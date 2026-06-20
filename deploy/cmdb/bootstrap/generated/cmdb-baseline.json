@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-06-20T15:44:46.336165+00:00",
-  "repo_root": "/workspace/eddie-auto-dev",
+  "generated_at": "2026-06-20T21:51:35.532508+00:00",
+  "repo_root": "/tmp/eddie-auto-dev-autorpa",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 146,
-    "critical_services": 59,
+    "repo_services": 122,
+    "critical_services": 50,
     "domains": {
-      "identity": 7,
-      "monitoring": 13,
-      "network": 16,
-      "operations": 84,
+      "identity": 2,
+      "monitoring": 12,
+      "network": 13,
+      "operations": 69,
       "storage": 23,
       "trading": 3
     }
@@ -39,30 +39,6 @@
   ],
   "applications_review": [
     {
-      "name": "nextcloud",
-      "domain": "identity",
-      "kind": "compose",
-      "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "nextcloud-db",
-      "domain": "identity",
-      "kind": "compose",
-      "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "nextcloud-redis",
-      "domain": "identity",
-      "kind": "compose",
-      "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
       "name": "open-webui",
       "domain": "identity",
       "kind": "compose",
@@ -75,22 +51,6 @@
       "domain": "identity",
       "kind": "compose",
       "source": "tools/vaultwarden/docker-compose.yml",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "homelab-vault-backup.service",
-      "domain": "identity",
-      "kind": "systemd",
-      "source": "systemd/homelab-vault-backup.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "homelab-vault-close.service",
-      "domain": "identity",
-      "kind": "systemd",
-      "source": "systemd/homelab-vault-close.service",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -167,14 +127,6 @@
       "candidate_system": "NetBox service model"
     },
     {
-      "name": "monitoring-containers-bootstrap.service",
-      "domain": "monitoring",
-      "kind": "systemd",
-      "source": "systemd/monitoring-containers-bootstrap.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
       "name": "rss-sentiment-exporter.service",
       "domain": "monitoring",
       "kind": "systemd",
@@ -195,14 +147,6 @@
       "domain": "monitoring",
       "kind": "systemd",
       "source": "systemd/tape-component-quality-exporter.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "proxy",
-      "domain": "network",
-      "kind": "compose",
-      "source": "deploy/cmdb/docker-compose.yml",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -235,22 +179,6 @@
       "domain": "network",
       "kind": "systemd",
       "source": "deploy/vpn/homelab-lan-gateway.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "iot-vpn-bypass-watchdog.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/iot-vpn-bypass-watchdog.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "iot-vpn-bypass-watchdog.timer",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/iot-vpn-bypass-watchdog.timer",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -327,22 +255,6 @@
       "candidate_system": "NetBox service model"
     },
     {
-      "name": "glpi",
-      "domain": "operations",
-      "kind": "compose",
-      "source": "deploy/cmdb/docker-compose.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "glpi-db",
-      "domain": "operations",
-      "kind": "compose",
-      "source": "deploy/cmdb/docker-compose.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
       "name": "mail-db",
       "domain": "operations",
       "kind": "compose",
@@ -411,46 +323,6 @@
       "domain": "operations",
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "netbox",
-      "domain": "operations",
-      "kind": "compose",
-      "source": "deploy/cmdb/docker-compose.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "netbox-postgres",
-      "domain": "operations",
-      "kind": "compose",
-      "source": "deploy/cmdb/docker-compose.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "netbox-redis",
-      "domain": "operations",
-      "kind": "compose",
-      "source": "deploy/cmdb/docker-compose.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "netbox-redis-cache",
-      "domain": "operations",
-      "kind": "compose",
-      "source": "deploy/cmdb/docker-compose.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "netbox-worker",
-      "domain": "operations",
-      "kind": "compose",
-      "source": "deploy/cmdb/docker-compose.yml",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -535,22 +407,6 @@
       "candidate_system": "GLPI review"
     },
     {
-      "name": "akash-sweep.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/akash-sweep.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "akash-sweep.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/akash-sweep.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
       "name": "auto_validate.service",
       "domain": "operations",
       "kind": "systemd",
@@ -567,14 +423,6 @@
       "candidate_system": "GLPI review"
     },
     {
-      "name": "bn-acervo-agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/bn-acervo-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
       "name": "check_projects.service",
       "domain": "operations",
       "kind": "systemd",
@@ -587,14 +435,6 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/check_projects.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "chromecast-ambilight.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/chromecast-ambilight.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -855,14 +695,6 @@
       "candidate_system": "GLPI review"
     },
     {
-      "name": "pandaplus-telegram-bridge.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/pandaplus-telegram-bridge.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
       "name": "post-boot-check.service",
       "domain": "operations",
       "kind": "systemd",
@@ -943,34 +775,10 @@
       "candidate_system": "GLPI review"
     },
     {
-      "name": "server-error-alert.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "deploy/homelab/server-error-alert.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
       "name": "specialized_agents-dashboard.service",
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/specialized_agents-dashboard.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "tuya-token-renewer.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/tuya-token-renewer.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "tuya-token-renewer.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/tuya-token-renewer.timer",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -1216,27 +1024,6 @@
     ],
     "critical_services": [
       {
-        "name": "nextcloud",
-        "domain": "identity",
-        "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-        "kind": "compose",
-        "critical": true
-      },
-      {
-        "name": "nextcloud-db",
-        "domain": "identity",
-        "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-        "kind": "compose",
-        "critical": true
-      },
-      {
-        "name": "nextcloud-redis",
-        "domain": "identity",
-        "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-        "kind": "compose",
-        "critical": true
-      },
-      {
         "name": "open-webui",
         "domain": "identity",
         "source": "tools/authentik_management/configs/docker-compose.override.yml",
@@ -1248,20 +1035,6 @@
         "domain": "identity",
         "source": "tools/vaultwarden/docker-compose.yml",
         "kind": "compose",
-        "critical": true
-      },
-      {
-        "name": "homelab-vault-backup.service",
-        "domain": "identity",
-        "source": "systemd/homelab-vault-backup.service",
-        "kind": "systemd",
-        "critical": true
-      },
-      {
-        "name": "homelab-vault-close.service",
-        "domain": "identity",
-        "source": "systemd/homelab-vault-close.service",
-        "kind": "systemd",
         "critical": true
       },
       {
@@ -1328,13 +1101,6 @@
         "critical": true
       },
       {
-        "name": "monitoring-containers-bootstrap.service",
-        "domain": "monitoring",
-        "source": "systemd/monitoring-containers-bootstrap.service",
-        "kind": "systemd",
-        "critical": true
-      },
-      {
         "name": "rss-sentiment-exporter.service",
         "domain": "monitoring",
         "source": "systemd/rss-sentiment-exporter.service",
@@ -1353,13 +1119,6 @@
         "domain": "monitoring",
         "source": "systemd/tape-component-quality-exporter.service",
         "kind": "systemd",
-        "critical": true
-      },
-      {
-        "name": "proxy",
-        "domain": "network",
-        "source": "deploy/cmdb/docker-compose.yml",
-        "kind": "compose",
         "critical": true
       },
       {
@@ -1387,20 +1146,6 @@
         "name": "homelab-lan-gateway.service",
         "domain": "network",
         "source": "deploy/vpn/homelab-lan-gateway.service",
-        "kind": "systemd",
-        "critical": true
-      },
-      {
-        "name": "iot-vpn-bypass-watchdog.service",
-        "domain": "network",
-        "source": "systemd/iot-vpn-bypass-watchdog.service",
-        "kind": "systemd",
-        "critical": true
-      },
-      {
-        "name": "iot-vpn-bypass-watchdog.timer",
-        "domain": "network",
-        "source": "systemd/iot-vpn-bypass-watchdog.timer",
         "kind": "systemd",
         "critical": true
       },
