@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-06-19T23:37:52.508547+00:00",
+  "generated_at": "2026-06-20T12:35:24.200551+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
@@ -39,48 +39,12 @@
   ],
   "applications_review": [
     {
-      "name": "eddie-apply-telegram-token.sh",
-      "domain": "identity",
-      "kind": "systemd",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": "Script de aplica\u00e7\u00e3o de token Telegram: grava /etc/eddie/telegram.env, cria drop-ins systemd e persiste em Authentik via secrets agent."
-    },
-    {
-      "name": "homelab-vault-backup.service",
-      "domain": "identity",
-      "kind": "systemd",
-      "source": "systemd/homelab-vault-backup.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "homelab-vault-close.service",
-      "domain": "identity",
-      "kind": "systemd",
-      "source": "systemd/homelab-vault-close.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
       "name": "nextcloud",
       "domain": "identity",
       "kind": "compose",
       "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "nextcloud-db",
@@ -88,10 +52,7 @@
       "kind": "compose",
       "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "nextcloud-redis",
@@ -99,10 +60,7 @@
       "kind": "compose",
       "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "open-webui",
@@ -110,10 +68,7 @@
       "kind": "compose",
       "source": "tools/authentik_management/configs/docker-compose.override.yml",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "vaultwarden",
@@ -121,32 +76,23 @@
       "kind": "compose",
       "source": "tools/vaultwarden/docker-compose.yml",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
-      "name": "agent-network-exporter.service",
-      "domain": "monitoring",
+      "name": "homelab-vault-backup.service",
+      "domain": "identity",
       "kind": "systemd",
-      "source": "tools/systemd/agent-network-exporter.service",
+      "source": "systemd/homelab-vault-backup.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
-      "name": "banking-metrics-exporter.service",
-      "domain": "monitoring",
+      "name": "homelab-vault-close.service",
+      "domain": "identity",
       "kind": "systemd",
-      "source": "systemd/banking-metrics-exporter.service",
+      "source": "systemd/homelab-vault-close.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "cadvisor",
@@ -154,65 +100,15 @@
       "kind": "compose",
       "source": "docker/docker-compose-exporters.yml",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "eddie_central_extended_metrics.service",
-      "domain": "monitoring",
-      "kind": "systemd",
-      "source": "systemd/eddie_central_extended_metrics.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "grafana",
       "domain": "monitoring",
-      "kind": "systemd",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
+      "kind": "compose",
+      "source": "tools/authentik_management/configs/docker-compose.override.yml",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": "Grafana 12.4.0 via docker-compose.grafana.yml. Backend: PostgreSQL (eddie-postgres, db=grafana). Porta: 3002->3000. SSO via Authentik. URL: https://grafana.rpa4all.com"
-    },
-    {
-      "name": "grafana-selfheal.service",
-      "domain": "monitoring",
-      "kind": "systemd",
-      "source": "systemd/grafana-selfheal.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "job-monitor.service",
-      "domain": "monitoring",
-      "kind": "systemd",
-      "source": "systemd/job-monitor.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "monitoring-containers-bootstrap.service",
-      "domain": "monitoring",
-      "kind": "systemd",
-      "source": "systemd/monitoring-containers-bootstrap.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "node-exporter",
@@ -220,10 +116,7 @@
       "kind": "compose",
       "source": "docker/docker-compose-exporters.yml",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "postfix-exporter",
@@ -231,10 +124,55 @@
       "kind": "compose",
       "source": "docker/docker-compose.simple-mail.yml",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "agent-network-exporter.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "tools/systemd/agent-network-exporter.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "banking-metrics-exporter.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/banking-metrics-exporter.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "eddie_central_extended_metrics.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/eddie_central_extended_metrics.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "grafana-selfheal.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/grafana-selfheal.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "job-monitor.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/job-monitor.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "monitoring-containers-bootstrap.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/monitoring-containers-bootstrap.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "rss-sentiment-exporter.service",
@@ -242,10 +180,7 @@
       "kind": "systemd",
       "source": "systemd/rss-sentiment-exporter.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "storj-exporter.service",
@@ -253,10 +188,7 @@
       "kind": "systemd",
       "source": "deploy/storj-exporter.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "tape-component-quality-exporter.service",
@@ -264,142 +196,7 @@
       "kind": "systemd",
       "source": "systemd/tape-component-quality-exporter.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "cloudflared-named@.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "tools/tunnels/cloudflared-named@.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "cloudflared.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "tools/tunnels/cloudflared/cloudflared.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "dhcp-selfheal.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/dhcp-selfheal.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "homelab-lan-gateway.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "deploy/vpn/homelab-lan-gateway.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "iot-vpn-bypass-watchdog.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/iot-vpn-bypass-watchdog.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "iot-vpn-bypass-watchdog.timer",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/iot-vpn-bypass-watchdog.timer",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "ipv6-proxy.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/ipv6-proxy.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "localtunnel@.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "tools/tunnels/localtunnel@.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "pihole-ipv6-dns-fix.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/pihole-ipv6-dns-fix.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "protonvpn-boot-selfheal.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/protonvpn-boot-selfheal.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "protonvpn-routing-watchdog-fix.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "deploy/vpn/protonvpn-routing-watchdog-fix.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "protonvpn-routing-watchdog.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "deploy/vpn/protonvpn-routing-watchdog.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "proxy",
@@ -407,10 +204,103 @@
       "kind": "compose",
       "source": "deploy/cmdb/docker-compose.yml",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "cloudflared-named@.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "tools/tunnels/cloudflared-named@.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "cloudflared.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "tools/tunnels/cloudflared/cloudflared.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "dhcp-selfheal.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/dhcp-selfheal.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "homelab-lan-gateway.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "deploy/vpn/homelab-lan-gateway.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "iot-vpn-bypass-watchdog.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/iot-vpn-bypass-watchdog.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "iot-vpn-bypass-watchdog.timer",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/iot-vpn-bypass-watchdog.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ipv6-proxy.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/ipv6-proxy.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "localtunnel@.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "tools/tunnels/localtunnel@.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "pihole-ipv6-dns-fix.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/pihole-ipv6-dns-fix.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "protonvpn-boot-selfheal.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/protonvpn-boot-selfheal.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "protonvpn-routing-watchdog-fix.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "deploy/vpn/protonvpn-routing-watchdog-fix.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "protonvpn-routing-watchdog.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "deploy/vpn/protonvpn-routing-watchdog.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "rpa4all-ddns-server.service",
@@ -418,10 +308,7 @@
       "kind": "systemd",
       "source": "deploy/vpn/rpa4all-ddns-server.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "rpa4all-vpn-ddns.service",
@@ -429,21 +316,7 @@
       "kind": "systemd",
       "source": "deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "telegram_botfather_rotate_selenium.py",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": "Script Selenium que rotaciona o token do bot Telegram via BotFather. Usa Chrome headless + Squid proxy + chromedriver146."
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "wireguard-nat.service",
@@ -451,230 +324,7 @@
       "kind": "systemd",
       "source": "deploy/vpn/wireguard-nat.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "akash-sweep.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/akash-sweep.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "akash-sweep.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/akash-sweep.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "auto_validate.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "deploy/auto_validate.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "autonomous_remediator.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/systemd/autonomous_remediator.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "bn-acervo-agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/bn-acervo-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "check_projects.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/check_projects.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "check_projects.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/check_projects.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "chromecast-ambilight.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/chromecast-ambilight.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "clear-agent@.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/clear-agent@.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "coordinator.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/coordinator.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "crypto-agent@.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/crypto-agent@.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "diretor.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/diretor.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "eddie-calendar.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/eddie-calendar.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "eddie-expurgo.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/eddie-expurgo.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "eddie-telegram-bot.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": "Chatbot Telegram do homelab Eddie com suporte a comandos de trading, AI, m\u00eddia e administra\u00e7\u00e3o."
-    },
-    {
-      "name": "eddie-tray-agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/systemd/eddie-tray-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "eddie-whatsapp-bot.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/eddie-whatsapp-bot.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "final-boot-status-agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/systemd/final-boot-status-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "gdrive-agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/systemd/gdrive-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "github-agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/github-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "glpi",
@@ -682,10 +332,7 @@
       "kind": "compose",
       "source": "deploy/cmdb/docker-compose.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "glpi-db",
@@ -693,76 +340,7 @@
       "kind": "compose",
       "source": "deploy/cmdb/docker-compose.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "homelab-dashboard.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/homelab-dashboard.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "lto6-checkpoint-drain.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/lto6-checkpoint-drain.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "lto6-checkpoint-recover.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/lto6-checkpoint-recover.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "lto6-selfheal.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/lto6-selfheal.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "lto6-selfheal.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/lto6-selfheal.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "lto6-smb-proof-selfheal.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/selfheal/lto6-smb-proof-selfheal.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "mail-db",
@@ -770,10 +348,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.simple-mail.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "mail-server",
@@ -781,10 +356,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.simple-mail.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "mailu-backend",
@@ -792,10 +364,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "mailu-db",
@@ -803,10 +372,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "mailu-dovecot",
@@ -814,10 +380,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "mailu-frontend",
@@ -825,10 +388,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "mailu-postfix",
@@ -836,10 +396,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "mailu-redis",
@@ -847,10 +404,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "mailu-roundcube",
@@ -858,87 +412,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "marketing-api.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-api.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "marketing-daily-report.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-daily-report.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "marketing-daily-report.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-daily-report.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "marketing-email-drip.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-email-drip.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "marketing-email-drip.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-email-drip.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "marketing-x-posts.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-x-posts.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "marketing-x-posts.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-x-posts.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "netbox",
@@ -946,10 +420,7 @@
       "kind": "compose",
       "source": "deploy/cmdb/docker-compose.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "netbox-postgres",
@@ -957,10 +428,7 @@
       "kind": "compose",
       "source": "deploy/cmdb/docker-compose.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "netbox-redis",
@@ -968,10 +436,7 @@
       "kind": "compose",
       "source": "deploy/cmdb/docker-compose.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "netbox-redis-cache",
@@ -979,10 +444,7 @@
       "kind": "compose",
       "source": "deploy/cmdb/docker-compose.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "netbox-worker",
@@ -990,10 +452,7 @@
       "kind": "compose",
       "source": "deploy/cmdb/docker-compose.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "nginx",
@@ -1001,10 +460,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.simple-mail.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "ntopng",
@@ -1012,10 +468,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.ntopng.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "ntopng-redis",
@@ -1023,87 +476,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.ntopng.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "ollama-finetune.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-finetune.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "ollama-finetune.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-finetune.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "ollama-gpu-coordinator.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-gpu-coordinator.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "ollama-gpu-selfheal.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/ollama-gpu-selfheal.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "ollama-gpu1.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-gpu1.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "ollama-warmup.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-warmup.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "ollama-warmup.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-warmup.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "opensearch-dashboards",
@@ -1111,10 +484,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.opensearch.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "opensearch-node1",
@@ -1122,32 +492,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.opensearch.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "pandaplus-telegram-bridge.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/pandaplus-telegram-bridge.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "post-boot-check.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/post-boot-check.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "postgres",
@@ -1155,10 +500,7 @@
       "kind": "compose",
       "source": "docker/docker-compose.email-simple.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "printshare",
@@ -1166,76 +508,7 @@
       "kind": "compose",
       "source": "deploy/printshare/docker-compose.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "printshare.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "deploy/printshare/printshare.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "python-training.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/python-training.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "python-training.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/python-training.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "rag-reindex.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/rag-reindex.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "rag-reindex.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/rag-reindex.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "review-service.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/systemd/review-service.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "roundcube",
@@ -1243,98 +516,15 @@
       "kind": "compose",
       "source": "docker/docker-compose.simple-mail.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "rpa4all-validation.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/rpa4all-validation.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "rpa4all-validation.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/rpa4all-validation.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "secrets_agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/secrets_agent/secrets_agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "server-error-alert.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "deploy/homelab/server-error-alert.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "specialized_agents-dashboard.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/specialized_agents-dashboard.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "tuya-token-renewer.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/tuya-token-renewer.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "tuya-token-renewer.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/tuya-token-renewer.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "wikijs",
       "domain": "operations",
-      "kind": "systemd",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
+      "kind": "compose",
+      "source": "docker/docker-compose.wikijs.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": "Wiki.js v2 \u2014 documenta\u00e7\u00e3o t\u00e9cnica do homelab. Docker: ghcr.io/requarks/wiki:2. DB: wikijs-db (postgres:15-alpine)."
+      "candidate_system": "GLPI review"
     },
     {
       "name": "wikijs-db",
@@ -1342,10 +532,447 @@
       "kind": "compose",
       "source": "docker/docker-compose.wikijs.yml",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "akash-sweep.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/akash-sweep.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "akash-sweep.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/akash-sweep.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "auto_validate.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "deploy/auto_validate.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "autonomous_remediator.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "tools/systemd/autonomous_remediator.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "bn-acervo-agent.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/bn-acervo-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "check_projects.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/check_projects.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "check_projects.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/check_projects.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "chromecast-ambilight.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/chromecast-ambilight.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "clear-agent@.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/clear-agent@.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "coordinator.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/coordinator.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "crypto-agent@.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/crypto-agent@.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "diretor.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/diretor.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "eddie-calendar.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/eddie-calendar.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "eddie-expurgo.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/eddie-expurgo.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "eddie-telegram-bot.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/eddie-telegram-bot.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "eddie-tray-agent.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "tools/systemd/eddie-tray-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "eddie-whatsapp-bot.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/eddie-whatsapp-bot.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "final-boot-status-agent.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "tools/systemd/final-boot-status-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "gdrive-agent.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "tools/systemd/gdrive-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "github-agent.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/github-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "homelab-dashboard.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/homelab-dashboard.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "lto6-checkpoint-drain.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/lto6-checkpoint-drain.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "lto6-checkpoint-recover.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/lto6-checkpoint-recover.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "lto6-selfheal.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/lto6-selfheal.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "lto6-selfheal.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/lto6-selfheal.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "lto6-smb-proof-selfheal.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "tools/selfheal/lto6-smb-proof-selfheal.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "marketing-api.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/marketing-api.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "marketing-daily-report.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/marketing-daily-report.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "marketing-daily-report.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/marketing-daily-report.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "marketing-email-drip.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/marketing-email-drip.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "marketing-email-drip.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/marketing-email-drip.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "marketing-x-posts.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/marketing-x-posts.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "marketing-x-posts.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/marketing-x-posts.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "ollama-finetune.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/ollama-finetune.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "ollama-finetune.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/ollama-finetune.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "ollama-gpu-coordinator.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/ollama-gpu-coordinator.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "ollama-gpu-selfheal.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "tools/ollama-gpu-selfheal.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "ollama-gpu1.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/ollama-gpu1.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "ollama-warmup.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/ollama-warmup.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "ollama-warmup.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/ollama-warmup.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "pandaplus-telegram-bridge.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/pandaplus-telegram-bridge.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "post-boot-check.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/post-boot-check.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "printshare.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "deploy/printshare/printshare.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "python-training.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/python-training.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "python-training.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/python-training.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "rag-reindex.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/rag-reindex.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "rag-reindex.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/rag-reindex.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "review-service.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "tools/systemd/review-service.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "rpa4all-validation.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/rpa4all-validation.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "rpa4all-validation.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/rpa4all-validation.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "secrets_agent.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "tools/secrets_agent/secrets_agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "server-error-alert.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "deploy/homelab/server-error-alert.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "specialized_agents-dashboard.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/specialized_agents-dashboard.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "tuya-token-renewer.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/tuya-token-renewer.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "tuya-token-renewer.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/tuya-token-renewer.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
     },
     {
       "name": "workstation-win11l-http@.service",
@@ -1353,10 +980,7 @@
       "kind": "systemd",
       "source": "systemd/workstation-win11l-http@.service",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "workstation-win11l-rdp@.service",
@@ -1364,10 +988,7 @@
       "kind": "systemd",
       "source": "systemd/workstation-win11l-rdp@.service",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "x-agent.service",
@@ -1375,21 +996,7 @@
       "kind": "systemd",
       "source": "tools/x_agent/x-agent.service",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "smart-ir-selfheal.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "/etc/systemd/system/smart-ir-selfheal.service",
-      "recommended_owner": "application",
-      "candidate_system": "NetBox service model",
-      "status": "disabled",
-      "status_reason": "Desativado em 2026-06-14 por decis\u00e3o operacional: n\u00e3o funciona e interfere nos outros dispositivos IoT.",
-      "description": "Watchdog do Smart IR NovaDigital no Home Assistant/Tuya Local."
+      "candidate_system": "GLPI review"
     },
     {
       "name": "disk-clean.service",
@@ -1397,10 +1004,7 @@
       "kind": "systemd",
       "source": "systemd/disk-clean.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "disk-clean.timer",
@@ -1408,10 +1012,7 @@
       "kind": "systemd",
       "source": "systemd/disk-clean.timer",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "disk-spindown.service",
@@ -1419,10 +1020,7 @@
       "kind": "systemd",
       "source": "tools/homelab/disk-spindown.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "homelab-disk-backup.service",
@@ -1430,10 +1028,7 @@
       "kind": "systemd",
       "source": "tools/backup/homelab-disk-backup.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "homelab-tape-log-drain-nextcloud.service",
@@ -1441,10 +1036,7 @@
       "kind": "systemd",
       "source": "systemd/homelab-tape-log-drain-nextcloud.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "homelab-tape-log-drain-nextcloud.timer",
@@ -1452,10 +1044,7 @@
       "kind": "systemd",
       "source": "systemd/homelab-tape-log-drain-nextcloud.timer",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "homelab-tape-log-drain-sg1.service",
@@ -1463,10 +1052,7 @@
       "kind": "systemd",
       "source": "systemd/homelab-tape-log-drain-sg1.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "homelab-tape-log-drain-sg1.timer",
@@ -1474,10 +1060,7 @@
       "kind": "systemd",
       "source": "systemd/homelab-tape-log-drain-sg1.timer",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "homelab-tape-logrotate.service",
@@ -1485,10 +1068,7 @@
       "kind": "systemd",
       "source": "systemd/homelab-tape-logrotate.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "homelab-tape-logrotate.timer",
@@ -1496,10 +1076,7 @@
       "kind": "systemd",
       "source": "systemd/homelab-tape-logrotate.timer",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "ltfs-backup-catalog.service",
@@ -1507,10 +1084,7 @@
       "kind": "systemd",
       "source": "systemd/ltfs-backup-catalog.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "ltfs-backup-catalog.timer",
@@ -1518,10 +1092,7 @@
       "kind": "systemd",
       "source": "systemd/ltfs-backup-catalog.timer",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "ltfs-deep-recovery.service",
@@ -1529,10 +1100,7 @@
       "kind": "systemd",
       "source": "systemd/ltfs-deep-recovery.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "ltfs-lto6-selfheal-escalator.service",
@@ -1540,10 +1108,7 @@
       "kind": "systemd",
       "source": "systemd/ltfs-lto6-selfheal-escalator.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "ltfs-lto6-sg1.service",
@@ -1551,10 +1116,7 @@
       "kind": "systemd",
       "source": "systemd/ltfs-lto6-sg1.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "ltfs-lto6.service",
@@ -1562,10 +1124,7 @@
       "kind": "systemd",
       "source": "systemd/ltfs-lto6.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "ltfs-window-enforcer.service",
@@ -1573,10 +1132,7 @@
       "kind": "systemd",
       "source": "systemd/ltfs-window-enforcer.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "ltfs-window-enforcer.timer",
@@ -1584,10 +1140,7 @@
       "kind": "systemd",
       "source": "systemd/ltfs-window-enforcer.timer",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "lto6-drain-backups.service",
@@ -1595,10 +1148,7 @@
       "kind": "systemd",
       "source": "systemd/lto6-drain-backups.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "lto6-drain-backups.timer",
@@ -1606,21 +1156,7 @@
       "kind": "systemd",
       "source": "systemd/lto6-drain-backups.timer",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
-    },
-    {
-      "name": "mnt-raid1.mount",
-      "domain": "storage",
-      "kind": "systemd",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": "mergerfs union de /mnt/disk1 (sdb1) + /mnt/disk2 (sdc1) + /mnt/disk3 (sda1) em /mnt/raid1. Op\u00e7\u00e3o nonempty obrigat\u00f3ria \u2014 diret\u00f3rio cont\u00e9m nextcloud/ ao montar. Docker data-root: /mnt/disk1/docker. Ollama models: /mnt/raid1/ollama/models"
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "tape-quality-ollama-narrator.service",
@@ -1628,10 +1164,7 @@
       "kind": "systemd",
       "source": "systemd/tape-quality-ollama-narrator.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "tape-quality-ollama-narrator.timer",
@@ -1639,10 +1172,7 @@
       "kind": "systemd",
       "source": "systemd/tape-quality-ollama-narrator.timer",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "tape-safe-eject.service",
@@ -1650,10 +1180,7 @@
       "kind": "systemd",
       "source": "systemd/tape-safe-eject.service",
       "recommended_owner": "platform",
-      "candidate_system": "NetBox service model",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "candle-collector.service",
@@ -1661,10 +1188,7 @@
       "kind": "systemd",
       "source": "systemd/candle-collector.service",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "candle-collector.timer",
@@ -1672,10 +1196,7 @@
       "kind": "systemd",
       "source": "systemd/candle-collector.timer",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     },
     {
       "name": "clear-trading-agent.service",
@@ -1683,10 +1204,7 @@
       "kind": "systemd",
       "source": "systemd/clear-trading-agent.service",
       "recommended_owner": "application",
-      "candidate_system": "GLPI review",
-      "status": "active",
-      "status_reason": "",
-      "description": ""
+      "candidate_system": "GLPI review"
     }
   ],
   "mvp_focus": {
@@ -2114,38 +1632,7 @@
   },
   "annotated_services": [
     {
-      "description": "Script de aplica\u00e7\u00e3o de token Telegram: grava /etc/eddie/telegram.env, cria drop-ins systemd e persiste em Authentik via secrets agent.",
-      "type": "script",
-      "path": "/usr/local/bin/eddie-apply-telegram-token.sh",
-      "repo": "scripts/automation/eddie-apply-telegram-token.sh",
-      "usage": [
-        "eddie-apply-telegram-token.sh <TOKEN>",
-        "eddie-apply-telegram-token.sh --token-file <path>"
-      ],
-      "services_updated": [
-        "eddie-telegram-bot",
-        "eddie-expurgo",
-        "eddie-calendar",
-        "homelab-dashboard",
-        "eddie-location"
-      ],
-      "authentik_paths": [
-        "authentik/eddie/telegram_bot_token",
-        "shared/telegram_bot_token"
-      ],
-      "critical": true,
-      "last_updated": "2026-06-14",
-      "commits": [
-        "22f73963",
-        "23dfedf9"
-      ],
-      "name": "eddie-apply-telegram-token.sh",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
-      "kind": "systemd",
-      "status": "active",
-      "status_reason": ""
-    },
-    {
+      "name": "eddie-telegram-bot.service",
       "description": "Chatbot Telegram do homelab Eddie com suporte a comandos de trading, AI, m\u00eddia e administra\u00e7\u00e3o.",
       "runtime_path": "/home/homelab/myClaude/telegram_bot.py",
       "venv": "/home/homelab/myClaude/.venv",
@@ -2233,51 +1720,54 @@
         "2026-06-14: apply script reescrito \u2014 agora persiste token no Authentik via POST /secrets (commit 22f73963)",
         "2026-06-14: grep -hoP corrigido (sem -h prefixava filename: ao extrair SECRETS_AGENT_API_KEY) (commit 23dfedf9)",
         "2026-06-14: suporte a --token-file no apply script para evitar expans\u00e3o bash prematura de {token_file}"
-      ],
-      "name": "eddie-telegram-bot.service",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
-      "kind": "systemd",
-      "status": "active",
-      "status_reason": ""
+      ]
     },
     {
+      "name": "grafana",
       "description": "Grafana 12.4.0 via docker-compose.grafana.yml. Backend: PostgreSQL (eddie-postgres, db=grafana). Porta: 3002->3000. SSO via Authentik. URL: https://grafana.rpa4all.com",
       "compose_file": "/home/homelab/docker-compose.grafana.yml",
       "depends_on": [
         "eddie-postgres",
         "homelab_monitoring network"
       ],
-      "critical": true,
-      "name": "grafana",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
-      "kind": "systemd",
-      "status": "active",
-      "status_reason": ""
+      "critical": true
     },
     {
+      "name": "mnt-raid1.mount",
       "description": "mergerfs union de /mnt/disk1 (sdb1) + /mnt/disk2 (sdc1) + /mnt/disk3 (sda1) em /mnt/raid1. Op\u00e7\u00e3o nonempty obrigat\u00f3ria \u2014 diret\u00f3rio cont\u00e9m nextcloud/ ao montar. Docker data-root: /mnt/disk1/docker. Ollama models: /mnt/raid1/ollama/models",
       "fix_applied": "2026-06-12: adicionado nonempty ao fstab; disk1/disk3 precisam estar montados antes",
+      "critical": true
+    },
+    {
+      "name": "eddie-apply-telegram-token.sh",
+      "description": "Script de aplica\u00e7\u00e3o de token Telegram: grava /etc/eddie/telegram.env, cria drop-ins systemd e persiste em Authentik via secrets agent.",
+      "type": "script",
+      "path": "/usr/local/bin/eddie-apply-telegram-token.sh",
+      "repo": "scripts/automation/eddie-apply-telegram-token.sh",
+      "usage": [
+        "eddie-apply-telegram-token.sh <TOKEN>",
+        "eddie-apply-telegram-token.sh --token-file <path>"
+      ],
+      "services_updated": [
+        "eddie-telegram-bot",
+        "eddie-expurgo",
+        "eddie-calendar",
+        "homelab-dashboard",
+        "eddie-location"
+      ],
+      "authentik_paths": [
+        "authentik/eddie/telegram_bot_token",
+        "shared/telegram_bot_token"
+      ],
       "critical": true,
-      "name": "mnt-raid1.mount",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
-      "kind": "systemd",
-      "status": "active",
-      "status_reason": ""
+      "last_updated": "2026-06-14",
+      "commits": [
+        "22f73963",
+        "23dfedf9"
+      ]
     },
     {
-      "description": "Watchdog do Smart IR NovaDigital no Home Assistant/Tuya Local.",
-      "source": "/etc/systemd/system/smart-ir-selfheal.service",
-      "domain": "operations",
-      "candidate_system": "NetBox service model",
-      "status": "disabled",
-      "status_reason": "Desativado em 2026-06-14 por decis\u00e3o operacional: n\u00e3o funciona e interfere nos outros dispositivos IoT.",
-      "disabled_at": "2026-06-14",
-      "target_device": "homelab",
-      "critical": false,
-      "name": "smart-ir-selfheal.service",
-      "kind": "systemd"
-    },
-    {
+      "name": "telegram_botfather_rotate_selenium.py",
       "description": "Script Selenium que rotaciona o token do bot Telegram via BotFather. Usa Chrome headless + Squid proxy + chromedriver146.",
       "type": "script",
       "path": "/home/homelab/telegram_botfather_rotate_selenium.py",
@@ -2292,14 +1782,10 @@
       "features_added": [
         "--extra-chrome-arg (2026-06-14): permite passar proxy ao Chrome headless"
       ],
-      "critical": true,
-      "name": "telegram_botfather_rotate_selenium.py",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
-      "kind": "systemd",
-      "status": "active",
-      "status_reason": ""
+      "critical": true
     },
     {
+      "name": "wikijs",
       "description": "Wiki.js v2 \u2014 documenta\u00e7\u00e3o t\u00e9cnica do homelab. Docker: ghcr.io/requarks/wiki:2. DB: wikijs-db (postgres:15-alpine).",
       "type": "docker-compose",
       "container": "wikijs",
@@ -2314,12 +1800,19 @@
         "runbooks/telegram-bot-rotation": "page_id 646 \u2014 runbook completo de rota\u00e7\u00e3o do bot"
       },
       "routing_issue_2026-06-14": "table 205 tinha rota stale br-db3b8fade1cf (linkdown) para 172.20.0.0/16 (wikijs network). Fix: ip route del stale + ip route add br-488839767b3b. Corrigir sempre que wikijs container for recriado.",
-      "critical": false,
-      "name": "wikijs",
-      "source": "deploy/cmdb/bootstrap/cmdb-agent-overrides.json",
-      "kind": "systemd",
-      "status": "active",
-      "status_reason": ""
+      "critical": false
+    },
+    {
+      "name": "smart-ir-selfheal.service",
+      "description": "Watchdog do Smart IR NovaDigital no Home Assistant/Tuya Local.",
+      "source": "/etc/systemd/system/smart-ir-selfheal.service",
+      "domain": "operations",
+      "candidate_system": "NetBox service model",
+      "status": "disabled",
+      "status_reason": "Desativado em 2026-06-14 por decis\u00e3o operacional: n\u00e3o funciona e interfere nos outros dispositivos IoT.",
+      "disabled_at": "2026-06-14",
+      "target_device": "homelab",
+      "critical": false
     }
   ],
   "project": {
