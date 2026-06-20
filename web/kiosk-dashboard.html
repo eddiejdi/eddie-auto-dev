@@ -11,8 +11,9 @@
             background: #1e1e1e;
             color: #fff;
             overflow: hidden;
+            overscroll-behavior: none;
         }
-        #container { width: 100vw; height: 100vh; position: relative; }
+        #container { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
         .dashboard-frame {
             position: absolute;
             top: 0; left: 0;
@@ -20,10 +21,15 @@
             border: none;
             z-index: 1;
             opacity: 0;
+            pointer-events: none;
             transition: opacity 0.8s ease-in-out;
         }
-        .dashboard-frame.active { opacity: 1; z-index: 10; }
-        ::-webkit-scrollbar { width: 0; height: 0; }
+        .dashboard-frame.active {
+            opacity: 1;
+            z-index: 10;
+            pointer-events: auto;
+            overflow-y: scroll;
+        }
         #indicator {
             position: fixed;
             bottom: 12px;
