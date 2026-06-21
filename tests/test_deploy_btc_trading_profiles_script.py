@@ -26,3 +26,10 @@ def test_script_archives_duplicate_btc_dashboard_files_before_grafana_restart() 
     assert "dashboard_backups" in content
     assert "cleanup_btc_dashboard_duplicates" in content
     assert content.index("cleanup_btc_dashboard_duplicates") < content.index("restart_grafana_if_present")
+
+
+def test_script_defaults_to_live_crypto_agent_service_user() -> None:
+    content = _load_script()
+    assert 'SERVICE_USER="${SERVICE_USER:-btc-trading}"' in content
+    assert 'SERVICE_GROUP="${SERVICE_GROUP:-btc-trading}"' in content
+    assert 'sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile' in content
