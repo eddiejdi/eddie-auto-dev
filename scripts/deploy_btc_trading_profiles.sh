@@ -223,9 +223,10 @@ install_managed_units() {
   if [[ ! -d /etc/sudoers.d ]]; then
     sudo mkdir -p /etc/sudoers.d
   fi
-  sudo install -m 0440 "${REPO_ROOT}/systemd/trading-svc-ollama.sudoers" \
-    /etc/sudoers.d/trading-svc-ollama
-  sudo visudo -cf /etc/sudoers.d/trading-svc-ollama >/dev/null
+  sudo rm -f /etc/sudoers.d/trading-svc-ollama
+  sudo install -m 0440 "${REPO_ROOT}/systemd/btc-trading-ollama.sudoers" \
+    /etc/sudoers.d/btc-trading-ollama
+  sudo visudo -cf /etc/sudoers.d/btc-trading-ollama >/dev/null
 }
 
 sync_trading_runtime() {

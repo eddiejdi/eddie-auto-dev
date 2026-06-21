@@ -33,3 +33,10 @@ def test_script_defaults_to_live_crypto_agent_service_user() -> None:
     assert 'SERVICE_USER="${SERVICE_USER:-btc-trading}"' in content
     assert 'SERVICE_GROUP="${SERVICE_GROUP:-btc-trading}"' in content
     assert 'sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile' in content
+
+
+def test_script_installs_canonical_btc_trading_sudoers_file() -> None:
+    content = _load_script()
+    assert "sudo rm -f /etc/sudoers.d/trading-svc-ollama" in content
+    assert 'systemd/btc-trading-ollama.sudoers' in content
+    assert "/etc/sudoers.d/btc-trading-ollama" in content
