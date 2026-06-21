@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-06-20T17:32:16.392521+00:00",
+  "generated_at": "2026-06-21T04:48:28.140755+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 147,
+    "repo_services": 148,
     "critical_services": 60,
     "domains": {
       "identity": 7,
       "monitoring": 14,
       "network": 16,
-      "operations": 84,
+      "operations": 85,
       "storage": 23,
       "trading": 3
     }
@@ -803,6 +803,14 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/marketing-x-posts.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "notebook-power-agent.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/notebook-power-agent.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
