@@ -1,16 +1,16 @@
 # CMDB Baseline
 
-- Generated at: `2026-06-21T05:03:36.317967+00:00`
+- Generated at: `2026-06-21T14:55:52.456180+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `148`
-- Critical services flagged for MVP: `60`
+- Repo services discovered: `145`
+- Critical services flagged for MVP: `57`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
-- `identity`: 7
+- `identity`: 4
 - `monitoring`: 14
 - `network`: 16
 - `operations`: 85
@@ -23,9 +23,6 @@
 
 ## MVP critical services
 
-- `nextcloud` (identity, compose) from `forks/rpa4all-nextcloud-authentik/docker-compose.yml`
-- `nextcloud-db` (identity, compose) from `forks/rpa4all-nextcloud-authentik/docker-compose.yml`
-- `nextcloud-redis` (identity, compose) from `forks/rpa4all-nextcloud-authentik/docker-compose.yml`
 - `open-webui` (identity, compose) from `tools/authentik_management/configs/docker-compose.override.yml`
 - `vaultwarden` (identity, compose) from `tools/vaultwarden/docker-compose.yml`
 - `homelab-vault-backup.service` (identity, systemd) from `systemd/homelab-vault-backup.service`
@@ -63,6 +60,9 @@
 - `disk-clean.service` (storage, systemd) from `systemd/disk-clean.service`
 - `disk-clean.timer` (storage, systemd) from `systemd/disk-clean.timer`
 - `disk-spindown.service` (storage, systemd) from `tools/homelab/disk-spindown.service`
+- `homelab-disk-backup.service` (storage, systemd) from `tools/backup/homelab-disk-backup.service`
+- `homelab-tape-log-drain-nextcloud.service` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.service`
+- `homelab-tape-log-drain-nextcloud.timer` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.timer`
 
 ## Serviços anotados manualmente
 

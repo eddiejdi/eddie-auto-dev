@@ -1,15 +1,15 @@
 {
-  "generated_at": "2026-06-21T05:03:36.317967+00:00",
+  "generated_at": "2026-06-21T14:55:52.456180+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 148,
-    "critical_services": 60,
+    "repo_services": 145,
+    "critical_services": 57,
     "domains": {
-      "identity": 7,
+      "identity": 4,
       "monitoring": 14,
       "network": 16,
       "operations": 85,
@@ -38,30 +38,6 @@
     }
   ],
   "applications_review": [
-    {
-      "name": "nextcloud",
-      "domain": "identity",
-      "kind": "compose",
-      "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "nextcloud-db",
-      "domain": "identity",
-      "kind": "compose",
-      "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "nextcloud-redis",
-      "domain": "identity",
-      "kind": "compose",
-      "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
     {
       "name": "open-webui",
       "domain": "identity",
@@ -1231,27 +1207,6 @@
       "storage"
     ],
     "critical_services": [
-      {
-        "name": "nextcloud",
-        "domain": "identity",
-        "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-        "kind": "compose",
-        "critical": true
-      },
-      {
-        "name": "nextcloud-db",
-        "domain": "identity",
-        "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-        "kind": "compose",
-        "critical": true
-      },
-      {
-        "name": "nextcloud-redis",
-        "domain": "identity",
-        "source": "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
-        "kind": "compose",
-        "critical": true
-      },
       {
         "name": "open-webui",
         "domain": "identity",
