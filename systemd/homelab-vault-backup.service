@@ -1,0 +1,53 @@
+[Unit]
+Description=Homelab Vault — backup + UI ao inserir pendrive
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=no
+
+# Aguarda partição estar pronta
+ExecStartPre=/bin/sleep 3
+ExecStartPre=/bin/bash -c "test -b /dev/sda2 || (echo 'sda2 não encontrada'; exit 1)"
+
+# Abre vault LUKS com keyfile
+ExecStartPre=/sbin/cryptsetup open --key-file /etc/homelab-vault.key /dev/sda2 homelab-vault
+ExecStartPre=/bin/mkdir -p /mnt/vault
+ExecStartPre=/bin/mount /dev/mapper/homelab-vault /mnt/vault
+
+# Copia UI atualizada do boot FAT32 para o vault (se pendrive tiver versão nova)
+ExecStartPre=/bin/bash -c \
+    "test -f /mnt/vault-boot/ui/index.html && \
+     cp /mnt/vault-boot/ui/index.html /mnt/vault/ui/ || true"
+
+# Inicia servidor UI em background
+ExecStartPre=/bin/bash -c \
+    "python3 /mnt/vault/vault-server.py &>/tmp/vault-server.log & \
+     echo \$! > /tmp/vault-server.pid"
+
+# Aguarda servidor subir e abre navegador
+ExecStartPre=/bin/bash -c \
+    "for i in \$(seq 1 10); do \
+       sleep 1; \
+       curl -s http://localhost:8765/api/status &>/dev/null && break; \
+     done; \
+     DISPLAY=:0 XAUTHORITY=/home/edenilson/.Xauthority \
+       sudo -u edenilson xdg-open http://localhost:8765 &>/dev/null || true"
+
+# Executa backup
+ExecStart=/bin/bash /opt/homelab/vault/backup-to-vault.sh
+
+# Encerra servidor e fecha vault sempre ao terminar
+ExecStopPost=/bin/bash -c "\
+    kill \$(cat /tmp/vault-server.pid 2>/dev/null) 2>/dev/null || true; \
+    umount /mnt/vault 2>/dev/null || true; \
+    cryptsetup close homelab-vault 2>/dev/null || true"
+
+TimeoutStartSec=600
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=homelab-vault-backup
+
+[Install]
+WantedBy=multi-user.target

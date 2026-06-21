@@ -1,0 +1,9 @@
+[Unit]
+Description=IoT VPN Bypass Watchdog — restaura rotas ISP se perdidas
+After=iot-vpn-bypass.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/iot-vpn-bypass.sh --heal
+StandardOutput=journal
+StandardError=journal

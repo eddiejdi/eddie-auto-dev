@@ -1,0 +1,17 @@
+[Unit]
+Description=Chromecast Ambilight — sincroniza LED com cor dominante do thumbnail
+After=network-online.target secrets-agent.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/chromecast_ambilight.py
+Restart=on-failure
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=chromecast-ambilight
+
+[Install]
+WantedBy=multi-user.target

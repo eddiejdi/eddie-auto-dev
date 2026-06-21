@@ -1,0 +1,11 @@
+[Unit]
+Description=IoT VPN Bypass Watchdog Timer
+Requires=iot-vpn-bypass.service
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+Unit=iot-vpn-bypass-watchdog.service
+
+[Install]
+WantedBy=timers.target

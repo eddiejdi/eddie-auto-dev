@@ -1,0 +1,11 @@
+[Unit]
+Description=Akash AKT sweep diário para KuCoin
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /usr/local/bin/akash-sweep.py
+User=homelab
+StandardOutput=journal
+StandardError=journal

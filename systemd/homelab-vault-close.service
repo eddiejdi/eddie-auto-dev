@@ -1,0 +1,8 @@
+[Unit]
+Description=Homelab Vault — fecha LUKS ao remover pendrive
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "umount /mnt/vault 2>/dev/null; /sbin/cryptsetup close homelab-vault 2>/dev/null; true"
+StandardOutput=journal
+SyslogIdentifier=homelab-vault-close

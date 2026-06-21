@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Theme.AmbientTvLedMvp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">#226A5A</item>
+        <item name="colorPrimaryVariant">#18493F</item>
+        <item name="colorSecondary">#D97A27</item>
+        <item name="android:statusBarColor">#101412</item>
+        <item name="android:navigationBarColor">#101412</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="23">false</item>
+    </style>
+</resources>

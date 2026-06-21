@@ -1,0 +1,5 @@
+[AutoRun]
+open=Start Vault.bat
+icon=vault.ico
+label=Homelab Vault
+action=Abrir painel do Homelab Vault

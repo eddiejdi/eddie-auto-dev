@@ -1,0 +1,12 @@
+[Unit]
+Description=Renova token Tuya a cada 90 minutos
+After=network-online.target
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=90min
+Persistent=true
+Unit=tuya-token-renewer.service
+
+[Install]
+WantedBy=timers.target

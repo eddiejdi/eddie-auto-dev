@@ -1,0 +1,18 @@
+[Unit]
+Description=BN Acervo Investigation API (user)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/myClaude
+Environment=BN_ACERVO_DEBUG_LOG_PATH=/tmp/bn-acervo-dev-8513.log
+Environment=BN_ACERVO_HTTP_TRUST_ENV=false
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/usr/bin/env python3 -m uvicorn specialized_agents.api:app --host 0.0.0.0 --port 8513
+Restart=always
+RestartSec=5
+StandardOutput=append:/tmp/bn-acervo-dev-8513.log
+StandardError=append:/tmp/bn-acervo-dev-8513.log
+
+[Install]
+WantedBy=default.target

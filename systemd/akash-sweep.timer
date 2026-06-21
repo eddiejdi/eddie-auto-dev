@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer para Akash AKT sweep diário (08:00 BRT / 11:00 UTC)
+Requires=akash-sweep.service
+
+[Timer]
+OnCalendar=*-*-* 11:00:00 UTC
+RandomizedDelaySec=300
+Persistent=true
+
+[Install]
+WantedBy=timers.target
