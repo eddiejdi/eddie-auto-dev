@@ -461,6 +461,7 @@ class TestSignedRequestTimestampRecovery:
             patch("kucoin_api._sync_server_time_offset") as mock_sync,
             patch("kucoin_api.rate_limit"),
             patch("kucoin_api.requests.request", side_effect=[invalid_ts, success]) as mock_request,
+            patch("kucoin_api._send_telegram_alert") as mock_tg,
         ):
             result = kucoin_api.place_market_order("BTC-USDT", "sell", size=0.001)
 
@@ -471,6 +472,10 @@ class TestSignedRequestTimestampRecovery:
         }
         assert mock_request.call_count == 2
         mock_sync.assert_called_once_with(force_refresh=True)
+        mock_tg.assert_called_once()
+        message = mock_tg.call_args.args[0]
+        assert "SELL" in message
+        assert "order-123" in message
 
     def test_signed_request_devolve_ultima_resposta_quando_timestamp_permanece_invalido(self) -> None:
         invalid_ts = MagicMock()
@@ -485,12 +490,17 @@ class TestSignedRequestTimestampRecovery:
             patch("kucoin_api._sync_server_time_offset") as mock_sync,
             patch("kucoin_api.rate_limit"),
             patch("kucoin_api.requests.request", side_effect=[invalid_ts, invalid_ts, invalid_ts]),
+            patch("kucoin_api._send_telegram_alert") as mock_tg,
         ):
             result = kucoin_api.place_market_order("BTC-USDT", "sell", size=0.001)
 
         assert result["success"] is False
         assert result["error"] == "Invalid KC-API-TIMESTAMP"
         assert mock_sync.call_count == 2
+        mock_tg.assert_called_once()
+        message = mock_tg.call_args.args[0]
+        assert "FALHOU" in message
+        assert "Invalid KC-API-TIMESTAMP" in message
 
 
 # ================ TESTES: Withdrawal / Deposit / Fees ================

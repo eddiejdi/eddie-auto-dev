@@ -121,6 +121,36 @@ def _send_telegram_alert(message: str) -> None:
         logger.warning(f"⚠️ Failed to send Telegram alert: {e}")
 
 
+def _format_market_order_notification(
+    *,
+    symbol: str,
+    side: str,
+    funds: float | None = None,
+    size: float | None = None,
+    order_id: str | None = None,
+    error: str | None = None,
+) -> str:
+    """Monta mensagem Telegram para execução de ordem de mercado."""
+    action = side.upper()
+    icon = "🟢" if action == "BUY" else "🔴" if action == "SELL" else "📤"
+    status = "EXECUTADA" if not error else "FALHOU"
+    lines = [
+        f"{icon} *BTC Trading Agent — Ordem {status}*",
+        "",
+        f"• Ação: `{action}`",
+        f"• Par: `{symbol}`",
+    ]
+    if funds is not None:
+        lines.append(f"• Valor: `{float(funds):.2f} USDT`")
+    if size is not None:
+        lines.append(f"• Quantidade: `{float(size):.8f}`")
+    if order_id:
+        lines.append(f"• Order ID: `{order_id}`")
+    if error:
+        lines.append(f"• Erro: `{error[:180]}`")
+    return "\n".join(lines)
+
+
 def _load_credentials():
     """Carrega credenciais KuCoin com prioridade: Agent Secrets > env vars."""
     try:
@@ -767,10 +797,29 @@ def place_market_order(symbol: str, side: str, funds: float = None,
     result = r.json()
     if result.get("code") != "200000":
         logger.error(f"❌ Order failed: {result}")
-        return {"success": False, "error": result.get("msg", "Unknown"), "raw": result}
+        error_msg = result.get("msg", "Unknown")
+        _send_telegram_alert(
+            _format_market_order_notification(
+                symbol=symbol,
+                side=side,
+                funds=funds,
+                size=size,
+                error=error_msg,
+            )
+        )
+        return {"success": False, "error": error_msg, "raw": result}
 
     order_id = result.get("data", {}).get("orderId")
     logger.info(f"✅ Order placed: {order_id}")
+    _send_telegram_alert(
+        _format_market_order_notification(
+            symbol=symbol,
+            side=side,
+            funds=funds,
+            size=size,
+            order_id=order_id,
+        )
+    )
 
     return {"success": True, "orderId": order_id, "raw": result}
 
