@@ -680,7 +680,41 @@
           },
           "unit": "currencyUSD"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Total PnL"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 3
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "yellow",
+                  "mode": "fixed"
+                }
+              },
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "fill": "solid"
+                }
+              },
+              {
+                "id": "displayName",
+                "value": "⚡ Total"
+              }
+            ]
+          }
+        ]
       },
       "gridPos": {
         "h": 8,
@@ -739,6 +773,17 @@
           "rawQuery": true,
           "rawSql": "WITH bucketed AS (\n  SELECT\n    to_timestamp($__unixEpochGroup(timestamp, $__interval)) AS \"time\",\n    COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_delta\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND profile = 'shadow'\n    AND 'shadow' IN (${profile:sqlstring})\n    AND timestamp BETWEEN $__unixEpochFrom() AND $__unixEpochTo()\n  GROUP BY 1\n),\npoints AS (\n  SELECT to_timestamp($__unixEpochFrom()) AS \"time\", 0::numeric(12,4) AS pnl_delta, 0 AS sort_key\n  UNION ALL SELECT \"time\", pnl_delta, 1 AS sort_key FROM bucketed\n  UNION ALL SELECT to_timestamp($__unixEpochTo()) AS \"time\", 0::numeric(12,4) AS pnl_delta, 2 AS sort_key\n)\nSELECT \"time\",\n  SUM(pnl_delta) OVER (ORDER BY \"time\", sort_key)::numeric(12,4) AS \"Shadow PnL\"\nFROM points ORDER BY 1, sort_key",
           "refId": "C"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH bucketed AS (\n  SELECT\n    to_timestamp($__unixEpochGroup(timestamp, $__interval)) AS \"time\",\n    COALESCE(SUM(pnl), 0)::numeric(12,4) AS pnl_delta\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND profile IN (${profile:sqlstring})\n    AND timestamp BETWEEN $__unixEpochFrom() AND $__unixEpochTo()\n  GROUP BY 1\n),\npoints AS (\n  SELECT to_timestamp($__unixEpochFrom()) AS \"time\", 0::numeric(12,4) AS pnl_delta, 0 AS sort_key\n  UNION ALL SELECT \"time\", pnl_delta, 1 AS sort_key FROM bucketed\n  UNION ALL SELECT to_timestamp($__unixEpochTo()) AS \"time\", 0::numeric(12,4) AS pnl_delta, 2 AS sort_key\n)\nSELECT \"time\",\n  SUM(pnl_delta) OVER (ORDER BY \"time\", sort_key)::numeric(12,4) AS \"Total PnL\"\nFROM points ORDER BY 1, sort_key",
+          "refId": "D"
         }
       ],
       "title": "📊 PnL no Período",
