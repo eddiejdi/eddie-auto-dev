@@ -185,12 +185,14 @@ CAUTION_PATTERNS: list[tuple[str, str]] = [
 # Padrões de credenciais hardcoded em comandos (segurança)
 # ---------------------------------------------------------------------------
 HARDCODED_SECRET_PATTERNS: list[str] = [
-    r"password\s*=\s*['\"][^'\"]{6,}['\"]",     # password='...' hardcoded
-    r"secret\s*=\s*['\"][^'\"]{10,}['\"]",       # secret='...' hardcoded
-    r"api_key\s*=\s*['\"][^'\"]{10,}['\"]",      # api_key='...' hardcoded
+    # \n excluído de [^...] para não fazer match através de múltiplas linhas (falso positivo
+    # em bash/SQL com comparações de variáveis seguidas de echo/comandos na linha seguinte)
+    r"password\s*=\s*['\"][^'\"\n]{6,}['\"]",     # password='...' hardcoded
+    r"secret\s*=\s*['\"][^'\"\n]{10,}['\"]",       # secret='...' hardcoded
+    r"api_key\s*=\s*['\"][^'\"\n]{10,}['\"]",      # api_key='...' hardcoded
     r"token\s*=\s*['\"][a-zA-Z0-9_\-]{20,}['\"]",  # token='...' hardcoded
-    r"sk-[a-zA-Z0-9]{20,}",                       # OpenAI/OpenRouter tokens
-    r"ak-[a-zA-Z0-9\-]{15,}",                     # Authentik tokens em comandos
+    r"sk-[a-zA-Z0-9]{20,}",                         # OpenAI/OpenRouter tokens
+    r"ak-[a-zA-Z0-9\-]{15,}",                       # Authentik tokens em comandos
 ]
 
 # ---------------------------------------------------------------------------

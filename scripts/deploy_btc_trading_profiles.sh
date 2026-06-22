@@ -77,14 +77,24 @@ require_secret_key() {
   local conservative_service="crypto-agent@BTC_USDT_conservative.service"
   local runtime_env=""
   local dot_env="${TARGET_DIR}/.env"
+  # Arquivo criado quando migramos SECRETS_AGENT_API_KEY de inline para EnvironmentFile=
+  local dedicated_env="/etc/crypto-agent/secrets-api.env"
+  local key_name="SECRETS_AGENT_API_KEY"
 
-  if [[ -f "${env_file}" ]] && grep -Eq '^SECRETS_AGENT_API_KEY=.+' "${env_file}"; then
+  if [[ -f "${env_file}" ]] && grep -Eq "^${key_name}=.+" "${env_file}"; then
     return 0
   fi
 
+  # EnvironmentFile= dedicado (systemctl show -p Environment não expande arquivos)
+  if [[ -f "${dedicated_env}" ]] && grep -Eq "^${key_name}=.+" "${dedicated_env}"; then
+    echo "ℹ️ ${key_name} validada via ${dedicated_env}"
+    return 0
+  fi
+
+  # Fallback: Environment= inline (configurações antigas)
   runtime_env="$(sudo systemctl show "${conservative_service}" -p Environment --value 2>/dev/null || true)"
-  if [[ "${runtime_env}" == *"SECRETS_AGENT_API_KEY="* ]]; then
-    echo "ℹ️ SECRETS_AGENT_API_KEY validada via systemd drop-in (${conservative_service})"
+  if [[ "${runtime_env}" == *"${key_name}="* ]]; then
+    echo "ℹ️ ${key_name} validada via systemd drop-in (${conservative_service})"
     return 0
   fi
 
