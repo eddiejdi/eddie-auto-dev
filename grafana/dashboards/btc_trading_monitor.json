@@ -5458,7 +5458,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "max by(profile)((btc_trading_equity_change_today_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_today_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_equity_change_today_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_today_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
           "legendFormat": "Hoje %",
           "refId": "A"
         },
@@ -5467,7 +5467,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "max by(profile)((btc_trading_equity_change_today_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_today_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_equity_change_today_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_today_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
           "legendFormat": "USDT",
           "refId": "B"
         }
@@ -5558,7 +5558,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "max by(profile)((btc_trading_equity_change_yesterday_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_yesterday_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_equity_change_yesterday_pct{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_yesterday_pct{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
           "legendFormat": "Ontem %",
           "refId": "A"
         },
@@ -5567,7 +5567,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "max by(profile)((btc_trading_equity_change_yesterday_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_yesterday_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max((btc_trading_equity_change_yesterday_usdt{coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_equity_change_yesterday_usdt{exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
           "legendFormat": "USDT",
           "refId": "B"
         }
