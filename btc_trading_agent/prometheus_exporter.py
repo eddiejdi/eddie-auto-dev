@@ -19,6 +19,7 @@ from datetime import datetime
 from typing import Dict, Optional
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
 from profile_rules import validate_profile_for_symbol
+from position_reconstruction import reconstruct_open_buys, summarize_open_buys
 
 try:
     import psycopg2
@@ -238,17 +239,22 @@ class MetricsCollector:
             cur.execute("""
                 WITH bounds AS (
                     SELECT
-                        EXTRACT(EPOCH FROM date_trunc('day', NOW()))              AS today_start,
-                        EXTRACT(EPOCH FROM date_trunc('day', NOW() - INTERVAL '1 day')) AS yday_start
+                        EXTRACT(EPOCH FROM date_trunc('day', NOW()))                        AS today_start,
+                        EXTRACT(EPOCH FROM date_trunc('day', NOW() - INTERVAL '1 day'))     AS yday_start,
+                        EXTRACT(EPOCH FROM date_trunc('day', NOW() - INTERVAL '2 days'))    AS d2_start
                 )
                 SELECT
-                    (SELECT equity_usdt FROM btc.exchange_snapshots
-                     WHERE timestamp >= b.today_start ORDER BY timestamp ASC  LIMIT 1) AS today_open,
-                    (SELECT equity_usdt FROM btc.exchange_snapshots
-                     ORDER BY timestamp DESC LIMIT 1)                               AS today_close,
+                    -- today_open = fechamento de ontem (último snapshot antes de hoje),
+                    -- evita distorção quando o exporter ficou offline parte do dia
                     (SELECT equity_usdt FROM btc.exchange_snapshots
                      WHERE timestamp >= b.yday_start AND timestamp < b.today_start
-                     ORDER BY timestamp ASC  LIMIT 1)                               AS yday_open,
+                     ORDER BY timestamp DESC LIMIT 1)                               AS today_open,
+                    (SELECT equity_usdt FROM btc.exchange_snapshots
+                     ORDER BY timestamp DESC LIMIT 1)                               AS today_close,
+                    -- yday_open = fechamento de anteontem
+                    (SELECT equity_usdt FROM btc.exchange_snapshots
+                     WHERE timestamp >= b.d2_start AND timestamp < b.yday_start
+                     ORDER BY timestamp DESC LIMIT 1)                               AS yday_open,
                     (SELECT equity_usdt FROM btc.exchange_snapshots
                      WHERE timestamp >= b.yday_start AND timestamp < b.today_start
                      ORDER BY timestamp DESC LIMIT 1)                               AS yday_close
