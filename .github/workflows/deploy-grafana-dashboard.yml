@@ -70,7 +70,7 @@ jobs:
     - name: Run dashboard deploy
       run: "if [ -z \"$GRAFANA_USER\" ] || [ -z \"$GRAFANA_PASS\" ]; then\n  echo\
         \ \"Missing GRAFANA_USER/GRAFANA_PASS secrets\" >&2\n  exit 1\nfi\npython3\
-        \ populate_grafana_dashboard.py\n"
+        \ scripts/misc/populate_grafana_dashboard.py\n"
   selenium-e2e:
     name: Selenium E2E
     uses: ./.github/workflows/selenium-tests.yml
