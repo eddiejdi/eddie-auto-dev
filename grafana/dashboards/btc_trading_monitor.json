@@ -5699,6 +5699,19 @@
     "list": [
       {
         "current": {
+          "text": "Homelab",
+          "value": "192.168.15.2"
+        },
+        "includeAll": false,
+        "label": "Servidor",
+        "name": "servidor",
+        "options": [],
+        "query": "Homelab : 192.168.15.2,Orange Pi : 192.168.15.166,Localhost : localhost",
+        "type": "custom",
+        "valuesFormat": "csv"
+      },
+      {
+        "current": {
           "text": "BTC-USDT",
           "value": "BTC-USDT"
         },
