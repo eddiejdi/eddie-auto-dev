@@ -1,19 +1,19 @@
 # CMDB Baseline
 
-- Generated at: `2026-06-20T15:44:46.336165+00:00`
+- Generated at: `2026-06-23T01:36:57.742479+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `146`
-- Critical services flagged for MVP: `59`
+- Repo services discovered: `122`
+- Critical services flagged for MVP: `50`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
-- `identity`: 7
-- `monitoring`: 13
-- `network`: 16
-- `operations`: 84
+- `identity`: 2
+- `monitoring`: 12
+- `network`: 13
+- `operations`: 69
 - `storage`: 23
 - `trading`: 3
 
@@ -23,13 +23,8 @@
 
 ## MVP critical services
 
-- `nextcloud` (identity, compose) from `forks/rpa4all-nextcloud-authentik/docker-compose.yml`
-- `nextcloud-db` (identity, compose) from `forks/rpa4all-nextcloud-authentik/docker-compose.yml`
-- `nextcloud-redis` (identity, compose) from `forks/rpa4all-nextcloud-authentik/docker-compose.yml`
 - `open-webui` (identity, compose) from `tools/authentik_management/configs/docker-compose.override.yml`
 - `vaultwarden` (identity, compose) from `tools/vaultwarden/docker-compose.yml`
-- `homelab-vault-backup.service` (identity, systemd) from `systemd/homelab-vault-backup.service`
-- `homelab-vault-close.service` (identity, systemd) from `systemd/homelab-vault-close.service`
 - `cadvisor` (monitoring, compose) from `docker/docker-compose-exporters.yml`
 - `grafana` (monitoring, compose) from `tools/authentik_management/configs/docker-compose.override.yml`
 - `node-exporter` (monitoring, compose) from `docker/docker-compose-exporters.yml`
@@ -39,17 +34,13 @@
 - `eddie_central_extended_metrics.service` (monitoring, systemd) from `systemd/eddie_central_extended_metrics.service`
 - `grafana-selfheal.service` (monitoring, systemd) from `systemd/grafana-selfheal.service`
 - `job-monitor.service` (monitoring, systemd) from `systemd/job-monitor.service`
-- `monitoring-containers-bootstrap.service` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.service`
 - `rss-sentiment-exporter.service` (monitoring, systemd) from `systemd/rss-sentiment-exporter.service`
 - `storj-exporter.service` (monitoring, systemd) from `deploy/storj-exporter.service`
 - `tape-component-quality-exporter.service` (monitoring, systemd) from `systemd/tape-component-quality-exporter.service`
-- `proxy` (network, compose) from `deploy/cmdb/docker-compose.yml`
 - `cloudflared-named@.service` (network, systemd) from `tools/tunnels/cloudflared-named@.service`
 - `cloudflared.service` (network, systemd) from `tools/tunnels/cloudflared/cloudflared.service`
 - `dhcp-selfheal.service` (network, systemd) from `systemd/dhcp-selfheal.service`
 - `homelab-lan-gateway.service` (network, systemd) from `deploy/vpn/homelab-lan-gateway.service`
-- `iot-vpn-bypass-watchdog.service` (network, systemd) from `systemd/iot-vpn-bypass-watchdog.service`
-- `iot-vpn-bypass-watchdog.timer` (network, systemd) from `systemd/iot-vpn-bypass-watchdog.timer`
 - `ipv6-proxy.service` (network, systemd) from `systemd/ipv6-proxy.service`
 - `localtunnel@.service` (network, systemd) from `tools/tunnels/localtunnel@.service`
 - `pihole-ipv6-dns-fix.service` (network, systemd) from `systemd/pihole-ipv6-dns-fix.service`
@@ -63,6 +54,15 @@
 - `disk-clean.timer` (storage, systemd) from `systemd/disk-clean.timer`
 - `disk-spindown.service` (storage, systemd) from `tools/homelab/disk-spindown.service`
 - `homelab-disk-backup.service` (storage, systemd) from `tools/backup/homelab-disk-backup.service`
+- `homelab-tape-log-drain-nextcloud.service` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.service`
+- `homelab-tape-log-drain-nextcloud.timer` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.timer`
+- `homelab-tape-log-drain-sg1.service` (storage, systemd) from `systemd/homelab-tape-log-drain-sg1.service`
+- `homelab-tape-log-drain-sg1.timer` (storage, systemd) from `systemd/homelab-tape-log-drain-sg1.timer`
+- `homelab-tape-logrotate.service` (storage, systemd) from `systemd/homelab-tape-logrotate.service`
+- `homelab-tape-logrotate.timer` (storage, systemd) from `systemd/homelab-tape-logrotate.timer`
+- `ltfs-backup-catalog.service` (storage, systemd) from `systemd/ltfs-backup-catalog.service`
+- `ltfs-backup-catalog.timer` (storage, systemd) from `systemd/ltfs-backup-catalog.timer`
+- `ltfs-deep-recovery.service` (storage, systemd) from `systemd/ltfs-deep-recovery.service`
 
 ## Serviços anotados manualmente
 
