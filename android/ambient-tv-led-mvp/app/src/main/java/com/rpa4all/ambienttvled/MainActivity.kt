@@ -11,15 +11,19 @@ import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
 import com.rpa4all.ambienttvled.capture.ScreenCaptureService
 import com.rpa4all.ambienttvled.databinding.ActivityMainBinding
+import com.rpa4all.ambienttvled.light.HomeAssistantLightController
 import com.rpa4all.ambienttvled.light.SimulatedLightController
 import com.rpa4all.ambienttvled.model.RgbColor
+import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var projectionManager: MediaProjectionManager
     private val simulatedController = SimulatedLightController()
+    private val haController = HomeAssistantLightController(AppConfig.homeAssistantConfig)
 
     private val stateReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -83,6 +87,30 @@ class MainActivity : AppCompatActivity() {
             binding.colorText.text = "Cor: ${randomColor.toHexString()}"
             binding.statusText.text = "Status: Simulacao local"
             binding.controllerText.text = "Controlador: ${simulatedController.name}"
+        }
+
+        binding.volumeUpButton.setOnClickListener {
+            binding.volumeStatusText.text = "Volume: enviando Vol+ ao HA..."
+            lifecycleScope.launch {
+                val result = haController.volumeUp()
+                binding.volumeStatusText.text = if (result.isSuccess) {
+                    "Volume: Vol+ OK (${AppConfig.homeAssistantConfig.volumeEntityId})"
+                } else {
+                    "Volume: ERRO — ${result.exceptionOrNull()?.message}"
+                }
+            }
+        }
+
+        binding.volumeDownButton.setOnClickListener {
+            binding.volumeStatusText.text = "Volume: enviando Vol- ao HA..."
+            lifecycleScope.launch {
+                val result = haController.volumeDown()
+                binding.volumeStatusText.text = if (result.isSuccess) {
+                    "Volume: Vol- OK (${AppConfig.homeAssistantConfig.volumeEntityId})"
+                } else {
+                    "Volume: ERRO — ${result.exceptionOrNull()?.message}"
+                }
+            }
         }
     }
 

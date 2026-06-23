@@ -16,6 +16,7 @@ import android.os.SystemClock
 import com.rpa4all.ambienttvled.AppConfig
 import com.rpa4all.ambienttvled.ControllerMode
 import com.rpa4all.ambienttvled.color.FrameColorAnalyzer
+import com.rpa4all.ambienttvled.light.HomeAssistantLightController
 import com.rpa4all.ambienttvled.light.LightController
 import com.rpa4all.ambienttvled.light.SimulatedLightController
 import com.rpa4all.ambienttvled.light.TuyaCloudLightController
@@ -106,6 +107,9 @@ class ScreenCaptureService : Service() {
             ControllerMode.TUYA_CLOUD -> TuyaCloudLightController(
                 config = AppConfig.tuyaConfig,
                 commandProfile = TuyaCommandProfile.defaultRgbStrip(),
+            )
+            ControllerMode.HOME_ASSISTANT -> HomeAssistantLightController(
+                config = AppConfig.homeAssistantConfig,
             )
         }
 

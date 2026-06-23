@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -15,6 +17,12 @@ android {
         versionName = "0.1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val localProps = rootProject.file("local.properties")
+        val props = Properties()
+        if (localProps.exists()) props.load(localProps.inputStream())
+        val vaultBearer = props.getProperty("vault.bearer", "")
+        buildConfigField("String", "VAULT_BEARER", "\"$vaultBearer\"")
     }
 
     buildTypes {
