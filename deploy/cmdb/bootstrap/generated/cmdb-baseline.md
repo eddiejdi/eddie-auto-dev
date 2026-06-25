@@ -1,10 +1,10 @@
 # CMDB Baseline
 
-- Generated at: `2026-06-23T01:50:12.064811+00:00`
+- Generated at: `2026-06-25T16:45:40.135958+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
 - Repo services discovered: `122`
-- Critical services flagged for MVP: `50`
+- Critical services flagged for MVP: `122`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
@@ -13,9 +13,7 @@
 - `identity`: 2
 - `monitoring`: 12
 - `network`: 13
-- `operations`: 69
-- `storage`: 23
-- `trading`: 3
+- `storage`: 95
 
 ## NetBox seed candidates
 
@@ -50,19 +48,19 @@
 - `rpa4all-ddns-server.service` (network, systemd) from `deploy/vpn/rpa4all-ddns-server.service`
 - `rpa4all-vpn-ddns.service` (network, systemd) from `deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service`
 - `wireguard-nat.service` (network, systemd) from `deploy/vpn/wireguard-nat.service`
-- `disk-clean.service` (storage, systemd) from `systemd/disk-clean.service`
-- `disk-clean.timer` (storage, systemd) from `systemd/disk-clean.timer`
-- `disk-spindown.service` (storage, systemd) from `tools/homelab/disk-spindown.service`
-- `homelab-disk-backup.service` (storage, systemd) from `tools/backup/homelab-disk-backup.service`
-- `homelab-tape-log-drain-nextcloud.service` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.service`
-- `homelab-tape-log-drain-nextcloud.timer` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.timer`
-- `homelab-tape-log-drain-sg1.service` (storage, systemd) from `systemd/homelab-tape-log-drain-sg1.service`
-- `homelab-tape-log-drain-sg1.timer` (storage, systemd) from `systemd/homelab-tape-log-drain-sg1.timer`
-- `homelab-tape-logrotate.service` (storage, systemd) from `systemd/homelab-tape-logrotate.service`
-- `homelab-tape-logrotate.timer` (storage, systemd) from `systemd/homelab-tape-logrotate.timer`
-- `ltfs-backup-catalog.service` (storage, systemd) from `systemd/ltfs-backup-catalog.service`
-- `ltfs-backup-catalog.timer` (storage, systemd) from `systemd/ltfs-backup-catalog.timer`
-- `ltfs-deep-recovery.service` (storage, systemd) from `systemd/ltfs-deep-recovery.service`
+- `mail-db` (storage, compose) from `docker/docker-compose.simple-mail.yml`
+- `mail-server` (storage, compose) from `docker/docker-compose.simple-mail.yml`
+- `mailu-backend` (storage, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-db` (storage, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-dovecot` (storage, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-frontend` (storage, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-postfix` (storage, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-redis` (storage, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-roundcube` (storage, compose) from `docker/docker-compose.mailu.yml`
+- `nginx` (storage, compose) from `docker/docker-compose.simple-mail.yml`
+- `ntopng` (storage, compose) from `docker/docker-compose.ntopng.yml`
+- `ntopng-redis` (storage, compose) from `docker/docker-compose.ntopng.yml`
+- `opensearch-dashboards` (storage, compose) from `docker/docker-compose.opensearch.yml`
 
 ## Serviços anotados manualmente
 
