@@ -218,6 +218,24 @@ def detect_container_public_ip(container_name: str, urls: list[str]) -> str | No
     return None
 
 
+def select_safe_expected_external_address(
+    container_address: str | None,
+    config_address: str | None,
+    default_address: str,
+) -> str:
+    """Escolhe o endereco externo esperado mais confiavel.
+
+    Prioriza enderecos efetivos em runtime (ADDRESS do container e
+    contact.external-address do config.yaml) antes de cair para o default
+    estatico. Retorna o primeiro candidato nao-vazio na ordem de prioridade.
+    """
+
+    for candidate in (container_address, config_address):
+        if candidate:
+            return candidate
+    return default_address
+
+
 class StorjHealthChecker:
     """Executa checks de saude e acoes de self-heal para Storj."""
 
@@ -319,11 +337,18 @@ class StorjHealthChecker:
         if not node.dynamic_public_ip:
             return node.expected_external_address
         public_ip = detect_container_public_ip(node.container_name, node.public_ip_urls)
-        if not public_ip:
-            public_ip = detect_public_ip(node.public_ip_urls)
         if public_ip:
             return f"{public_ip}:{node.probe_port}"
-        return node.expected_external_address
+        # Em topologia macvlan + VPN o host sai com IP publico DIFERENTE do
+        # container; usar detect_public_ip() do host gravaria um ADDRESS errado
+        # e geraria address_drift falso. Quando a deteccao pelo container falha,
+        # reutiliza o endereco efetivo (ADDRESS do container / config.yaml)
+        # antes de cair para o default estatico — nunca o IP do host.
+        return select_safe_expected_external_address(
+            self.read_container_address(node.container_name),
+            self.read_config_external_address(node.config_path),
+            node.expected_external_address,
+        )
 
     def _record_action(self, state: StorjNodeState, action: str) -> None:
         """Atualiza contadores de acoes no estado."""
@@ -390,6 +415,24 @@ class StorjHealthChecker:
             return None
 
         issues = set(state.last_issues)
+
+        # Falha do caminho host->container (macvlan shim/proxy): a API local
+        # esta inacessivel (api_down), porem o container continua em execucao
+        # — detectavel porque `docker inspect` (lado host) ainda retorna o
+        # ADDRESS efetivo. Reiniciar o container NAO restaura o host shim
+        # (IP/rota do storj-host0); o correto e reiniciar o host_shim_service
+        # primeiro (barato, idempotente e nao-disruptivo) antes de escalar
+        # para restart_container. O ACTION_COOLDOWN evita loops e da tempo de
+        # recuperacao (warmup de ARP). Se o shim ja foi a ultima acao e o
+        # problema persiste, o fluxo abaixo escala normalmente.
+        if (
+            "api_down" in issues
+            and node.host_shim_service
+            and state.container_address is not None
+            and state.last_action != "restart_host_shim_service"
+        ):
+            return "restart_host_shim_service"
+
         if "address_drift" in issues:
             if node.sync_public_address_command and state.last_action != "sync_public_address":
                 return "sync_public_address"
