@@ -435,6 +435,56 @@ def test_decide_action_prefers_public_address_sync_on_drift(default_node: StorjN
     assert action == "sync_public_address"
 
 
+def test_decide_action_restarts_shim_when_api_down_but_container_up(
+    default_node: StorjNodeDef,
+) -> None:
+    """api_down com container em execucao => falha do host shim, reinicia o shim primeiro."""
+
+    checker = StorjHealthChecker([default_node], dry_run=True)
+    state = StorjNodeState(
+        consecutive_failures=2,
+        last_issues=["api_down", "port_closed"],
+        container_address="191.202.237.52:28967",
+    )
+
+    action = checker.decide_action(default_node, state)
+
+    assert action == "restart_host_shim_service"
+
+
+def test_decide_action_skips_shim_when_container_down(default_node: StorjNodeDef) -> None:
+    """api_down sem container (docker inspect falhou) => nao tenta shim, escala container."""
+
+    checker = StorjHealthChecker([default_node], dry_run=True)
+    state = StorjNodeState(
+        consecutive_failures=default_node.container_restart_threshold,
+        last_issues=["api_down"],
+        container_address=None,
+    )
+
+    action = checker.decide_action(default_node, state)
+
+    assert action == "restart_container"
+
+
+def test_decide_action_escalates_after_shim_restart_did_not_recover(
+    default_node: StorjNodeDef,
+) -> None:
+    """Se o shim ja foi a ultima acao e api_down persiste, escala para restart_container."""
+
+    checker = StorjHealthChecker([default_node], dry_run=True)
+    state = StorjNodeState(
+        consecutive_failures=default_node.container_restart_threshold,
+        last_issues=["api_down", "port_closed"],
+        container_address="191.202.237.52:28967",
+        last_action="restart_host_shim_service",
+    )
+
+    action = checker.decide_action(default_node, state)
+
+    assert action == "restart_container"
+
+
 def test_perform_action_respects_rate_limit(default_node: StorjNodeDef) -> None:
     """Bloqueia novas acoes quando o limite horario foi excedido."""
 

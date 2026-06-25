@@ -1,20 +1,18 @@
 {
-  "generated_at": "2026-06-23T01:50:12.064811+00:00",
-  "repo_root": "/tmp/eddie-auto-dev-autorpa",
+  "generated_at": "2026-06-25T16:45:40.135958+00:00",
+  "repo_root": "/tmp/storj-fix",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
     "repo_services": 122,
-    "critical_services": 50,
+    "critical_services": 122,
     "domains": {
       "identity": 2,
       "monitoring": 12,
       "network": 13,
-      "operations": 69,
-      "storage": 23,
-      "trading": 3
+      "storage": 95
     }
   },
   "netbox_devices": [
@@ -256,555 +254,243 @@
     },
     {
       "name": "mail-db",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.simple-mail.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "mail-server",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.simple-mail.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "mailu-backend",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "mailu-db",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "mailu-dovecot",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "mailu-frontend",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "mailu-postfix",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "mailu-redis",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "mailu-roundcube",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.mailu.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "nginx",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.simple-mail.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "ntopng",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.ntopng.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "ntopng-redis",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.ntopng.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "opensearch-dashboards",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.opensearch.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "opensearch-node1",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.opensearch.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "postgres",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.email-simple.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "printshare",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "deploy/printshare/docker-compose.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "roundcube",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.simple-mail.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "wikijs",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.wikijs.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "wikijs-db",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "compose",
       "source": "docker/docker-compose.wikijs.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "auto_validate.service",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "systemd",
       "source": "deploy/auto_validate.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "autonomous_remediator.service",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "systemd",
       "source": "tools/systemd/autonomous_remediator.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "candle-collector.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/candle-collector.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "candle-collector.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/candle-collector.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "check_projects.service",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "systemd",
       "source": "systemd/check_projects.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "check_projects.timer",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "systemd",
       "source": "systemd/check_projects.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "clear-agent@.service",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "systemd",
       "source": "systemd/clear-agent@.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "clear-trading-agent.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/clear-trading-agent.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "coordinator.service",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "systemd",
       "source": "systemd/coordinator.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "crypto-agent@.service",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "systemd",
       "source": "systemd/crypto-agent@.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "diretor.service",
-      "domain": "operations",
+      "domain": "storage",
       "kind": "systemd",
       "source": "systemd/diretor.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "eddie-calendar.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/eddie-calendar.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "eddie-expurgo.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/eddie-expurgo.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "eddie-telegram-bot.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/eddie-telegram-bot.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "eddie-tray-agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/systemd/eddie-tray-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "eddie-whatsapp-bot.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/eddie-whatsapp-bot.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "final-boot-status-agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/systemd/final-boot-status-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "gdrive-agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/systemd/gdrive-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "github-agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/github-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "homelab-dashboard.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/homelab-dashboard.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "lto6-checkpoint-drain.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/lto6-checkpoint-drain.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "lto6-checkpoint-recover.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/lto6-checkpoint-recover.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "lto6-selfheal.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/lto6-selfheal.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "lto6-selfheal.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/lto6-selfheal.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "lto6-smb-proof-selfheal.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/selfheal/lto6-smb-proof-selfheal.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "marketing-api.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-api.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "marketing-daily-report.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-daily-report.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "marketing-daily-report.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-daily-report.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "marketing-email-drip.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-email-drip.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "marketing-email-drip.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-email-drip.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "marketing-x-posts.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-x-posts.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "marketing-x-posts.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/marketing-x-posts.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "ollama-finetune.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-finetune.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "ollama-finetune.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-finetune.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "ollama-gpu-coordinator.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-gpu-coordinator.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "ollama-gpu-selfheal.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/ollama-gpu-selfheal.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "ollama-gpu1.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-gpu1.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "ollama-warmup.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-warmup.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "ollama-warmup.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/ollama-warmup.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "post-boot-check.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/post-boot-check.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "printshare.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "deploy/printshare/printshare.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "python-training.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/python-training.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "python-training.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/python-training.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "rag-reindex.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/rag-reindex.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "rag-reindex.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/rag-reindex.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "review-service.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/systemd/review-service.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "rpa4all-validation.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/rpa4all-validation.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "rpa4all-validation.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/rpa4all-validation.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "secrets_agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/secrets_agent/secrets_agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "specialized_agents-dashboard.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/specialized_agents-dashboard.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "workstation-win11l-http@.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/workstation-win11l-http@.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "workstation-win11l-rdp@.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/workstation-win11l-rdp@.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "x-agent.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "tools/x_agent/x-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
       "name": "disk-clean.service",
@@ -827,6 +513,78 @@
       "domain": "storage",
       "kind": "systemd",
       "source": "tools/homelab/disk-spindown.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "eddie-calendar.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/eddie-calendar.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "eddie-expurgo.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/eddie-expurgo.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "eddie-telegram-bot.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/eddie-telegram-bot.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "eddie-tray-agent.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "tools/systemd/eddie-tray-agent.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "eddie-whatsapp-bot.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/eddie-whatsapp-bot.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "final-boot-status-agent.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "tools/systemd/final-boot-status-agent.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "gdrive-agent.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "tools/systemd/gdrive-agent.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "github-agent.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/github-agent.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "homelab-dashboard.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/homelab-dashboard.service",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -951,6 +709,22 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "lto6-checkpoint-drain.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/lto6-checkpoint-drain.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "lto6-checkpoint-recover.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/lto6-checkpoint-recover.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "lto6-drain-backups.service",
       "domain": "storage",
       "kind": "systemd",
@@ -963,6 +737,230 @@
       "domain": "storage",
       "kind": "systemd",
       "source": "systemd/lto6-drain-backups.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "lto6-selfheal.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/lto6-selfheal.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "lto6-selfheal.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/lto6-selfheal.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "lto6-smb-proof-selfheal.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "tools/selfheal/lto6-smb-proof-selfheal.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "marketing-api.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/marketing-api.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "marketing-daily-report.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/marketing-daily-report.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "marketing-daily-report.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/marketing-daily-report.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "marketing-email-drip.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/marketing-email-drip.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "marketing-email-drip.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/marketing-email-drip.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "marketing-x-posts.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/marketing-x-posts.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "marketing-x-posts.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/marketing-x-posts.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ollama-finetune.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ollama-finetune.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ollama-finetune.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ollama-finetune.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ollama-gpu-coordinator.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ollama-gpu-coordinator.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ollama-gpu-selfheal.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "tools/ollama-gpu-selfheal.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ollama-gpu1.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ollama-gpu1.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ollama-warmup.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ollama-warmup.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ollama-warmup.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ollama-warmup.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "post-boot-check.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/post-boot-check.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "printshare.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "deploy/printshare/printshare.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "python-training.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/python-training.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "python-training.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/python-training.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "rag-reindex.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/rag-reindex.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "rag-reindex.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/rag-reindex.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "review-service.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "tools/systemd/review-service.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "rpa4all-validation.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/rpa4all-validation.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "rpa4all-validation.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/rpa4all-validation.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "secrets_agent.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "tools/secrets_agent/secrets_agent.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "specialized_agents-dashboard.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/specialized_agents-dashboard.service",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -991,28 +989,28 @@
       "candidate_system": "NetBox service model"
     },
     {
-      "name": "candle-collector.service",
-      "domain": "trading",
+      "name": "workstation-win11l-http@.service",
+      "domain": "storage",
       "kind": "systemd",
-      "source": "systemd/candle-collector.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "source": "systemd/workstation-win11l-http@.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
-      "name": "candle-collector.timer",
-      "domain": "trading",
+      "name": "workstation-win11l-rdp@.service",
+      "domain": "storage",
       "kind": "systemd",
-      "source": "systemd/candle-collector.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "source": "systemd/workstation-win11l-rdp@.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     },
     {
-      "name": "clear-trading-agent.service",
-      "domain": "trading",
+      "name": "x-agent.service",
+      "domain": "storage",
       "kind": "systemd",
-      "source": "systemd/clear-trading-agent.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
+      "source": "tools/x_agent/x-agent.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
     }
   ],
   "mvp_focus": {
@@ -1213,6 +1211,216 @@
         "critical": true
       },
       {
+        "name": "mail-db",
+        "domain": "storage",
+        "source": "docker/docker-compose.simple-mail.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "mail-server",
+        "domain": "storage",
+        "source": "docker/docker-compose.simple-mail.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "mailu-backend",
+        "domain": "storage",
+        "source": "docker/docker-compose.mailu.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "mailu-db",
+        "domain": "storage",
+        "source": "docker/docker-compose.mailu.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "mailu-dovecot",
+        "domain": "storage",
+        "source": "docker/docker-compose.mailu.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "mailu-frontend",
+        "domain": "storage",
+        "source": "docker/docker-compose.mailu.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "mailu-postfix",
+        "domain": "storage",
+        "source": "docker/docker-compose.mailu.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "mailu-redis",
+        "domain": "storage",
+        "source": "docker/docker-compose.mailu.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "mailu-roundcube",
+        "domain": "storage",
+        "source": "docker/docker-compose.mailu.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "nginx",
+        "domain": "storage",
+        "source": "docker/docker-compose.simple-mail.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "ntopng",
+        "domain": "storage",
+        "source": "docker/docker-compose.ntopng.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "ntopng-redis",
+        "domain": "storage",
+        "source": "docker/docker-compose.ntopng.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "opensearch-dashboards",
+        "domain": "storage",
+        "source": "docker/docker-compose.opensearch.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "opensearch-node1",
+        "domain": "storage",
+        "source": "docker/docker-compose.opensearch.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "postgres",
+        "domain": "storage",
+        "source": "docker/docker-compose.email-simple.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "printshare",
+        "domain": "storage",
+        "source": "deploy/printshare/docker-compose.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "roundcube",
+        "domain": "storage",
+        "source": "docker/docker-compose.simple-mail.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "wikijs",
+        "domain": "storage",
+        "source": "docker/docker-compose.wikijs.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "wikijs-db",
+        "domain": "storage",
+        "source": "docker/docker-compose.wikijs.yml",
+        "kind": "compose",
+        "critical": true
+      },
+      {
+        "name": "auto_validate.service",
+        "domain": "storage",
+        "source": "deploy/auto_validate.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "autonomous_remediator.service",
+        "domain": "storage",
+        "source": "tools/systemd/autonomous_remediator.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "candle-collector.service",
+        "domain": "storage",
+        "source": "systemd/candle-collector.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "candle-collector.timer",
+        "domain": "storage",
+        "source": "systemd/candle-collector.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "check_projects.service",
+        "domain": "storage",
+        "source": "systemd/check_projects.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "check_projects.timer",
+        "domain": "storage",
+        "source": "systemd/check_projects.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "clear-agent@.service",
+        "domain": "storage",
+        "source": "systemd/clear-agent@.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "clear-trading-agent.service",
+        "domain": "storage",
+        "source": "systemd/clear-trading-agent.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "coordinator.service",
+        "domain": "storage",
+        "source": "systemd/coordinator.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "crypto-agent@.service",
+        "domain": "storage",
+        "source": "systemd/crypto-agent@.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "diretor.service",
+        "domain": "storage",
+        "source": "systemd/diretor.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
         "name": "disk-clean.service",
         "domain": "storage",
         "source": "systemd/disk-clean.service",
@@ -1230,6 +1438,69 @@
         "name": "disk-spindown.service",
         "domain": "storage",
         "source": "tools/homelab/disk-spindown.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "eddie-calendar.service",
+        "domain": "storage",
+        "source": "systemd/eddie-calendar.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "eddie-expurgo.service",
+        "domain": "storage",
+        "source": "systemd/eddie-expurgo.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "eddie-telegram-bot.service",
+        "domain": "storage",
+        "source": "systemd/eddie-telegram-bot.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "eddie-tray-agent.service",
+        "domain": "storage",
+        "source": "tools/systemd/eddie-tray-agent.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "eddie-whatsapp-bot.service",
+        "domain": "storage",
+        "source": "systemd/eddie-whatsapp-bot.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "final-boot-status-agent.service",
+        "domain": "storage",
+        "source": "tools/systemd/final-boot-status-agent.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "gdrive-agent.service",
+        "domain": "storage",
+        "source": "tools/systemd/gdrive-agent.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "github-agent.service",
+        "domain": "storage",
+        "source": "systemd/github-agent.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "homelab-dashboard.service",
+        "domain": "storage",
+        "source": "systemd/homelab-dashboard.service",
         "kind": "systemd",
         "critical": true
       },
@@ -1339,6 +1610,20 @@
         "critical": true
       },
       {
+        "name": "lto6-checkpoint-drain.service",
+        "domain": "storage",
+        "source": "systemd/lto6-checkpoint-drain.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "lto6-checkpoint-recover.service",
+        "domain": "storage",
+        "source": "systemd/lto6-checkpoint-recover.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
         "name": "lto6-drain-backups.service",
         "domain": "storage",
         "source": "systemd/lto6-drain-backups.service",
@@ -1349,6 +1634,202 @@
         "name": "lto6-drain-backups.timer",
         "domain": "storage",
         "source": "systemd/lto6-drain-backups.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "lto6-selfheal.service",
+        "domain": "storage",
+        "source": "systemd/lto6-selfheal.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "lto6-selfheal.timer",
+        "domain": "storage",
+        "source": "systemd/lto6-selfheal.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "lto6-smb-proof-selfheal.service",
+        "domain": "storage",
+        "source": "tools/selfheal/lto6-smb-proof-selfheal.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "marketing-api.service",
+        "domain": "storage",
+        "source": "systemd/marketing-api.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "marketing-daily-report.service",
+        "domain": "storage",
+        "source": "systemd/marketing-daily-report.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "marketing-daily-report.timer",
+        "domain": "storage",
+        "source": "systemd/marketing-daily-report.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "marketing-email-drip.service",
+        "domain": "storage",
+        "source": "systemd/marketing-email-drip.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "marketing-email-drip.timer",
+        "domain": "storage",
+        "source": "systemd/marketing-email-drip.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "marketing-x-posts.service",
+        "domain": "storage",
+        "source": "systemd/marketing-x-posts.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "marketing-x-posts.timer",
+        "domain": "storage",
+        "source": "systemd/marketing-x-posts.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ollama-finetune.service",
+        "domain": "storage",
+        "source": "systemd/ollama-finetune.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ollama-finetune.timer",
+        "domain": "storage",
+        "source": "systemd/ollama-finetune.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ollama-gpu-coordinator.service",
+        "domain": "storage",
+        "source": "systemd/ollama-gpu-coordinator.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ollama-gpu-selfheal.service",
+        "domain": "storage",
+        "source": "tools/ollama-gpu-selfheal.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ollama-gpu1.service",
+        "domain": "storage",
+        "source": "systemd/ollama-gpu1.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ollama-warmup.service",
+        "domain": "storage",
+        "source": "systemd/ollama-warmup.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ollama-warmup.timer",
+        "domain": "storage",
+        "source": "systemd/ollama-warmup.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "post-boot-check.service",
+        "domain": "storage",
+        "source": "systemd/post-boot-check.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "printshare.service",
+        "domain": "storage",
+        "source": "deploy/printshare/printshare.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "python-training.service",
+        "domain": "storage",
+        "source": "systemd/python-training.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "python-training.timer",
+        "domain": "storage",
+        "source": "systemd/python-training.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "rag-reindex.service",
+        "domain": "storage",
+        "source": "systemd/rag-reindex.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "rag-reindex.timer",
+        "domain": "storage",
+        "source": "systemd/rag-reindex.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "review-service.service",
+        "domain": "storage",
+        "source": "tools/systemd/review-service.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "rpa4all-validation.service",
+        "domain": "storage",
+        "source": "systemd/rpa4all-validation.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "rpa4all-validation.timer",
+        "domain": "storage",
+        "source": "systemd/rpa4all-validation.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "secrets_agent.service",
+        "domain": "storage",
+        "source": "tools/secrets_agent/secrets_agent.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "specialized_agents-dashboard.service",
+        "domain": "storage",
+        "source": "systemd/specialized_agents-dashboard.service",
         "kind": "systemd",
         "critical": true
       },
@@ -1370,6 +1851,27 @@
         "name": "tape-safe-eject.service",
         "domain": "storage",
         "source": "systemd/tape-safe-eject.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "workstation-win11l-http@.service",
+        "domain": "storage",
+        "source": "systemd/workstation-win11l-http@.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "workstation-win11l-rdp@.service",
+        "domain": "storage",
+        "source": "systemd/workstation-win11l-rdp@.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "x-agent.service",
+        "domain": "storage",
+        "source": "tools/x_agent/x-agent.service",
         "kind": "systemd",
         "critical": true
       }
