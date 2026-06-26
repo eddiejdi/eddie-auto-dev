@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-06-23T13:26:14.546137+00:00",
+  "generated_at": "2026-06-26T22:29:16.185238+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 145,
+    "repo_services": 146,
     "critical_services": 57,
     "domains": {
       "identity": 4,
@@ -14,7 +14,7 @@
       "network": 16,
       "operations": 85,
       "storage": 23,
-      "trading": 3
+      "trading": 4
     }
   },
   "netbox_devices": [
@@ -1195,6 +1195,14 @@
       "domain": "trading",
       "kind": "systemd",
       "source": "systemd/clear-trading-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "trading-daily-report.service",
+      "domain": "trading",
+      "kind": "systemd",
+      "source": "systemd/trading-daily-report.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     }
