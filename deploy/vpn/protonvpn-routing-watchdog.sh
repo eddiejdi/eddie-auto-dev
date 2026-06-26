@@ -75,16 +75,22 @@ check_effective_paths() {
     local homelab_path lan_path
 
     homelab_path="$(ip route get 1.1.1.1 from "$LAN_GATEWAY_IP" 2>/dev/null || true)"
-    lan_path="$(ip route get 1.1.1.1 from "$CHECK_CLIENT_IP" iif "$LAN_INTERFACE" 2>/dev/null || true)"
 
     if [[ "$homelab_path" != *"dev $PROTONVPN_IFACE"* ]]; then
         warn "Tráfego do homelab não está saindo por $PROTONVPN_IFACE"
         return 1
     fi
 
-    if [[ "$lan_path" != *"dev $PROTONVPN_IFACE"* ]]; then
-        warn "Tráfego da LAN não está saindo por $PROTONVPN_IFACE"
-        return 1
+    # Só verifica caminho do cliente LAN se o host estiver ativo no ARP cache;
+    # se estiver offline evita falso positivo que aciona force_protonvpn_route
+    if ip neigh show "$CHECK_CLIENT_IP" 2>/dev/null | grep -qE "REACHABLE|STALE|DELAY|PROBE"; then
+        lan_path="$(ip route get 1.1.1.1 from "$CHECK_CLIENT_IP" iif "$LAN_INTERFACE" 2>/dev/null || true)"
+        if [[ "$lan_path" != *"dev $PROTONVPN_IFACE"* ]]; then
+            warn "Tráfego da LAN não está saindo por $PROTONVPN_IFACE"
+            return 1
+        fi
+    else
+        log "INFO: $CHECK_CLIENT_IP não está ativo no ARP — skip verificação de path do cliente"
     fi
 
     return 0
@@ -222,17 +228,26 @@ force_protonvpn_route() {
     ensure_table_lan_routes
     ensure_table_docker_routes
 
-    while ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:"; do
-        ip rule del pref "$POLICY_RULE_PRIORITY" >/dev/null 2>&1 || break
-    done
-    ip rule add not fwmark "$fwmark" table "$PROTONVPN_TABLE" pref "$POLICY_RULE_PRIORITY"
-    log "✓ Policy rule ${POLICY_RULE_PRIORITY} restaurada (not fwmark ${fwmark} -> tabela ${PROTONVPN_TABLE})"
+    # Só faz del+add se a regra estiver ausente ou incorreta; evita janela sem rota
+    if ! ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:.*fwmark not.*lookup ${PROTONVPN_TABLE}"; then
+        while ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:"; do
+            ip rule del pref "$POLICY_RULE_PRIORITY" >/dev/null 2>&1 || break
+        done
+        ip rule add not fwmark "$fwmark" table "$PROTONVPN_TABLE" pref "$POLICY_RULE_PRIORITY"
+        log "✓ Policy rule ${POLICY_RULE_PRIORITY} restaurada (not fwmark ${fwmark} -> tabela ${PROTONVPN_TABLE})"
+    else
+        log "✓ Policy rule ${POLICY_RULE_PRIORITY} já está correta — sem alteração"
+    fi
 
-    while ip rule show | grep -Eq "^${MAIN_SUPPRESS_PRIORITY}:"; do
-        ip rule del pref "$MAIN_SUPPRESS_PRIORITY" >/dev/null 2>&1 || break
-    done
-    ip rule add lookup main suppress_prefixlength 0 pref "$MAIN_SUPPRESS_PRIORITY"
-    log "✓ Policy rule ${MAIN_SUPPRESS_PRIORITY} restaurada (lookup main suppress_prefixlength 0)"
+    if ! ip rule show | grep -Eq "^${MAIN_SUPPRESS_PRIORITY}:.*lookup main suppress_prefixlength 0"; then
+        while ip rule show | grep -Eq "^${MAIN_SUPPRESS_PRIORITY}:"; do
+            ip rule del pref "$MAIN_SUPPRESS_PRIORITY" >/dev/null 2>&1 || break
+        done
+        ip rule add lookup main suppress_prefixlength 0 pref "$MAIN_SUPPRESS_PRIORITY"
+        log "✓ Policy rule ${MAIN_SUPPRESS_PRIORITY} restaurada (lookup main suppress_prefixlength 0)"
+    else
+        log "✓ Policy rule ${MAIN_SUPPRESS_PRIORITY} já está correta — sem alteração"
+    fi
 
     ip route flush cache
 
