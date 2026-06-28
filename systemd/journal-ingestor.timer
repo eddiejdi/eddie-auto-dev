@@ -1,0 +1,10 @@
+[Unit]
+Description=Indexa Action Journal na memória compartilhada a cada hora
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=1h
+Unit=journal-ingestor.service
+
+[Install]
+WantedBy=timers.target

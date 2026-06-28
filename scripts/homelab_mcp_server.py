@@ -12,7 +12,9 @@ Configuração via variáveis de ambiente:
     SECRETS_AGENT_API_KEY - Chave de API do Secrets Agent
     API_BASE_URL         - URL da API Estou Aqui (default: http://localhost:3000)
     DATABASE_URL         - Connection string PostgreSQL
+    CHROMA_DB_PATH       - Path do ChromaDB (default: /home/homelab/myClaude/chroma_db)
 """
+import importlib.util
 import json
 import logging
 import os
@@ -20,6 +22,9 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
+
+# Adiciona raiz do projeto ao path para imports de tools/
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
 from mcp.server import FastMCP
@@ -838,6 +843,67 @@ def resource_db_models() -> str:
         "WebChatMessage": {"table": "WebChatMessages", "id": "UUID", "fields": ["content", "sender", "sessionId"]},
     }
     return json.dumps(models, ensure_ascii=False, indent=2)
+
+
+# ═══════════════════════════  SHARED MEMORY  ══════════════════════════════
+
+def _get_mem():
+    """Importa agent_memory lazily para não atrasar startup do MCP server."""
+    try:
+        from tools.memory_layer import agent_memory
+        return agent_memory
+    except ImportError:
+        return None
+
+
+@mcp.tool()
+def memory_search(query: str, sources: str = "", limit: int = 5) -> str:
+    """Busca semântica na memória compartilhada do homelab.
+
+    Retorna fatos de commits git, wiki pages, action journal e agentes.
+    Use ANTES de agir para saber o que já foi feito e evitar duplicação de trabalho.
+
+    sources: CSV de fontes para filtrar — "git,wiki,journal,alert,agent" (vazio = todas)
+    limit:   máximo de resultados (default: 5)
+
+    Exemplo: memory_search("trading agent restart", sources="journal,git", limit=3)
+    """
+    mem = _get_mem()
+    if mem is None:
+        return json.dumps({"error": "ChromaDB não disponível. Verifique CHROMA_DB_PATH."})
+    try:
+        src_list = [s.strip() for s in sources.split(",") if s.strip()] or None
+        results  = mem.search(query, sources=src_list, limit=max(1, limit))
+        return json.dumps({"results": results, "count": len(results)}, ensure_ascii=False)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
+
+
+@mcp.tool()
+def memory_store(fact: str, source: str = "agent", tags: str = "", ttl_days: int = 0) -> str:
+    """Armazena um fato na memória compartilhada do homelab.
+
+    Use para registrar descobertas importantes que outros agentes devem saber.
+    Fatos repetidos com mesmo source+fact são deduplicados (upsert por hash).
+
+    source:   categoria — "agent", "git", "wiki", "journal", "alert"
+    tags:     CSV de tags — "trading,btc,critico"
+    ttl_days: dias até expirar (0 = sem expiração)
+    """
+    mem = _get_mem()
+    if mem is None:
+        return json.dumps({"error": "ChromaDB não disponível. Verifique CHROMA_DB_PATH."})
+    try:
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+        mem_id   = mem.store(
+            fact,
+            source=source,
+            tags=tag_list,
+            ttl_days=ttl_days,
+        )
+        return json.dumps({"ok": True, "memory_id": mem_id}, ensure_ascii=False)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
 
 
 # ═══════════════════════════  ENTRYPOINT  ═════════════════════════════════
