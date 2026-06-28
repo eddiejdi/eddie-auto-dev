@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -1559,8 +1560,18 @@ async def cmdb_agent_health() -> dict[str, Any]:
     }
 
 
+def _cmdb_v2():
+    """Retorna CmdbAgentV2 se CMDB_AGENT_VERSION=v2."""
+    if os.getenv("CMDB_AGENT_VERSION", "v1") == "v2":
+        from specialized_agents.cmdb_agent_v2 import get_cmdb_agent_v2
+        return get_cmdb_agent_v2()
+    return None
+
+
 @router.post("/run")
 async def cmdb_agent_run(payload: CmdbAgentRunRequest) -> dict[str, Any]:
+    if v2 := _cmdb_v2():
+        return await v2.run(payload)
     try:
         agent = CmdbLoadAgent(
             repo_root=Path(payload.repo_root) if payload.repo_root else REPO_ROOT,
@@ -1578,6 +1589,8 @@ async def cmdb_agent_run(payload: CmdbAgentRunRequest) -> dict[str, Any]:
 
 @router.post("/apply/netbox")
 async def cmdb_agent_apply_netbox(payload: CmdbNetboxApplyRequest) -> dict[str, Any]:
+    if v2 := _cmdb_v2():
+        return await v2.apply_netbox(payload)
     try:
         return NetBoxPackageApplier(
             package_path=Path(payload.package_path),
@@ -1591,6 +1604,8 @@ async def cmdb_agent_apply_netbox(payload: CmdbNetboxApplyRequest) -> dict[str, 
 
 @router.post("/apply/glpi")
 async def cmdb_agent_apply_glpi(payload: CmdbGlpiApplyRequest) -> dict[str, Any]:
+    if v2 := _cmdb_v2():
+        return await v2.apply_glpi(payload)
     try:
         return GLPIPackageApplier(
             package_path=Path(payload.package_path),

@@ -53,6 +53,24 @@ _NC_INTERNAL_URL = os.getenv("NEXTCLOUD_INTERNAL_URL", "http://127.0.0.1:8880").
 _NC_ADMIN = os.getenv("NEXTCLOUD_ADMIN_USER", "admin")
 _NC_PASS = os.getenv("NEXTCLOUD_ADMIN_PASSWORD", "")
 _NC_CONTAINER = os.getenv("NEXTCLOUD_CONTAINER", "nextcloud-app")
+_NC_CONTAINER_CANDIDATES = tuple(
+    dict.fromkeys(
+        filter(
+            None,
+            [
+                _NC_CONTAINER,
+                *(
+                    item.strip()
+                    for item in os.getenv(
+                        "NEXTCLOUD_CONTAINER_CANDIDATES",
+                        "nextcloud-app,nextcloud-rpa4all",
+                    ).split(",")
+                ),
+            ],
+        )
+    )
+)
+_NC_RESOLVED_CONTAINER: str | None = None
 
 _OLLAMA_GPU0 = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 _OLLAMA_GPU1 = os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435")
@@ -297,9 +315,40 @@ async def _run_command(*cmd: str) -> tuple[int, str, str]:
     )
 
 
+def _container_not_found(stderr: str, stdout: str = "") -> bool:
+    """Identifica erro de container Docker inexistente."""
+    text = f"{stderr}\n{stdout}".lower()
+    return "no such container" in text or "not found" in text
+
+
+async def _resolve_nc_container(force_refresh: bool = False) -> str:
+    """Resolve nome real do container Nextcloud com fallback para aliases conhecidos."""
+    global _NC_RESOLVED_CONTAINER
+
+    if _NC_RESOLVED_CONTAINER and not force_refresh:
+        return _NC_RESOLVED_CONTAINER
+
+    last_error = "container não encontrado"
+    for candidate in _NC_CONTAINER_CANDIDATES:
+        rc, out, err = await _run_command("docker", "inspect", candidate, "--format", "{{.Name}}")
+        if rc == 0:
+            _NC_RESOLVED_CONTAINER = candidate
+            return candidate
+        last_error = err or out or last_error
+
+    raise RuntimeError(
+        f"Nenhum container Nextcloud disponível entre {_NC_CONTAINER_CANDIDATES}. Último erro: {last_error}"
+    )
+
+
 async def _run_occ(*args: str) -> tuple[int, str, str]:
     """Executa `docker exec -u www-data <container> php occ <args>` e retorna (rc, stdout, stderr)."""
-    return await _run_command("docker", "exec", "-u", "www-data", _NC_CONTAINER, "php", "occ", *args)
+    container = await _resolve_nc_container()
+    rc, out, err = await _run_command("docker", "exec", "-u", "www-data", container, "php", "occ", *args)
+    if rc != 0 and _container_not_found(err, out):
+        container = await _resolve_nc_container(force_refresh=True)
+        rc, out, err = await _run_command("docker", "exec", "-u", "www-data", container, "php", "occ", *args)
+    return rc, out, err
 
 
 def _occ_cmd_allowed(args: list[str]) -> bool:
@@ -702,10 +751,11 @@ echo "Status: systemctl status nextcloud-vpn-watchdog"
 
 async def _read_nc_logs(lines: int = 50) -> str:
     """Lê as últimas N linhas do nextcloud.log via docker exec."""
+    container = await _resolve_nc_container()
     _, out, err = await _run_command(
         "docker",
         "exec",
-        _NC_CONTAINER,
+        container,
         "tail",
         f"-n{lines}",
         "/var/www/html/data/nextcloud.log",
@@ -762,8 +812,9 @@ def _classify_lto_mount(mounts: list[dict[str, Any]]) -> dict[str, Any]:
 
 async def _nextcloud_storage_diagnostics() -> dict[str, Any]:
     """Executa checks baseados no histórico de falhas de storage do Nextcloud."""
+    container = await _resolve_nc_container()
     diagnostics: dict[str, Any] = {
-        "container": _NC_CONTAINER,
+        "container": container,
         "historical_incident": "docs/INCIDENTS/NEXTCLOUD_TANK_LTO_UPLOAD_2026-04-23.md",
     }
 
@@ -771,7 +822,7 @@ async def _nextcloud_storage_diagnostics() -> dict[str, Any]:
         rc, out, err = await _run_command(
             "docker",
             "inspect",
-            _NC_CONTAINER,
+            container,
             "--format",
             "{{json .Mounts}}",
         )
@@ -788,7 +839,7 @@ async def _nextcloud_storage_diagnostics() -> dict[str, Any]:
             "exec",
             "-u",
             "www-data",
-            _NC_CONTAINER,
+            container,
             "sh",
             "-lc",
             f'p={_LTO_EXTERNAL_DEST}/.agent_probe_$$; date > "$p"; stat -c "%u:%g %a" "$p"; rm -f "$p"',
@@ -1050,18 +1101,31 @@ class NextcloudAgent:
         """Verifica disponibilidade do Nextcloud e das GPUs Ollama."""
         results: dict[str, Any] = {}
 
-        # Nextcloud
+        # Nextcloud interno (critério principal para operação do agente)
+        try:
+            tc = aiohttp.ClientTimeout(total=5)
+            async with aiohttp.ClientSession(timeout=tc) as session:
+                async with session.get(f"{_NC_INTERNAL_URL}/status.php") as resp:
+                    results["nextcloud_internal"] = {
+                        "reachable": resp.status == 200,
+                        "status_code": resp.status,
+                        "url": _NC_INTERNAL_URL,
+                    }
+        except Exception as exc:
+            results["nextcloud_internal"] = {"reachable": False, "error": str(exc)}
+
+        # Nextcloud público (informativo; pode falhar por Cloudflare/proxy)
         try:
             tc = aiohttp.ClientTimeout(total=5)
             async with aiohttp.ClientSession(timeout=tc) as session:
                 async with session.get(f"{_NC_URL}/status.php") as resp:
-                    results["nextcloud"] = {
+                    results["nextcloud_external"] = {
                         "reachable": resp.status == 200,
                         "status_code": resp.status,
                         "url": _NC_URL,
                     }
         except Exception as exc:
-            results["nextcloud"] = {"reachable": False, "error": str(exc)}
+            results["nextcloud_external"] = {"reachable": False, "error": str(exc)}
 
         # Ollama GPU0
         for label, host in [("ollama_gpu0", _OLLAMA_GPU0), ("ollama_gpu1", _OLLAMA_GPU1)]:
@@ -1092,7 +1156,7 @@ class NextcloudAgent:
 
         overall = all(
             [
-                results.get("nextcloud", {}).get("reachable", False),
+                results.get("nextcloud_internal", {}).get("reachable", False),
                 results.get("ollama_gpu0", {}).get("reachable", False),
                 results.get("occ", {}).get("reachable", False),
                 results.get("storage", {}).get("ok", False),
@@ -1106,8 +1170,12 @@ class NextcloudAgent:
 _agent: NextcloudAgent | None = None
 
 
-def get_nextcloud_agent() -> NextcloudAgent:
+def get_nextcloud_agent():
+    """Retorna NextcloudAgent (v1 ou v2 conforme NEXTCLOUD_AGENT_VERSION)."""
     global _agent
+    if os.getenv("NEXTCLOUD_AGENT_VERSION", "v1") == "v2":
+        from specialized_agents.nextcloud_agent_v2 import get_nextcloud_agent_v2
+        return get_nextcloud_agent_v2()
     if _agent is None:
         _agent = NextcloudAgent()
     return _agent
