@@ -1,0 +1,24 @@
+[Unit]
+Description=Storj macvlan host shim
+After=network-online.target docker.service wg-quick@protonvpn.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Cada linha falha de forma visível — sem swallow silencioso com ponto-e-vírgula
+ExecStart=/bin/sh -c 'ip link show storj-host0 >/dev/null 2>&1 || ip link add storj-host0 link eth-wan type macvlan mode bridge'
+ExecStart=/bin/sh -c 'ip addr show dev storj-host0 | grep -q 192.168.15.251/32 || ip addr add 192.168.15.251/32 dev storj-host0'
+ExecStart=/bin/sh -c 'ip link set storj-host0 up'
+ExecStart=/bin/sh -c 'ip route show 192.168.15.250/32 | grep -q storj-host0 || ip route add 192.168.15.250/32 dev storj-host0'
+ExecStart=/bin/sh -c 'ip route show table 205 192.168.15.250/32 | grep -q storj-host0 || ip route add table 205 192.168.15.250/32 dev storj-host0 2>/dev/null || true'
+ExecStart=/bin/sh -c 'ip rule show | grep -q "to 192.168.15.250 lookup main" || ip rule add to 192.168.15.250/32 priority 98 lookup main'
+ExecStart=/bin/sh -c 'ip rule show | grep -q "from 192.168.15.250 lookup main" || ip rule add from 192.168.15.250/32 priority 99 lookup main'
+ExecStop=/bin/sh -c 'ip rule del to 192.168.15.250/32 priority 98 lookup main 2>/dev/null || true'
+ExecStop=/bin/sh -c 'ip rule del from 192.168.15.250/32 priority 99 lookup main 2>/dev/null || true'
+ExecStop=/bin/sh -c 'ip route del table 205 192.168.15.250/32 dev storj-host0 2>/dev/null || true'
+ExecStop=/bin/sh -c 'ip route del 192.168.15.250/32 dev storj-host0 2>/dev/null || true'
+ExecStop=/bin/sh -c 'ip link del storj-host0 2>/dev/null || true'
+
+[Install]
+WantedBy=multi-user.target
