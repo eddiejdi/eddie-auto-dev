@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-06-28T17:04:44.060955+00:00",
+  "generated_at": "2026-06-28T17:28:27.411272+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 149,
-    "critical_services": 57,
+    "repo_services": 151,
+    "critical_services": 59,
     "domains": {
       "identity": 4,
       "monitoring": 14,
       "network": 16,
       "operations": 88,
-      "storage": 23,
+      "storage": 25,
       "trading": 4
     }
   },
@@ -1119,6 +1119,22 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "ltfs-log-rotation.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-log-rotation.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ltfs-log-rotation.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-log-rotation.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "ltfs-lto6-selfheal-escalator.service",
       "domain": "storage",
       "kind": "systemd",
@@ -1565,6 +1581,20 @@
         "name": "ltfs-deep-recovery.service",
         "domain": "storage",
         "source": "systemd/ltfs-deep-recovery.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ltfs-log-rotation.service",
+        "domain": "storage",
+        "source": "systemd/ltfs-log-rotation.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ltfs-log-rotation.timer",
+        "domain": "storage",
+        "source": "systemd/ltfs-log-rotation.timer",
         "kind": "systemd",
         "critical": true
       },
