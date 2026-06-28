@@ -485,8 +485,18 @@ def conube_health() -> dict[str, Any]:
     }
 
 
+def _conube_langgraph():
+    """Retorna ConubeAgentLangraph se CONUBE_AGENT_VERSION=v2, None caso contrário."""
+    if os.getenv("CONUBE_AGENT_VERSION", "v1") == "v2":
+        from specialized_agents.conube_agent_langgraph import get_conube_agent_langgraph
+        return get_conube_agent_langgraph()
+    return None
+
+
 @router.post("/session/test-login")
 def conube_test_login(payload: ConubeActionRequest | None = None) -> dict[str, Any]:
+    if lg := _conube_langgraph():
+        return lg.test_login(payload)
     agent = _build_agent(payload.headless if payload else None)
     try:
         result = agent.login()
@@ -513,6 +523,8 @@ def conube_daily_summary_report(
     refresh: bool = False,
     use_ollama: bool = True,
 ) -> dict[str, Any]:
+    if lg := _conube_langgraph():
+        return lg.daily_summary(headless=headless, refresh=refresh, use_ollama=use_ollama)
     agent = _build_agent(headless)
     try:
         login_result = agent.login()
