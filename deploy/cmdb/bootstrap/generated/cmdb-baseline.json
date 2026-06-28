@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-06-28T18:57:22.388908+00:00",
+  "generated_at": "2026-06-28T23:32:29.952230+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 151,
-    "critical_services": 59,
+    "repo_services": 153,
+    "critical_services": 61,
     "domains": {
       "identity": 4,
       "monitoring": 14,
       "network": 16,
       "operations": 88,
-      "storage": 25,
+      "storage": 27,
       "trading": 4
     }
   },
@@ -1191,6 +1191,22 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "storj-host-shim.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/storj-host-shim.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "storj-macvlan-network.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/storj-macvlan-network.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "tape-quality-ollama-narrator.service",
       "domain": "storage",
       "kind": "systemd",
@@ -1644,6 +1660,20 @@
         "name": "lto6-drain-backups.timer",
         "domain": "storage",
         "source": "systemd/lto6-drain-backups.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "storj-host-shim.service",
+        "domain": "storage",
+        "source": "systemd/storj-host-shim.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "storj-macvlan-network.service",
+        "domain": "storage",
+        "source": "systemd/storj-macvlan-network.service",
         "kind": "systemd",
         "critical": true
       },
