@@ -9,5 +9,11 @@ if [ -x "$VE/bin/python" ]; then
   PY="$VE/bin/python"
 fi
 
-echo "Starting CoordinatorAgent service with $PY"
-exec "$PY" dev_agent/run_coordinator_service.py
+VER="${COORDINATOR_VERSION:-v1}"
+echo "Starting CoordinatorAgent service with $PY (version=$VER)"
+
+if [ "$VER" = "v2" ]; then
+  exec "$PY" -m specialized_agents.coordinator_v2
+else
+  exec "$PY" dev_agent/run_coordinator_service.py
+fi
