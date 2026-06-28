@@ -1,0 +1,11 @@
+[Unit]
+Description=LTFS Log Rotation — executa diariamente
+Requires=ltfs-log-rotation.service
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+RandomizedDelaySec=600
+Unit=ltfs-log-rotation.service
+
+[Install]
+WantedBy=timers.target
