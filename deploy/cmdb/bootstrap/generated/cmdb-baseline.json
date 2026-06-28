@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-06-26T22:29:16.185238+00:00",
+  "generated_at": "2026-06-28T15:57:04.587710+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 146,
+    "repo_services": 147,
     "critical_services": 57,
     "domains": {
       "identity": 4,
       "monitoring": 14,
       "network": 16,
-      "operations": 85,
+      "operations": 86,
       "storage": 23,
       "trading": 4
     }
@@ -531,6 +531,14 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/akash-sweep.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "approval-gateway.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/approval-gateway.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
