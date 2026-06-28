@@ -13,7 +13,7 @@ VER="${COORDINATOR_VERSION:-v1}"
 echo "Starting CoordinatorAgent service with $PY (version=$VER)"
 
 if [ "$VER" = "v2" ]; then
-  exec "$PY" -m specialized_agents.coordinator_v2
+  exec "$PY" -m specialized_agents.coordinator_langgraph
 else
   exec "$PY" dev_agent/run_coordinator_service.py
 fi

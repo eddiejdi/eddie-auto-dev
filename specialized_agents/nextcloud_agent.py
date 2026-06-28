@@ -1174,8 +1174,8 @@ def get_nextcloud_agent():
     """Retorna NextcloudAgent (v1 ou v2 conforme NEXTCLOUD_AGENT_VERSION)."""
     global _agent
     if os.getenv("NEXTCLOUD_AGENT_VERSION", "v1") == "v2":
-        from specialized_agents.nextcloud_agent_v2 import get_nextcloud_agent_v2
-        return get_nextcloud_agent_v2()
+        from specialized_agents.nextcloud_agent_langgraph import get_nextcloud_agent_langgraph
+        return get_nextcloud_agent_langgraph()
     if _agent is None:
         _agent = NextcloudAgent()
     return _agent

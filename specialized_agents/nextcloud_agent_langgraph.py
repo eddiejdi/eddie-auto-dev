@@ -1,5 +1,5 @@
 """
-NextcloudAgent v2 — wrapper de governança LangGraph sobre o NextcloudAgent v1.
+NextcloudAgent LangGraph — wrapper de governança LangGraph sobre o NextcloudAgent.
 
 Adiciona:
   - Action Journal: toda operação gera intent_id rastreável
@@ -253,7 +253,7 @@ class NextcloudAgentV2:
 _agent_v2: NextcloudAgentV2 | None = None
 
 
-def get_nextcloud_agent_v2() -> NextcloudAgentV2:
+def get_nextcloud_agent_langgraph() -> NextcloudAgentV2:
     global _agent_v2
     if _agent_v2 is None:
         _agent_v2 = NextcloudAgentV2()

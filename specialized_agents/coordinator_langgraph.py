@@ -1,5 +1,5 @@
 """
-Coordinator v2 — reimplementação do CoordinatorAgent em LangGraph.
+Coordinator LangGraph — reimplementação do CoordinatorAgent em LangGraph.
 
 Drop-in replacement para `run_coordinator_service.py` com adição de:
   - Checkpointing via PostgresSaver (resume após restart)
@@ -49,7 +49,7 @@ from specialized_agents.langgraph_base import (
     _route_after_declare,
 )
 
-logger = logging.getLogger("dev_agent.coordinator_v2")
+logger = logging.getLogger("dev_agent.coordinator_langgraph")
 
 MAX_RETRIES = int(os.environ.get("COORDINATOR_MAX_RETRIES", "3"))
 
@@ -109,7 +109,7 @@ def _build_search():
 
 def _node_declare_intent(state: CoordinatorState) -> CoordinatorState:
     intent_id = _intent_declare(
-        agent_id    = state.get("agent_id", "coordinator_v2"),
+        agent_id    = state.get("agent_id", "coordinator_langgraph"),
         action_type = state.get("action_type", "coordinator_task"),
         description = state.get("description", "")[:500],
         target      = state.get("bus_source", "unknown"),
@@ -141,13 +141,13 @@ def _node_execute_dev(state: CoordinatorState) -> CoordinatorState:
             "attempt":     attempt + 1,
             "errors":      errors,
             "outcome":     outcome,
-            "memory_fact": f"coordinator_v2: '{description[:120]}' → sucesso ({attempt + 1} tentativas)",
+            "memory_fact": f"coordinator_langgraph: '{description[:120]}' → sucesso ({attempt + 1} tentativas)",
             "status":      "done",
         }
 
     err = result.get("error", "unknown_error")
     errors.append(err)
-    logger.warning("[coordinator_v2] attempt=%d falhou: %s", attempt + 1, err[:200])
+    logger.warning("[coordinator_langgraph] attempt=%d falhou: %s", attempt + 1, err[:200])
     return {
         **state,
         "dev_result": result,
@@ -170,9 +170,9 @@ def _node_enrich_and_retry(state: CoordinatorState) -> CoordinatorState:
                 extra     = "\n\nInformações encontradas na web:\n" + str(results)
                 extra    += "\n\nUse essas informações para resolver o problema."
                 description = description + extra
-                logger.info("[coordinator_v2] Descrição enriquecida com web search")
+                logger.info("[coordinator_langgraph] Descrição enriquecida com web search")
             except Exception as exc:
-                logger.warning("[coordinator_v2] Web search falhou: %s", exc)
+                logger.warning("[coordinator_langgraph] Web search falhou: %s", exc)
 
     return {**state, "description": description, "enriched": True}
 
@@ -184,8 +184,8 @@ def _node_store_memory(state: CoordinatorState) -> CoordinatorState:
             _memory_store(
                 fact     = fact,
                 source   = "agent",
-                tags     = ["coordinator_v2", state.get("status", "done")],
-                agent_id = "coordinator_v2",
+                tags     = ["coordinator_langgraph", state.get("status", "done")],
+                agent_id = "coordinator_langgraph",
             )
         except Exception:
             pass
@@ -295,10 +295,10 @@ class CoordinatorV2Service:
         import uuid
         request_id = msg.metadata.get("request_id", msg.id)
         thread_id  = f"coord_{request_id}"
-        logger.info("[coordinator_v2] request de %s (thread=%s)", msg.source, thread_id[:24])
+        logger.info("[coordinator_langgraph] request de %s (thread=%s)", msg.source, thread_id[:24])
 
         initial: CoordinatorState = {
-            "agent_id":    "coordinator_v2",
+            "agent_id":    "coordinator_langgraph",
             "action_type": "coordinator_task",
             "risk_level":  "low",
             "description": msg.content,
@@ -327,7 +327,7 @@ class CoordinatorV2Service:
             if final.get("status") != "done":
                 result_dict["requires_user"] = True
         except Exception as exc:
-            logger.error("[coordinator_v2] erro no grafo: %s", exc)
+            logger.error("[coordinator_langgraph] erro no grafo: %s", exc)
             result_dict = {"success": False, "error": str(exc), "requires_user": True}
 
         bus.publish(
@@ -347,7 +347,7 @@ class CoordinatorV2Service:
         bus.recording = True
         bus.subscribe(self.handle_message)
 
-        logger.info("[coordinator_v2] Listening on AgentCommunicationBus (version=v2)...")
+        logger.info("[coordinator_langgraph] Listening on AgentCommunicationBus (version=v2)...")
 
         stop = False
 
@@ -364,7 +364,7 @@ class CoordinatorV2Service:
         finally:
             bus.unsubscribe(self.handle_message)
             self.close()
-            logger.info("[coordinator_v2] Encerrado.")
+            logger.info("[coordinator_langgraph] Encerrado.")
 
 
 def main() -> None:

@@ -1,5 +1,5 @@
 """
-WikiAgent v2 — wrapper de governança LangGraph sobre o WikiAgent v1.
+WikiAgent LangGraph — wrapper de governança LangGraph sobre o WikiAgent.
 
 Adiciona ao WikiAgent existente:
   - Action Journal: toda operação gera um registro intent_id
@@ -196,7 +196,7 @@ class WikiAgentV2:
 _agent_v2: WikiAgentV2 | None = None
 
 
-def get_wiki_agent_v2() -> WikiAgentV2:
+def get_wiki_agent_langgraph() -> WikiAgentV2:
     global _agent_v2
     if _agent_v2 is None:
         _agent_v2 = WikiAgentV2()

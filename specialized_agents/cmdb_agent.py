@@ -1563,8 +1563,8 @@ async def cmdb_agent_health() -> dict[str, Any]:
 def _cmdb_v2():
     """Retorna CmdbAgentV2 se CMDB_AGENT_VERSION=v2."""
     if os.getenv("CMDB_AGENT_VERSION", "v1") == "v2":
-        from specialized_agents.cmdb_agent_v2 import get_cmdb_agent_v2
-        return get_cmdb_agent_v2()
+        from specialized_agents.cmdb_agent_langgraph import get_cmdb_agent_langgraph
+        return get_cmdb_agent_langgraph()
     return None
 
 

@@ -507,8 +507,8 @@ def get_wiki_agent():
     """Retorna instância singleton do WikiAgent (v1 ou v2 conforme WIKI_AGENT_VERSION)."""
     global _agent
     if os.getenv("WIKI_AGENT_VERSION", "v1") == "v2":
-        from specialized_agents.wiki_agent_v2 import get_wiki_agent_v2
-        return get_wiki_agent_v2()
+        from specialized_agents.wiki_agent_langgraph import get_wiki_agent_langgraph
+        return get_wiki_agent_langgraph()
     if _agent is None:
         _agent = WikiAgent()
     return _agent

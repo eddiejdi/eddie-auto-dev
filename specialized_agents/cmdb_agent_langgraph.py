@@ -1,5 +1,5 @@
 """
-CmdbAgent v2 — wrapper de governança LangGraph sobre o CmdbAgent v1.
+CmdbAgent LangGraph — wrapper de governança LangGraph sobre o CmdbAgent.
 
 Adiciona:
   - Action Journal: toda operação gera intent_id rastreável
@@ -221,7 +221,7 @@ class CmdbAgentV2:
 _agent_v2: CmdbAgentV2 | None = None
 
 
-def get_cmdb_agent_v2() -> CmdbAgentV2:
+def get_cmdb_agent_langgraph() -> CmdbAgentV2:
     global _agent_v2
     if _agent_v2 is None:
         _agent_v2 = CmdbAgentV2()
