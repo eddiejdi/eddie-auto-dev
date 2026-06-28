@@ -4563,8 +4563,18 @@ async def _cancel_job(store: InvestigationJobStore, job_id: str, *, reason: str)
     return record
 
 
+def _bn_acervo_langgraph():
+    """Retorna BnAcervoAgentLangraph se BN_ACERVO_AGENT_VERSION=v2."""
+    if os.getenv("BN_ACERVO_AGENT_VERSION", "v1") == "v2":
+        from specialized_agents.bn_acervo_agent_langgraph import get_bn_acervo_agent_langgraph
+        return get_bn_acervo_agent_langgraph()
+    return None
+
+
 @router.post("/jobs", response_model=AcervoJobStatusResponse)
 async def bn_acervo_create_job(payload: AcervoStoryRequest) -> AcervoJobStatusResponse:
+    if lg := _bn_acervo_langgraph():
+        return AcervoJobStatusResponse(**(await lg.create_job(payload)))
     agent = BnAcervoAgent()
     active_jobs = _reconcile_active_jobs(agent.job_store)
     if active_jobs:
@@ -4588,6 +4598,8 @@ async def bn_acervo_create_job(payload: AcervoStoryRequest) -> AcervoJobStatusRe
 
 @router.post("/jobs/cancel-active")
 async def bn_acervo_cancel_active_jobs() -> dict[str, Any]:
+    if lg := _bn_acervo_langgraph():
+        return await lg.cancel_active_jobs()
     agent = BnAcervoAgent()
     active_jobs = _reconcile_active_jobs(agent.job_store)
     cancelled: list[str] = []
@@ -4611,6 +4623,8 @@ async def bn_acervo_get_job(job_id: str) -> AcervoJobStatusResponse:
 
 @router.post("/story")
 async def bn_acervo_story(payload: AcervoStoryRequest) -> dict[str, Any]:
+    if lg := _bn_acervo_langgraph():
+        return await lg.story(payload)
     agent = BnAcervoAgent()
     try:
         return await agent.run(payload)
@@ -4623,6 +4637,8 @@ async def bn_acervo_story(payload: AcervoStoryRequest) -> dict[str, Any]:
 
 @router.post("/dossier")
 async def bn_acervo_dossier(payload: AcervoStoryRequest) -> dict[str, Any]:
+    if lg := _bn_acervo_langgraph():
+        return await lg.dossier(payload)
     agent = BnAcervoAgent()
     try:
         return await agent.run(payload.model_copy(update={"output_mode": "dossier"}))
