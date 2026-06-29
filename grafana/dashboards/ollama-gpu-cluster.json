@@ -584,14 +584,58 @@
       "targets": [
         {
           "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "btc-trading-pg"
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "dfqjvc7g094owc"
           },
-          "editorMode": "code",
-          "format": 0,
-          "rawQuery": true,
-          "rawSql": "SELECT\n  ts AT TIME ZONE 'America/Sao_Paulo' AS horario,\n  model,\n  endpoint,\n  ROUND(elapsed_s::numeric, 2) AS seg,\n  status,\n  LEFT(prompt, 300)    AS prompt,\n  LEFT(response, 300)  AS resposta\nFROM ollama_payload_log\nORDER BY ts DESC\nLIMIT 50",
-          "refId": "A"
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "parser": "backend",
+          "url": "http://172.17.0.1:11437/api/requests?limit=50",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "root_selector": "requests",
+          "columns": [
+            {
+              "selector": "ts",
+              "text": "horario",
+              "type": "timestamp"
+            },
+            {
+              "selector": "model",
+              "text": "model",
+              "type": "string"
+            },
+            {
+              "selector": "endpoint",
+              "text": "endpoint",
+              "type": "string"
+            },
+            {
+              "selector": "elapsed_s",
+              "text": "seg",
+              "type": "number"
+            },
+            {
+              "selector": "status",
+              "text": "status",
+              "type": "string"
+            },
+            {
+              "selector": "prompt",
+              "text": "prompt",
+              "type": "string"
+            },
+            {
+              "selector": "response",
+              "text": "resposta",
+              "type": "string"
+            }
+          ],
+          "filters": []
         }
       ],
       "title": "Payload Log — Ultimas Requisicoes (prompt + resposta)",
@@ -786,5 +830,5 @@
   "timezone": "browser",
   "title": "Ollama GPU Cluster",
   "uid": "ollama-metrics-cluster",
-  "version": 1
+  "version": 5
 }
