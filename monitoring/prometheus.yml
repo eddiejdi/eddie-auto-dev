@@ -51,6 +51,7 @@ scrape_configs:
           coin: 'BTC-USDT'
           instance: 'btc_usdt_conservative'
           profile: 'conservative'
+          servidor: 'homelab'
 
   - job_name: 'crypto-exporter-btc_usdt_aggressive'
     scrape_interval: 30s
@@ -60,6 +61,7 @@ scrape_configs:
           coin: 'BTC-USDT'
           instance: 'btc_usdt_aggressive'
           profile: 'aggressive'
+          servidor: 'homelab'
 
   - job_name: 'btc-signals-exporter'
     scrape_interval: 30s
@@ -155,11 +157,47 @@ scrape_configs:
           coin: 'BTC-USDT'
           instance: 'btc_usdt_shadow'
           profile: 'shadow'
+          servidor: 'homelab'
 
-  - job_name: 'akash-provider'
-    scrape_interval: 30s
+  # ---------------------------------------------------------------------------
+  # ollama-metrics — proxy Prometheus para os 3 endpoints Ollama do cluster GPU
+  # Métricas: tokens, latência, modelos carregados, uso de VRAM por GPU
+  # ---------------------------------------------------------------------------
+  - job_name: 'ollama-gpu0-rtx3060'
+    scrape_interval: 15s
     static_configs:
-      - targets: ['localhost:9115']
+      - targets: ['172.17.0.1:11544']
         labels:
-          instance: 'akash-provider'
-          service: 'akash'
+          gpu: 'rtx3060'
+          vram: '12gb'
+          host: 'homelab'
+          endpoint: 'gpu0'
+
+  - job_name: 'ollama-gpu1-gtx1050'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['172.17.0.1:11545']
+        labels:
+          gpu: 'gtx1050'
+          vram: '2gb'
+          host: 'homelab'
+          endpoint: 'gpu1'
+
+  - job_name: 'ollama-nas-rtx2060'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['192.168.15.4:11546']
+        labels:
+          gpu: 'rtx2060super'
+          vram: '8gb'
+          host: 'nas'
+          endpoint: 'nas'
+
+  - job_name: 'ollama-gpu-coordinator'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['172.17.0.1:11437']
+        labels:
+          service: 'gpu-coordinator'
+          host: 'homelab'
+

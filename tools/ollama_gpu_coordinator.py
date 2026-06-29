@@ -1,37 +1,35 @@
 #!/usr/bin/env python3
-"""Coordenador de GPUs Ollama — proxy HTTP inteligente de balanceamento de carga.
+"""Coordenador de GPUs Ollama — balanceamento de carga real com 3 endpoints.
 
-Redireciona requisições Ollama para GPU0 (:11434) ou GPU1 (:11435) com base na
-disponibilidade e no tamanho do modelo. Usa qwen2.5:1.5b-instruct-q2_k no GPU1
-como modelo de coordenação para evitar 503 em cascata.
+Estratégia de roteamento (em ordem de prioridade):
+  1. VRAM fit    — descarta GPUs onde o modelo não cabe
+  2. Affinity    — prefere GPU onde o modelo já está carregado (evita reload)
+  3. Least-load  — entre candidatos elegíveis, escolhe o com menos requisições ativas
+  4. Priority    — GPU0 > GPU1 > NAS como tiebreaker de hardware
 
-Routing:
-- Modelos pesados (>2GB): sempre GPU0 (:11434)
-- Modelos leves (<1.5GB): GPU1 (:11435) primário, GPU0 como fallback
-- Se GPU primário ocupado: aguarda até BUSY_WAIT_SEC e tenta o secundário
+Endpoints:
+  GPU0  RTX 3060 12GB  :11434  (proxy métricas :11544)
+  GPU1  GTX 1050  2GB  :11435  (proxy métricas :11545)
+  NAS   RTX 2060  8GB  :11436  (proxy métricas :11546)
 
 Usage:
     python3 ollama_gpu_coordinator.py --port 11437
-    systemctl start ollama-gpu-coordinator
-
-Endpoints compatíveis com Ollama:
-    POST /api/generate
-    POST /api/chat
-    GET  /api/ps
-    GET  /api/tags
-    GET  /api/version
+    systemctl restart ollama-gpu-coordinator
 """
 
 from __future__ import annotations
 
 import argparse
+import http.client
 import json
 import logging
 import os
 import sys
+import threading
 import time
-import urllib.request
 import urllib.error
+import urllib.parse
+import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import Optional
 
@@ -41,336 +39,499 @@ logging.basicConfig(
 )
 log = logging.getLogger("gpu-coord")
 
-# ── Configuração ─────────────────────────────────────────────────────
+# ── Configuração ──────────────────────────────────────────────────────────────
 
-GPU0_HOST = os.environ.get("OLLAMA_GPU0_HOST", "http://192.168.15.2:11434")
-GPU1_HOST = os.environ.get("OLLAMA_GPU1_HOST", "http://192.168.15.2:11435")
-
-# Modelos que DEVEM sempre ir para GPU0 (grandes, >2GB VRAM)
-HEAVY_MODELS: set[str] = {
-    "trading-analyst",
-    "trading-analyst:latest",
-    "qwen3:8b",
-    "llama3.2:1b",
-}
-
-# Modelos que vão para GPU1 (leves, <1.5GB VRAM)
-LIGHT_MODELS: set[str] = {
-    "qwen3:0.6b",
-    "qwen3-fast:gpu1",
-    "qwen2.5:1.5b-instruct-q2_k",
-    "qwen2.5:1.5b",
-    "smollm2:iq3m",
-}
-
-# Tempo máximo aguardando GPU ficar livre (segundos)
-BUSY_WAIT_SEC = int(os.environ.get("GPU_COORD_BUSY_WAIT_SEC", "10"))
-# Timeout padrão de proxy de requisições (segundos)
-REQUEST_TIMEOUT_SEC = int(os.environ.get("GPU_COORD_REQUEST_TIMEOUT_SEC", "180"))
-# Porta padrão do coordenador
 DEFAULT_PORT = int(os.environ.get("GPU_COORD_PORT", "11437"))
+REQUEST_TIMEOUT_SEC = int(os.environ.get("GPU_COORD_REQUEST_TIMEOUT_SEC", "240"))
+POLL_INTERVAL_SEC = float(os.environ.get("GPU_COORD_POLL_INTERVAL_SEC", "10"))
+HEALTH_TIMEOUT_SEC = float(os.environ.get("GPU_COORD_HEALTH_TIMEOUT_SEC", "3"))
 
-# ── Estado compartilhado de ocupação ─────────────────────────────────
+# VRAM estimativas por padrão de nome (MB) — usado quando o modelo não está na VRAM
+_VRAM_ESTIMATES: list[tuple[str, int]] = [
+    ("0.5b",  400), ("0.6b",  600), ("1b",   900), ("1.5b", 1300),
+    ("2b",   1800), ("3b",   2200), ("4b",   3000), ("7b",  5000),
+    ("8b",   6000), ("13b", 10000), ("14b", 10500), ("32b", 22000),
+    ("70b", 48000),
+    # modelos nomeados
+    ("trading-analyst", 9500), ("qwen3-fast", 1500), ("smollm", 600),
+    ("moondream", 1700),
+]
 
-def _is_gpu_busy(host: str) -> bool:
-    """Verifica se o Ollama está processando alguma requisição."""
-    try:
-        req = urllib.request.Request(
-            f"{host}/api/ps",
-            headers={"User-Agent": "gpu-coordinator/1.0"},
-        )
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            data = json.loads(resp.read().decode())
-            return len(data.get("models", [])) > 0
-    except Exception:
-        return False  # se não responde, assume livre (tentativa direta vai falhar de qualquer modo)
-
-
-def _gpu_model_count(host: str) -> int:
-    """Retorna quantidade de modelos carregados na VRAM."""
-    try:
-        req = urllib.request.Request(
-            f"{host}/api/ps",
-            headers={"User-Agent": "gpu-coordinator/1.0"},
-        )
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            data = json.loads(resp.read().decode())
-            return len(data.get("models", []))
-    except Exception:
-        return 999  # erro = assume ocupado
+_STATS_LOCK = threading.Lock()
+_TOTAL_REQUESTS = 0
+_REQUEST_ERRORS = 0
 
 
-def _route_model(model_name: str) -> tuple[str, str]:
-    """Retorna (primary_host, fallback_host) para o modelo dado.
-
-    Args:
-        model_name: Nome do modelo Ollama (ex: 'trading-analyst', 'qwen3:0.6b')
-
-    Returns:
-        Tupla (primary_host, fallback_host)
-    """
-    name_lower = model_name.lower().split(":")[0]
-
-    # Modelos pesados: GPU0 é sempre primário
-    if model_name in HEAVY_MODELS or name_lower in {m.split(":")[0] for m in HEAVY_MODELS}:
-        return GPU0_HOST, GPU1_HOST
-
-    # Modelos leves explícitos: GPU1 é primário
-    if model_name in LIGHT_MODELS or name_lower in {m.split(":")[0] for m in LIGHT_MODELS}:
-        return GPU1_HOST, GPU0_HOST
-
-    # Heurística por tamanho: modelos com sufixo 0.6b/1b/1.5b → GPU1
-    for light_suffix in ("0.6b", "1b", "1.5b", "0.5b", "smol", "mini", "q2_k"):
-        if light_suffix in model_name.lower():
-            return GPU1_HOST, GPU0_HOST
-
-    # Default: GPU0 para o desconhecido
-    return GPU0_HOST, GPU1_HOST
+def _estimate_vram_mb(model: str) -> int:
+    """Estima VRAM necessária para um modelo pelo nome (MB)."""
+    m = model.lower()
+    for key, mb in _VRAM_ESTIMATES:
+        if key in m:
+            return mb
+    return 4000  # conservador para desconhecidos
 
 
-def _forward_request(
-    method: str,
-    path: str,
-    body: bytes,
-    headers: dict,
-    model_name: Optional[str],
-) -> tuple[int, bytes, str]:
-    """Encaminha a requisição ao GPU correto, com fallback.
+# ── Estado de endpoint ────────────────────────────────────────────────────────
 
-    Returns:
-        (status_code, body_bytes, chosen_host)
-    """
-    primary, fallback = _route_model(model_name or "")
+class EndpointState:
+    """Estado em tempo real de um endpoint Ollama (thread-safe)."""
 
-    # Verifica se o primário está ocupado — espera até BUSY_WAIT_SEC
-    waited = 0
-    while waited < BUSY_WAIT_SEC and _is_gpu_busy(primary):
-        log.info(f"⏳ {primary} ocupado, aguardando 2s (modelo={model_name})…")
-        time.sleep(2)
-        waited += 2
+    def __init__(self, name: str, host: str, vram_total_mb: int, priority: int):
+        self.name = name
+        self.host = host
+        self.vram_total_mb = vram_total_mb
+        self.priority = priority
 
-    # Tenta primário
-    for host in (primary, fallback):
+        self._lock = threading.Lock()
+        self._active: int = 0
+        self._loaded: dict[str, float] = {}   # model_name → vram_mb
+        self._healthy: bool = False
+        self._last_poll: float = 0.0
+        self._total_served: int = 0
+
+    # ── propriedades ──────────────────────────────────────────────────────────
+
+    @property
+    def healthy(self) -> bool:
+        return self._healthy
+
+    @property
+    def active_requests(self) -> int:
+        return self._active
+
+    @property
+    def vram_used_mb(self) -> float:
+        return sum(self._loaded.values())
+
+    @property
+    def vram_free_mb(self) -> float:
+        return max(0.0, self.vram_total_mb - self.vram_used_mb)
+
+    def has_model(self, model: str) -> bool:
+        m = model if ":" in model else model + ":latest"
+        return model in self._loaded or m in self._loaded
+
+    # ── mutação ───────────────────────────────────────────────────────────────
+
+    def increment(self) -> None:
+        with self._lock:
+            self._active += 1
+            self._total_served += 1
+
+    def decrement(self) -> None:
+        with self._lock:
+            self._active = max(0, self._active - 1)
+
+    def poll(self) -> None:
+        """Atualiza estado via /api/ps e /api/tags (chamado pelo poller)."""
         try:
-            url = f"{host}{path}"
             req = urllib.request.Request(
-                url,
-                data=body if body else None,
-                method=method,
-                headers={
-                    "Content-Type": "application/json",
-                    "User-Agent": "gpu-coordinator/1.0",
-                },
+                f"{self.host}/api/ps",
+                headers={"User-Agent": "gpu-coordinator/2.0"},
             )
-            with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT_SEC) as resp:
-                resp_body = resp.read()
-                log.info(f"✅ {method} {path} modelo={model_name} → {host} status=200")
-                return 200, resp_body, host
-        except urllib.error.HTTPError as e:
-            body_err = e.read() if e.fp else b""
-            status = e.code
-            log.warning(f"⚠️ {host}{path} HTTP {status} (modelo={model_name})")
-            if status == 503 and host == primary:
-                log.info(f"🔀 Tentando fallback {fallback} (modelo={model_name})")
-                continue
-            return status, body_err, host
+            with urllib.request.urlopen(req, timeout=HEALTH_TIMEOUT_SEC) as resp:
+                data = json.loads(resp.read())
+                loaded = {}
+                for m in data.get("models", []):
+                    name = m.get("name", "")
+                    vram = m.get("size_vram", 0) / (1024 * 1024)  # bytes → MB
+                    if not vram:
+                        vram = _estimate_vram_mb(name)
+                    loaded[name] = vram
+                with self._lock:
+                    self._loaded = loaded
+                    self._healthy = True
+                    self._last_poll = time.monotonic()
         except Exception as exc:
-            log.warning(f"⚠️ {host}{path} erro: {exc}")
-            if host == primary:
-                continue
-            return 503, json.dumps({"error": str(exc)}).encode(), host
+            with self._lock:
+                self._healthy = False
+            log.warning("poll %s falhou: %s", self.name, exc)
 
-    return 503, b'{"error":"both GPUs unavailable"}', primary
+    # ── scoring ───────────────────────────────────────────────────────────────
+
+    def score(self, model: str) -> float:
+        """Pontuação para este endpoint receber o modelo (menor = melhor).
+
+        Retorna float('inf') se o endpoint não é elegível.
+        """
+        if not self._healthy:
+            return float("inf")
+
+        needed_mb = _estimate_vram_mb(model)
+
+        # Se o modelo já está carregado, não precisa de espaço adicional
+        if self.has_model(model):
+            needed_mb = 0
+
+        # VRAM insuficiente com 10% de margem de segurança
+        if self.vram_free_mb < needed_mb * 1.10 and needed_mb > 0:
+            return float("inf")
+
+        score = 0.0
+        # Penalidade por requisições ativas (10 pts cada)
+        score += self._active * 10.0
+        # Bônus por afinidade de modelo (evita reload de VRAM)
+        if self.has_model(model):
+            score -= 8.0
+        # Penalidade de prioridade de hardware (GPU0=0, GPU1=0.5, NAS=1.0)
+        score += self.priority * 0.5
+
+        return score
+
+    def info(self) -> dict:
+        return {
+            "name": self.name,
+            "host": self.host,
+            "healthy": self._healthy,
+            "active_requests": self._active,
+            "total_served": self._total_served,
+            "vram_total_mb": self.vram_total_mb,
+            "vram_used_mb": round(self.vram_used_mb, 1),
+            "vram_free_mb": round(self.vram_free_mb, 1),
+            "loaded_models": list(self._loaded.keys()),
+        }
+
+
+# ── Cluster ───────────────────────────────────────────────────────────────────
+
+class GPUCluster:
+    """Gerencia os endpoints e executa o balanceamento de carga."""
+
+    def __init__(self, endpoints: list[EndpointState]):
+        self._endpoints = endpoints
+        self._poller: Optional[threading.Thread] = None
+
+    def start_poller(self) -> None:
+        """Inicia thread daemon que mantém o estado dos endpoints atualizado."""
+        # Poll inicial (síncrono) para ter estado antes da 1ª requisição
+        for ep in self._endpoints:
+            ep.poll()
+
+        def _loop() -> None:
+            while True:
+                time.sleep(POLL_INTERVAL_SEC)
+                for ep in self._endpoints:
+                    ep.poll()
+
+        self._poller = threading.Thread(target=_loop, daemon=True, name="gpu-poller")
+        self._poller.start()
+        log.info("poller iniciado (intervalo=%.0fs, endpoints=%d)", POLL_INTERVAL_SEC, len(self._endpoints))
+
+    def pick(self, model: str) -> Optional[EndpointState]:
+        """Retorna o melhor endpoint para o modelo. None se nenhum disponível."""
+        best: Optional[EndpointState] = None
+        best_score = float("inf")
+
+        for ep in self._endpoints:
+            s = ep.score(model)
+            log.debug("score %s model=%s → %.1f (active=%d vram_free=%.0fMB)",
+                      ep.name, model, s, ep.active_requests, ep.vram_free_mb)
+            if s < best_score:
+                best_score = s
+                best = ep
+
+        if best is None or best_score == float("inf"):
+            log.warning("nenhum endpoint elegível para model=%s", model)
+            return None
+
+        log.info("roteando model=%s → %s (score=%.1f active=%d vram_free=%.0fMB)",
+                 model, best.name, best_score, best.active_requests, best.vram_free_mb)
+        return best
+
+    def health_info(self) -> dict:
+        return {
+            "coordinator": "ok",
+            "endpoints": [ep.info() for ep in self._endpoints],
+        }
+
+    def prometheus_metrics(self) -> str:
+        lines = []
+        lines.append("# HELP gpu_coord_active_requests Requisições ativas por endpoint")
+        lines.append("# TYPE gpu_coord_active_requests gauge")
+        for ep in self._endpoints:
+            lines.append(f'gpu_coord_active_requests{{endpoint="{ep.name}",host="{ep.host}"}} {ep.active_requests}')
+
+        lines.append("# HELP gpu_coord_vram_free_mb VRAM livre estimada por endpoint (MB)")
+        lines.append("# TYPE gpu_coord_vram_free_mb gauge")
+        for ep in self._endpoints:
+            lines.append(f'gpu_coord_vram_free_mb{{endpoint="{ep.name}"}} {ep.vram_free_mb:.1f}')
+
+        lines.append("# HELP gpu_coord_healthy Endpoint saudável (1=sim, 0=não)")
+        lines.append("# TYPE gpu_coord_healthy gauge")
+        for ep in self._endpoints:
+            lines.append(f'gpu_coord_healthy{{endpoint="{ep.name}"}} {1 if ep.healthy else 0}')
+
+        lines.append("# HELP gpu_coord_total_requests_served Total de requisições servidas por endpoint")
+        lines.append("# TYPE gpu_coord_total_requests_served counter")
+        for ep in self._endpoints:
+            lines.append(f'gpu_coord_total_requests_served{{endpoint="{ep.name}"}} {ep._total_served}')
+
+        with _STATS_LOCK:
+            total = _TOTAL_REQUESTS
+            errors = _REQUEST_ERRORS
+        lines.append("# HELP gpu_coord_requests_total Total de requisições recebidas pelo coordinator")
+        lines.append("# TYPE gpu_coord_requests_total counter")
+        lines.append(f"gpu_coord_requests_total {total}")
+        lines.append("# HELP gpu_coord_request_errors_total Total de requisições com erro")
+        lines.append("# TYPE gpu_coord_request_errors_total counter")
+        lines.append(f"gpu_coord_request_errors_total {errors}")
+
+        return "\n".join(lines) + "\n"
+
+
+# ── HTTP handler ──────────────────────────────────────────────────────────────
+
+_cluster: Optional[GPUCluster] = None
 
 
 class CoordinatorHandler(BaseHTTPRequestHandler):
-    """Handler HTTP que atua como proxy coordenador para os Ollama GPUs."""
 
-    def log_message(self, fmt: str, *args) -> None:  # type: ignore[override]
-        """Silencia log padrão do BaseHTTPRequestHandler."""
-        pass
+    def log_message(self, fmt: str, *args) -> None:
+        pass  # silencia log padrão
 
-    def _write_response_body(self, body: bytes) -> None:
-        """Escreve resposta sem derrubar o handler se o cliente desistir."""
-        try:
-            self.wfile.write(body)
-        except (BrokenPipeError, ConnectionResetError):
-            log.info("cliente fechou conexão antes do término da resposta")
+    # ── leitura ───────────────────────────────────────────────────────────────
 
     def _read_body(self) -> bytes:
-        """Lê o corpo da requisição HTTP."""
         length = int(self.headers.get("Content-Length", 0))
         return self.rfile.read(length) if length > 0 else b""
 
-    def _extract_model(self, body: bytes) -> Optional[str]:
-        """Extrai o nome do modelo do body JSON."""
+    def _extract_model(self, body: bytes) -> str:
         try:
-            data = json.loads(body.decode("utf-8", errors="replace"))
-            return data.get("model")
+            return json.loads(body).get("model", "") or ""
         except Exception:
-            return None
+            return ""
 
-    def _proxy_generate_or_chat(self) -> None:
-        """Processa /api/generate e /api/chat com roteamento inteligente."""
-        body = self._read_body()
-        model_name = self._extract_model(body)
+    # ── escrita ───────────────────────────────────────────────────────────────
 
-        # Desabilita streaming para simplificar o proxy
-        try:
-            data = json.loads(body.decode())
-            data["stream"] = False
-            body = json.dumps(data).encode()
-        except Exception:
-            pass
-
-        status, resp_body, host = _forward_request(
-            "POST",
-            self.path,
-            body,
-            dict(self.headers),
-            model_name,
-        )
-
-        # Adiciona header indicando qual GPU atendeu
+    def _json_response(self, status: int, data: dict | str) -> None:
+        body = (json.dumps(data, indent=2) if isinstance(data, dict) else data).encode()
         self.send_response(status)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("X-GPU-Host", host)
-        self.send_header("Content-Length", str(len(resp_body)))
-        self.end_headers()
-        self._write_response_body(resp_body)
-
-    def _proxy_passthrough(self, host: str) -> None:
-        """Repassa a requisição GET simples a um host fixo."""
-        try:
-            url = f"{host}{self.path}"
-            req = urllib.request.Request(url, headers={"User-Agent": "gpu-coordinator/1.0"})
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                body = resp.read()
-                self.send_response(200)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(body)))
-                self.end_headers()
-                self._write_response_body(body)
-        except Exception as exc:
-            err = json.dumps({"error": str(exc)}).encode()
-            self.send_response(503)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(err)))
-            self.end_headers()
-            self._write_response_body(err)
-
-    def _handle_ps(self) -> None:
-        """Agrega /api/ps de ambos os GPUs."""
-        models: list = []
-        for host in (GPU0_HOST, GPU1_HOST):
-            try:
-                req = urllib.request.Request(
-                    f"{host}/api/ps",
-                    headers={"User-Agent": "gpu-coordinator/1.0"},
-                )
-                with urllib.request.urlopen(req, timeout=3) as resp:
-                    data = json.loads(resp.read().decode())
-                    models.extend(data.get("models", []))
-            except Exception:
-                pass
-        body = json.dumps({"models": models}).encode()
-        self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        self._write_response_body(body)
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
 
-    def _handle_tags(self) -> None:
-        """Agrega /api/tags de ambos os GPUs (sem duplicatas)."""
-        seen: set[str] = set()
+    def _text_response(self, status: int, text: str, content_type: str = "text/plain") -> None:
+        body = text.encode()
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        try:
+            self.wfile.write(body)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
+    # ── proxy ─────────────────────────────────────────────────────────────────
+
+    def _forward(self, ep: EndpointState, method: str, path: str, body: bytes,
+                 streaming: bool) -> None:
+        """Encaminha a requisição para o endpoint escolhido."""
+        parsed = urllib.parse.urlparse(ep.host)
+        host = parsed.hostname
+        port = parsed.port or 80
+
+        ep.increment()
+        with _STATS_LOCK:
+            global _TOTAL_REQUESTS
+            _TOTAL_REQUESTS += 1
+        try:
+            conn = http.client.HTTPConnection(host, port, timeout=REQUEST_TIMEOUT_SEC)
+            headers = {
+                "Content-Type": "application/json",
+                "User-Agent": "gpu-coordinator/2.0",
+                "X-Routed-By": "gpu-coord",
+                "X-GPU-Endpoint": ep.name,
+            }
+            if body:
+                headers["Content-Length"] = str(len(body))
+
+            conn.request(method, path, body=body or None, headers=headers)
+            resp = conn.getresponse()
+
+            if streaming:
+                self.send_response(resp.status)
+                self.send_header("Content-Type", resp.getheader("Content-Type", "application/json"))
+                self.send_header("X-GPU-Endpoint", ep.name)
+                self.send_header("Transfer-Encoding", "chunked")
+                self.end_headers()
+                try:
+                    while True:
+                        chunk = resp.read(4096)
+                        if not chunk:
+                            break
+                        self.wfile.write(chunk)
+                    self.wfile.flush()
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+            else:
+                resp_body = resp.read()
+                self.send_response(resp.status)
+                self.send_header("Content-Type", resp.getheader("Content-Type", "application/json"))
+                self.send_header("Content-Length", str(len(resp_body)))
+                self.send_header("X-GPU-Endpoint", ep.name)
+                self.end_headers()
+                try:
+                    self.wfile.write(resp_body)
+                except (BrokenPipeError, ConnectionResetError):
+                    pass
+
+            if resp.status >= 400:
+                with _STATS_LOCK:
+                    global _REQUEST_ERRORS
+                    _REQUEST_ERRORS += 1
+
+        except Exception as exc:
+            log.warning("forward para %s falhou: %s", ep.name, exc)
+            with _STATS_LOCK:
+                _REQUEST_ERRORS += 1
+            self._json_response(503, {"error": str(exc), "endpoint": ep.name})
+        finally:
+            ep.decrement()
+            try:
+                conn.close()
+            except Exception:
+                pass
+
+    def _route_and_forward(self) -> None:
+        """Lê body, escolhe GPU, encaminha."""
+        body = self._read_body()
+        model = self._extract_model(body)
+
+        # Detecta se cliente quer streaming
+        streaming = False
+        try:
+            streaming = json.loads(body).get("stream", True)
+        except Exception:
+            pass
+
+        ep = _cluster.pick(model) if _cluster else None
+        if ep is None:
+            self._json_response(503, {"error": "nenhum GPU disponível para model=" + model})
+            return
+
+        self._forward(ep, "POST", self.path, body, streaming)
+
+    def _passthrough_get(self, host: str) -> None:
+        """GET simples passado para um host fixo."""
+        try:
+            req = urllib.request.Request(
+                f"{host}{self.path}",
+                headers={"User-Agent": "gpu-coordinator/2.0"},
+            )
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                body = resp.read()
+                ct = resp.headers.get("Content-Type", "application/json")
+                self._text_response(200, body.decode(errors="replace"), ct)
+        except Exception as exc:
+            self._json_response(503, {"error": str(exc)})
+
+    def _handle_ps(self) -> None:
+        """Agrega /api/ps de todos os endpoints."""
         models: list = []
-        for host in (GPU0_HOST, GPU1_HOST):
+        for ep in (_cluster._endpoints if _cluster else []):
+            if not ep.healthy:
+                continue
             try:
                 req = urllib.request.Request(
-                    f"{host}/api/tags",
-                    headers={"User-Agent": "gpu-coordinator/1.0"},
+                    f"{ep.host}/api/ps",
+                    headers={"User-Agent": "gpu-coordinator/2.0"},
                 )
                 with urllib.request.urlopen(req, timeout=3) as resp:
-                    data = json.loads(resp.read().decode())
+                    data = json.loads(resp.read())
+                    for m in data.get("models", []):
+                        m["_endpoint"] = ep.name
+                        models.append(m)
+            except Exception:
+                pass
+        self._json_response(200, {"models": models})
+
+    def _handle_tags(self) -> None:
+        """Agrega /api/tags de todos os endpoints (sem duplicatas)."""
+        seen: set[str] = set()
+        models: list = []
+        for ep in (_cluster._endpoints if _cluster else []):
+            if not ep.healthy:
+                continue
+            try:
+                req = urllib.request.Request(
+                    f"{ep.host}/api/tags",
+                    headers={"User-Agent": "gpu-coordinator/2.0"},
+                )
+                with urllib.request.urlopen(req, timeout=3) as resp:
+                    data = json.loads(resp.read())
                     for m in data.get("models", []):
                         if m["name"] not in seen:
                             seen.add(m["name"])
                             models.append(m)
             except Exception:
                 pass
-        body = json.dumps({"models": models}).encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self._write_response_body(body)
+        self._json_response(200, {"models": models})
 
-    def _handle_health(self) -> None:
-        """Endpoint de health com status dos GPUs."""
-        gpu0_busy = _is_gpu_busy(GPU0_HOST)
-        gpu1_busy = _is_gpu_busy(GPU1_HOST)
-        body = json.dumps({
-            "coordinator": "ok",
-            "gpu0": {"host": GPU0_HOST, "busy": gpu0_busy},
-            "gpu1": {"host": GPU1_HOST, "busy": gpu1_busy},
-            "routing": {
-                "heavy_models_to": "GPU0",
-                "light_models_to": "GPU1",
-                "coordinator_model": "qwen2.5:1.5b-instruct-q2_k",
-            },
-        }, indent=2).encode()
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.send_header("Content-Length", str(len(body)))
-        self.end_headers()
-        self._write_response_body(body)
+    # ── do_GET / do_POST ──────────────────────────────────────────────────────
 
     def do_GET(self) -> None:
-        """Trata GET: /api/ps, /api/tags, /api/version, /health."""
         if self.path == "/api/ps":
             self._handle_ps()
         elif self.path.startswith("/api/tags"):
             self._handle_tags()
         elif self.path == "/health":
-            self._handle_health()
+            self._json_response(200, _cluster.health_info() if _cluster else {"error": "not initialized"})
+        elif self.path == "/metrics":
+            self._text_response(200, _cluster.prometheus_metrics() if _cluster else "", "text/plain; version=0.0.4")
         else:
-            self._proxy_passthrough(GPU0_HOST)
+            # fallback: primeiro endpoint saudável
+            ep = next((e for e in (_cluster._endpoints if _cluster else []) if e.healthy), None)
+            if ep:
+                self._passthrough_get(ep.host)
+            else:
+                self._json_response(503, {"error": "no healthy endpoint"})
 
     def do_POST(self) -> None:
-        """Trata POST: /api/generate, /api/chat."""
-        if self.path in ("/api/generate", "/api/chat"):
-            self._proxy_generate_or_chat()
+        if self.path in ("/api/generate", "/api/chat", "/api/embed", "/api/embeddings"):
+            self._route_and_forward()
         else:
-            # Outros endpoints (pull, push, etc.) → GPU0
-            body = self._read_body()
-            status, resp_body, _ = _forward_request("POST", self.path, body, {}, None)
-            self.send_response(status)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(resp_body)))
-            self.end_headers()
-            self._write_response_body(resp_body)
+            # pull, push, etc. → GPU0 (primeiro endpoint)
+            ep = _cluster._endpoints[0] if _cluster and _cluster._endpoints else None
+            if ep:
+                body = self._read_body()
+                self._forward(ep, "POST", self.path, body, streaming=False)
+            else:
+                self._json_response(503, {"error": "no endpoints configured"})
 
+
+# ── main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    """Ponto de entrada do coordenador."""
-    parser = argparse.ArgumentParser(description="Coordenador de GPUs Ollama")
+    global _cluster
+
+    parser = argparse.ArgumentParser(description="Coordenador de GPUs Ollama v2")
     parser.add_argument("--port", type=int, default=DEFAULT_PORT)
-    parser.add_argument("--gpu0", default=GPU0_HOST)
-    parser.add_argument("--gpu1", default=GPU1_HOST)
+    parser.add_argument("--gpu0", default=os.environ.get("OLLAMA_GPU0_HOST", "http://192.168.15.2:11434"))
+    parser.add_argument("--gpu1", default=os.environ.get("OLLAMA_GPU1_HOST", "http://192.168.15.2:11435"))
+    parser.add_argument("--nas",  default=os.environ.get("OLLAMA_NAS_HOST",  "http://192.168.15.4:11436"))
     args = parser.parse_args()
 
-    # pylint: disable=global-statement
-    import sys as _sys
-    _mod = _sys.modules[__name__]
-    setattr(_mod, "GPU0_HOST", args.gpu0)
-    setattr(_mod, "GPU1_HOST", args.gpu1)
+    endpoints = [
+        EndpointState("gpu0-rtx3060", args.gpu0, vram_total_mb=12 * 1024, priority=0),
+        EndpointState("gpu1-gtx1050", args.gpu1, vram_total_mb=2 * 1024,  priority=1),
+        EndpointState("nas-rtx2060",  args.nas,  vram_total_mb=8 * 1024,  priority=2),
+    ]
+
+    _cluster = GPUCluster(endpoints)
+    _cluster.start_poller()
 
     server = ThreadingHTTPServer(("0.0.0.0", args.port), CoordinatorHandler)
     server.daemon_threads = True
-    log.info(f"🚀 Coordenador GPU iniciado na porta {args.port}")
-    log.info(f"   GPU0 (pesado): {GPU0_HOST}")
-    log.info(f"   GPU1 (leve):   {GPU1_HOST}")
-    log.info(f"   Routing: trading-analyst→GPU0 | qwen3:0.6b/qwen2.5:1.5b→GPU1")
+
+    log.info("🚀 GPU Coordinator v2 iniciado na porta %d", args.port)
+    for ep in endpoints:
+        log.info("   %s  %s  %dGB  healthy=%s  modelos=%s",
+                 ep.name, ep.host, ep.vram_total_mb // 1024, ep.healthy,
+                 list(ep._loaded.keys()))
     try:
         server.serve_forever()
     except KeyboardInterrupt:
