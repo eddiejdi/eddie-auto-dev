@@ -654,7 +654,8 @@
               "text": "response",
               "type": "string"
             }
-          ]
+          ],
+          "parser": "backend"
         }
       ]
     },
