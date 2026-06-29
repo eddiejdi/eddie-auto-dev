@@ -71,10 +71,72 @@ _RING_SIZE = int(os.environ.get("GPU_COORD_RING_SIZE", "100"))
 _ring_lock = threading.Lock()
 _ring: collections.deque = collections.deque(maxlen=_RING_SIZE)
 
+# PostgreSQL async writer — lê DATABASE_URL de /etc/default/eddie-common via EnvironmentFile
+_PG_DSN = os.environ.get("GPU_COORD_PG_DSN") or os.environ.get("DATABASE_URL", "")
+_pg_queue: Optional[object] = None
+
+
+def _start_pg_writer() -> None:
+    global _pg_queue
+    try:
+        import queue as _queue
+        import psycopg2  # type: ignore[import]
+    except ImportError:
+        log.info("psycopg2 não instalado — payload log apenas em memória")
+        return
+    if not _PG_DSN:
+        log.info("DATABASE_URL não definida — payload log apenas em memória")
+        return
+    _pg_queue = _queue.Queue(maxsize=500)
+
+    def _writer() -> None:
+        conn = None
+        while True:
+            try:
+                import queue as _q
+                entry = _pg_queue.get(timeout=5)  # type: ignore[union-attr]
+                if conn is None or conn.closed:
+                    conn = psycopg2.connect(_PG_DSN)
+                    conn.autocommit = True
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            CREATE TABLE IF NOT EXISTS ollama_payload_log (
+                                id BIGSERIAL PRIMARY KEY,
+                                ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                                model TEXT, endpoint TEXT, path TEXT,
+                                status INT, elapsed_s FLOAT, streaming BOOLEAN,
+                                prompt TEXT, response TEXT
+                            )
+                        """)
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO ollama_payload_log"
+                        " (ts,model,endpoint,path,status,elapsed_s,streaming,prompt,response)"
+                        " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+                        (
+                            entry.get("ts"), entry.get("model"), entry.get("endpoint"),
+                            entry.get("path"), entry.get("status"), entry.get("elapsed_s"),
+                            bool(entry.get("streaming")),
+                            (entry.get("prompt") or "")[:2000],
+                            (entry.get("response") or "")[:2000],
+                        ),
+                    )
+            except Exception as exc:
+                log.warning("pg_writer: %s", exc)
+                conn = None
+
+    threading.Thread(target=_writer, daemon=True, name="pg-writer").start()
+    log.info("pg_writer iniciado (dsn=%s...)", _PG_DSN[:20])
+
 
 def _ring_append(entry: dict) -> None:
     with _ring_lock:
         _ring.append(entry)
+    if _pg_queue is not None:
+        try:
+            _pg_queue.put_nowait(entry)  # type: ignore[union-attr]
+        except Exception:
+            pass
 
 
 def _ring_snapshot() -> list:
@@ -616,6 +678,7 @@ def main() -> None:
 
     _cluster = GPUCluster(endpoints)
     _cluster.start_poller()
+    _start_pg_writer()
 
     server = ThreadingHTTPServer(("0.0.0.0", args.port), CoordinatorHandler)
     server.daemon_threads = True
