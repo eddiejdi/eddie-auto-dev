@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-06-28T23:32:29.952230+00:00",
+  "generated_at": "2026-06-29T00:59:05.535751+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 153,
-    "critical_services": 61,
+    "repo_services": 155,
+    "critical_services": 63,
     "domains": {
       "identity": 4,
       "monitoring": 14,
       "network": 16,
       "operations": 88,
-      "storage": 27,
+      "storage": 29,
       "trading": 4
     }
   },
@@ -1207,6 +1207,22 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "storj-macvlan-watchdog.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/storj-macvlan-watchdog.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "storj-macvlan-watchdog.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/storj-macvlan-watchdog.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "tape-quality-ollama-narrator.service",
       "domain": "storage",
       "kind": "systemd",
@@ -1674,6 +1690,20 @@
         "name": "storj-macvlan-network.service",
         "domain": "storage",
         "source": "systemd/storj-macvlan-network.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "storj-macvlan-watchdog.service",
+        "domain": "storage",
+        "source": "systemd/storj-macvlan-watchdog.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "storj-macvlan-watchdog.timer",
+        "domain": "storage",
+        "source": "systemd/storj-macvlan-watchdog.timer",
         "kind": "systemd",
         "critical": true
       },
