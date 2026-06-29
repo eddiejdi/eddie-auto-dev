@@ -34,8 +34,7 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "none"
       },
       "fieldConfig": {
         "defaults": {
@@ -79,8 +78,7 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "none"
       },
       "fieldConfig": {
         "defaults": {
@@ -98,7 +96,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "sum(ollama_model_ram_mb) / 1024",
+          "expr": "sum(ollama_model_ram_mb)/1024",
           "instant": true,
           "refId": "A"
         }
@@ -124,8 +122,7 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "none"
       },
       "fieldConfig": {
         "defaults": {
@@ -169,8 +166,7 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "none"
       },
       "fieldConfig": {
         "defaults": {
@@ -214,8 +210,7 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "none"
       },
       "fieldConfig": {
         "defaults": {
@@ -241,7 +236,7 @@
     },
     {
       "type": "stat",
-      "title": "Endpoints Saud\u00e1veis",
+      "title": "Endpoints Saudaveis",
       "gridPos": {
         "x": 20,
         "y": 0,
@@ -259,8 +254,7 @@
           ]
         },
         "colorMode": "background",
-        "graphMode": "none",
-        "textMode": "auto"
+        "graphMode": "none"
       },
       "fieldConfig": {
         "defaults": {
@@ -304,7 +298,6 @@
         "overrides": []
       },
       "options": {
-        "xField": "Time",
         "orientation": "horizontal",
         "legend": {
           "displayMode": "list",
@@ -384,7 +377,7 @@
     },
     {
       "type": "timeseries",
-      "title": "Requisi\u00e7\u00f5es Ativas por GPU",
+      "title": "Requisicoes Ativas por GPU",
       "gridPos": {
         "x": 0,
         "y": 14,
@@ -417,7 +410,7 @@
             "uid": "dfc0w4yioe4u8e"
           },
           "expr": "gpu_coord_active_requests{endpoint=\"gpu0-rtx3060\"}",
-          "legendFormat": "GPU0 RTX3060",
+          "legendFormat": "GPU0",
           "refId": "A"
         },
         {
@@ -426,7 +419,7 @@
             "uid": "dfc0w4yioe4u8e"
           },
           "expr": "gpu_coord_active_requests{endpoint=\"gpu1-gtx1050\"}",
-          "legendFormat": "GPU1 GTX1050",
+          "legendFormat": "GPU1",
           "refId": "B"
         },
         {
@@ -435,7 +428,7 @@
             "uid": "dfc0w4yioe4u8e"
           },
           "expr": "gpu_coord_active_requests{endpoint=\"nas-rtx2060\"}",
-          "legendFormat": "NAS RTX2060",
+          "legendFormat": "NAS",
           "refId": "C"
         }
       ]
@@ -499,11 +492,178 @@
       ]
     },
     {
+      "type": "table",
+      "title": "Payload Log - Ultimas Requisicoes (prompt + resposta)",
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 14
+      },
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "dfqjvc7g094owc"
+      },
+      "options": {
+        "sortBy": [
+          {
+            "displayName": "ts",
+            "desc": true
+          }
+        ],
+        "footer": {
+          "show": false
+        }
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "left",
+            "wrap": true
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ts"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 190
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "model"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 150
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "endpoint"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 130
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "elapsed_s"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 75
+              },
+              {
+                "id": "displayName",
+                "value": "seg"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 60
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "streaming"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 70
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "dfqjvc7g094owc"
+          },
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "format": "table",
+          "url": "http://172.17.0.1:11437/api/requests?limit=50",
+          "root_selector": "requests",
+          "columns": [
+            {
+              "selector": "ts",
+              "text": "ts",
+              "type": "string"
+            },
+            {
+              "selector": "model",
+              "text": "model",
+              "type": "string"
+            },
+            {
+              "selector": "endpoint",
+              "text": "endpoint",
+              "type": "string"
+            },
+            {
+              "selector": "elapsed_s",
+              "text": "elapsed_s",
+              "type": "number"
+            },
+            {
+              "selector": "status",
+              "text": "status",
+              "type": "number"
+            },
+            {
+              "selector": "streaming",
+              "text": "streaming",
+              "type": "string"
+            },
+            {
+              "selector": "prompt",
+              "text": "prompt",
+              "type": "string"
+            },
+            {
+              "selector": "response",
+              "text": "response",
+              "type": "string"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "type": "timeseries",
       "title": "Token Generation Rate (tokens/s)",
       "gridPos": {
         "x": 0,
-        "y": 22,
+        "y": 36,
         "w": 12,
         "h": 8
       },
@@ -543,7 +703,7 @@
       "title": "Request Latency p95 (s)",
       "gridPos": {
         "x": 12,
-        "y": 22,
+        "y": 36,
         "w": 12,
         "h": 8
       },
@@ -583,7 +743,7 @@
       "title": "CPU Homelab (%)",
       "gridPos": {
         "x": 0,
-        "y": 30,
+        "y": 44,
         "w": 12,
         "h": 8
       },
@@ -623,7 +783,7 @@
       "title": "RAM Homelab (GB)",
       "gridPos": {
         "x": 12,
-        "y": 30,
+        "y": 44,
         "w": 12,
         "h": 8
       },
@@ -652,7 +812,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / (1024^3)",
+          "expr": "sum(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes)/(1024^3)",
           "legendFormat": "Usado",
           "refId": "A"
         },
@@ -661,7 +821,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "sum(node_memory_MemTotal_bytes) / (1024^3)",
+          "expr": "sum(node_memory_MemTotal_bytes)/(1024^3)",
           "legendFormat": "Total",
           "refId": "B"
         }
@@ -669,6 +829,6 @@
     }
   ],
   "schemaVersion": 38,
-  "version": 2,
+  "version": 3,
   "id": null
 }

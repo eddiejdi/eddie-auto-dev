@@ -20,6 +20,8 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import collections
+import datetime
 import http.client
 import json
 import logging
@@ -60,6 +62,24 @@ _VRAM_ESTIMATES: list[tuple[str, int]] = [
 _STATS_LOCK = threading.Lock()
 _TOTAL_REQUESTS = 0
 _REQUEST_ERRORS = 0
+
+# ── Ring buffer de requisições ────────────────────────────────────────────────
+
+_PAYLOAD_LOG_CHARS = int(os.environ.get("GPU_COORD_PAYLOAD_LOG_CHARS", "500"))
+_RING_SIZE = int(os.environ.get("GPU_COORD_RING_SIZE", "100"))
+
+_ring_lock = threading.Lock()
+_ring: collections.deque = collections.deque(maxlen=_RING_SIZE)
+
+
+def _ring_append(entry: dict) -> None:
+    with _ring_lock:
+        _ring.append(entry)
+
+
+def _ring_snapshot() -> list:
+    with _ring_lock:
+        return list(reversed(_ring))  # mais recente primeiro
 
 
 def _estimate_vram_mb(model: str) -> int:
@@ -334,7 +354,22 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         host = parsed.hostname
         port = parsed.port or 80
 
+        # Extrai prompt para o ring buffer
+        prompt_preview = ""
+        model_name = ""
+        try:
+            req_data = json.loads(body) if body else {}
+            model_name = req_data.get("model", "")
+            raw_prompt = req_data.get("prompt") or ""
+            if not raw_prompt:
+                msgs = req_data.get("messages", [])
+                raw_prompt = " | ".join(m.get("content", "")[:200] for m in msgs[-3:])
+            prompt_preview = raw_prompt[:_PAYLOAD_LOG_CHARS]
+        except Exception:
+            pass
+
         ep.increment()
+        t_start = time.monotonic()
         with _STATS_LOCK:
             global _TOTAL_REQUESTS
             _TOTAL_REQUESTS += 1
@@ -352,20 +387,30 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
             conn.request(method, path, body=body or None, headers=headers)
             resp = conn.getresponse()
 
+            resp_preview = ""
             if streaming:
                 self.send_response(resp.status)
                 self.send_header("Content-Type", resp.getheader("Content-Type", "application/json"))
                 self.send_header("X-GPU-Endpoint", ep.name)
                 self.send_header("Transfer-Encoding", "chunked")
                 self.end_headers()
+                chunks = []
                 try:
                     while True:
                         chunk = resp.read(4096)
                         if not chunk:
                             break
                         self.wfile.write(chunk)
+                        chunks.append(chunk)
                     self.wfile.flush()
                 except (BrokenPipeError, ConnectionResetError):
+                    pass
+                try:
+                    full = b"".join(chunks).decode(errors="replace")
+                    # streaming: cada linha é JSON com "response" parcial
+                    tokens = [json.loads(ln).get("response", "") for ln in full.splitlines() if ln.strip()]
+                    resp_preview = "".join(tokens)[:_PAYLOAD_LOG_CHARS]
+                except Exception:
                     pass
             else:
                 resp_body = resp.read()
@@ -378,6 +423,26 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
                     self.wfile.write(resp_body)
                 except (BrokenPipeError, ConnectionResetError):
                     pass
+                try:
+                    resp_preview = json.loads(resp_body).get("response", "")[:_PAYLOAD_LOG_CHARS]
+                except Exception:
+                    resp_preview = resp_body[:_PAYLOAD_LOG_CHARS].decode(errors="replace")
+
+            elapsed = round(time.monotonic() - t_start, 2)
+
+            _ring_append({
+                "ts":       datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "model":    model_name,
+                "endpoint": ep.name,
+                "path":     path,
+                "status":   resp.status,
+                "elapsed_s": elapsed,
+                "prompt":   prompt_preview,
+                "response": resp_preview,
+                "streaming": streaming,
+            })
+            log.info("✅ %s model=%s → %s status=%d elapsed=%.1fs",
+                     path, model_name, ep.name, resp.status, elapsed)
 
             if resp.status >= 400:
                 with _STATS_LOCK:
@@ -385,7 +450,20 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
                     _REQUEST_ERRORS += 1
 
         except Exception as exc:
+            elapsed = round(time.monotonic() - t_start, 2)
             log.warning("forward para %s falhou: %s", ep.name, exc)
+            _ring_append({
+                "ts":       datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "model":    model_name,
+                "endpoint": ep.name,
+                "path":     path,
+                "status":   503,
+                "elapsed_s": elapsed,
+                "prompt":   prompt_preview,
+                "response": "",
+                "error":    str(exc),
+                "streaming": streaming,
+            })
             with _STATS_LOCK:
                 _REQUEST_ERRORS += 1
             self._json_response(503, {"error": str(exc), "endpoint": ep.name})
@@ -482,6 +560,21 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
             self._json_response(200, _cluster.health_info() if _cluster else {"error": "not initialized"})
         elif self.path == "/metrics":
             self._text_response(200, _cluster.prometheus_metrics() if _cluster else "", "text/plain; version=0.0.4")
+        elif self.path.startswith("/api/requests"):
+            # Ring buffer das últimas requisições com preview de prompt/resposta
+            params = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
+            limit = int(params.get("limit", ["50"])[0])
+            entries = _ring_snapshot()[:limit]
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            body = json.dumps({"requests": entries, "total": len(_ring_snapshot())}).encode()
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            try:
+                self.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                pass
         else:
             # fallback: primeiro endpoint saudável
             ep = next((e for e in (_cluster._endpoints if _cluster else []) if e.healthy), None)
