@@ -1,0 +1,11 @@
+[Unit]
+Description=Storj macvlan watchdog timer (2 min)
+Requires=storj-macvlan-watchdog.service
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+Unit=storj-macvlan-watchdog.service
+
+[Install]
+WantedBy=timers.target
