@@ -26,6 +26,7 @@ import http.client
 import json
 import logging
 import os
+import re
 import sys
 import threading
 import time
@@ -143,6 +144,13 @@ def _ring_snapshot() -> list:
     with _ring_lock:
         return list(reversed(_ring))  # mais recente primeiro
 
+
+
+def _clean_text(text: str, maxlen: int = _PAYLOAD_LOG_CHARS) -> str:
+    """Remove <think> blocks, normaliza whitespace e trunca."""
+    text = re.sub(r'<think>.*?</think>', '', text, flags=re.DOTALL)
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text[:maxlen]
 
 def _estimate_vram_mb(model: str) -> int:
     """Estima VRAM necessária para um modelo pelo nome (MB)."""
@@ -426,7 +434,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
             if not raw_prompt:
                 msgs = req_data.get("messages", [])
                 raw_prompt = " | ".join(m.get("content", "")[:200] for m in msgs[-3:])
-            prompt_preview = raw_prompt[:_PAYLOAD_LOG_CHARS]
+            prompt_preview = _clean_text(raw_prompt)
         except Exception:
             pass
 
@@ -471,7 +479,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
                     full = b"".join(chunks).decode(errors="replace")
                     # streaming: cada linha é JSON com "response" parcial
                     tokens = [json.loads(ln).get("response", "") for ln in full.splitlines() if ln.strip()]
-                    resp_preview = "".join(tokens)[:_PAYLOAD_LOG_CHARS]
+                    resp_preview = _clean_text("".join(tokens))
                 except Exception:
                     pass
             else:
@@ -486,7 +494,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
                 except (BrokenPipeError, ConnectionResetError):
                     pass
                 try:
-                    resp_preview = json.loads(resp_body).get("response", "")[:_PAYLOAD_LOG_CHARS]
+                    resp_preview = _clean_text(json.loads(resp_body).get("response", ""))
                 except Exception:
                     resp_preview = resp_body[:_PAYLOAD_LOG_CHARS].decode(errors="replace")
 
