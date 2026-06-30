@@ -64,6 +64,28 @@ _STATS_LOCK = threading.Lock()
 _TOTAL_REQUESTS = 0
 _REQUEST_ERRORS = 0
 
+# ── Histogram de latência por modelo ─────────────────────────────────────────
+
+_DURATION_BUCKETS = [0.5, 1.0, 2.0, 5.0, 10.0, 30.0, 60.0, 120.0, 240.0, float("inf")]
+_dur_lock = threading.Lock()
+# model → {le: count}
+_dur_buckets: dict[str, dict[float, int]] = {}
+_dur_sum: dict[str, float] = {}
+_dur_count: dict[str, int] = {}
+
+
+def _record_duration(model: str, elapsed_s: float) -> None:
+    with _dur_lock:
+        if model not in _dur_buckets:
+            _dur_buckets[model] = {le: 0 for le in _DURATION_BUCKETS}
+            _dur_sum[model] = 0.0
+            _dur_count[model] = 0
+        for le in _DURATION_BUCKETS:
+            if elapsed_s <= le:
+                _dur_buckets[model][le] += 1
+        _dur_sum[model] += elapsed_s
+        _dur_count[model] += 1
+
 # ── Ring buffer de requisições ────────────────────────────────────────────────
 
 _PAYLOAD_LOG_CHARS = int(os.environ.get("GPU_COORD_PAYLOAD_LOG_CHARS", "500"))
@@ -417,6 +439,26 @@ class GPUCluster:
         lines.append("# TYPE gpu_coord_request_errors_total counter")
         lines.append(f"gpu_coord_request_errors_total {errors}")
 
+        # VRAM por modelo carregado (usada pelos painéis do Grafana)
+        lines.append("# HELP ollama_model_ram_mb VRAM usada por modelo carregado em VRAM por endpoint (MB)")
+        lines.append("# TYPE ollama_model_ram_mb gauge")
+        for ep in self._endpoints:
+            for model_name, vram_mb in ep._loaded.items():
+                safe = model_name.replace('"', '\\"')
+                lines.append(f'ollama_model_ram_mb{{model="{safe}",endpoint="{ep.name}"}} {vram_mb:.1f}')
+
+        # Histograma de latência por modelo (para histogram_quantile no Grafana)
+        lines.append("# HELP ollama_request_duration_seconds Latência de requisição por modelo (s)")
+        lines.append("# TYPE ollama_request_duration_seconds histogram")
+        with _dur_lock:
+            for model_name in list(_dur_buckets.keys()):
+                safe = model_name.replace('"', '\\"')
+                for le, cnt in _dur_buckets[model_name].items():
+                    le_str = "+Inf" if le == float("inf") else str(le)
+                    lines.append(f'ollama_request_duration_seconds_bucket{{model="{safe}",le="{le_str}"}} {cnt}')
+                lines.append(f'ollama_request_duration_seconds_sum{{model="{safe}"}} {_dur_sum[model_name]:.3f}')
+                lines.append(f'ollama_request_duration_seconds_count{{model="{safe}"}} {_dur_count[model_name]}')
+
         return "\n".join(lines) + "\n"
 
 
@@ -550,6 +592,9 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
                     resp_preview = resp_body[:_PAYLOAD_LOG_CHARS].decode(errors="replace")
 
             elapsed = round(time.monotonic() - t_start, 2)
+
+            if model_name:
+                _record_duration(model_name, elapsed)
 
             _ring_append({
                 "ts":       datetime.datetime.now(datetime.timezone.utc).isoformat(),

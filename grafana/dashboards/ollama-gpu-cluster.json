@@ -490,8 +490,8 @@
     },
     {
       "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "btc-trading-pg"
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "dfqjvc7g094owc"
       },
       "fieldConfig": {
         "defaults": {
