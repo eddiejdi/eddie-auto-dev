@@ -56,7 +56,7 @@ _VRAM_ESTIMATES: list[tuple[str, int]] = [
     ("8b",   6000), ("13b", 10000), ("14b", 10500), ("32b", 22000),
     ("70b", 48000),
     # modelos nomeados
-    ("trading-analyst", 9500), ("qwen3-fast", 1500), ("smollm", 600),
+    ("trading-analyst", 6500), ("qwen3-fast", 1500), ("smollm", 600),
     ("moondream", 1700),
 ]
 
@@ -296,19 +296,70 @@ class GPUCluster:
         # Poll inicial (síncrono) para ter estado antes da 1ª requisição
         for ep in self._endpoints:
             ep.poll()
+        self._evict_misplaced_models()
 
         def _loop() -> None:
             while True:
                 time.sleep(POLL_INTERVAL_SEC)
                 for ep in self._endpoints:
                     ep.poll()
+                self._evict_misplaced_models()
 
         self._poller = threading.Thread(target=_loop, daemon=True, name="gpu-poller")
         self._poller.start()
         log.info("poller iniciado (intervalo=%.0fs, endpoints=%d)", POLL_INTERVAL_SEC, len(self._endpoints))
 
+    def _unload_model(self, ep: EndpointState, model: str) -> None:
+        """Descarrega um modelo da VRAM de um endpoint via keep_alive=0."""
+        try:
+            body = json.dumps({"model": model, "keep_alive": 0, "prompt": ""}).encode()
+            req = urllib.request.Request(
+                f"{ep.host}/api/generate",
+                data=body,
+                headers={"Content-Type": "application/json", "User-Agent": "gpu-coordinator/2.0"},
+                method="POST",
+            )
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                resp.read()
+            log.info("🧹 evictado modelo %s de %s (estava na GPU errada)", model, ep.name)
+        except Exception as exc:
+            log.warning("falha ao evictar %s de %s: %s", model, ep.name, exc)
+
+    def _evict_misplaced_models(self) -> None:
+        """Detecta e evicta da VRAM modelos pinados carregados na GPU errada."""
+        for ep in self._endpoints:
+            if not ep.healthy:
+                continue
+            for model_name in list(ep._loaded.keys()):
+                for suffix, target_ep_name in self._PIN_SUFFIX.items():
+                    if model_name.endswith(suffix) and ep.name != target_ep_name:
+                        log.error(
+                            "🚨 modelo pinado '%s' detectado em %s (correto: %s) — evictando",
+                            model_name, ep.name, target_ep_name,
+                        )
+                        self._unload_model(ep, model_name)
+
+    # Modelos com sufixo ":gpuN" são pinados ao endpoint correspondente.
+    # Modelos sem sufixo são roteados por potência (RTX 3060 > NAS RTX 2060 > GTX 1050).
+    _PIN_SUFFIX: dict[str, str] = {
+        ":gpu0": "gpu0-rtx3060",
+        ":gpu1": "gpu1-gtx1050",
+        ":nas":  "nas-rtx2060",
+    }
+
     def pick(self, model: str) -> Optional[EndpointState]:
         """Retorna o melhor endpoint para o modelo. None se nenhum disponível."""
+        # Pinning por sufixo — nunca vaza para outra GPU
+        for suffix, ep_name in self._PIN_SUFFIX.items():
+            if model.endswith(suffix):
+                pinned = next((ep for ep in self._endpoints if ep.name == ep_name), None)
+                if pinned and pinned.healthy:
+                    log.info("roteando model=%s → %s [pinned] (active=%d vram_free=%.0fMB)",
+                             model, pinned.name, pinned.active_requests, pinned.vram_free_mb)
+                    return pinned
+                log.warning("endpoint pinado %s indisponível para model=%s — sem fallback", ep_name, model)
+                return None
+
         best: Optional[EndpointState] = None
         best_score = float("inf")
 
@@ -679,9 +730,9 @@ def main() -> None:
     args = parser.parse_args()
 
     endpoints = [
-        EndpointState("gpu0-rtx3060", args.gpu0, vram_total_mb=12 * 1024, priority=0),
-        EndpointState("gpu1-gtx1050", args.gpu1, vram_total_mb=2 * 1024,  priority=1),
-        EndpointState("nas-rtx2060",  args.nas,  vram_total_mb=8 * 1024,  priority=2),
+        EndpointState("gpu0-rtx3060", args.gpu0, vram_total_mb=12 * 1024, priority=0),  # ~170 GFLOPS FP32
+        EndpointState("nas-rtx2060",  args.nas,  vram_total_mb=8 * 1024,  priority=1),  # ~57 GFLOPS FP32
+        EndpointState("gpu1-gtx1050", args.gpu1, vram_total_mb=2 * 1024,  priority=2),  # ~19 GFLOPS FP32
     ]
 
     _cluster = GPUCluster(endpoints)
