@@ -19,6 +19,7 @@ on:
       - 'btc_trading_agent/config_BTC_USDT_*.json'
       - 'patches/config_BTC_USDT_*_optimized.json'
       - 'scripts/deploy_btc_trading_profiles.sh'
+      - 'scripts/kucoin_postgres_sync.py'
       - 'scripts/candle_collector.py'
       - 'scripts/ollama_finetune_batch.py'
       - 'systemd/crypto-agent@.service'

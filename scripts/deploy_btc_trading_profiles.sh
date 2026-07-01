@@ -280,6 +280,9 @@ sync_trading_runtime() {
     "${REPO_ROOT}/grafana/exporters/requirements.txt" \
     "${EXPORTERS_DIR}/requirements.txt"
   sync_runtime_file \
+    "${REPO_ROOT}/scripts/kucoin_postgres_sync.py" \
+    "${SCRIPTS_DIR}/kucoin_postgres_sync.py"
+  sync_runtime_file \
     "${REPO_ROOT}/scripts/candle_collector.py" \
     "${SCRIPTS_DIR}/candle_collector.py"
   sync_runtime_file \
