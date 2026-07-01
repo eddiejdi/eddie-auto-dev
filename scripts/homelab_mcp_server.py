@@ -12,13 +12,19 @@ Configuração via variáveis de ambiente:
     SECRETS_AGENT_API_KEY - Chave de API do Secrets Agent
     API_BASE_URL         - URL da API Estou Aqui (default: http://localhost:3000)
     DATABASE_URL         - Connection string PostgreSQL
+    CHROMA_DB_PATH       - Path do ChromaDB (default: /home/homelab/myClaude/chroma_db)
 """
+import importlib.util
 import json
 import logging
 import os
 import sys
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Optional
+
+# Adiciona raiz do projeto ao path para imports de tools/
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import requests
 from mcp.server import FastMCP
@@ -451,6 +457,344 @@ def db_active_events() -> str:
     return db_execute_query(sql)
 
 
+# ═══════════════════════  AGENT GOVERNANCE  ═══════════════════════════════
+#
+# Ferramentas do Agent Governance Layer (Fase 0).
+# Requerem DATABASE_URL configurado no ambiente.
+# Documentação: docs/AGENT_GOVERNANCE_MIGRATION_PLAN.md
+
+# Ações com risk_level >= medium ficam pendentes até aprovação humana (Fase 1).
+# Ações none/low são auto-aprovadas imediatamente.
+_AUTO_APPROVE_LEVELS = {"none", "low"}
+_VALID_RISK_LEVELS   = {"none", "low", "medium", "high", "critical"}
+_VALID_ACTION_TYPES  = {"restart", "deploy", "modify", "delete", "create", "query", "config", "other"}
+_VALID_STATUSES      = {"pending", "approved", "rejected", "in_progress", "done", "failed", "expired"}
+
+
+def _db_write(sql: str, params: tuple) -> dict:
+    """Executa SQL de escrita no PostgreSQL do homelab (INSERT/UPDATE)."""
+    if not DATABASE_URL:
+        return {"ok": False, "error": "DATABASE_URL não configurada."}
+    try:
+        import psycopg2
+        import psycopg2.extras
+        conn = psycopg2.connect(DATABASE_URL)
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(sql, params)
+        rows = cur.fetchall() if cur.description else []
+        conn.commit()
+        cur.close()
+        conn.close()
+        return {
+            "ok": True,
+            "rows": [dict(r) for r in rows],
+        }
+    except ImportError:
+        return {"ok": False, "error": "psycopg2 não instalado."}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def _db_read_one(sql: str, params: tuple) -> dict:
+    """Executa SELECT e retorna a primeira linha como dict (ou None)."""
+    if not DATABASE_URL:
+        return {"ok": False, "error": "DATABASE_URL não configurada."}
+    try:
+        import psycopg2
+        import psycopg2.extras
+        conn = psycopg2.connect(DATABASE_URL)
+        conn.set_session(readonly=True, autocommit=True)
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(sql, params)
+        row = cur.fetchone()
+        cur.close()
+        conn.close()
+        return {"ok": True, "row": dict(row) if row else None}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def _db_read_many(sql: str, params: tuple = ()) -> dict:
+    """Executa SELECT e retorna todas as linhas."""
+    if not DATABASE_URL:
+        return {"ok": False, "error": "DATABASE_URL não configurada."}
+    try:
+        import psycopg2
+        import psycopg2.extras
+        conn = psycopg2.connect(DATABASE_URL)
+        conn.set_session(readonly=True, autocommit=True)
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(sql, params)
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return {"ok": True, "rows": [dict(r) for r in rows]}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@mcp.tool()
+def intent_declare(
+    agent_id: str,
+    action_type: str,
+    description: str,
+    target: str = "",
+    risk_level: str = "medium",
+    context: str = "{}",
+) -> str:
+    """Declara a intenção de executar uma ação antes de realizá-la.
+
+    Deve ser chamado ANTES de qualquer ação que modifique o ambiente.
+    Retorna intent_id para uso posterior em intent_check_status() e intent_complete().
+
+    Ações com risk_level 'none' ou 'low' são auto-aprovadas imediatamente.
+    Ações com risk_level 'medium', 'high' ou 'critical' ficam em status 'pending'
+    até aprovação humana via Telegram (Fase 1 do Governance Layer).
+
+    Args:
+        agent_id:    Identificador do agente (ex: 'nextcloud_agent', 'claude_code').
+        action_type: Tipo da ação — restart | deploy | modify | delete | create | query | config | other
+        description: Descrição legível do que será feito e por quê.
+        target:      Recurso afetado — serviço, arquivo, host, URL (opcional).
+        risk_level:  Nível de risco — none | low | medium | high | critical (default: medium)
+        context:     JSON com contexto adicional — estado atual, motivação, etc. (default: {})
+    """
+    if risk_level not in _VALID_RISK_LEVELS:
+        return json.dumps({"ok": False, "error": f"risk_level inválido: '{risk_level}'. Use: {sorted(_VALID_RISK_LEVELS)}"}, ensure_ascii=False)
+
+    if action_type not in _VALID_ACTION_TYPES:
+        return json.dumps({"ok": False, "error": f"action_type inválido: '{action_type}'. Use: {sorted(_VALID_ACTION_TYPES)}"}, ensure_ascii=False)
+
+    try:
+        ctx = json.loads(context) if context else {}
+    except json.JSONDecodeError:
+        return json.dumps({"ok": False, "error": "context não é JSON válido."}, ensure_ascii=False)
+
+    intent_id = f"intent-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
+    initial_status = "approved" if risk_level in _AUTO_APPROVE_LEVELS else "pending"
+
+    result = _db_write(
+        """
+        INSERT INTO agent_actions
+            (intent_id, agent_id, action_type, description, target,
+             risk_level, status, context_snapshot,
+             resolved_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING intent_id, status, created_at
+        """,
+        (
+            intent_id, agent_id, action_type, description,
+            target or None,
+            risk_level, initial_status,
+            json.dumps(ctx),
+            datetime.now(timezone.utc) if initial_status == "approved" else None,
+        ),
+    )
+
+    if not result["ok"]:
+        return json.dumps(result, ensure_ascii=False)
+
+    row = result["rows"][0] if result["rows"] else {}
+    return json.dumps({
+        "ok": True,
+        "intent_id": intent_id,
+        "status": initial_status,
+        "auto_approved": initial_status == "approved",
+        "message": (
+            "Auto-aprovado — pode prosseguir." if initial_status == "approved"
+            else "Aguardando aprovação humana. Chame intent_check_status() antes de executar."
+        ),
+        "created_at": str(row.get("created_at", "")),
+    }, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def intent_check_status(intent_id: str) -> str:
+    """Verifica o status de aprovação de uma intenção declarada.
+
+    Retorna o status atual: pending | approved | rejected | expired.
+    O agente deve verificar este status antes de executar qualquer ação
+    que tenha sido declarada com risk_level >= medium.
+
+    Fluxo recomendado:
+        1. intent_declare(...)  → obtém intent_id
+        2. intent_check_status(intent_id)  → verifica aprovação
+        3. Se approved → executa a ação
+        4. Se pending  → aguarda e tenta novamente (backoff sugerido: 30s)
+        5. Se rejected | expired → aborta
+
+    Args:
+        intent_id: ID retornado por intent_declare().
+    """
+    result = _db_read_one(
+        """
+        SELECT intent_id, agent_id, action_type, description, target,
+               risk_level, status, approved_by,
+               created_at, resolved_at
+        FROM agent_actions
+        WHERE intent_id = %s
+        """,
+        (intent_id,),
+    )
+
+    if not result["ok"]:
+        return json.dumps(result, ensure_ascii=False)
+
+    if result["row"] is None:
+        return json.dumps({"ok": False, "error": f"intent_id não encontrado: {intent_id}"}, ensure_ascii=False)
+
+    row = {k: str(v) if v is not None and not isinstance(v, (str, int, float, bool)) else v
+           for k, v in result["row"].items()}
+
+    can_proceed = row["status"] == "approved"
+    should_abort = row["status"] in ("rejected", "expired")
+
+    return json.dumps({
+        "ok": True,
+        "intent_id": intent_id,
+        "status": row["status"],
+        "can_proceed": can_proceed,
+        "should_abort": should_abort,
+        "approved_by": row.get("approved_by"),
+        "risk_level": row["risk_level"],
+        "created_at": row.get("created_at"),
+        "resolved_at": row.get("resolved_at"),
+        "message": (
+            "Aprovado — pode executar agora."          if can_proceed else
+            "Rejeitado ou expirado — aborte a ação."  if should_abort else
+            "Ainda aguardando aprovação humana."
+        ),
+    }, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def intent_complete(
+    intent_id: str,
+    outcome: str,
+    success: bool = True,
+    error_detail: str = "",
+) -> str:
+    """Registra a conclusão de uma intenção após executar a ação.
+
+    Deve ser chamado SEMPRE após a execução, independente do resultado (sucesso ou falha).
+    Atualiza o status para 'done' (sucesso) ou 'failed' (falha) e registra o resultado.
+
+    Args:
+        intent_id:    ID retornado por intent_declare().
+        outcome:      Descrição do que aconteceu (ex: 'Serviço reiniciado com sucesso').
+        success:      True se a execução foi bem-sucedida, False se falhou.
+        error_detail: Detalhes do erro em caso de falha (opcional).
+    """
+    final_status = "done" if success else "failed"
+    now = datetime.now(timezone.utc)
+
+    result = _db_write(
+        """
+        UPDATE agent_actions
+        SET status        = %s,
+            outcome       = %s,
+            error_detail  = %s,
+            executed_at   = COALESCE(executed_at, %s),
+            completed_at  = %s
+        WHERE intent_id = %s
+        RETURNING intent_id, status, outcome, completed_at
+        """,
+        (
+            final_status,
+            outcome,
+            error_detail or None,
+            now, now,
+            intent_id,
+        ),
+    )
+
+    if not result["ok"]:
+        return json.dumps(result, ensure_ascii=False)
+
+    if not result["rows"]:
+        return json.dumps({"ok": False, "error": f"intent_id não encontrado: {intent_id}"}, ensure_ascii=False)
+
+    row = result["rows"][0]
+    return json.dumps({
+        "ok": True,
+        "intent_id": intent_id,
+        "status": final_status,
+        "outcome": outcome,
+        "completed_at": str(row.get("completed_at", "")),
+    }, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def journal_query(
+    agent_id: str = "",
+    action_type: str = "",
+    target: str = "",
+    status: str = "",
+    risk_level: str = "",
+    limit: int = 20,
+) -> str:
+    """Consulta o Action Journal — histórico persistente de ações dos agentes.
+
+    Use antes de agir para saber o que já foi feito no mesmo target ou por outros agentes.
+    Todos os parâmetros são opcionais e combinados como filtros AND.
+
+    Args:
+        agent_id:    Filtrar por agente específico (ex: 'nextcloud_agent').
+        action_type: Filtrar por tipo — restart | deploy | modify | delete | create | query | config | other
+        target:      Filtrar por target (busca parcial, case-insensitive).
+        status:      Filtrar por status — pending | approved | rejected | done | failed | expired
+        risk_level:  Filtrar por risco — none | low | medium | high | critical
+        limit:       Máximo de registros (default: 20, máximo: 100).
+    """
+    limit = min(max(1, limit), 100)
+
+    conditions = ["1=1"]
+    params: list = []
+
+    if agent_id:
+        conditions.append("agent_id = %s")
+        params.append(agent_id)
+    if action_type:
+        conditions.append("action_type = %s")
+        params.append(action_type)
+    if target:
+        conditions.append("target ILIKE %s")
+        params.append(f"%{target}%")
+    if status:
+        conditions.append("status = %s")
+        params.append(status)
+    if risk_level:
+        conditions.append("risk_level = %s")
+        params.append(risk_level)
+
+    where = " AND ".join(conditions)
+    sql = f"""
+        SELECT intent_id, agent_id, action_type, description, target,
+               risk_level, status, approved_by, outcome,
+               created_at, completed_at
+        FROM agent_audit_log
+        WHERE {where}
+        LIMIT %s
+    """
+    params.append(limit)
+
+    result = _db_read_many(sql, tuple(params))
+    if not result["ok"]:
+        return json.dumps(result, ensure_ascii=False)
+
+    rows = [
+        {k: str(v) if v is not None and not isinstance(v, (str, int, float, bool)) else v
+         for k, v in row.items()}
+        for row in result["rows"]
+    ]
+
+    return json.dumps({
+        "ok": True,
+        "count": len(rows),
+        "actions": rows,
+    }, ensure_ascii=False, indent=2)
+
+
 # ═══════════════════════════  RESOURCES  ══════════════════════════════════
 
 @mcp.resource("homelab://bus/status")
@@ -499,6 +843,67 @@ def resource_db_models() -> str:
         "WebChatMessage": {"table": "WebChatMessages", "id": "UUID", "fields": ["content", "sender", "sessionId"]},
     }
     return json.dumps(models, ensure_ascii=False, indent=2)
+
+
+# ═══════════════════════════  SHARED MEMORY  ══════════════════════════════
+
+def _get_mem():
+    """Importa agent_memory lazily para não atrasar startup do MCP server."""
+    try:
+        from tools.memory_layer import agent_memory
+        return agent_memory
+    except ImportError:
+        return None
+
+
+@mcp.tool()
+def memory_search(query: str, sources: str = "", limit: int = 5) -> str:
+    """Busca semântica na memória compartilhada do homelab.
+
+    Retorna fatos de commits git, wiki pages, action journal e agentes.
+    Use ANTES de agir para saber o que já foi feito e evitar duplicação de trabalho.
+
+    sources: CSV de fontes para filtrar — "git,wiki,journal,alert,agent" (vazio = todas)
+    limit:   máximo de resultados (default: 5)
+
+    Exemplo: memory_search("trading agent restart", sources="journal,git", limit=3)
+    """
+    mem = _get_mem()
+    if mem is None:
+        return json.dumps({"error": "ChromaDB não disponível. Verifique CHROMA_DB_PATH."})
+    try:
+        src_list = [s.strip() for s in sources.split(",") if s.strip()] or None
+        results  = mem.search(query, sources=src_list, limit=max(1, limit))
+        return json.dumps({"results": results, "count": len(results)}, ensure_ascii=False)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
+
+
+@mcp.tool()
+def memory_store(fact: str, source: str = "agent", tags: str = "", ttl_days: int = 0) -> str:
+    """Armazena um fato na memória compartilhada do homelab.
+
+    Use para registrar descobertas importantes que outros agentes devem saber.
+    Fatos repetidos com mesmo source+fact são deduplicados (upsert por hash).
+
+    source:   categoria — "agent", "git", "wiki", "journal", "alert"
+    tags:     CSV de tags — "trading,btc,critico"
+    ttl_days: dias até expirar (0 = sem expiração)
+    """
+    mem = _get_mem()
+    if mem is None:
+        return json.dumps({"error": "ChromaDB não disponível. Verifique CHROMA_DB_PATH."})
+    try:
+        tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+        mem_id   = mem.store(
+            fact,
+            source=source,
+            tags=tag_list,
+            ttl_days=ttl_days,
+        )
+        return json.dumps({"ok": True, "memory_id": mem_id}, ensure_ascii=False)
+    except Exception as exc:
+        return json.dumps({"error": str(exc)})
 
 
 # ═══════════════════════════  ENTRYPOINT  ═════════════════════════════════

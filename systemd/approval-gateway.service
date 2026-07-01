@@ -1,0 +1,46 @@
+[Unit]
+Description=Agent Approval Gateway — Governance Layer Fase 1
+Documentation=https://github.com/rpa4all/eddie-auto-dev/blob/main/docs/AGENT_GOVERNANCE_MIGRATION_PLAN.md
+After=network-online.target postgresql.service
+Wants=network-online.target
+PartOf=homelab-agents.target
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/myClaude
+
+# Credenciais — arquivo canônico do homelab (DATABASE_URL + TELEGRAM_BOT_TOKEN + TELEGRAM_CHAT_ID)
+# /home/homelab/myClaude/.env pode ter token antigo — não usar para evitar conflito
+EnvironmentFile=/etc/default/eddie-common
+
+# Ajustes opcionais de comportamento
+Environment=DB_POLL_SECS=5
+Environment=TG_LONG_POLL=30
+Environment=INTENT_EXP_MIN=10
+Environment=PYTHONUNBUFFERED=1
+
+ExecStart=/usr/bin/python3 -m specialized_agents.approval_gateway
+
+# Restart com backoff em caso de falha
+Restart=on-failure
+RestartSec=10
+RestartBurst=5
+StartLimitIntervalSec=120
+StartLimitBurst=5
+
+# Logs estruturados
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=approval-gateway
+
+# Segurança mínima
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/home/homelab/myClaude
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

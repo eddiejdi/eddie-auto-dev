@@ -1,0 +1,1566 @@
+<!doctype html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RPA4ALL — Investigação Histórica BN</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script type="module">
+    import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+    window.__bnMermaid = mermaid;
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <style>
+    :root {
+      --investigation-accent: #c58d12;
+      --investigation-accent-2: #eb5a3c;
+      --investigation-panel: rgba(11, 18, 32, 0.84);
+      --investigation-line: rgba(255, 255, 255, 0.08);
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(197, 141, 18, 0.22), transparent 36%),
+        radial-gradient(circle at top right, rgba(235, 90, 60, 0.15), transparent 28%),
+        linear-gradient(180deg, #0b1320, #060b13 75%);
+    }
+
+    .investigation-shell {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 28px 22px 48px;
+    }
+
+    .investigation-hero {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 18px;
+      align-items: stretch;
+      margin-bottom: 20px;
+    }
+
+    .investigation-block {
+      background: var(--investigation-panel);
+      border: 1px solid var(--investigation-line);
+      border-radius: 18px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.34);
+    }
+
+    .investigation-cover {
+      padding: 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .investigation-cover::after {
+      content: "";
+      position: absolute;
+      inset: auto -10% -35% 35%;
+      height: 260px;
+      background: radial-gradient(circle, rgba(197, 141, 18, 0.26), transparent 60%);
+      pointer-events: none;
+    }
+
+    .investigation-overline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(197, 141, 18, 0.12);
+      color: #ffd89a;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .investigation-cover h1 {
+      margin: 16px 0 10px;
+      font-size: clamp(34px, 5vw, 56px);
+      line-height: 1.02;
+      letter-spacing: -0.04em;
+    }
+
+    .investigation-cover p {
+      max-width: 70ch;
+      color: #b8c6d9;
+      font-size: 16px;
+      line-height: 1.65;
+    }
+
+    .investigation-facts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .investigation-fact {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .investigation-fact strong {
+      display: block;
+      font-size: 24px;
+      color: #fff4d9;
+    }
+
+    .investigation-fact span {
+      color: #9fb0c8;
+      font-size: 13px;
+      line-height: 1.4;
+    }
+
+    .investigation-frame {
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .investigation-frame h2,
+    .investigation-section h2 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: 0.01em;
+    }
+
+    .investigation-frame p,
+    .investigation-meta,
+    .investigation-note {
+      color: #97abc6;
+      line-height: 1.55;
+    }
+
+    .investigation-grid {
+      display: grid;
+      grid-template-columns: minmax(360px, 420px) minmax(0, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .investigation-form {
+      padding: 22px;
+      position: sticky;
+      top: 96px;
+    }
+
+    .investigation-section {
+      padding: 22px;
+      margin-bottom: 18px;
+    }
+
+    .investigation-form-grid {
+      display: grid;
+      gap: 14px;
+    }
+
+    .investigation-field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .investigation-field label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #d5dfed;
+    }
+
+    .investigation-field input,
+    .investigation-field textarea,
+    .investigation-field select {
+      width: 100%;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(7, 13, 22, 0.86);
+      color: #eef3fb;
+      border-radius: 12px;
+      padding: 12px 14px;
+      font: inherit;
+    }
+
+    .investigation-field textarea {
+      min-height: 112px;
+      resize: vertical;
+    }
+
+    .budget-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .investigation-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: #dce6f4;
+    }
+
+    .investigation-toggle input {
+      width: 18px;
+      height: 18px;
+    }
+
+    .investigation-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .investigation-btn {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      color: #10151f;
+      background: linear-gradient(135deg, var(--investigation-accent), var(--investigation-accent-2));
+      box-shadow: 0 18px 30px rgba(168, 79, 33, 0.3);
+    }
+
+    .investigation-btn.secondary {
+      color: #e8effb;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: none;
+    }
+
+    .investigation-status {
+      min-height: 48px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: #dce6f4;
+      line-height: 1.5;
+    }
+
+    .investigation-status[data-state="error"] {
+      border-color: rgba(255, 98, 98, 0.35);
+      background: rgba(255, 98, 98, 0.08);
+      color: #ffd3d3;
+    }
+
+    .investigation-status[data-state="running"] {
+      border-color: rgba(197, 141, 18, 0.32);
+      background: rgba(197, 141, 18, 0.08);
+      color: #ffe0a3;
+    }
+
+    .investigation-progress {
+      display: grid;
+      gap: 10px;
+    }
+
+    .investigation-progress-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 12px;
+      color: #9fb0c8;
+    }
+
+    .investigation-progress-track {
+      position: relative;
+      height: 12px;
+      border-radius: 999px;
+      overflow: hidden;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .investigation-progress-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--investigation-accent), var(--investigation-accent-2));
+      box-shadow: 0 0 24px rgba(197, 141, 18, 0.28);
+      transition: width 0.45s ease;
+    }
+
+    .investigation-progress-steps {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .investigation-progress-step {
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      color: #8da2bd;
+      font-size: 12px;
+      text-align: center;
+      transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease;
+    }
+
+    .investigation-progress-step[data-state="active"] {
+      color: #ffe5ae;
+      border-color: rgba(197, 141, 18, 0.32);
+      background: rgba(197, 141, 18, 0.12);
+    }
+
+    .investigation-progress-step[data-state="done"] {
+      color: #dff9e4;
+      border-color: rgba(92, 184, 92, 0.26);
+      background: rgba(92, 184, 92, 0.1);
+    }
+
+    .investigation-summary {
+      font-size: 16px;
+      line-height: 1.7;
+      color: #d8e3f1;
+      white-space: pre-wrap;
+    }
+
+    .investigation-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .investigation-kpi {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .investigation-kpi strong {
+      display: block;
+      font-size: 26px;
+      color: #ffffff;
+    }
+
+    .investigation-kpi span {
+      color: #93a8c2;
+      font-size: 13px;
+    }
+
+    .timeline-list,
+    .reference-list,
+    .question-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .timeline-item,
+    .reference-item,
+    .question-item {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .timeline-item strong,
+    .reference-item strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #fff3d1;
+    }
+
+    .reference-item a {
+      color: #7fd8ff;
+      word-break: break-all;
+    }
+
+    .mermaid-shell {
+      overflow: auto;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(7, 13, 22, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .investigation-json {
+      max-height: 460px;
+      overflow: auto;
+      padding: 16px;
+      border-radius: 14px;
+      background: #050910;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: #9de0ff;
+      font-size: 13px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+    }
+
+    .investigation-debug-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .investigation-debug-toolbar p {
+      margin: 0;
+      color: #8fa4bf;
+      font-size: 13px;
+    }
+
+    .investigation-debug-log {
+      max-height: 360px;
+      overflow: auto;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #03070d;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: #a8d8ff;
+      font-size: 12px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    .investigation-backend-log {
+      max-height: 360px;
+      overflow: auto;
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: #02060a;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      color: #ffd9a0;
+      font-size: 12px;
+      line-height: 1.65;
+      white-space: pre-wrap;
+      font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+
+    .neural-map-shell {
+      min-height: 560px;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      background:
+        radial-gradient(circle at top left, rgba(197, 141, 18, 0.12), transparent 28%),
+        linear-gradient(180deg, rgba(4, 10, 18, 0.98), rgba(3, 7, 13, 0.96));
+    }
+
+    .neural-map-shell svg {
+      width: 100%;
+      height: 560px;
+      display: block;
+    }
+
+    .neural-map-meta {
+      margin: 0 0 14px;
+      color: #b2c3d8;
+      line-height: 1.55;
+    }
+
+    .neural-map-meta strong {
+      color: #fff0c8;
+    }
+
+    @media (max-width: 1100px) {
+      .investigation-hero,
+      .investigation-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .investigation-form {
+        position: static;
+      }
+
+      .investigation-kpis,
+      .investigation-facts {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .investigation-shell {
+        padding: 18px 14px 36px;
+      }
+
+      .investigation-cover,
+      .investigation-form,
+      .investigation-section,
+      .investigation-frame {
+        padding: 18px;
+      }
+
+      .investigation-kpis,
+      .investigation-facts,
+      .budget-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <header class="topnav">
+    <div class="brand">
+      <div class="logo">BN</div>
+      <div class="title">
+        <h1>Investigação Histórica</h1>
+        <p class="tag">Acervo BN + imprensa + dossiê relacional de longo curso</p>
+      </div>
+    </div>
+    <nav class="tabs" aria-label="Atalhos">
+      <a class="tab active" href="bn-acervo-investigation.html">Investigação</a>
+      <a class="tab" href="index.html#projects">Projetos</a>
+      <a class="tab" href="index.html#ide">IDE</a>
+    </nav>
+  </header>
+
+  <main class="investigation-shell">
+    <section class="investigation-hero">
+      <article class="investigation-block investigation-cover">
+        <span class="investigation-overline">Dossiê de Longo Curso</span>
+        <h1>Investigue figuras públicas, empresas e sabotagens documentadas com profundidade.</h1>
+        <p>
+          Esta página usa o agente do Acervo da Biblioteca Nacional como instrumento de investigação,
+          não como simples consulta rápida. O fluxo prioriza imprensa, hemeroteca, PDFs, OCR,
+          memória acumulativa do caso, relações entre atores e um grafo Mermaid expandível.
+        </p>
+        <div class="investigation-facts">
+          <div class="investigation-fact">
+            <strong>Modo Deep</strong>
+            <span>Busca mais ampla, mais documentos, mais OCR e acumulação incremental.</span>
+          </div>
+          <div class="investigation-fact">
+            <strong>Mermaid</strong>
+            <span>Relações entre pessoas, empresas, governo, crédito, imprensa e eventos.</span>
+          </div>
+          <div class="investigation-fact">
+            <strong>Memória do Caso</strong>
+            <span>Runs sucessivos podem enriquecer a investigação ao longo de vários dias.</span>
+          </div>
+        </div>
+      </article>
+
+      <aside class="investigation-block investigation-frame">
+        <h2>Como usar</h2>
+        <p>
+          Comece com o ator central. Se houver homônimos ou ruído histórico, refine para o nome canônico.
+          Em seguida, aumente o orçamento de busca/OCR e registre perguntas abertas para ciclos futuros.
+        </p>
+        <p class="investigation-note">
+          Exemplo recomendado: <strong>João Amaral Gurgel</strong>, com foco em
+          política industrial, financiamento, relações com governo, imprensa e sabotagem estatal.
+        </p>
+      </aside>
+    </section>
+
+    <section class="investigation-grid">
+      <form class="investigation-block investigation-form" id="investigationForm">
+        <div class="investigation-form-grid">
+          <div class="investigation-field">
+            <label for="queryInput">Consulta central</label>
+            <textarea id="queryInput" name="query">João Amaral Gurgel</textarea>
+          </div>
+
+          <div class="investigation-field">
+            <label for="modeSelect">Modo de investigação</label>
+            <select id="modeSelect" name="investigation_mode">
+              <option value="deep" selected>Deep</option>
+              <option value="quick">Quick</option>
+            </select>
+          </div>
+
+          <div class="budget-grid">
+            <div class="investigation-field">
+              <label for="searchResultsInput">Máx. buscas</label>
+              <input id="searchResultsInput" type="number" min="1" max="500" value="120" />
+            </div>
+            <div class="investigation-field">
+              <label for="detailRecordsInput">Máx. registros detalhados</label>
+              <input id="detailRecordsInput" type="number" min="1" max="200" value="80" />
+            </div>
+            <div class="investigation-field">
+              <label for="documentsInput">Máx. documentos</label>
+              <input id="documentsInput" type="number" min="0" max="200" value="50" />
+            </div>
+            <div class="investigation-field">
+              <label for="ocrPagesInput">Máx. páginas OCR por documento</label>
+              <input id="ocrPagesInput" type="number" min="0" max="500" value="250" />
+            </div>
+          </div>
+
+          <label class="investigation-toggle">
+            <span>Permitir páginas de autoridade e contextos institucionais</span>
+            <input id="authorityToggle" type="checkbox" checked />
+          </label>
+
+          <label class="investigation-toggle">
+            <span>Persistir investigação para acumular evidência entre runs</span>
+            <input id="persistToggle" type="checkbox" checked />
+          </label>
+
+          <div class="investigation-actions">
+            <button class="investigation-btn" type="submit">Executar investigação</button>
+            <button class="investigation-btn secondary" type="button" id="exampleButton">Carregar exemplo Gurgel</button>
+            <button class="investigation-btn secondary" type="button" id="copyCurlButton">Copiar cURL</button>
+            <button class="investigation-btn secondary" type="button" id="cancelActiveJobButton" disabled>Cancelar job ativo</button>
+          </div>
+
+          <div class="investigation-status" id="statusBox">
+            Pronto para executar. A página usa o endpoint configurado em <code>agents-config.json</code>.
+          </div>
+
+          <div class="investigation-progress" aria-live="polite">
+            <div class="investigation-progress-meta">
+              <span id="progressLabel">Aguardando execução</span>
+              <span id="progressPercent">0%</span>
+            </div>
+            <div class="investigation-progress-track" aria-hidden="true">
+              <div class="investigation-progress-fill" id="progressFill"></div>
+            </div>
+            <div class="investigation-progress-meta">
+              <span id="progressPhase">Fase: inativa</span>
+              <span id="progressElapsed">00:00</span>
+            </div>
+            <div class="investigation-progress-steps" id="progressSteps">
+              <div class="investigation-progress-step" data-step="0">Preparação</div>
+              <div class="investigation-progress-step" data-step="1">API</div>
+              <div class="investigation-progress-step" data-step="2">Envio</div>
+              <div class="investigation-progress-step" data-step="3">Análise</div>
+              <div class="investigation-progress-step" data-step="4">Dossiê</div>
+            </div>
+          </div>
+
+          <div class="investigation-actions">
+            <button class="investigation-btn secondary" type="button" id="clearDebugButton">Limpar debug</button>
+          </div>
+        </div>
+      </form>
+
+      <section>
+        <article class="investigation-block investigation-section">
+          <h2>Resumo do caso</h2>
+          <div class="investigation-kpis">
+            <div class="investigation-kpi">
+              <strong id="kpiRefs">0</strong>
+              <span>Referências</span>
+            </div>
+            <div class="investigation-kpi">
+              <strong id="kpiEntities">0</strong>
+              <span>Entidades</span>
+            </div>
+            <div class="investigation-kpi">
+              <strong id="kpiRelations">0</strong>
+              <span>Relações</span>
+            </div>
+            <div class="investigation-kpi">
+              <strong id="kpiEvents">0</strong>
+              <span>Eventos</span>
+            </div>
+          </div>
+          <p class="investigation-meta" id="subjectMeta">Nenhum resultado carregado.</p>
+          <div class="investigation-summary" id="summaryBox">Execute a investigação para gerar o resumo analítico.</div>
+        </article>
+
+        <article class="investigation-block investigation-section">
+          <h2>Grafo Mermaid</h2>
+          <div class="mermaid-shell">
+            <div id="mermaidMount" class="investigation-summary">O grafo será renderizado aqui.</div>
+          </div>
+        </article>
+
+        <article class="investigation-block investigation-section">
+          <h2>Mapa Neural de Correlação</h2>
+          <p class="neural-map-meta" id="neuralMapMeta">O mapa correlacional será calculado a partir das entidades, vínculos e coocorrências documentais.</p>
+          <div class="neural-map-shell" id="neuralMapMount">
+            <div class="investigation-summary" style="padding: 18px;">O mapa neural será renderizado aqui.</div>
+          </div>
+        </article>
+
+        <article class="investigation-block investigation-section">
+          <h2>Timeline documental</h2>
+          <div class="timeline-list" id="timelineList">
+            <div class="timeline-item">Nenhum evento carregado.</div>
+          </div>
+        </article>
+
+        <article class="investigation-block investigation-section">
+          <h2>Perguntas em aberto</h2>
+          <div class="question-list" id="questionList">
+            <div class="question-item">As perguntas abertas do plano aparecerão aqui.</div>
+          </div>
+        </article>
+
+        <article class="investigation-block investigation-section">
+          <h2>Referências</h2>
+          <div class="reference-list" id="referenceList">
+            <div class="reference-item">Nenhuma referência carregada.</div>
+          </div>
+        </article>
+
+        <article class="investigation-block investigation-section">
+          <h2>Debug da execução</h2>
+          <div class="investigation-debug-toolbar">
+            <p>Log local da UI, resolução de API, request, resposta e erros.</p>
+          </div>
+          <pre class="investigation-debug-log" id="debugOutput">[aguardando] nenhum evento registrado ainda.</pre>
+        </article>
+
+        <article class="investigation-block investigation-section">
+          <h2>Log do backend</h2>
+          <div class="investigation-debug-toolbar">
+            <p>Polling do endpoint remoto <code>/bn-acervo/debug/logs</code> durante a investigação.</p>
+            <button class="investigation-btn secondary" type="button" id="refreshBackendLogButton">Atualizar backend log</button>
+          </div>
+          <pre class="investigation-backend-log" id="backendLogOutput">[aguardando] nenhum log do backend carregado ainda.</pre>
+        </article>
+
+        <article class="investigation-block investigation-section">
+          <h2>JSON bruto</h2>
+          <pre class="investigation-json" id="jsonOutput">{}</pre>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const form = document.getElementById('investigationForm');
+    const statusBox = document.getElementById('statusBox');
+    const summaryBox = document.getElementById('summaryBox');
+    const subjectMeta = document.getElementById('subjectMeta');
+    const referenceList = document.getElementById('referenceList');
+    const questionList = document.getElementById('questionList');
+    const timelineList = document.getElementById('timelineList');
+    const jsonOutput = document.getElementById('jsonOutput');
+    const mermaidMount = document.getElementById('mermaidMount');
+    const neuralMapMount = document.getElementById('neuralMapMount');
+    const neuralMapMeta = document.getElementById('neuralMapMeta');
+    const exampleButton = document.getElementById('exampleButton');
+    const copyCurlButton = document.getElementById('copyCurlButton');
+    const cancelActiveJobButton = document.getElementById('cancelActiveJobButton');
+    const clearDebugButton = document.getElementById('clearDebugButton');
+    const debugOutput = document.getElementById('debugOutput');
+    const refreshBackendLogButton = document.getElementById('refreshBackendLogButton');
+    const backendLogOutput = document.getElementById('backendLogOutput');
+
+    const kpiRefs = document.getElementById('kpiRefs');
+    const kpiEntities = document.getElementById('kpiEntities');
+    const kpiRelations = document.getElementById('kpiRelations');
+    const kpiEvents = document.getElementById('kpiEvents');
+
+    const queryInput = document.getElementById('queryInput');
+    const modeSelect = document.getElementById('modeSelect');
+    const searchResultsInput = document.getElementById('searchResultsInput');
+    const detailRecordsInput = document.getElementById('detailRecordsInput');
+    const documentsInput = document.getElementById('documentsInput');
+    const ocrPagesInput = document.getElementById('ocrPagesInput');
+    const authorityToggle = document.getElementById('authorityToggle');
+    const persistToggle = document.getElementById('persistToggle');
+    const progressFill = document.getElementById('progressFill');
+    const progressLabel = document.getElementById('progressLabel');
+    const progressPercent = document.getElementById('progressPercent');
+    const progressPhase = document.getElementById('progressPhase');
+    const progressElapsed = document.getElementById('progressElapsed');
+    const progressSteps = Array.from(document.querySelectorAll('#progressSteps [data-step]'));
+
+    let runtimeConfig = null;
+    let resolvedApiBase = '';
+    let progressTimer = null;
+    let progressStartedAt = 0;
+    let progressValue = 0;
+    let progressPhaseIndex = -1;
+    let debugLines = [];
+    let backendLogTimer = null;
+    let backendLogLines = [];
+    let backendLogFailures = 0;
+    let currentJobId = '';
+    let currentActiveJobId = '';
+    let jobPollTimer = null;
+
+    function setStatus(message, state = 'idle') {
+      statusBox.textContent = message;
+      statusBox.dataset.state = state;
+    }
+
+    function appendDebug(message, level = 'info') {
+      const timestamp = new Date().toLocaleTimeString('pt-BR', { hour12: false });
+      const line = `[${timestamp}] [${level}] ${message}`;
+      debugLines.push(line);
+      if (debugLines.length > 250) {
+        debugLines = debugLines.slice(-250);
+      }
+      debugOutput.textContent = debugLines.join('\n');
+      debugOutput.scrollTop = debugOutput.scrollHeight;
+    }
+
+    function clearDebugLog() {
+      debugLines = ['[aguardando] log limpo.'];
+      debugOutput.textContent = debugLines.join('\n');
+    }
+
+    function setBackendLogLines(lines) {
+      backendLogLines = Array.isArray(lines) && lines.length ? lines.slice(-250) : ['[aguardando] nenhum log do backend carregado ainda.'];
+      backendLogOutput.textContent = backendLogLines.join('\n');
+      backendLogOutput.scrollTop = backendLogOutput.scrollHeight;
+    }
+
+    function getConfiguredJobEndpoint(config) {
+      return '/bn-acervo/jobs';
+    }
+
+    function phaseStepIndex(phase) {
+      const mapping = {
+        queued: 0,
+        planning: 0,
+        discovery: 1,
+        ranking: 2,
+        documents: 3,
+        composition: 4,
+        completed: 4,
+        contingency: 4,
+        failed: 4
+      };
+      return mapping[phase] ?? progressPhaseIndex;
+    }
+
+    async function fetchBackendLogs(apiBase, silent = false) {
+      if (!apiBase) return;
+      const logUrl = `${apiBase}/bn-acervo/debug/logs?limit=180`;
+      try {
+        if (!silent) {
+          appendDebug(`Consultando backend log em ${logUrl}`, 'debug');
+        }
+        const response = await fetch(logUrl, { cache: 'no-store' });
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const payload = await response.json();
+        const entryLines = Array.isArray(payload.entries)
+          ? payload.entries.map((entry) => `[${entry.ts}] [${entry.level}] ${entry.message}`)
+          : [];
+        const fileTailLines = Array.isArray(payload.file_tail)
+          ? payload.file_tail.map((line) => `[file] ${line}`)
+          : [];
+        const combined = [...entryLines, ...fileTailLines];
+        backendLogFailures = 0;
+        setBackendLogLines(combined);
+        if (!silent) {
+          appendDebug(`Backend log atualizado com ${combined.length} linha(s).`, 'debug');
+        }
+      } catch (error) {
+        backendLogFailures += 1;
+        const warningLine = `[erro] falha ao carregar log do backend: ${error.message} (tentativa ${backendLogFailures})`;
+        const preserved = backendLogLines.length ? backendLogLines.slice(-180) : ['[aguardando] nenhum log do backend carregado ainda.'];
+        setBackendLogLines([...preserved, warningLine]);
+        if (!silent) {
+          appendDebug(`Falha ao consultar backend log: ${error.message}`, 'warn');
+        }
+      }
+    }
+
+    function stopBackendLogPolling() {
+      if (backendLogTimer) {
+        window.clearInterval(backendLogTimer);
+        backendLogTimer = null;
+      }
+    }
+
+    function stopJobPolling() {
+      if (jobPollTimer) {
+        window.clearInterval(jobPollTimer);
+        jobPollTimer = null;
+      }
+    }
+
+    function setCancelButtonState(running, label = 'Cancelar job ativo') {
+      cancelActiveJobButton.disabled = !running;
+      cancelActiveJobButton.textContent = running ? label : 'Cancelar job ativo';
+    }
+
+    function isNetworkFetchError(error) {
+      return error instanceof TypeError || /failed to fetch/i.test(String(error?.message || ''));
+    }
+
+    function startBackendLogPolling(apiBase) {
+      stopBackendLogPolling();
+      fetchBackendLogs(apiBase, true);
+      backendLogTimer = window.setInterval(() => {
+        fetchBackendLogs(apiBase, true);
+      }, 2500);
+    }
+
+    function applyJobStatus(job) {
+      if (!job || typeof job !== 'object') {
+        return;
+      }
+      const phase = String(job.phase || job.status || 'running');
+      const percent = Number(job.progress_percent || 0);
+      const label = job.logs?.length
+        ? String(job.logs[job.logs.length - 1].message || '')
+        : `Job ${job.status || 'desconhecido'}`;
+      setProgress(percent, phase, label || `Job ${job.status || 'desconhecido'}`, phaseStepIndex(phase));
+    }
+
+    async function pollJobStatus(apiBase) {
+      if (!currentJobId) return;
+      const statusUrl = `${apiBase}/bn-acervo/jobs/${currentJobId}`;
+      const response = await fetch(statusUrl, { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error(`Falha ao consultar job ${currentJobId}: HTTP ${response.status}`);
+      }
+      const job = await response.json();
+      appendDebug(`Job ${job.job_id} status=${job.status} fase=${job.phase} progresso=${job.progress_percent}%`, 'debug');
+      applyJobStatus(job);
+      currentActiveJobId = ['queued', 'running'].includes(String(job.status || '').toLowerCase()) ? String(job.job_id || '') : '';
+      setCancelButtonState(Boolean(currentActiveJobId), currentActiveJobId ? `Cancelar job ${currentActiveJobId.slice(0, 8)}` : 'Cancelar job ativo');
+      if (Array.isArray(job.logs) && job.logs.length) {
+        const lines = job.logs.map((entry) => `[${entry.timestamp}] [${entry.level}] ${entry.message}`);
+        setBackendLogLines(lines);
+      }
+      if (job.partial_result && typeof job.partial_result === 'object') {
+        renderResult(job.partial_result, { partial: job.status !== 'completed' });
+      }
+      if (job.status === 'completed') {
+        stopJobPolling();
+        stopBackendLogPolling();
+        if (job.result) {
+          renderResult(job.result, { partial: false });
+        }
+        currentActiveJobId = '';
+        setCancelButtonState(false);
+        completeProgress('Investigação concluída e consolidada pelo job assíncrono.');
+        setStatus(`Investigação concluída. Job ${job.job_id}.`, 'idle');
+        return;
+      }
+      if (job.status === 'failed') {
+        stopJobPolling();
+        stopBackendLogPolling();
+        const errorMessage = job.error || 'job_failed';
+        currentActiveJobId = '';
+        setCancelButtonState(false);
+        failProgress(`Job ${job.job_id} falhou: ${errorMessage}`);
+        setStatus(`Erro na investigação: ${errorMessage}`, 'error');
+        return;
+      }
+      if (job.status === 'cancelled') {
+        stopJobPolling();
+        stopBackendLogPolling();
+        currentActiveJobId = '';
+        setCancelButtonState(false);
+        failProgress(`Job ${job.job_id} foi cancelado.`);
+        setStatus(`Investigação cancelada. Job ${job.job_id}.`, 'error');
+      }
+    }
+
+    function startJobPolling(apiBase) {
+      stopJobPolling();
+      jobPollTimer = window.setInterval(() => {
+        pollJobStatus(apiBase).catch((error) => {
+          appendDebug(`Falha no polling do job: ${error.message}`, 'warn');
+        });
+      }, 2500);
+    }
+
+    function formatElapsed(ms) {
+      const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+      const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      const seconds = String(totalSeconds % 60).padStart(2, '0');
+      return `${minutes}:${seconds}`;
+    }
+
+    function setProgress(percent, phaseLabel, labelText, activeStep = progressPhaseIndex) {
+      progressValue = Math.max(0, Math.min(100, Math.round(percent)));
+      progressFill.style.width = `${progressValue}%`;
+      progressPercent.textContent = `${progressValue}%`;
+      progressPhase.textContent = `Fase: ${phaseLabel}`;
+      progressLabel.textContent = labelText;
+      progressPhaseIndex = activeStep;
+      progressSteps.forEach((step, index) => {
+        if (index < activeStep) {
+          step.dataset.state = 'done';
+        } else if (index === activeStep) {
+          step.dataset.state = 'active';
+        } else {
+          step.dataset.state = 'idle';
+        }
+      });
+      appendDebug(`Progresso ${progressValue}% | fase=${phaseLabel} | ${labelText}`, 'progress');
+    }
+
+    function stopProgressTimer() {
+      if (progressTimer) {
+        window.clearInterval(progressTimer);
+        progressTimer = null;
+      }
+    }
+
+    function startProgress() {
+      stopProgressTimer();
+      progressStartedAt = Date.now();
+      progressElapsed.textContent = '00:00';
+      appendDebug('Iniciando ciclo de investigação.', 'info');
+      setProgress(6, 'preparação', 'Preparando investigação e validando parâmetros.', 0);
+      progressTimer = window.setInterval(() => {
+        const elapsed = Date.now() - progressStartedAt;
+        progressElapsed.textContent = formatElapsed(elapsed);
+
+        if (progressValue < 22 && elapsed > 1500) {
+          setProgress(22, 'api', 'Resolvendo backend e preparando chamada.', 1);
+          return;
+        }
+        if (progressValue < 38 && elapsed > 3500) {
+          setProgress(38, 'envio', 'Enviando consulta investigativa ao agente.', 2);
+          return;
+        }
+        if (progressValue < 72 && elapsed > 8000) {
+          setProgress(72, 'análise', 'Coletando, ranqueando e digerindo documentos.', 3);
+          return;
+        }
+        if (progressValue < 89 && elapsed > 18000) {
+          setProgress(89, 'dossiê', 'Consolidando entidades, eventos, timeline e Mermaid.', 4);
+          return;
+        }
+        if (progressValue < 94 && elapsed > 30000) {
+          setProgress(94, 'dossiê', 'Investigação longa em andamento. Aguardando resposta final do backend.', 4);
+        }
+      }, 500);
+    }
+
+    function completeProgress(successMessage) {
+      stopProgressTimer();
+      stopBackendLogPolling();
+      stopJobPolling();
+      progressElapsed.textContent = formatElapsed(Date.now() - progressStartedAt);
+      appendDebug(`Investigação concluída em ${progressElapsed.textContent}.`, 'success');
+      setProgress(100, 'concluída', successMessage, progressSteps.length);
+    }
+
+    function failProgress(errorMessage) {
+      stopProgressTimer();
+      stopBackendLogPolling();
+      stopJobPolling();
+      if (progressStartedAt) {
+        progressElapsed.textContent = formatElapsed(Date.now() - progressStartedAt);
+      }
+      appendDebug(errorMessage, 'error');
+      progressLabel.textContent = errorMessage;
+      progressPhase.textContent = 'Fase: erro';
+      progressFill.style.width = `${Math.max(progressValue, 8)}%`;
+    }
+
+    function normalizeApiBase(value) {
+      return String(value || '').replace(/\/$/, '');
+    }
+
+    function getConfiguredEndpoint(config) {
+      return config?.agents?.specialized_agents?.bn_acervo?.api_endpoint || '/bn-acervo/dossier';
+    }
+
+    function getConfiguredApiBase(config) {
+      return config?.agents?.specialized_agents?.bn_acervo?.api_base || '';
+    }
+
+    function buildApiBaseCandidates(config) {
+      const params = new URLSearchParams(window.location.search);
+      const candidates = [];
+      const pushCandidate = (value, source = 'fallback') => {
+        const normalized = normalizeApiBase(value);
+        if (normalized && !candidates.some((item) => item.base === normalized)) {
+          candidates.push({ base: normalized, source });
+        }
+      };
+
+      pushCandidate(params.get('api_base'), 'query');
+      pushCandidate(getConfiguredApiBase(config), 'agent-config');
+      pushCandidate(window.localStorage.getItem('bnAcervoApiBase'), 'cache');
+
+      if (window.location.protocol.startsWith('http')) {
+        pushCandidate(window.location.origin, 'same-origin');
+      }
+
+      if (['127.0.0.1', 'localhost'].includes(window.location.hostname)) {
+        pushCandidate('http://127.0.0.1:8513', 'local-dev');
+        pushCandidate('http://localhost:8513', 'local-dev');
+        pushCandidate('http://127.0.0.1:8503', 'local-dev');
+        pushCandidate('http://localhost:8503', 'local-dev');
+      }
+
+      pushCandidate(config?.api_url, 'global-config');
+      pushCandidate(config?.homelab_url, 'global-config');
+      return candidates;
+    }
+
+    async function apiSupportsHealth(apiBase, endpoint) {
+      const prefix = endpoint.split('/').slice(0, 2).join('/') || '';
+      const healthUrl = `${apiBase}${prefix}/health`;
+      try {
+        appendDebug(`Testando health do backend em ${healthUrl}`, 'debug');
+        const response = await fetch(healthUrl, { cache: 'no-store' });
+        appendDebug(`Health ${healthUrl} -> HTTP ${response.status}`, response.ok ? 'debug' : 'warn');
+        return response.ok;
+      } catch (error) {
+        appendDebug(`Falha ao consultar health ${healthUrl}: ${error.message}`, 'warn');
+        return false;
+      }
+    }
+
+    async function resolveApiBase(config) {
+      const endpoint = getConfiguredEndpoint(config);
+      const candidates = buildApiBaseCandidates(config);
+      appendDebug(`Resolvendo API base para endpoint ${endpoint}. ${candidates.length} candidato(s).`, 'info');
+
+      for (const candidate of candidates) {
+        appendDebug(`Avaliando candidato ${candidate.base} (${candidate.source}).`, 'debug');
+        if (candidate.source === 'query' || candidate.source === 'agent-config') {
+          window.localStorage.setItem('bnAcervoApiBase', candidate.base);
+          appendDebug(`API base fixada por ${candidate.source}: ${candidate.base}`, 'success');
+          return candidate.base;
+        }
+        if (await apiSupportsHealth(candidate.base, endpoint)) {
+          window.localStorage.setItem('bnAcervoApiBase', candidate.base);
+          appendDebug(`API compatível encontrada em ${candidate.base}`, 'success');
+          return candidate.base;
+        }
+      }
+
+      throw new Error(`Nenhuma API compatível com ${endpoint} foi encontrada. Suba a API local ou informe ?api_base=http://host:porta`);
+    }
+
+    async function loadConfig() {
+      if (runtimeConfig) return runtimeConfig;
+      appendDebug('Carregando agents-config.json.', 'info');
+      const response = await fetch('agents-config.json', { cache: 'no-store' });
+      if (!response.ok) {
+        throw new Error('Falha ao carregar agents-config.json');
+      }
+      runtimeConfig = await response.json();
+      appendDebug('Configuração carregada com sucesso.', 'success');
+      return runtimeConfig;
+    }
+
+    function buildPayload() {
+      return {
+        query: queryInput.value.trim(),
+        output_mode: 'dossier',
+        investigation_mode: modeSelect.value,
+        max_search_results: Number(searchResultsInput.value || 0),
+        max_detail_records: Number(detailRecordsInput.value || 0),
+        max_download_documents: Number(documentsInput.value || 0),
+        max_ocr_pages_per_document: Number(ocrPagesInput.value || 0),
+        include_authority_pages: authorityToggle.checked,
+        persist_investigation: persistToggle.checked
+      };
+    }
+
+    function renderQuestions(plan) {
+      const questions = Array.isArray(plan?.unresolved_questions) ? plan.unresolved_questions : [];
+      if (!questions.length) {
+        questionList.innerHTML = '<div class="question-item">Nenhuma pergunta em aberto retornada neste ciclo.</div>';
+        return;
+      }
+      questionList.innerHTML = questions.map((item) =>
+        `<div class="question-item">${String(item)}</div>`
+      ).join('');
+    }
+
+    function renderReferences(references) {
+      if (!Array.isArray(references) || !references.length) {
+        referenceList.innerHTML = '<div class="reference-item">Nenhuma referência carregada.</div>';
+        return;
+      }
+      referenceList.innerHTML = references.map((reference) => {
+        const docLink = reference.document_urls?.[0]
+          ? `<div><a href="${reference.document_urls[0]}" target="_blank" rel="noopener">${reference.document_urls[0]}</a></div>`
+          : '';
+        return `
+          <div class="reference-item">
+            <strong>[${reference.id}] ${reference.title}</strong>
+            <div><a href="${reference.detail_url}" target="_blank" rel="noopener">${reference.detail_url}</a></div>
+            ${docLink}
+            <div>${reference.evidence_excerpt || ''}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderTimeline(timeline) {
+      if (!Array.isArray(timeline) || !timeline.length) {
+        timelineList.innerHTML = '<div class="timeline-item">Nenhum evento carregado.</div>';
+        return;
+      }
+      timelineList.innerHTML = timeline.map((item) => `
+        <div class="timeline-item">
+          <strong>${item.date || 'sem data'}</strong>
+          <div>${item.description || ''}</div>
+        </div>
+      `).join('');
+    }
+
+    async function renderMermaid(graphText) {
+      if (!graphText) {
+        mermaidMount.textContent = 'Nenhum grafo Mermaid retornado.';
+        return;
+      }
+      try {
+        const id = `bn-mermaid-${Date.now()}`;
+        const { svg } = await window.__bnMermaid.render(id, graphText);
+        mermaidMount.innerHTML = svg;
+      } catch (error) {
+        mermaidMount.textContent = graphText;
+      }
+    }
+
+    function neuralNodeColor(node) {
+      const palette = {
+        figura_publica: '#f7b267',
+        pessoa: '#f4d06f',
+        organizacao: '#6dd3ce',
+        instituicao: '#7ea8ff',
+        obra: '#b8f2e6',
+        evento: '#f4845f',
+        veiculo: '#f25c54',
+        local: '#84dcc6',
+        entidade: '#c8d5e6'
+      };
+      return palette[String(node?.kind || 'entidade')] || palette.entidade;
+    }
+
+    function neuralEdgeColor(edge) {
+      if (edge?.type === 'co_occurrence') return 'rgba(255, 213, 79, 0.45)';
+      if (edge?.memory_origin) return 'rgba(142, 202, 230, 0.65)';
+      return 'rgba(255, 255, 255, 0.36)';
+    }
+
+    function renderNeuralMap(map, partial = false) {
+      if (!map || !Array.isArray(map.nodes) || !map.nodes.length) {
+        neuralMapMeta.textContent = 'Nenhum mapa correlacional disponível neste ciclo.';
+        neuralMapMount.innerHTML = '<div class="investigation-summary" style="padding: 18px;">Nenhum mapa correlacional disponível.</div>';
+        return;
+      }
+      const stats = map.stats || {};
+      neuralMapMeta.innerHTML = `<strong>${partial ? 'Snapshot parcial' : 'Mapa consolidado'}</strong> · ${stats.node_count || map.nodes.length} nós · ${stats.edge_count || (map.edges || []).length} arestas · densidade ${stats.density ?? '0'}`;
+      if (!window.d3) {
+        neuralMapMount.innerHTML = `<pre class="investigation-json">${JSON.stringify(map, null, 2)}</pre>`;
+        return;
+      }
+
+      const width = Math.max(neuralMapMount.clientWidth || 0, 760);
+      const height = 560;
+      neuralMapMount.innerHTML = '';
+
+      const nodes = map.nodes.map((node) => ({ ...node }));
+      const links = (Array.isArray(map.edges) ? map.edges : []).map((edge) => ({ ...edge }));
+      const svg = window.d3.select(neuralMapMount)
+        .append('svg')
+        .attr('viewBox', `0 0 ${width} ${height}`)
+        .attr('role', 'img')
+        .attr('aria-label', 'Mapa neural de correlação de entidades');
+
+      const root = svg.append('g');
+      const zoom = window.d3.zoom().scaleExtent([0.45, 2.6]).on('zoom', (event) => {
+        root.attr('transform', event.transform);
+      });
+      svg.call(zoom);
+
+      const link = root.append('g')
+        .attr('stroke-linecap', 'round')
+        .selectAll('line')
+        .data(links)
+        .join('line')
+        .attr('stroke', (d) => neuralEdgeColor(d))
+        .attr('stroke-width', (d) => Math.max(1.2, Number(d.strength || d.weight || 1) * 0.55))
+        .attr('stroke-dasharray', (d) => d.type === 'co_occurrence' ? '4 5' : null)
+        .attr('opacity', 0.92);
+
+      const node = root.append('g')
+        .selectAll('g')
+        .data(nodes)
+        .join('g')
+        .style('cursor', 'grab');
+
+      node.append('circle')
+        .attr('r', (d) => Math.max(8, 8 + Number(d.weighted_degree || d.importance || 1) * 0.65))
+        .attr('fill', (d) => neuralNodeColor(d))
+        .attr('stroke', (d) => d.is_subject ? '#fff3cf' : 'rgba(255,255,255,0.8)')
+        .attr('stroke-width', (d) => d.is_subject ? 2.5 : 1.1)
+        .attr('opacity', 0.95);
+
+      node.append('text')
+        .text((d) => d.name)
+        .attr('dx', 12)
+        .attr('dy', 4)
+        .attr('fill', '#edf3fb')
+        .attr('font-size', 11)
+        .attr('font-weight', (d) => d.is_subject ? 800 : 600)
+        .attr('paint-order', 'stroke')
+        .attr('stroke', 'rgba(3,7,13,0.88)')
+        .attr('stroke-width', 4);
+
+      node.append('title')
+        .text((d) => {
+          const themes = Array.isArray(d.themes) && d.themes.length ? `\nTemas: ${d.themes.join(', ')}` : '';
+          const roles = Array.isArray(d.role_history) && d.role_history.length
+            ? `\nCargos: ${d.role_history.map((item) => item.role).join(', ')}`
+            : '';
+          return `${d.name} (${d.kind})\nGrau: ${d.degree} | força: ${Number(d.weighted_degree || 0).toFixed(2)}${themes}${roles}`;
+        });
+
+      link.append('title')
+        .text((d) => `${d.label} | refs=${(d.evidence_refs || []).join(', ') || 'n/a'} | força=${d.strength || d.weight || 0}`);
+
+      const simulation = window.d3.forceSimulation(nodes)
+        .force('link', window.d3.forceLink(links).id((d) => d.id).distance((d) => d.type === 'co_occurrence' ? 120 : 88).strength((d) => d.type === 'co_occurrence' ? 0.16 : 0.3))
+        .force('charge', window.d3.forceManyBody().strength((d) => d.is_subject ? -900 : -460))
+        .force('center', window.d3.forceCenter(width / 2, height / 2))
+        .force('collision', window.d3.forceCollide().radius((d) => Math.max(18, 18 + Number(d.weighted_degree || d.importance || 1) * 0.5)));
+
+      const drag = window.d3.drag()
+        .on('start', (event, d) => {
+          if (!event.active) simulation.alphaTarget(0.2).restart();
+          d.fx = d.x;
+          d.fy = d.y;
+        })
+        .on('drag', (event, d) => {
+          d.fx = event.x;
+          d.fy = event.y;
+        })
+        .on('end', (event, d) => {
+          if (!event.active) simulation.alphaTarget(0);
+          d.fx = null;
+          d.fy = null;
+        });
+      node.call(drag);
+
+      simulation.on('tick', () => {
+        link
+          .attr('x1', (d) => d.source.x)
+          .attr('y1', (d) => d.source.y)
+          .attr('x2', (d) => d.target.x)
+          .attr('y2', (d) => d.target.y);
+        node.attr('transform', (d) => `translate(${d.x},${d.y})`);
+      });
+    }
+
+    function renderResult(result, options = {}) {
+      const partial = Boolean(options.partial);
+      const dossier = result?.dossier || {};
+      const references = Array.isArray(result?.references) ? result.references : [];
+      const entities = Array.isArray(dossier?.entities) ? dossier.entities : [];
+      const relationships = Array.isArray(dossier?.relationships) ? dossier.relationships : [];
+      const events = Array.isArray(dossier?.events) ? dossier.events : [];
+      const timeline = Array.isArray(dossier?.timeline) ? dossier.timeline : [];
+      const neuralMap = result?.neural_map || dossier?.neural_map || null;
+
+      kpiRefs.textContent = String(references.length);
+      kpiEntities.textContent = String(entities.length + (dossier?.subject ? 1 : 0));
+      kpiRelations.textContent = String(relationships.length);
+      kpiEvents.textContent = String(events.length);
+
+      const subjectName = dossier?.subject?.name || 'Sujeito não identificado';
+      const subjectKind = dossier?.subject?.kind || 'entidade';
+      subjectMeta.textContent = `${subjectName} · ${subjectKind} · modo ${result?.plan ? modeSelect.value : 'desconhecido'}${partial ? ' · snapshot parcial' : ''}`;
+      summaryBox.textContent = dossier?.summary || result?.dossier_markdown || 'Sem resumo retornado.';
+
+      renderReferences(references);
+      renderQuestions(result?.plan || {});
+      renderTimeline(timeline);
+      renderMermaid(result?.mermaid_graph || dossier?.mermaid_graph || '');
+      renderNeuralMap(neuralMap, partial);
+      jsonOutput.textContent = JSON.stringify(result, null, 2);
+      appendDebug(`Resultado ${partial ? 'parcial' : 'final'} renderizado: refs=${references.length}, entidades=${entities.length}, relações=${relationships.length}, eventos=${events.length}.`, partial ? 'debug' : 'success');
+    }
+
+    async function cancelActiveInvestigation(apiBase, activeJobId = '') {
+      const targetJobId = activeJobId || currentActiveJobId || currentJobId;
+      if (!apiBase) {
+        throw new Error('api_base_ausente');
+      }
+      appendDebug(`Solicitando cancelamento do job ativo${targetJobId ? ` ${targetJobId}` : ''}.`, 'warn');
+      const response = await fetch(`${apiBase}/bn-acervo/jobs/cancel-active`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload?.detail?.message || payload?.detail || `Falha ${response.status}`);
+      }
+      const cancelled = Array.isArray(payload.cancelled_job_ids) ? payload.cancelled_job_ids : [];
+      currentActiveJobId = '';
+      currentJobId = '';
+      stopJobPolling();
+      stopBackendLogPolling();
+      setCancelButtonState(false);
+      appendDebug(`Cancelamento concluído. Jobs cancelados: ${cancelled.join(', ') || 'nenhum'}.`, 'success');
+      setStatus(`Processamento cancelado.${cancelled.length ? ` Jobs: ${cancelled.join(', ')}` : ''}`, 'idle');
+      return payload;
+    }
+
+    async function handleActiveJobConflict(response, apiBase) {
+      const payload = await response.json().catch(() => ({}));
+      const detail = payload?.detail || {};
+      const activeJobId = String(detail?.active_job_id || '');
+      const phase = String(detail?.phase || 'desconhecida');
+      currentActiveJobId = activeJobId;
+      setCancelButtonState(Boolean(activeJobId), activeJobId ? `Cancelar job ${activeJobId.slice(0, 8)}` : 'Cancelar job ativo');
+      appendDebug(`Conflito de concorrência: job ativo=${activeJobId || 'desconhecido'} fase=${phase}.`, 'warn');
+      setStatus(`Já existe um job em andamento${activeJobId ? ` (${activeJobId})` : ''}. Cancele-o ou aguarde.`, 'running');
+      if (activeJobId) {
+        currentJobId = activeJobId;
+        await pollJobStatus(apiBase).catch((error) => {
+          appendDebug(`Falha ao consultar job ativo ${activeJobId}: ${error.message}`, 'warn');
+        });
+        startJobPolling(apiBase);
+      }
+      return detail;
+    }
+
+    async function executeInvestigation() {
+      const payload = buildPayload();
+      if (!payload.query) {
+        setStatus('Informe uma consulta antes de executar.', 'error');
+        failProgress('Consulta ausente. Nada foi executado.');
+        return;
+      }
+
+      appendDebug(`Payload preparado para query="${payload.query}" modo=${payload.investigation_mode}.`, 'info');
+      startProgress();
+      setStatus('Executando investigação. Em casos profundos, a coleta pode levar bastante tempo.', 'running');
+      try {
+        const config = await loadConfig();
+        setProgress(24, 'api', 'Configuração carregada. Selecionando backend do agente.', 1);
+        const apiBase = resolvedApiBase || await resolveApiBase(config);
+        resolvedApiBase = apiBase;
+        const endpoint = getConfiguredJobEndpoint(config);
+        startBackendLogPolling(apiBase);
+        setProgress(40, 'envio', `Backend selecionado: ${apiBase}. Criando job assíncrono.`, 2);
+        appendDebug(`POST ${apiBase}${endpoint}`, 'request');
+        const response = await fetch(`${apiBase}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        appendDebug(`Resposta HTTP recebida: ${response.status} ${response.statusText}`, response.ok ? 'response' : 'error');
+
+        if (response.status === 409) {
+          await handleActiveJobConflict(response, apiBase);
+          return;
+        }
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          appendDebug(`Corpo de erro: ${errorText || 'sem detalhe'}`, 'error');
+          throw new Error(`Falha ${response.status}: ${errorText || 'sem detalhe'}`);
+        }
+        const job = await response.json();
+        currentJobId = String(job.job_id || '');
+        currentActiveJobId = currentJobId;
+        setCancelButtonState(Boolean(currentActiveJobId), currentActiveJobId ? `Cancelar job ${currentActiveJobId.slice(0, 8)}` : 'Cancelar job ativo');
+        appendDebug(`Job criado: ${currentJobId}`, 'success');
+        applyJobStatus(job);
+        setStatus(`Job ${currentJobId} criado. Acompanhando execução assíncrona.`, 'running');
+        await pollJobStatus(apiBase);
+        startJobPolling(apiBase);
+      } catch (error) {
+        const message = isNetworkFetchError(error)
+          ? `Backend indisponível em ${resolvedApiBase || 'api-base-desconhecida'}. Verifique o serviço bn-acervo-agent no homelab.`
+          : String(error.message || error);
+        failProgress(`Execução interrompida: ${message}`);
+        setStatus(`Erro na investigação: ${message}`, 'error');
+      }
+    }
+
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      executeInvestigation();
+    });
+
+    exampleButton.addEventListener('click', () => {
+      queryInput.value = 'João Amaral Gurgel';
+      modeSelect.value = 'deep';
+      searchResultsInput.value = '120';
+      detailRecordsInput.value = '80';
+      documentsInput.value = '50';
+      ocrPagesInput.value = '250';
+      authorityToggle.checked = true;
+      persistToggle.checked = true;
+      appendDebug('Exemplo João Amaral Gurgel carregado na interface.', 'info');
+      setStatus('Exemplo Gurgel carregado. Ajuste os limites se quiser ampliar ainda mais.', 'idle');
+    });
+
+    copyCurlButton.addEventListener('click', async () => {
+      try {
+        const config = await loadConfig();
+        const apiBase = resolvedApiBase || await resolveApiBase(config);
+        resolvedApiBase = apiBase;
+        const endpoint = getConfiguredJobEndpoint(config);
+        const payload = buildPayload();
+        const curl = [
+          'curl -sX POST',
+          `"${apiBase}${endpoint}"`,
+          "-H 'Content-Type: application/json'",
+          `-d '${JSON.stringify(payload)}'`
+        ].join(' ');
+        await navigator.clipboard.writeText(curl);
+        appendDebug('Comando cURL copiado para a área de transferência.', 'info');
+        setStatus('cURL copiado para a área de transferência.', 'idle');
+      } catch (error) {
+        appendDebug(`Falha ao copiar cURL: ${error.message}`, 'error');
+        setStatus(`Falha ao copiar cURL: ${error.message}`, 'error');
+      }
+    });
+
+    cancelActiveJobButton.addEventListener('click', async () => {
+      try {
+        const config = await loadConfig();
+        const apiBase = resolvedApiBase || await resolveApiBase(config);
+        resolvedApiBase = apiBase;
+        setCancelButtonState(true, 'Cancelando...');
+        await cancelActiveInvestigation(apiBase);
+      } catch (error) {
+        appendDebug(`Falha ao cancelar job ativo: ${error.message}`, 'error');
+        setStatus(`Falha ao cancelar job ativo: ${error.message}`, 'error');
+        setCancelButtonState(Boolean(currentActiveJobId), currentActiveJobId ? `Cancelar job ${currentActiveJobId.slice(0, 8)}` : 'Cancelar job ativo');
+      }
+    });
+
+    clearDebugButton.addEventListener('click', () => {
+      clearDebugLog();
+      appendDebug('Painel de debug reiniciado pelo usuário.', 'info');
+    });
+
+    refreshBackendLogButton.addEventListener('click', async () => {
+      try {
+        const config = await loadConfig();
+        const apiBase = resolvedApiBase || await resolveApiBase(config);
+        resolvedApiBase = apiBase;
+        await fetchBackendLogs(apiBase, false);
+      } catch (error) {
+        setBackendLogLines([`[erro] falha ao resolver backend log: ${error.message}`]);
+        appendDebug(`Falha ao atualizar backend log manualmente: ${error.message}`, 'error');
+      }
+    });
+
+    loadConfig().then(async (config) => {
+      resolvedApiBase = await resolveApiBase(config);
+      setCancelButtonState(false);
+      setProgress(0, 'inativa', `API pronta em ${resolvedApiBase}.`, -1);
+      appendDebug(`Página pronta. API ativa em ${resolvedApiBase}.`, 'success');
+      await fetchBackendLogs(resolvedApiBase, true);
+      setStatus(`Configuração carregada. API ativa em ${resolvedApiBase}.`, 'idle');
+    }).catch((error) => {
+      failProgress(`Falha de configuração: ${error.message}`);
+      setStatus(`Falha ao carregar configuração: ${error.message}`, 'error');
+    });
+  </script>
+</body>
+
+</html>

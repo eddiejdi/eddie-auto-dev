@@ -1,0 +1,18 @@
+[Unit]
+Description=Ensure Prometheus and Grafana containers are running after boot
+After=docker.service network-online.target
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStartPre=/bin/sleep 20
+ExecStart=/usr/local/bin/ensure-monitoring-containers.sh
+User=root
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=monitoring-containers-bootstrap
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

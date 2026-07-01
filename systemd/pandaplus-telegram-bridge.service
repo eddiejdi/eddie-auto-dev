@@ -1,0 +1,30 @@
+[Unit]
+Description=PandaPlus → Telegram Bridge (detecta unlock_request/alarm_lock e notifica via Telegram)
+After=network-online.target docker.service
+Wants=network-online.target
+Documentation=https://github.com/eddiejdi/eddie-auto-dev/blob/main/tools/pandaplus_bridge/README.md
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/myClaude
+EnvironmentFile=/etc/default/pandaplus-bridge
+ExecStartPre=/usr/bin/docker cp homeassistant:/config/.storage/core.config_entries /var/lib/pandaplus-bridge/core.config_entries
+ExecStart=/home/homelab/myClaude/.venv/bin/python3 -m tools.pandaplus_bridge.bridge
+Restart=on-failure
+RestartSec=15
+StandardOutput=journal
+StandardError=journal
+
+# Hardening básico
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/pandaplus-bridge
+ProtectHome=read-only
+MemoryMax=256M
+CPUQuota=20%
+
+[Install]
+WantedBy=multi-user.target

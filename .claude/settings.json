@@ -7,7 +7,17 @@
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Bash|Edit|Write|NotebookEdit",
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 tools/copilot_hooks/inject_memory_context.py",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": ".*",
         "hooks": [
           {
             "type": "command",
@@ -17,7 +27,7 @@
         ]
       },
       {
-        "matcher": "Bash",
+        "matcher": ".*",
         "hooks": [
           {
             "type": "command",
@@ -29,7 +39,7 @@
     ],
     "PostToolUse": [
       {
-        "matcher": "Edit|Write|NotebookEdit",
+        "matcher": ".*",
         "hooks": [
           {
             "type": "command",

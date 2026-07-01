@@ -1,27 +1,29 @@
 [Unit]
 Description=Tape Component Quality Exporter
-After=network.target
-Wants=network.target
+After=network.target ltfs-lto6.service
+Wants=ltfs-lto6.service
 Conflicts=ltfs-deep-recovery.service
 
 [Service]
 Type=simple
-EnvironmentFile=-/etc/default/tape-component-quality-exporter
-Environment="PYTHONUNBUFFERED=1"
-Environment="TAPE_COMPONENT_QUALITY_PORT=9124"
-ExecStart=/usr/bin/python3 /usr/local/tools/tape_component_quality_agent.py --exporter --port ${TAPE_COMPONENT_QUALITY_PORT} --interval 30
+EnvironmentFile=/etc/default/ltfs-lto6
+Environment=PYTHONPATH=/var/db/ltfs-tools/libs
+Environment=PYTHONUNBUFFERED=1
+Environment=PATH=/var/db/ltfs-patched/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStartPre=/bin/mkdir -p /run/ltfs-export/lto6
+ExecStart=/usr/bin/python3 /var/db/ltfs-tools/tape_component_quality_agent.py --exporter \
+  --port 9124 \
+  --interval 30 \
+  --hosts host7,host8 \
+  --device /dev/sg4 \
+  --mount-point /mnt/tape/lto6 \
+  --work-dir /var/lib/ltfs/work
 Restart=always
 RestartSec=30
 TimeoutStopSec=30
-
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=tape-component-quality-exporter
-
-# Precisa de acesso local a /sys/class/fc_host e /dev/sg*
-NoNewPrivileges=no
-PrivateTmp=yes
-ProtectHome=yes
 
 [Install]
 WantedBy=multi-user.target

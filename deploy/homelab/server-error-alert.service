@@ -1,0 +1,23 @@
+[Unit]
+Description=Server Error Alert — monitor de erros + Telegram + GLPI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /apps/server-error-alert/server_error_alert.py
+Restart=always
+RestartSec=10
+
+EnvironmentFile=-/etc/homelab/server-error-alert.env
+EnvironmentFile=-/home/homelab/.config/homelab/secrets.env
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=server-error-alert
+
+# Não gera alert loop consigo mesmo
+LogLevelMax=warning
+
+[Install]
+WantedBy=multi-user.target

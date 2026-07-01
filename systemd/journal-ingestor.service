@@ -1,0 +1,16 @@
+[Unit]
+Description=Action Journal → Agent Memory Ingestor
+After=network.target
+
+[Service]
+Type=oneshot
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/myClaude
+EnvironmentFile=/etc/default/eddie-common
+
+ExecStart=/usr/bin/python3 tools/memory_ingestors/journal_ingestor.py
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=journal-ingestor

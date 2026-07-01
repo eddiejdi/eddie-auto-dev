@@ -503,9 +503,12 @@ class WikiAgent:
 _agent: WikiAgent | None = None
 
 
-def get_wiki_agent() -> WikiAgent:
-    """Retorna instância singleton do WikiAgent."""
+def get_wiki_agent():
+    """Retorna instância singleton do WikiAgent (v1 ou v2 conforme WIKI_AGENT_VERSION)."""
     global _agent
+    if os.getenv("WIKI_AGENT_VERSION", "v1") == "v2":
+        from specialized_agents.wiki_agent_langgraph import get_wiki_agent_langgraph
+        return get_wiki_agent_langgraph()
     if _agent is None:
         _agent = WikiAgent()
     return _agent

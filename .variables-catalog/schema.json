@@ -1,0 +1,185 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Variables Catalog Schema",
+  "description": "Comprehensive taxonomy for system variables in homelab environment",
+  "type": "object",
+  "properties": {
+    "catalogVersion": {
+      "type": "string",
+      "default": "1.0.0"
+    },
+    "generatedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "environment": {
+      "type": "string",
+      "enum": ["development", "staging", "production"],
+      "default": "production"
+    },
+    "categories": {
+      "type": "object",
+      "properties": {
+        "database": {
+          "type": "object",
+          "description": "Database connection variables",
+          "additionalProperties": {
+            "$ref": "#/definitions/variable"
+          }
+        },
+        "services": {
+          "type": "object",
+          "description": "Service configuration",
+          "additionalProperties": {
+            "$ref": "#/definitions/variable"
+          }
+        },
+        "authentication": {
+          "type": "object",
+          "description": "Auth tokens and credentials",
+          "additionalProperties": {
+            "$ref": "#/definitions/variable"
+          }
+        },
+        "trading": {
+          "type": "object",
+          "description": "Trading bot configuration",
+          "additionalProperties": {
+            "$ref": "#/definitions/variable"
+          }
+        },
+        "infrastructure": {
+          "type": "object",
+          "description": "System and deployment variables",
+          "additionalProperties": {
+            "$ref": "#/definitions/variable"
+          }
+        },
+        "integrations": {
+          "type": "object",
+          "description": "Third-party API integrations",
+          "additionalProperties": {
+            "$ref": "#/definitions/variable"
+          }
+        },
+        "monitoring": {
+          "type": "object",
+          "description": "Monitoring and logging variables",
+          "additionalProperties": {
+            "$ref": "#/definitions/variable"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "variable": {
+      "type": "object",
+      "required": ["name", "type", "source"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Variable name (canonical)"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Human-readable name"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["string", "integer", "boolean", "float", "json", "url", "secret", "path", "enum"],
+          "description": "Variable type"
+        },
+        "source": {
+          "type": "string",
+          "enum": [".env", "docker-compose", "systemd", "kubernetes", "config-file", "code", "vault", "secret-store"],
+          "description": "Where the variable is defined"
+        },
+        "description": {
+          "type": "string",
+          "description": "Purpose and usage"
+        },
+        "default": {
+          "description": "Default value (if non-secret)"
+        },
+        "example": {
+          "description": "Example value"
+        },
+        "required": {
+          "type": "boolean",
+          "default": false
+        },
+        "sensitive": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if contains secrets"
+        },
+        "location": {
+          "type": "object",
+          "properties": {
+            "file": {
+              "type": "string",
+              "description": "File path where defined"
+            },
+            "line": {
+              "type": "integer"
+            },
+            "service": {
+              "type": "string",
+              "description": "Service/app that uses it"
+            }
+          }
+        },
+        "relatedVariables": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Variables that depend on or relate to this one"
+        },
+        "validationRules": {
+          "type": "object",
+          "properties": {
+            "pattern": {
+              "type": "string",
+              "description": "Regex pattern"
+            },
+            "minLength": {
+              "type": "integer"
+            },
+            "maxLength": {
+              "type": "integer"
+            },
+            "enum": {
+              "type": "array",
+              "description": "Allowed values"
+            },
+            "minValue": {
+              "type": "number"
+            },
+            "maxValue": {
+              "type": "number"
+            }
+          }
+        },
+        "lastModified": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "documentation": {
+          "type": "string",
+          "description": "Full documentation URL or reference"
+        },
+        "owner": {
+          "type": "string",
+          "description": "Who maintains this variable"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "deprecated", "unused", "experimental"],
+          "default": "active"
+        }
+      }
+    }
+  }
+}

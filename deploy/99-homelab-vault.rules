@@ -1,0 +1,14 @@
+# udev rule: dispara backup automático ao inserir o pendrive Kingston vault
+# Serial: E0D55EA574101930B9D801B7 (Kingston DataTraveler 3.0 — 58GB)
+# Instalar em: /etc/udev/rules.d/99-homelab-vault.rules
+
+# Aguarda partição sda2 (LUKS) — sda1 é FAT32 boot, sda2 é o vault cifrado
+ACTION=="add", KERNEL=="sda2", \
+  ATTRS{idVendor}=="0951", ATTRS{idProduct}=="1666", \
+  ATTRS{serial}=="E0D55EA574101930B9D801B7", \
+  RUN+="/bin/systemctl start homelab-vault-backup.service"
+
+# Fecha o vault quando o pendrive é removido
+ACTION=="remove", KERNEL=="sda", \
+  ATTRS{idVendor}=="0951", ATTRS{idProduct}=="1666", \
+  RUN+="/bin/systemctl start homelab-vault-close.service"

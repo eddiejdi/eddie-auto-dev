@@ -1,19 +1,21 @@
 # CMDB Baseline
 
-- Generated at: `2026-06-25T16:45:40.135958+00:00`
+- Generated at: `2026-07-01T12:40:29.528694+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `122`
-- Critical services flagged for MVP: `122`
+- Repo services discovered: `156`
+- Critical services flagged for MVP: `64`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
-- `identity`: 2
-- `monitoring`: 12
-- `network`: 13
-- `storage`: 95
+- `identity`: 4
+- `monitoring`: 14
+- `network`: 16
+- `operations`: 88
+- `storage`: 30
+- `trading`: 4
 
 ## NetBox seed candidates
 
@@ -23,22 +25,29 @@
 
 - `open-webui` (identity, compose) from `tools/authentik_management/configs/docker-compose.override.yml`
 - `vaultwarden` (identity, compose) from `tools/vaultwarden/docker-compose.yml`
+- `homelab-vault-backup.service` (identity, systemd) from `systemd/homelab-vault-backup.service`
+- `homelab-vault-close.service` (identity, systemd) from `systemd/homelab-vault-close.service`
 - `cadvisor` (monitoring, compose) from `docker/docker-compose-exporters.yml`
 - `grafana` (monitoring, compose) from `tools/authentik_management/configs/docker-compose.override.yml`
 - `node-exporter` (monitoring, compose) from `docker/docker-compose-exporters.yml`
 - `postfix-exporter` (monitoring, compose) from `docker/docker-compose.simple-mail.yml`
+- `prometheus` (monitoring, compose) from `docker/docker-compose.grafana.yml`
 - `agent-network-exporter.service` (monitoring, systemd) from `tools/systemd/agent-network-exporter.service`
 - `banking-metrics-exporter.service` (monitoring, systemd) from `systemd/banking-metrics-exporter.service`
 - `eddie_central_extended_metrics.service` (monitoring, systemd) from `systemd/eddie_central_extended_metrics.service`
 - `grafana-selfheal.service` (monitoring, systemd) from `systemd/grafana-selfheal.service`
 - `job-monitor.service` (monitoring, systemd) from `systemd/job-monitor.service`
+- `monitoring-containers-bootstrap.service` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.service`
 - `rss-sentiment-exporter.service` (monitoring, systemd) from `systemd/rss-sentiment-exporter.service`
 - `storj-exporter.service` (monitoring, systemd) from `deploy/storj-exporter.service`
 - `tape-component-quality-exporter.service` (monitoring, systemd) from `systemd/tape-component-quality-exporter.service`
+- `proxy` (network, compose) from `deploy/cmdb/docker-compose.yml`
 - `cloudflared-named@.service` (network, systemd) from `tools/tunnels/cloudflared-named@.service`
 - `cloudflared.service` (network, systemd) from `tools/tunnels/cloudflared/cloudflared.service`
 - `dhcp-selfheal.service` (network, systemd) from `systemd/dhcp-selfheal.service`
 - `homelab-lan-gateway.service` (network, systemd) from `deploy/vpn/homelab-lan-gateway.service`
+- `iot-vpn-bypass-watchdog.service` (network, systemd) from `systemd/iot-vpn-bypass-watchdog.service`
+- `iot-vpn-bypass-watchdog.timer` (network, systemd) from `systemd/iot-vpn-bypass-watchdog.timer`
 - `ipv6-proxy.service` (network, systemd) from `systemd/ipv6-proxy.service`
 - `localtunnel@.service` (network, systemd) from `tools/tunnels/localtunnel@.service`
 - `pihole-ipv6-dns-fix.service` (network, systemd) from `systemd/pihole-ipv6-dns-fix.service`
@@ -48,19 +57,12 @@
 - `rpa4all-ddns-server.service` (network, systemd) from `deploy/vpn/rpa4all-ddns-server.service`
 - `rpa4all-vpn-ddns.service` (network, systemd) from `deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service`
 - `wireguard-nat.service` (network, systemd) from `deploy/vpn/wireguard-nat.service`
-- `mail-db` (storage, compose) from `docker/docker-compose.simple-mail.yml`
-- `mail-server` (storage, compose) from `docker/docker-compose.simple-mail.yml`
-- `mailu-backend` (storage, compose) from `docker/docker-compose.mailu.yml`
-- `mailu-db` (storage, compose) from `docker/docker-compose.mailu.yml`
-- `mailu-dovecot` (storage, compose) from `docker/docker-compose.mailu.yml`
-- `mailu-frontend` (storage, compose) from `docker/docker-compose.mailu.yml`
-- `mailu-postfix` (storage, compose) from `docker/docker-compose.mailu.yml`
-- `mailu-redis` (storage, compose) from `docker/docker-compose.mailu.yml`
-- `mailu-roundcube` (storage, compose) from `docker/docker-compose.mailu.yml`
-- `nginx` (storage, compose) from `docker/docker-compose.simple-mail.yml`
-- `ntopng` (storage, compose) from `docker/docker-compose.ntopng.yml`
-- `ntopng-redis` (storage, compose) from `docker/docker-compose.ntopng.yml`
-- `opensearch-dashboards` (storage, compose) from `docker/docker-compose.opensearch.yml`
+- `disk-clean.service` (storage, systemd) from `systemd/disk-clean.service`
+- `disk-clean.timer` (storage, systemd) from `systemd/disk-clean.timer`
+- `disk-spindown.service` (storage, systemd) from `tools/homelab/disk-spindown.service`
+- `homelab-disk-backup.service` (storage, systemd) from `tools/backup/homelab-disk-backup.service`
+- `homelab-tape-log-drain-nextcloud.service` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.service`
+- `homelab-tape-log-drain-nextcloud.timer` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.timer`
 
 ## Serviços anotados manualmente
 

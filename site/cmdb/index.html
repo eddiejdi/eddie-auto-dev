@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CMDB RPA4ALL</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3efe5;
+        --panel: rgba(255, 255, 255, 0.86);
+        --line: rgba(16, 24, 40, 0.12);
+        --text: #18212b;
+        --muted: #58646f;
+        --accent: #0e5f72;
+        --accent-2: #ad6f18;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, rgba(173, 111, 24, 0.18), transparent 28rem),
+          radial-gradient(circle at bottom right, rgba(14, 95, 114, 0.22), transparent 24rem),
+          linear-gradient(180deg, #f7f4ec 0%, var(--bg) 100%);
+      }
+
+      main {
+        max-width: 980px;
+        margin: 0 auto;
+        padding: 48px 20px 64px;
+      }
+
+      .hero {
+        padding: 28px;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 18px 60px rgba(16, 24, 40, 0.12);
+      }
+
+      .eyebrow {
+        margin: 0 0 10px;
+        font-size: 0.84rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2.1rem, 4vw, 3.5rem);
+        line-height: 0.96;
+      }
+
+      .lead {
+        max-width: 54rem;
+        margin: 16px 0 0;
+        color: var(--muted);
+        font-size: 1.04rem;
+        line-height: 1.55;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+        gap: 18px;
+        margin-top: 24px;
+      }
+
+      .card {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        padding: 22px;
+        border: 1px solid var(--line);
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.9);
+      }
+
+      .card strong {
+        font-size: 1.24rem;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .card a {
+        display: inline-flex;
+        width: fit-content;
+        align-items: center;
+        justify-content: center;
+        padding: 11px 16px;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 700;
+        color: white;
+        background: linear-gradient(135deg, var(--accent) 0%, #0a7f96 100%);
+      }
+
+      .card.secondary a {
+        background: linear-gradient(135deg, var(--accent-2) 0%, #c98b2b 100%);
+      }
+
+      .meta {
+        margin-top: 24px;
+        color: var(--muted);
+        font-size: 0.92rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero">
+        <p class="eyebrow">CMDB RPA4ALL</p>
+        <h1>Inventario operacional com trilha de gestao e infraestrutura.</h1>
+        <p class="lead">
+          O NetBox concentra a topologia, enderecamento e relacionamentos tecnicos.
+          O GLPI fica responsavel pela camada operacional de ativos, usuarios e atendimento.
+          Ambos estao protegidos pelo login do Authentik.
+        </p>
+        <div class="grid">
+          <article class="card">
+            <strong>NetBox</strong>
+            <p>Fonte de verdade para devices, interfaces, IPs, sites, racks e dependencias tecnicas.</p>
+            <a href="/cmdb/netbox/">Abrir NetBox</a>
+          </article>
+          <article class="card secondary">
+            <strong>GLPI</strong>
+            <p>Inventario operacional, service desk e ciclo de vida dos ativos com autenticao delegada.</p>
+            <a href="/cmdb/glpi/index.php">Abrir GLPI</a>
+          </article>
+        </div>
+        <p class="meta">
+          URL unica: <strong>auth.rpa4all.com/cmdb/</strong>
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

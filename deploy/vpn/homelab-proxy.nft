@@ -1,0 +1,30 @@
+#!/usr/sbin/nft -f
+table ip homelab-proxy {
+    set isp_bypass_devices {
+        type ipv4_addr
+        flags interval
+        elements = { 192.168.15.55, 192.168.15.61, 192.168.15.67, 192.168.15.101, 192.168.15.107, 192.168.15.140, 192.168.15.143, 192.168.15.165, 192.168.15.190, 192.168.15.198 }
+    }
+    chain prerouting {
+        type nat hook prerouting priority dstnat - 1; policy accept;
+        # Permite NAS (192.168.15.4) acessar PostgreSQL via docker-proxy (INPUT path)
+        ip saddr 192.168.15.4 tcp dport 5433 redirect to :5433
+    }
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+        ip saddr 192.168.15.0/24 oifname "protonvpn" masquerade
+    }
+    chain forward {
+        type filter hook forward priority filter; policy accept;
+        iifname "eth-onboard" oifname "protonvpn" ip saddr 192.168.15.0/24 accept
+        iifname "protonvpn" oifname "eth-onboard" ct state established,related accept
+        # IoT bypass: permite dispositivos da set ir direto ao ISP via eth-wan (antes do kill-switch)
+        iifname "eth-onboard" oifname "eth-wan" ip saddr @isp_bypass_devices accept
+        # Kill-switch: impede LAN de vazar pelo ISP quando ProtonVPN estiver ativo
+        iifname "eth-onboard" oifname "eth-wan" ip saddr 192.168.15.0/24 counter drop
+    }
+    chain mss-clamp {
+        type filter hook forward priority mangle; policy accept;
+        tcp flags syn tcp option maxseg size set rt mtu
+    }
+}

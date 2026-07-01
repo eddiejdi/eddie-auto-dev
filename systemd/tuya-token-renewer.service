@@ -1,0 +1,16 @@
+[Unit]
+Description=Renovação do token Tuya no Home Assistant
+After=network-online.target secrets-agent.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/tuya_token_renewer.py
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tuya-token-renewer
+
+[Install]
+WantedBy=multi-user.target

@@ -250,7 +250,7 @@
       },
       "targets": [
         {
-          "expr": "storj_payout_current_gross_total_cents",
+          "expr": "storj_payout_current_gross_total_cents / 100",
           "legendFormat": "Bruto total",
           "refId": "A"
         }
@@ -294,7 +294,7 @@
       },
       "targets": [
         {
-          "expr": "storj_payout_previous_month_cents",
+          "expr": "storj_payout_previous_month_cents / 100",
           "legendFormat": "Bruto total",
           "refId": "A"
         }
@@ -566,22 +566,22 @@
       },
       "targets": [
         {
-          "expr": "storj_payout_current_storage_cents",
+          "expr": "storj_payout_current_storage_cents / 100",
           "legendFormat": "Storage",
           "refId": "A"
         },
         {
-          "expr": "storj_payout_current_egress_cents",
+          "expr": "storj_payout_current_egress_cents / 100",
           "legendFormat": "Egress",
           "refId": "B"
         },
         {
-          "expr": "storj_payout_current_repair_audit_cents",
+          "expr": "storj_payout_current_repair_audit_cents / 100",
           "legendFormat": "Repair/Audit",
           "refId": "C"
         },
         {
-          "expr": "storj_payout_current_held_cents",
+          "expr": "storj_payout_current_held_cents / 100",
           "legendFormat": "Held (retido)",
           "refId": "D"
         }
@@ -859,7 +859,7 @@
       },
       "targets": [
         {
-          "expr": "storj_payout_net_payout_cents * scalar(avg(usdt_brl_rate))",
+          "expr": "(storj_payout_net_payout_cents / 100) * scalar(avg(usdt_brl_rate))",
           "legendFormat": "Payout Líquido",
           "refId": "A"
         }
@@ -904,7 +904,7 @@
       },
       "targets": [
         {
-          "expr": "storj_payout_month_estimate_cents",
+          "expr": "storj_payout_month_estimate_cents / 100",
           "legendFormat": "Estimativa",
           "refId": "A"
         }
@@ -949,7 +949,7 @@
       },
       "targets": [
         {
-          "expr": "storj_payout_current_held_cents",
+          "expr": "storj_payout_current_held_cents / 100",
           "legendFormat": "Held",
           "refId": "A"
         }
@@ -1045,22 +1045,22 @@
       },
       "targets": [
         {
-          "expr": "storj_payout_current_gross_total_cents",
+          "expr": "storj_payout_current_gross_total_cents / 100",
           "legendFormat": "Bruto total",
           "refId": "A"
         },
         {
-          "expr": "storj_payout_net_payout_cents",
+          "expr": "storj_payout_net_payout_cents / 100",
           "legendFormat": "Confirmado Líquido",
           "refId": "B"
         },
         {
-          "expr": "storj_payout_current_held_cents",
+          "expr": "storj_payout_current_held_cents / 100",
           "legendFormat": "Held-back",
           "refId": "C"
         },
         {
-          "expr": "storj_payout_month_estimate_cents",
+          "expr": "storj_payout_month_estimate_cents / 100",
           "legendFormat": "Estimativa Mês",
           "refId": "D"
         }
@@ -1106,25 +1106,25 @@
       },
       "targets": [
         {
-          "expr": "round(storj_payout_current_gross_total_cents * 0.25 * scalar(avg(usdt_brl_rate)), 0.01)",
+          "expr": "round((storj_payout_current_gross_total_cents / 100) * 0.25 * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "A",
           "instant": true,
           "legendFormat": "liq_25"
         },
         {
-          "expr": "round(storj_payout_current_gross_total_cents * 0.50 * scalar(avg(usdt_brl_rate)), 0.01)",
+          "expr": "round((storj_payout_current_gross_total_cents / 100) * 0.50 * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "B",
           "instant": true,
           "legendFormat": "liq_50"
         },
         {
-          "expr": "round(storj_payout_current_gross_total_cents * 0.75 * scalar(avg(usdt_brl_rate)), 0.01)",
+          "expr": "round((storj_payout_current_gross_total_cents / 100) * 0.75 * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "C",
           "instant": true,
           "legendFormat": "liq_75"
         },
         {
-          "expr": "round(storj_payout_current_gross_total_cents * scalar(avg(usdt_brl_rate)), 0.01)",
+          "expr": "round((storj_payout_current_gross_total_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "D",
           "instant": true,
           "legendFormat": "liq_100"
@@ -1152,7 +1152,7 @@
     },
     {
       "id": 40,
-      "title": "Cotação ETH/BRL (Trading Agent)",
+      "title": "Cotação USD/BRL (Trading Agent)",
       "type": "stat",
       "gridPos": {
         "h": 6,
@@ -1166,8 +1166,8 @@
       },
       "targets": [
         {
-          "expr": "round(max(crypto_price{symbol=~\"ETH-BRL|ETHBRL\"}) or (max(crypto_price{symbol=~\"ETH-USDT|ETHUSDT\"}) * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544))), 0.001)",
-          "legendFormat": "ETH/BRL",
+          "expr": "round(avg(usdt_brl_rate), 0.001)",
+          "legendFormat": "USD/BRL",
           "refId": "A"
         }
       ],
@@ -1210,7 +1210,7 @@
       },
       "targets": [
         {
-          "expr": "round(storj_payout_current_gross_total_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_current_gross_total_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "legendFormat": "Total em BRL",
           "refId": "A"
         }
@@ -1267,22 +1267,22 @@
       },
       "targets": [
         {
-          "expr": "round(storj_payout_current_storage_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_current_storage_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "legendFormat": "Storage",
           "refId": "A"
         },
         {
-          "expr": "round(storj_payout_current_egress_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_current_egress_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "legendFormat": "Egress",
           "refId": "B"
         },
         {
-          "expr": "round(storj_payout_current_repair_audit_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_current_repair_audit_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "legendFormat": "Repair/Audit",
           "refId": "C"
         },
         {
-          "expr": "round(storj_payout_current_held_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_current_held_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "legendFormat": "Held",
           "refId": "D"
         }
@@ -1328,61 +1328,61 @@
       },
       "targets": [
         {
-          "expr": "round((max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 4)",
+          "expr": "round(avg(usdt_brl_rate), 4)",
           "refId": "A",
           "instant": true,
           "legendFormat": "usdbrl"
         },
         {
-          "expr": "round(storj_payout_current_storage_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_current_storage_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "B",
           "instant": true,
           "legendFormat": "storage_brl"
         },
         {
-          "expr": "round(storj_payout_current_egress_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_current_egress_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "C",
           "instant": true,
           "legendFormat": "egress_brl"
         },
         {
-          "expr": "round(storj_payout_current_repair_audit_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_current_repair_audit_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "D",
           "instant": true,
           "legendFormat": "repair_brl"
         },
         {
-          "expr": "round(storj_payout_current_gross_total_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_current_gross_total_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "E",
           "instant": true,
           "legendFormat": "gross_brl"
         },
         {
-          "expr": "round(storj_payout_net_payout_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_net_payout_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "F",
           "instant": true,
           "legendFormat": "net_brl"
         },
         {
-          "expr": "round(storj_payout_current_held_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_current_held_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "G",
           "instant": true,
           "legendFormat": "held_brl"
         },
         {
-          "expr": "round(storj_payout_month_estimate_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_month_estimate_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "H",
           "instant": true,
           "legendFormat": "estimate_brl"
         },
         {
-          "expr": "round(storj_payout_previous_net_payout_cents * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round((storj_payout_previous_net_payout_cents / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "I",
           "instant": true,
           "legendFormat": "previous_net_brl"
         },
         {
-          "expr": "round((storj_payout_net_payout_cents + storj_payout_previous_net_payout_cents) * (max(crypto_price{symbol=~\"USDT-BRL|USD-BRL|USDBRL\"}) or vector(4.9544)), 0.01)",
+          "expr": "round(((storj_payout_net_payout_cents + storj_payout_previous_net_payout_cents) / 100) * scalar(avg(usdt_brl_rate)), 0.01)",
           "refId": "J",
           "instant": true,
           "legendFormat": "recent_net_brl"

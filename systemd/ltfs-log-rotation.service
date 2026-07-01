@@ -1,0 +1,16 @@
+[Unit]
+Description=LTFS Log Rotation Agent (LangGraph pilot)
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/myClaude
+EnvironmentFile=/etc/default/eddie-common
+
+ExecStart=/usr/bin/python3 -m specialized_agents.ltfs_log_rotation_agent
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ltfs-log-rotation

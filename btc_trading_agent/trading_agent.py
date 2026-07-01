@@ -44,6 +44,7 @@ from risk_guardian_mixin import RiskGuardianMixin
 from position_manager_mixin import PositionManagerMixin
 from position_reconstruction import reconstruct_open_buys
 from profile_rules import validate_profile_for_symbol
+from llm import LLMRouter
 
 _ollama_gate_logger = logging.getLogger("btc_trading_agent.ollama_gate")
 
@@ -360,6 +361,9 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             f"🎲 Startup jitter: profile_slot={_profile_slot}s, first AI plan earliest at +{_profile_slot}s"
         )
 
+        # LLM router — roteamento multi-GPU (GPU0 homelab, GPU1 homelab, NAS RTX2060)
+        self._llm = LLMRouter()
+
         # Expõe constantes do módulo para os mixins (sem importação circular)
         self._module_config = _config
         self._trading_fee_pct = TRADING_FEE_PCT
@@ -401,6 +405,44 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             )
             self.state.profile = live_profile
         return self.state.profile
+
+    def _decision_features_with_position(
+        self,
+        features: Optional[Dict[str, Any]] = None,
+        *,
+        price: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Anexa snapshot de posição do profile ativo às features da decisão."""
+        enriched: Dict[str, Any] = dict(features or {})
+        current_price = price if price is not None else None
+        position = float(self.state.position or 0.0)
+        entry_price = float(self.state.entry_price or 0.0)
+        position_usdt = position * float(current_price) if current_price is not None else float(self.state.position_value or 0.0)
+        unrealized_pnl = None
+        if position > 0 and entry_price > 0 and current_price is not None:
+            unrealized_pnl = (float(current_price) - entry_price) * position
+
+        enriched.update({
+            "position_scope": "profile_runtime_state",
+            "profile": self._current_profile(),
+            "symbol": self.symbol,
+            "has_open_position": position > 0,
+            "position_btc": round(position, 8),
+            "position_usdt": round(position_usdt, 4),
+            "position_count": int(self.state.position_count or 0),
+            "raw_entry_count": int(getattr(self.state, "raw_entry_count", 0) or 0),
+            "logical_position_slots": int(getattr(self.state, "logical_position_slots", 0) or 0),
+            "entry_price": round(entry_price, 2),
+            "target_sell_price": round(float(self.state.target_sell_price or 0.0), 2),
+            "dry_run": bool(self.state.dry_run),
+        })
+        if current_price is not None:
+            enriched["decision_price"] = round(float(current_price), 2)
+        if unrealized_pnl is not None:
+            enriched["unrealized_pnl_usdt"] = round(unrealized_pnl, 4)
+        if self.state.target_sell_reason:
+            enriched["target_sell_reason"] = self.state.target_sell_reason[:240]
+        return enriched
 
     def _get_runtime_risk_caps(self) -> Dict[str, Any]:
         """Retorna caps/configs ativos da instância sem depender do config de import."""
@@ -789,103 +831,20 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         parser,
         retries_per_target: int = 1,
     ) -> tuple[Any, str, Dict[str, Any]]:
-        """Executa chamada estruturada ao Ollama com retry/fallback e parser validante."""
-        attempts: list[tuple[str, str, float, int, int]] = []
-        seen: set[tuple[str, str]] = set()
-        target_attempts = max(1, int(retries_per_target))
-        for target_index, (host, model, timeout_sec) in enumerate((
-            (primary_host, primary_model, primary_timeout_sec),
-            (fallback_host, fallback_model, fallback_timeout_sec),
-        ), start=1):
-            host = (host or "").strip()
-            model = (model or "").strip()
-            if not host or not model:
-                continue
-            key = (host, model)
-            if key in seen:
-                continue
-            seen.add(key)
-            for target_attempt in range(1, target_attempts + 1):
-                attempts.append((host, model, timeout_sec, target_index, target_attempt))
-
-        errors: list[str] = []
-        for attempt_no, (host, model, timeout_sec, target_index, target_attempt) in enumerate(attempts, start=1):
-            started = time.time()
-            try:
-                # Usa api/chat para modelos instruct (chat template aplicado corretamente)
-                # api/generate com prompt raw gera lixo em modelos instruction-tuned
-                use_chat = "instruct" in model.lower()
-                # Gate inter-processo: serializa requests ao mesmo host Ollama.
-                # Com N agentes concorrentes: gate_timeout > N × timeout_sec.
-                # Configurável via OLLAMA_GATE_TIMEOUT_MIN_SEC (default 200s cobre 4 agentes × 30s).
-                gate_timeout = max(
-                    type(self)._OLLAMA_GATE_TIMEOUT_MIN_SEC,
-                    timeout_sec * type(self)._OLLAMA_GATE_TIMEOUT_MULTIPLIER,
-                )
-                with _ollama_host_gate(host, timeout=gate_timeout):
-                    with httpx.Client(timeout=float(timeout_sec)) as client:
-                        if use_chat:
-                            resp = client.post(
-                                f"{host}/api/chat",
-                                json={
-                                    "model": model,
-                                    "messages": [
-                                        {
-                                            "role": "system",
-                                            "content": (
-                                                "You are a trading assistant. "
-                                                "Return ONLY a valid JSON object with the requested keys. "
-                                                "No markdown, no explanation, no extra text."
-                                            ),
-                                        },
-                                        {"role": "user", "content": prompt},
-                                    ],
-                                    "stream": False,
-                                    "format": "json",
-                                    "options": options,
-                                },
-                            )
-                        else:
-                            resp = client.post(
-                                f"{host}/api/generate",
-                                json={
-                                    "model": model,
-                                    "prompt": prompt,
-                                    "stream": False,
-                                    "format": "json",
-                                    "options": options,
-                                },
-                            )
-                if resp.status_code == 503:
-                    # 503 após gate indica que o modelo ainda estava sendo carregado
-                    # ou outro processo passou sem lock (gate timeout). Backoff maior.
-                    jitter = random.uniform(2.0, 5.0)
-                    logger.debug(
-                        "Ollama 503 em %s/%s (pós-gate) — aguardando %.1fs antes do fallback",
-                        host, model, jitter,
-                    )
-                    time.sleep(jitter)
-                    raise RuntimeError(f"HTTP 503")
-                if resp.status_code != 200:
-                    raise RuntimeError(f"HTTP {resp.status_code}")
-                if use_chat:
-                    raw = (resp.json().get("message") or {}).get("content", "").strip()
-                else:
-                    raw = resp.json().get("response", "").strip()
-                parsed = parser(raw)
-                latency_ms = (time.time() - started) * 1000.0
-                return parsed, raw, {
-                    "host": host,
-                    "model": model,
-                    "latency_ms": round(latency_ms, 2),
-                    "attempt": attempt_no,
-                    "target_attempt": target_attempt,
-                    "fallback_used": target_index > 1,
-                }
-            except Exception as e:
-                errors.append(f"{model}@{host}#{target_attempt}: {type(e).__name__}: {e}")
-
-        raise RuntimeError(f"{label} failed after {len(attempts)} attempts: {' | '.join(errors[:4])}")
+        """Delega ao LLMRouter: primary/fallback explícitos + NAS como terceiro tier."""
+        return self._llm.request_structured(
+            label=label,
+            prompt=prompt,
+            primary_host=primary_host,
+            primary_model=primary_model,
+            fallback_host=fallback_host,
+            fallback_model=fallback_model,
+            primary_timeout_sec=primary_timeout_sec,
+            fallback_timeout_sec=fallback_timeout_sec,
+            options=options,
+            parser=parser,
+            retries_per_target=retries_per_target,
+        )
 
     def _parse_ai_trade_controls(self, raw: str) -> OllamaTradeControlSuggestion:
         """Valida a resposta JSON do Ollama para controles de risco."""
@@ -1582,6 +1541,10 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
     _OLLAMA_TRADE_WINDOW_TTL_CONSERVATIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_TTL_CONSERVATIVE_SEC", "90"))
     _OLLAMA_TRADE_WINDOW_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_TIMEOUT_SEC", "30"))
     _OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC", "20"))
+    _OLLAMA_RSS_TRIGGERS_ENABLED = os.getenv(
+        "OLLAMA_RSS_TRIGGERS_ENABLED", "true"
+    ).strip().lower() in {"1", "true", "yes", "on"}
+    _OLLAMA_AI_PLAN_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_AI_PLAN_MIN_INTERVAL_SEC", "20"))
     # Gate inter-processo: quanto tempo aguardar a vez antes de prosseguir sem serialização.
     # Com 4 agentes e timeout=30s/req, mín de 4×30=120s é suficiente; 200s dá margem.
     _OLLAMA_GATE_TIMEOUT_MIN_SEC = float(os.getenv("OLLAMA_GATE_TIMEOUT_MIN_SEC", "200"))
@@ -2063,8 +2026,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 fallback_timeout_sec=self._OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC,
                 options={
                     "temperature": 0.0,
-                    "num_predict": 64,
-                    "num_ctx": 1536,
+                    "num_predict": 256,
+                    "num_ctx": 2048,
                     "repeat_penalty": 1.05,
                     "top_k": 20,
                     "top_p": 0.70,
@@ -2258,8 +2221,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 fallback_timeout_sec=self._OLLAMA_TRADE_WINDOW_FALLBACK_TIMEOUT_SEC,
                 options={
                     "temperature": 0.0,
-                    "num_predict": 72,
-                    "num_ctx": 1536,
+                    "num_predict": 256,
+                    "num_ctx": 2048,
                     "repeat_penalty": 1.05,
                     "top_k": 20,
                     "top_p": 0.70,
@@ -2518,12 +2481,14 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             momentum = indicators.momentum()
             volatility = indicators.volatility()
 
-            position_info = "Sem posição aberta"
+            profile = self._current_profile()
+            position_info = f"profile={profile}: sem posição aberta"
             if self.state.position > 0:
                 pnl_pct = ((market_state.price - self.state.entry_price)
                            / self.state.entry_price * 100)
                 usdt_val = self.state.position * market_state.price
                 position_info = (
+                    f"profile={profile}: posição aberta "
                     f"{self.state.position:.8f} BTC ({self.state.position_count} entradas), "
                     f"preço médio ${self.state.entry_price:,.2f}, "
                     f"valor ~${usdt_val:.2f}, PnL {pnl_pct:+.2f}%"
@@ -2748,7 +2713,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 f"- Regime: {rag_stats['current_regime']} (confiança {rag_stats['regime_confidence']:.0%})\n"
                 f"- Orderbook: imbalance={market_state.orderbook_imbalance:.2f}, "
                 f"spread={market_state.spread:.2f}\n"
-                f"- Posição: {position_info}\n"
+                f"- Perfil do agente: {profile}\n"
+                f"- Posição deste perfil: {position_info}\n"
                 f"- USDT disponível: ${usdt_bal:.2f}\n"
                 f"- Config IA: buy_target=${rag_adj.ai_buy_target_price:,.2f}, "
                 f"TP={rag_adj.ai_take_profit_pct*100:.2f}%, "
@@ -2809,10 +2775,10 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             # Prompt compacto para modelos instruct pequenos (GPU1)
             # Usa vocabulário explícito de trading para passar no _sanitize_ai_plan
             _pos_str = (
-                f"Posição aberta: {self.state.position:.6f} BTC, "
+                f"Posição aberta do profile {profile}: {self.state.position:.6f} BTC, "
                 f"entry=${self.state.entry_price:,.2f}, "
                 f"PnL={current_net_pnl:+.4f} USDT"
-                if has_open_position else "Sem posição aberta"
+                if has_open_position else f"Profile {profile}: sem posição aberta"
             )
             prompt_fallback = (
                 f"Analise o mercado de Bitcoin (BTC/USDT) e descreva o que o agente de trading vai fazer.\n\n"
@@ -2825,13 +2791,19 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 f"2. Próxima ação: comprar, vender ou aguardar, com preço-alvo e stop-loss."
             )
 
-            # GPU0 → GPU1 fallback para AI plan
+            # GPU0 → GPU1 → demais endpoints saudáveis (NAS, etc.) para AI plan
             _fallback_host = self._secondary_ollama_host(self._OLLAMA_PLAN_HOST)
             plan_targets = [(self._OLLAMA_PLAN_HOST, self._OLLAMA_PLAN_MODEL, plan_options)]
             if _fallback_host and self._OLLAMA_PLAN_FALLBACK_MODEL:
                 plan_targets.append(
                     (_fallback_host, self._OLLAMA_PLAN_FALLBACK_MODEL, plan_options_fallback)
                 )
+            # Terceiro tier: endpoints do router não incluídos acima
+            _plan_tried_hosts = {h for h, _, _ in plan_targets}
+            _nas_model = os.getenv("OLLAMA_PLAN_NAS_MODEL", self._OLLAMA_PLAN_FALLBACK_MODEL or self._OLLAMA_PLAN_MODEL)
+            for _ep in self._llm._endpoints:
+                if _ep.host not in _plan_tried_hosts and _ep.is_healthy(probe_timeout=2.0):
+                    plan_targets.append((_ep.host, _nas_model, plan_options_fallback))
             raw_text = ""
             plan_text = ""
             used_model = self._OLLAMA_PLAN_MODEL
@@ -5181,7 +5153,14 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                         symbol=self.symbol, action="SELL", confidence=1.0,
                         price=price, reason=forced_signal.reason,
                         profile=self._current_profile(),
-                        features={"trigger": "trailing_stop", "trailing_high": round(self.state.trailing_high, 2), "drop_pct": round(drop_from_high * 100, 2)}
+                        features=self._decision_features_with_position(
+                            {
+                                "trigger": "trailing_stop",
+                                "trailing_high": round(self.state.trailing_high, 2),
+                                "drop_pct": round(drop_from_high * 100, 2),
+                            },
+                            price=price,
+                        )
                     )
                     self.db.mark_decision_executed(dec_id, getattr(self, '_last_trade_id', 0))
                 except Exception as e:
@@ -5247,7 +5226,13 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                             symbol=self.symbol, action="SELL", confidence=1.0,
                             price=price, reason=forced_signal.reason,
                             profile=self._current_profile(),
-                            features={"trigger": "auto_stop_loss", "pnl_pct": round(pnl_pct * 100, 2)}
+                            features=self._decision_features_with_position(
+                                {
+                                    "trigger": "auto_stop_loss",
+                                    "pnl_pct": round(pnl_pct * 100, 2),
+                                },
+                                price=price,
+                            )
                         )
                         self.db.mark_decision_executed(dec_id, getattr(self, '_last_trade_id', 0))
                     except Exception as e:
@@ -5297,7 +5282,15 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                             symbol=self.symbol, action="SELL", confidence=1.0,
                             price=price, reason=forced_signal.reason,
                             profile=self._current_profile(),
-                            features={"trigger": "auto_take_profit", "pnl_pct": round(pnl_pct * 100, 2), "tp_pct": round(tp_pct * 100, 2), "tp_source": tp_source}
+                            features=self._decision_features_with_position(
+                                {
+                                    "trigger": "auto_take_profit",
+                                    "pnl_pct": round(pnl_pct * 100, 2),
+                                    "tp_pct": round(tp_pct * 100, 2),
+                                    "tp_source": tp_source,
+                                },
+                                price=price,
+                            )
                         )
                         self.db.mark_decision_executed(dec_id, getattr(self, '_last_trade_id', 0))
                     except Exception as e:
@@ -5408,7 +5401,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     price=signal.price,
                     reason=signal.reason,
                     profile=self._current_profile(),
-                    features=signal.features
+                    features=self._decision_features_with_position(signal.features, price=signal.price)
                 )
                 
                 # Callbacks
@@ -5483,13 +5476,17 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 # - periodicamente
                 # - imediatamente quando entrar RSS novo relevante
                 periodic_plan = cycle == 5 or (cycle > 0 and cycle % self._AI_PLAN_INTERVAL == 0)
-                rss_triggered_plan = self._has_new_rss_since_last_plan()
+                rss_triggered_plan = (
+                    self._has_new_rss_since_last_plan()
+                    if self._OLLAMA_RSS_TRIGGERS_ENABLED
+                    else False
+                )
                 rag_stats = self.market_rag.get_stats()
                 regime_now = rag_stats.get("current_regime", "")
                 regime_changed = bool(self._last_ai_trade_controls_regime and regime_now and regime_now != self._last_ai_trade_controls_regime)
                 trade_window_regime_changed = bool(self._last_ai_trade_window_regime and regime_now and regime_now != self._last_ai_trade_window_regime)
                 should_generate_plan = periodic_plan or rss_triggered_plan
-                if should_generate_plan and (time.time() - self._last_ai_plan_trigger_ts) >= 20 and time.time() >= self._ai_plan_earliest_ts:
+                if should_generate_plan and (time.time() - self._last_ai_plan_trigger_ts) >= self._OLLAMA_AI_PLAN_MIN_INTERVAL_SEC and time.time() >= self._ai_plan_earliest_ts:
                     self._last_ai_plan_trigger_ts = time.time()
                     if rss_triggered_plan and not periodic_plan:
                         logger.info("📰 New RSS received — triggering fresh AI plan")

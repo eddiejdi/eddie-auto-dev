@@ -48,7 +48,7 @@ logging.basicConfig(
 
 MAX_ERROR_THRESHOLD = 10          # erros FC antes de degradar score
 MAX_LIP_PER_MINUTE = 3           # LIPs/min aceitáveis em link saudável
-MAX_LATENCY_MS = 200             # latência INQUIRY aceitável em ms
+MAX_LATENCY_MS = 800             # latência INQUIRY aceitável em ms (LTO tape drives: 300-600ms normal)
 MAX_RECONNECT_MS = 15_000        # tempo de reconnect após LIP (ms)
 STABLE_WINDOW_S = 60             # janela de monitoramento de estabilidade
 

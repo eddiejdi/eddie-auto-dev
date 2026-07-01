@@ -1,0 +1,7 @@
+[Unit]
+Description=Storj macvlan watchdog — corrige eth0 ausente no namespace
+After=docker.service storj-host-shim.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/storj-macvlan-watchdog.sh

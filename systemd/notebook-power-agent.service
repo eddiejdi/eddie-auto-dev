@@ -1,0 +1,30 @@
+[Unit]
+Description=Notebook Power Agent via TuyaLink or Home Assistant MQTT
+After=network-online.target
+Wants=network-online.target
+Documentation=file:/home/homelab/eddie-auto-dev/docs/NOTEBOOK_POWER_AGENT.md
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/home/homelab/eddie-auto-dev
+EnvironmentFile=/etc/default/notebook-power-agent
+Environment="PYTHONUNBUFFERED=1"
+ExecStart=/home/homelab/eddie-auto-dev/.venv/bin/python3 /home/homelab/eddie-auto-dev/tools/notebook_power_agent.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# O servico precisa chamar systemctl poweroff/hibernate/suspend.
+NoNewPrivileges=false
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/run /var/tmp
+ProtectHome=read-only
+MemoryMax=128M
+CPUQuota=10%
+
+[Install]
+WantedBy=multi-user.target

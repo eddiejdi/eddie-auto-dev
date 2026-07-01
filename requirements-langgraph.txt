@@ -1,0 +1,15 @@
+# Dependências para agentes LangGraph no homelab
+# Instalar com: pip3 install --break-system-packages -r requirements-langgraph.txt
+# (sistema Python 3.12 protegido por PEP 668; --break-system-packages necessário)
+#
+# Verificar instalação:
+#   python3 -c 'from langgraph.graph import StateGraph; from langgraph.checkpoint.postgres import PostgresSaver; print("ok")'
+
+langgraph
+langchain-anthropic
+langgraph-checkpoint-postgres
+
+# Já presentes no homelab (não reinstalar):
+# psycopg2-binary   — via apt (psycopg2)
+# psycopg           — psycopg3, já instalado
+# chromadb          — shared memory layer

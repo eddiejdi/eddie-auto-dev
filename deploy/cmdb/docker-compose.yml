@@ -1,0 +1,254 @@
+version: "3.9"
+
+x-netbox-common: &netbox-common
+  image: docker.io/netboxcommunity/netbox:${NETBOX_IMAGE_TAG:-v4.6-5.0.1}
+  restart: unless-stopped
+  depends_on:
+    netbox-postgres:
+      condition: service_healthy
+    netbox-redis:
+      condition: service_healthy
+    netbox-redis-cache:
+      condition: service_healthy
+  environment:
+    ALLOWED_HOSTS: ${NETBOX_ALLOWED_HOSTS:-*}
+    CORS_ORIGIN_ALLOW_ALL: "True"
+    CSRF_TRUSTED_ORIGINS: ${NETBOX_CSRF_TRUSTED_ORIGINS:-}
+    DB_HOST: netbox-postgres
+    DB_NAME: ${NETBOX_DB_NAME:-netbox}
+    DB_PASSWORD: ${NETBOX_DB_PASSWORD:?set NETBOX_DB_PASSWORD in .env}
+    DB_USER: ${NETBOX_DB_USER:-netbox}
+    EMAIL_FROM: ${NETBOX_EMAIL_FROM:-cmdb@local}
+    EMAIL_PORT: ${NETBOX_EMAIL_PORT:-25}
+    EMAIL_SERVER: ${NETBOX_EMAIL_SERVER:-localhost}
+    EMAIL_TIMEOUT: "5"
+    EMAIL_USE_SSL: ${NETBOX_EMAIL_USE_SSL:-false}
+    EMAIL_USE_TLS: ${NETBOX_EMAIL_USE_TLS:-false}
+    GRAPHQL_ENABLED: "true"
+    LOGIN_REQUIRED: ${NETBOX_LOGIN_REQUIRED:-true}
+    LOGOUT_REDIRECT_URL: ${NETBOX_LOGOUT_REDIRECT_URL:-/}
+    METRICS_ENABLED: "true"
+    NETBOX_BASE_PATH: ${NETBOX_BASE_PATH:-}
+    REDIS_CACHE_DATABASE: "1"
+    REDIS_CACHE_HOST: netbox-redis-cache
+    REDIS_CACHE_PASSWORD: ${NETBOX_REDIS_CACHE_PASSWORD:?set NETBOX_REDIS_CACHE_PASSWORD in .env}
+    REDIS_DATABASE: "0"
+    REDIS_HOST: netbox-redis
+    REDIS_PASSWORD: ${NETBOX_REDIS_PASSWORD:?set NETBOX_REDIS_PASSWORD in .env}
+    REMOTE_AUTH_AUTO_CREATE_USER: ${NETBOX_REMOTE_AUTH_AUTO_CREATE_USER:-false}
+    REMOTE_AUTH_ENABLED: ${NETBOX_REMOTE_AUTH_ENABLED:-false}
+    REMOTE_AUTH_GROUP_HEADER: ${NETBOX_REMOTE_AUTH_GROUP_HEADER:-HTTP_X_AUTHENTIK_GROUPS}
+    REMOTE_AUTH_GROUP_SEPARATOR: ${NETBOX_REMOTE_AUTH_GROUP_SEPARATOR:-|}
+    REMOTE_AUTH_GROUP_SYNC_ENABLED: ${NETBOX_REMOTE_AUTH_GROUP_SYNC_ENABLED:-false}
+    REMOTE_AUTH_HEADER: ${NETBOX_REMOTE_AUTH_HEADER:-HTTP_X_AUTHENTIK_USERNAME}
+    REMOTE_AUTH_STAFF_GROUPS: ${NETBOX_REMOTE_AUTH_STAFF_GROUPS:-}
+    REMOTE_AUTH_SUPERUSER_GROUPS: ${NETBOX_REMOTE_AUTH_SUPERUSER_GROUPS:-}
+    REMOTE_AUTH_USER_EMAIL: ${NETBOX_REMOTE_AUTH_USER_EMAIL:-HTTP_X_AUTHENTIK_EMAIL}
+    SECRET_KEY: ${NETBOX_SECRET_KEY:?set NETBOX_SECRET_KEY in .env}
+    SUPERUSER_EMAIL: ${NETBOX_SUPERUSER_EMAIL:-cmdb-admin@local}
+    SUPERUSER_NAME: ${NETBOX_SUPERUSER_NAME:-cmdb-admin}
+    SUPERUSER_PASSWORD: ${NETBOX_SUPERUSER_PASSWORD:?set NETBOX_SUPERUSER_PASSWORD in .env}
+    SKIP_SUPERUSER: ${NETBOX_SKIP_SUPERUSER:-false}
+    TIME_ZONE: ${CMDB_TIMEZONE:-America/Sao_Paulo}
+    WEBHOOKS_ENABLED: "true"
+  user: "netbox:root"
+  healthcheck:
+    test:
+      [
+        "CMD-SHELL",
+        "BASE_PATH=$${NETBOX_BASE_PATH%/}; if [ -n \"$${BASE_PATH}\" ]; then BASE_PATH=\"/$${BASE_PATH}\"; fi; curl -fsS \"http://localhost:8080$${BASE_PATH}/login/\" >/dev/null || exit 1",
+      ]
+    interval: 15s
+    timeout: 3s
+    retries: 10
+    start_period: 90s
+  volumes:
+    - netbox-media:/opt/netbox/netbox/media
+    - netbox-reports:/opt/netbox/netbox/reports
+    - netbox-scripts:/opt/netbox/netbox/scripts
+    - ./netbox/extra.py:/etc/netbox/config/extra.py:ro
+  networks:
+    - cmdb
+
+services:
+  netbox:
+    <<: *netbox-common
+    container_name: cmdb-netbox
+    ports:
+      - "${NETBOX_BIND:-127.0.0.1}:${NETBOX_DIRECT_PORT:-18091}:8080"
+
+  netbox-worker:
+    <<: *netbox-common
+    container_name: cmdb-netbox-worker
+    depends_on:
+      netbox:
+        condition: service_healthy
+    command:
+      - /opt/netbox/venv/bin/python
+      - /opt/netbox/netbox/manage.py
+      - rqworker
+    healthcheck:
+      test: ["CMD-SHELL", "ps -aux | grep -v grep | grep -q rqworker || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+    ports: []
+
+  netbox-postgres:
+    image: docker.io/postgres:${NETBOX_POSTGRES_IMAGE_TAG:-18-alpine}
+    container_name: cmdb-netbox-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${NETBOX_DB_NAME:-netbox}
+      POSTGRES_USER: ${NETBOX_DB_USER:-netbox}
+      POSTGRES_PASSWORD: ${NETBOX_DB_PASSWORD:?set NETBOX_DB_PASSWORD in .env}
+      TZ: ${CMDB_TIMEZONE:-America/Sao_Paulo}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -t 2 -d $$POSTGRES_DB -U $$POSTGRES_USER"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    volumes:
+      - netbox-postgres:/var/lib/postgresql
+    networks:
+      - cmdb
+
+  netbox-redis:
+    image: docker.io/valkey/valkey:${NETBOX_REDIS_IMAGE_TAG:-9.0-alpine}
+    container_name: cmdb-netbox-redis
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - valkey-server --appendonly yes --requirepass $$REDIS_PASSWORD
+    environment:
+      REDIS_PASSWORD: ${NETBOX_REDIS_PASSWORD:?set NETBOX_REDIS_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(valkey-cli --pass \"$${REDIS_PASSWORD}\" ping) = 'PONG' ]"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - netbox-redis:/data
+    networks:
+      - cmdb
+
+  netbox-redis-cache:
+    image: docker.io/valkey/valkey:${NETBOX_REDIS_IMAGE_TAG:-9.0-alpine}
+    container_name: cmdb-netbox-redis-cache
+    restart: unless-stopped
+    command:
+      - sh
+      - -c
+      - valkey-server --requirepass $$REDIS_PASSWORD
+    environment:
+      REDIS_PASSWORD: ${NETBOX_REDIS_CACHE_PASSWORD:?set NETBOX_REDIS_CACHE_PASSWORD in .env}
+    healthcheck:
+      test: ["CMD-SHELL", "[ $$(valkey-cli --pass \"$${REDIS_PASSWORD}\" ping) = 'PONG' ]"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    volumes:
+      - netbox-redis-cache:/data
+    networks:
+      - cmdb
+
+  glpi-db:
+    image: docker.io/mariadb:${GLPI_DB_IMAGE_TAG:-11}
+    container_name: cmdb-glpi-db
+    restart: unless-stopped
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      MARIADB_DATABASE: ${GLPI_DB_NAME:-glpi}
+      MARIADB_USER: ${GLPI_DB_USER:-glpi}
+      MARIADB_PASSWORD: ${GLPI_DB_PASSWORD:?set GLPI_DB_PASSWORD in .env}
+      MARIADB_RANDOM_ROOT_PASSWORD: "yes"
+      TZ: ${CMDB_TIMEZONE:-America/Sao_Paulo}
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u $$MARIADB_USER --password=$$MARIADB_PASSWORD >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    volumes:
+      - glpi-db:/var/lib/mysql
+    networks:
+      - cmdb
+
+  glpi:
+    image: glpi/glpi:${GLPI_IMAGE_TAG:-latest}
+    container_name: cmdb-glpi
+    restart: unless-stopped
+    depends_on:
+      glpi-db:
+        condition: service_healthy
+    environment:
+      GLPI_DB_HOST: glpi-db
+      GLPI_DB_PORT: "3306"
+      GLPI_DB_NAME: ${GLPI_DB_NAME:-glpi}
+      GLPI_DB_USER: ${GLPI_DB_USER:-glpi}
+      GLPI_DB_PASSWORD: ${GLPI_DB_PASSWORD:?set GLPI_DB_PASSWORD in .env}
+      GLPI_SKIP_AUTOINSTALL: ${GLPI_SKIP_AUTOINSTALL:-false}
+      GLPI_SKIP_AUTOUPDATE: ${GLPI_SKIP_AUTOUPDATE:-false}
+      GLPI_CRONTAB_ENABLED: ${GLPI_CRONTAB_ENABLED:-1}
+      TZ: ${CMDB_TIMEZONE:-America/Sao_Paulo}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost/cmdb/glpi/index.php >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    ports:
+      - "${GLPI_BIND:-127.0.0.1}:${GLPI_DIRECT_PORT:-18092}:80"
+    volumes:
+      - glpi-data:/var/glpi
+      - ./glpi/apache/000-default.conf:/etc/apache2/sites-available/000-default.conf:ro
+      - ./glpi/php/cmdb.ini:/usr/local/etc/php/conf.d/cmdb.ini:ro
+    networks:
+      - cmdb
+
+  proxy:
+    image: docker.io/nginx:${NGINX_IMAGE_TAG:-1.29-alpine}
+    container_name: cmdb-proxy
+    restart: unless-stopped
+    depends_on:
+      netbox:
+        condition: service_healthy
+      glpi:
+        condition: service_healthy
+    environment:
+      NETBOX_SERVER_NAME: ${NETBOX_SERVER_NAME:-netbox.cmdb.local}
+      GLPI_SERVER_NAME: ${GLPI_SERVER_NAME:-glpi.cmdb.local}
+      CLIENT_MAX_BODY_SIZE: ${CLIENT_MAX_BODY_SIZE:-64m}
+    ports:
+      - "${CMDB_PROXY_BIND:-127.0.0.1}:${CMDB_PROXY_HTTP_PORT:-18090}:80"
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - cmdb
+
+volumes:
+  glpi-data:
+  glpi-db:
+  netbox-media:
+  netbox-postgres:
+  netbox-redis:
+  netbox-redis-cache:
+  netbox-reports:
+  netbox-scripts:
+
+networks:
+  cmdb:
+    driver: bridge

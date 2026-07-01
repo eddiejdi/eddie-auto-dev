@@ -1,0 +1,22 @@
+[Unit]
+Description=Garante a rede Docker macvlan storj_macvlan
+Documentation=https://github.com/eddiejdi/eddie-auto-dev
+After=docker.service network-online.target
+Requires=docker.service
+Wants=network-online.target
+Before=storj-host-shim.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Retry se Docker não estiver pronto ainda
+Restart=on-failure
+RestartSec=15
+StartLimitIntervalSec=120
+StartLimitBurst=5
+ExecStart=/bin/sh -c "/usr/bin/docker network inspect storj_macvlan >/dev/null 2>&1 || /usr/bin/docker network create -d macvlan --subnet=192.168.15.0/24 --gateway=192.168.15.1 --ip-range=192.168.15.250/32 -o parent=eth-wan storj_macvlan"
+ExecStartPost=/bin/sh -c "systemctl --no-block try-restart storj-host-shim.service || true"
+ExecStop=/bin/true
+
+[Install]
+WantedBy=multi-user.target
