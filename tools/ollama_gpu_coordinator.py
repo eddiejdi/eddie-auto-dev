@@ -48,6 +48,8 @@ DEFAULT_PORT = int(os.environ.get("GPU_COORD_PORT", "11437"))
 REQUEST_TIMEOUT_SEC = int(os.environ.get("GPU_COORD_REQUEST_TIMEOUT_SEC", "240"))
 POLL_INTERVAL_SEC = float(os.environ.get("GPU_COORD_POLL_INTERVAL_SEC", "10"))
 HEALTH_TIMEOUT_SEC = float(os.environ.get("GPU_COORD_HEALTH_TIMEOUT_SEC", "3"))
+# Evicta modelo ocioso se VRAM livre cair abaixo deste valor (MB)
+EVICT_THRESHOLD_MB = int(os.environ.get("GPU_COORD_EVICT_THRESHOLD_MB", "2048"))
 
 # VRAM estimativas por padrão de nome (MB) — usado quando o modelo não está na VRAM
 _VRAM_ESTIMATES: list[tuple[str, int]] = [
@@ -56,7 +58,7 @@ _VRAM_ESTIMATES: list[tuple[str, int]] = [
     ("8b",   6000), ("13b", 10000), ("14b", 10500), ("32b", 22000),
     ("70b", 48000),
     # modelos nomeados
-    ("trading-analyst", 6500), ("qwen3-fast", 1500), ("smollm", 600),
+    ("trading-analyst", 6500), ("gemma3", 1000), ("smollm", 600),
     ("moondream", 1700),
 ]
 
@@ -196,7 +198,9 @@ class EndpointState:
 
         self._lock = threading.Lock()
         self._active: int = 0
-        self._loaded: dict[str, float] = {}   # model_name → vram_mb
+        self._loaded: dict[str, float] = {}        # model_name → vram_mb
+        self._model_active: dict[str, int] = {}    # model_name → requests ativas
+        self._model_last_used: dict[str, float] = {}  # model_name → monotonic timestamp
         self._healthy: bool = False
         self._last_poll: float = 0.0
         self._total_served: int = 0
@@ -225,14 +229,31 @@ class EndpointState:
 
     # ── mutação ───────────────────────────────────────────────────────────────
 
-    def increment(self) -> None:
+    def increment(self, model: str = "") -> None:
         with self._lock:
             self._active += 1
             self._total_served += 1
+            if model:
+                self._model_active[model] = self._model_active.get(model, 0) + 1
 
-    def decrement(self) -> None:
+    def decrement(self, model: str = "") -> None:
         with self._lock:
             self._active = max(0, self._active - 1)
+            if model:
+                self._model_active[model] = max(0, self._model_active.get(model, 0) - 1)
+                self._model_last_used[model] = time.monotonic()
+
+    def evictable_models(self) -> list[tuple[float, str]]:
+        """Retorna (vram_mb, name) de modelos ociosos e não-pinados, do maior para o menor."""
+        with self._lock:
+            result = []
+            for name, vram in self._loaded.items():
+                if self._model_active.get(name, 0) > 0:
+                    continue
+                if any(name.endswith(s) for s in (":gpu0", ":gpu1", ":nas")):
+                    continue
+                result.append((vram, name))
+        return sorted(result, reverse=True)
 
     def poll(self) -> None:
         """Atualiza estado via /api/ps e /api/tags (chamado pelo poller)."""
@@ -326,6 +347,7 @@ class GPUCluster:
                 for ep in self._endpoints:
                     ep.poll()
                 self._evict_misplaced_models()
+                self._evict_under_pressure()
 
         self._poller = threading.Thread(target=_loop, daemon=True, name="gpu-poller")
         self._poller.start()
@@ -346,6 +368,35 @@ class GPUCluster:
             log.info("🧹 evictado modelo %s de %s (estava na GPU errada)", model, ep.name)
         except Exception as exc:
             log.warning("falha ao evictar %s de %s: %s", model, ep.name, exc)
+
+    def _evict_for_space(self, ep: EndpointState, needed_mb: float) -> bool:
+        """Evicta modelos ociosos de ep até needed_mb caber. Retorna True se liberou espaço."""
+        freed = False
+        for vram, model in ep.evictable_models():
+            if ep.vram_free_mb >= needed_mb * 1.10:
+                break
+            log.info("💾 evictando %s de %s para abrir espaço (livre=%.0fMB, necessário=%.0fMB)",
+                     model, ep.name, ep.vram_free_mb, needed_mb)
+            self._unload_model(ep, model)
+            with ep._lock:
+                ep._loaded.pop(model, None)
+            freed = True
+        return freed
+
+    def _evict_under_pressure(self) -> None:
+        """Evicta proativamente o maior modelo ocioso quando VRAM livre < EVICT_THRESHOLD_MB."""
+        for ep in self._endpoints:
+            if not ep.healthy or ep.vram_free_mb >= EVICT_THRESHOLD_MB:
+                continue
+            evictable = ep.evictable_models()
+            if not evictable:
+                continue
+            vram, model = evictable[0]
+            log.info("⚡ pressão VRAM %s (livre=%.0fMB < %dMB) — evictando %s (%.0fMB)",
+                     ep.name, ep.vram_free_mb, EVICT_THRESHOLD_MB, model, vram)
+            self._unload_model(ep, model)
+            with ep._lock:
+                ep._loaded.pop(model, None)
 
     def _evict_misplaced_models(self) -> None:
         """Detecta e evicta da VRAM modelos pinados carregados na GPU errada."""
@@ -394,8 +445,21 @@ class GPUCluster:
                 best = ep
 
         if best is None or best_score == float("inf"):
-            log.warning("nenhum endpoint elegível para model=%s", model)
-            return None
+            # Tenta liberar VRAM evictando ociosos do endpoint com mais espaço livre
+            candidate = max(
+                (ep for ep in self._endpoints if ep.healthy),
+                key=lambda ep: ep.vram_free_mb,
+                default=None,
+            )
+            if candidate:
+                needed = _estimate_vram_mb(model)
+                if self._evict_for_space(candidate, needed):
+                    s = candidate.score(model)
+                    if s < float("inf"):
+                        best, best_score = candidate, s
+            if best is None or best_score == float("inf"):
+                log.warning("nenhum endpoint elegível para model=%s (mesmo após eviction)", model)
+                return None
 
         log.info("roteando model=%s → %s (score=%.1f active=%d vram_free=%.0fMB)",
                  model, best.name, best_score, best.active_requests, best.vram_free_mb)
@@ -531,7 +595,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         except Exception:
             pass
 
-        ep.increment()
+        ep.increment(model_name)
         t_start = time.monotonic()
         with _STATS_LOCK:
             global _TOTAL_REQUESTS
@@ -634,7 +698,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
                 _REQUEST_ERRORS += 1
             self._json_response(503, {"error": str(exc), "endpoint": ep.name})
         finally:
-            ep.decrement()
+            ep.decrement(model_name)
             try:
                 conn.close()
             except Exception:

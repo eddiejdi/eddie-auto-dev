@@ -4,14 +4,14 @@ LLM Router — roteamento multi-GPU para o trading agent.
 
 Gerencia 3 endpoints Ollama:
   GPU0  homelab:11434 — RTX 3060 12GB   (modelos pesados: trading-analyst)
-  GPU1  homelab:11435 — GTX 1050 2GB    (modelos leves: qwen3-fast:gpu1, qwen3:0.6b)
+  GPU1  homelab:11435 — GTX 1050 2GB    (modelos leves: gemma3:1b)
   NAS   192.168.15.4:11436 — RTX 2060 SUPER 8GB (média carga, CPU até driver NVIDIA)
 
 Uso simples no trading agent:
     from llm import LLMRouter
     router = LLMRouter()
     result = router.generate("trading-analyst", prompt, timeout=60)
-    result = router.chat("qwen2.5:3b", messages, timeout=30)
+    result = router.chat("gemma3:1b", messages, timeout=30)
 """
 
 import os
@@ -78,12 +78,12 @@ def _default_endpoints() -> List[OllamaEndpoint]:
         OllamaEndpoint(
             name="gpu1-gtx1050",
             host=gpu1_host,
-            primary_models=["qwen3-fast:gpu1", "qwen3:0.6b", "qwen3:1.7b"],
+            primary_models=["gemma3:1b"],
         ),
         OllamaEndpoint(
             name="nas-rtx2060",
             host=nas_host,
-            primary_models=["qwen2.5:1.5b", "qwen2.5:3b"],
+            primary_models=["mistral:7b"],
         ),
     ]
 
@@ -511,6 +511,6 @@ if __name__ == "__main__":
         print(f"  {status} {name}")
 
     print("\n=== Endpoint routing for models ===")
-    for model in ["trading-analyst", "qwen3-fast:gpu1", "qwen3:0.6b", "qwen2.5:3b", "qwen2.5:1.5b"]:
+    for model in ["trading-analyst", "gemma3:1b", "mistral:7b"]:
         order = router._resolve_order(model)
         print(f"  {model:30s} → {[ep.name for ep in order]}")

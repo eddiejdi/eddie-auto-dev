@@ -17,7 +17,7 @@
     {
       "title": "Ollama - Local GPU (Default)",
       "provider": "ollama",
-      "model": "qwen2.5-coder:7b",
+      "model": "mistral:7b",
       "apiBase": "http://192.168.15.2:11434",
       "contextLength": 32768,
       "completionOptions": {
@@ -29,7 +29,7 @@
     {
       "title": "Ollama - GPU1 Lightweight",
       "provider": "ollama",
-      "model": "qwen3:0.6b",
+      "model": "gemma3:1b",
       "apiBase": "http://192.168.15.2:11435",
       "contextLength": 16384,
       "completionOptions": {
@@ -41,7 +41,7 @@
   "tabAutocompleteModel": {
     "title": "Tab Autocomplete - Ollama",
     "provider": "ollama",
-    "model": "qwen2.5-coder:1.5b",
+    "model": "gemma3:1b",
     "apiBase": "http://192.168.15.2:11434",
     "completionOptions": {
       "temperature": 0.3,
