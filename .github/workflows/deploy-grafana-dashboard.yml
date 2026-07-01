@@ -69,8 +69,26 @@ jobs:
         '
     - name: Run dashboard deploy
       run: "if [ -z \"$GRAFANA_USER\" ] || [ -z \"$GRAFANA_PASS\" ]; then\n  echo\
-        \ \"Missing GRAFANA_USER/GRAFANA_PASS secrets\" >&2\n  exit 1\nfi\npython3\
-        \ scripts/misc/populate_grafana_dashboard.py\n"
+        \ \"Missing GRAFANA_USER/GRAFANA_PASS secrets\" >&2\n  exit 1\nfi\n\n# Deploy\
+        \ script inline\necho \"========================================================\"\n\
+        echo \"🎯 DEPLOY: SELETOR DE SERVIDORES NO GRAFANA\"\necho \"========================================================\"\n\
+        \necho \"📡 Obtendo dashboard...\"\nDASH=$(ssh -i \"$HOMELAB_SSH_KEY\" -o\
+        \ StrictHostKeyChecking=no \"$HOMELAB_USER@$HOMELAB_HOST\" \"curl -s -u $GRAFANA_USER:$GRAFANA_PASS\
+        \ http://localhost:3000/api/dashboards/uid/btc-trading-monitor\")\n\nif [\
+        \ -z \"$DASH\" ]; then\n  echo \"❌ Falha ao obter dashboard\"\n  exit 1\n\
+        fi\n\necho \"✅ Dashboard obtido\"\n\n# Modificar JSON\necho \"🔧 Adicionando\
+        \ seletor de servidores...\"\n\necho \"$DASH\" | python3 -c \"import json,sys;d=json.load(sys.stdin);dash=d.get('dashboard',{});temp=dash.get('templating',{'list':[]});temp['list']=[v\
+        \ for v in temp.get('list',[]) if v.get('name')!='servidor'];srv={'name':'servidor','type':'custom','label':'Servidor','description':'Selecione\
+        \ o servidor','current':{'selected':False,'text':'localhost','value':'localhost'},'options':[{'text':'Localhost','value':'localhost'},{'text':'Homelab\
+        \ (192.168.15.2)','value':'192.168.15.2'},{'text':'Orange Pi (192.168.15.166)','value':'192.168.15.166'},{'text':'NAS\
+        \ (192.168.15.100)','value':'192.168.15.100'}],'multi':False,'includeAll':False,'show':'label','showLabel':True,'showValue':True};temp['list'].insert(0,srv);print(json.dumps({'dashboard':dash}))\" >/tmp/dash.json\n\n\
+        echo \"   ✅ Variável adicionada\"\necho \"💾 Salvando...\"\n\nssh -i \"$HOMELAB_SSH_KEY\"\
+        \ -o StrictHostKeyChecking=no \"$HOMELAB_USER@$HOMELAB_HOST\" \"curl -s -X\
+        \ POST -u $GRAFANA_USER:$GRAFANA_PASS -H 'Content-Type: application/json'\
+        \ -d @- http://localhost:3000/api/dashboards/db\" </tmp/dash.json >/tmp/resp.json\n\n\
+        if grep -q '\"id\"' /tmp/resp.json 2>/dev/null; then\n  echo \"   ✅ Dashboard\
+        \ salvo com sucesso\"\n  echo \"========================================================\"\n\
+        \ else\n  echo \"   ❌ Erro:\"\n  cat /tmp/resp.json\n  exit 1\nfi\n"
   selenium-e2e:
     name: Selenium E2E
     uses: ./.github/workflows/selenium-tests.yml
