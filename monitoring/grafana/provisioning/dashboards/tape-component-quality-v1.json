@@ -93,7 +93,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "tape_component_quality_last_run_timestamp_seconds{host=\"rpa4all-nas-001\",drive=\"$drive\"}",
+          "expr": "tape_component_quality_last_run_timestamp_seconds{host=\"rpa4all-nas-001\",drive=\"$drive\"} * 1000",
           "instant": true
         }
       ],
