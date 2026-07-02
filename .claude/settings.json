@@ -64,6 +64,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "python3 tools/hooks/block_incomplete_stop.py",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "python3 tools/hooks/restore_stopped.py",
             "timeout": 60
           }
