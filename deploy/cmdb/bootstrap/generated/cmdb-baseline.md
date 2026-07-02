@@ -1,10 +1,10 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-01T12:40:29.528694+00:00`
+- Generated at: `2026-07-02T22:44:01.458927+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
 - Repo services discovered: `156`
-- Critical services flagged for MVP: `64`
+- Critical services flagged for MVP: `156`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
@@ -13,9 +13,7 @@
 - `identity`: 4
 - `monitoring`: 14
 - `network`: 16
-- `operations`: 88
-- `storage`: 30
-- `trading`: 4
+- `storage`: 122
 
 ## NetBox seed candidates
 
@@ -57,12 +55,12 @@
 - `rpa4all-ddns-server.service` (network, systemd) from `deploy/vpn/rpa4all-ddns-server.service`
 - `rpa4all-vpn-ddns.service` (network, systemd) from `deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service`
 - `wireguard-nat.service` (network, systemd) from `deploy/vpn/wireguard-nat.service`
-- `disk-clean.service` (storage, systemd) from `systemd/disk-clean.service`
-- `disk-clean.timer` (storage, systemd) from `systemd/disk-clean.timer`
-- `disk-spindown.service` (storage, systemd) from `tools/homelab/disk-spindown.service`
-- `homelab-disk-backup.service` (storage, systemd) from `tools/backup/homelab-disk-backup.service`
-- `homelab-tape-log-drain-nextcloud.service` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.service`
-- `homelab-tape-log-drain-nextcloud.timer` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.timer`
+- `glpi` (storage, compose) from `deploy/cmdb/docker-compose.yml`
+- `glpi-db` (storage, compose) from `deploy/cmdb/docker-compose.yml`
+- `mail-db` (storage, compose) from `docker/docker-compose.simple-mail.yml`
+- `mail-server` (storage, compose) from `docker/docker-compose.simple-mail.yml`
+- `mailu-backend` (storage, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-db` (storage, compose) from `docker/docker-compose.mailu.yml`
 
 ## Serviços anotados manualmente
 
