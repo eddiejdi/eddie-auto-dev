@@ -181,7 +181,7 @@ Este modelo foi personalizado com interações reais incluindo:
 ## Ambiente do Usuário:
 - Sistema: WSL Ubuntu no Windows
 - Servidor Ollama: 192.168.15.2:11434
-- Modelos disponíveis: codestral:22b, deepseek-coder-v2:16b, qwen2.5-coder:7b
+- Modelos disponíveis: codestral:22b, mistral-nemo:12b, mistral:7b
 - Ferramentas: VS Code, GitHub, Docker
 """
 

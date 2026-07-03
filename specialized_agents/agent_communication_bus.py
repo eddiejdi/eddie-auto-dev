@@ -462,7 +462,7 @@ def log_llm_call(source: str, prompt: str, model: str = None, **metadata):
         from .token_economy import get_token_economy
         get_token_economy().record_ollama_call(
             prompt_text=prompt,
-            model=model or "qwen2.5-coder:7b",
+            model=model or "mistral:7b",
             source=source,
         )
     except ImportError:

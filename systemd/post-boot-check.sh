@@ -122,10 +122,10 @@ check_ollama_gpu() {
         local gpu1_model
         gpu1_model=$(echo "$gpu1_info" | python3 -c "import sys,json;m=json.load(sys.stdin).get('models',[]);print(m[0]['name'] if m else '')" 2>/dev/null || echo "")
         CHECKED=$((CHECKED + 1))
-        if [[ "$gpu1_model" == *"qwen3:0.6b"* ]]; then
+        if [[ "$gpu1_model" == *"gemma3:1b"* ]]; then
             log "${GREEN}[OK]${NC} ollama: GPU1 controller carregado ($gpu1_model, Forever)"
         elif [[ -n "$gpu1_model" ]]; then
-            log "${YELLOW}[WARN]${NC} ollama: GPU1 com modelo inesperado: $gpu1_model (esperado qwen3:0.6b)"
+            log "${YELLOW}[WARN]${NC} ollama: GPU1 com modelo inesperado: $gpu1_model (esperado gemma3:1b)"
             WARNED=$((WARNED + 1))
         else
             log "${YELLOW}[WARN]${NC} ollama: GPU1 API ativa mas sem modelo carregado"

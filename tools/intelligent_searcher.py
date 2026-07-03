@@ -67,7 +67,7 @@ class IntelligentSearcher:
         *,
         host_gpu0: str = "http://192.168.15.2:11434",
         host_gpu1: str = "http://192.168.15.2:11435",
-        model_gpu1: str = "qwen3:0.6b",
+        model_gpu1: str = "gemma3:1b",
         model_gpu0_vision: str = "llava:7b",
         request_timeout: int = 120,
     ) -> None:
@@ -378,7 +378,7 @@ async def _async_main() -> int:
     parser.add_argument("--limit", type=int, default=8, help="Limite de resultados")
     parser.add_argument("--gpu0-host", type=str, default="http://192.168.15.2:11434", help="Host Ollama GPU0")
     parser.add_argument("--gpu1-host", type=str, default="http://192.168.15.2:11435", help="Host Ollama GPU1")
-    parser.add_argument("--gpu1-model", type=str, default="qwen3:0.6b", help="Modelo textual GPU1")
+    parser.add_argument("--gpu1-model", type=str, default="gemma3:1b", help="Modelo textual GPU1")
     parser.add_argument("--gpu0-vision-model", type=str, default="llava:7b", help="Modelo OCR/visao GPU0")
     args = parser.parse_args()
 

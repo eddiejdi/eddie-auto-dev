@@ -8,6 +8,8 @@ import pytest
 
 import base64
 
+import specialized_agents.nextcloud_agent as nextcloud_agent_module
+
 from specialized_agents.nextcloud_agent import (
     NextcloudChatRequest,
     NextcloudFilesListRequest,
@@ -100,7 +102,7 @@ async def test_ollama_plan_valid_json():
     })
     with patch(
         "specialized_agents.nextcloud_agent._ollama_chat",
-        new=AsyncMock(return_value=(plan_json, "http://host", "qwen2.5:3b")),
+        new=AsyncMock(return_value=(plan_json, "http://host", "phi4-mini:latest")),
     ):
         from specialized_agents.nextcloud_agent import _ollama_plan
         result = await _ollama_plan("qual o status do nextcloud?")
@@ -114,7 +116,7 @@ async def test_ollama_plan_fallback_on_invalid_json():
     """Retorna fallback admin.status quando Ollama retorna JSON inválido."""
     with patch(
         "specialized_agents.nextcloud_agent._ollama_chat",
-        new=AsyncMock(return_value=("não é json", "http://host", "qwen2.5:3b")),
+        new=AsyncMock(return_value=("não é json", "http://host", "phi4-mini:latest")),
     ):
         from specialized_agents.nextcloud_agent import _ollama_plan
         result = await _ollama_plan("qualquer coisa")
@@ -197,7 +199,7 @@ async def test_agent_chat_success():
         "params": {},
         "reasoning": "teste",
         "gpu_used": "http://host",
-        "model_used": "qwen2.5:3b",
+        "model_used": "phi4-mini:latest",
     }
     dispatch_result = {"rc": 0, "output": "ok"}
 
@@ -249,6 +251,40 @@ async def test_run_occ_allowed():
 
 
 @pytest.mark.asyncio
+async def test_run_occ_resolves_container_alias():
+    nextcloud_agent_module._NC_RESOLVED_CONTAINER = None
+    with patch(
+        "specialized_agents.nextcloud_agent._run_command",
+        new=AsyncMock(
+            side_effect=[
+                (1, "", "Error: No such container: nextcloud-app"),
+                (0, "/nextcloud-rpa4all", ""),
+                (0, "ok", ""),
+            ]
+        ),
+    ) as run_cmd:
+        rc, out, err = await nextcloud_agent_module._run_occ("status")
+
+    assert rc == 0
+    assert out == "ok"
+    assert err == ""
+    assert run_cmd.await_args_list[1].args == (
+        "docker",
+        "inspect",
+        "nextcloud-rpa4all",
+        "--format",
+        "{{.Name}}",
+    )
+    assert run_cmd.await_args_list[2].args[:5] == (
+        "docker",
+        "exec",
+        "-u",
+        "www-data",
+        "nextcloud-rpa4all",
+    )
+
+
+@pytest.mark.asyncio
 async def test_run_occ_blocked():
     from fastapi import HTTPException
     agent = get_nextcloud_agent()
@@ -268,7 +304,7 @@ async def test_health_all_ok():
 
     mock_resp_ollama = AsyncMock()
     mock_resp_ollama.status = 200
-    mock_resp_ollama.json = AsyncMock(return_value={"models": [{"name": "qwen2.5:3b"}]})
+    mock_resp_ollama.json = AsyncMock(return_value={"models": [{"name": "phi4-mini:latest"}]})
     mock_resp_ollama.__aenter__ = AsyncMock(return_value=mock_resp_ollama)
     mock_resp_ollama.__aexit__ = AsyncMock(return_value=False)
 

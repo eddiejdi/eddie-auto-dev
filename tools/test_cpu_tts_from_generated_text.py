@@ -43,7 +43,7 @@ GEMINI_TTS_URL = (
 PIPER_VENV_PYTHON = Path(".venv-tts-piper/bin/python")
 PIPER_DATA_DIR = Path("artifacts/piper_voices")
 PIPER_DEFAULT_VOICE = "pt_BR-cadu-medium"
-GPU1_FALLBACK_MODELS = ("qwen2.5:1.5b-instruct-q2_k",)
+GPU1_FALLBACK_MODELS = ("llama3.2:1b",)
 
 DAY_WORDS_PT_BR = {
     1: "primeiro",
@@ -142,12 +142,12 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--ollama-model",
-        default="qwen3:0.6b",
+        default="gemma3:1b",
         help="Modelo principal do Ollama na GPU1 usado para expansao e reescrita.",
     )
     parser.add_argument(
         "--ollama-fallback-models",
-        default="qwen2.5:1.5b-instruct-q2_k",
+        default="llama3.2:1b",
         help="Lista separada por virgula de modelos alternativos na GPU1.",
     )
     parser.add_argument(

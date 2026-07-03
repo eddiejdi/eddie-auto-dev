@@ -95,7 +95,7 @@ def test_generate_usa_gpu0_quando_forcado_por_padrao(
     assert fake_httpx[0].base_url == "http://192.168.15.2:11434"
     url, payload, timeout = fake_httpx[0].requests[0]
     assert url == "/api/generate"
-    assert payload["model"] == "qwen2.5:3b"
+    assert payload["model"] == "phi4-mini:latest"
     assert payload["prompt"] == "revise este código"
     assert timeout == 300
 
@@ -115,7 +115,7 @@ def test_generate_small_request_usa_gpu1_modelo_pequeno(
     assert len(fake_httpx) == 2
     assert fake_httpx[1].base_url == "http://192.168.15.2:11435"
     _, payload, _ = fake_httpx[1].requests[0]
-    assert payload["model"] == "qwen3:0.6b"
+    assert payload["model"] == "gemma3:1b"
 
 
 def test_generate_auto_rota_request_curta_para_gpu1(
@@ -129,7 +129,7 @@ def test_generate_auto_rota_request_curta_para_gpu1(
     assert len(fake_httpx) == 2
     assert fake_httpx[1].base_url == "http://192.168.15.2:11435"
     _, payload, _ = fake_httpx[1].requests[0]
-    assert payload["model"] == "qwen3:0.6b"
+    assert payload["model"] == "gemma3:1b"
 
 
 def test_generate_auto_mantem_gpu0_para_pedido_expert(
@@ -145,7 +145,7 @@ def test_generate_auto_mantem_gpu0_para_pedido_expert(
     assert result == {"ok": True}
     assert len(fake_httpx) == 1
     _, payload, _ = fake_httpx[0].requests[0]
-    assert payload["model"] == "qwen2.5:3b"
+    assert payload["model"] == "phi4-mini:latest"
 
 
 def test_generate_aceita_override_explicito(

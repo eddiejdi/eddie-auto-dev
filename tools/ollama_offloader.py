@@ -39,10 +39,10 @@ except ImportError:
 
 OLLAMA_GPU0 = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 OLLAMA_GPU1 = os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435")
-# GPU0: modelo coder principal (qwen3:1.7b disponível como fallback de qwen2.5-coder:7b)
-MODEL_GPU0 = os.getenv("OLLAMA_MODEL", "qwen3:1.7b")
-# GPU1: qwen3:1.7b funciona bem para trivials; fallback para qwen3-fast:gpu1 se necessário
-MODEL_GPU1 = os.getenv("OLLAMA_SMALL_MODEL", "qwen3:1.7b")
+# GPU0: modelo geral principal (phi4-mini como padrão pós-migração de modelos)
+MODEL_GPU0 = os.getenv("OLLAMA_MODEL", "phi4-mini:latest")
+# GPU1: gemma3:1b cabe na GTX 1050 2GB; fallback para gemma3-fast:gpu1 se necessário
+MODEL_GPU1 = os.getenv("OLLAMA_SMALL_MODEL", "gemma3:1b")
 
 # GPU1 (pequeno/rápido) — tarefas de leitura/resumo
 _GPU1_TASKS = {"explain", "summarize", "commit", "translate"}
@@ -134,8 +134,7 @@ def _select_backend(task: str) -> tuple[str, str]:
 def _call_ollama(content: str, task: str, timeout: int = 120) -> str:
     host, model = _select_backend(task)
     system = _SYSTEM_PROMPTS.get(task, "Você é um assistente técnico útil.")
-    # /no_think desabilita chain-of-thought do qwen3 → respostas ~3x mais rápidas
-    user_content = f"/no_think\n{content}"
+    user_content = content
     payload = {
         "model": model,
         "messages": [

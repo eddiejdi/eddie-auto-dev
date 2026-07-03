@@ -108,7 +108,7 @@ async def model_info() -> Dict[str, Any]:
     {
         "status": "ok",
         "provider": "ollama" | "openai_compatible",
-        "model": "qwen2.5-coder:7b",
+        "model": "mistral:7b",
         "gpu": "GPU0" | "GPU1" | "CLOUD",
         "base_url": "http://..."
     }

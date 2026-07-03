@@ -58,9 +58,9 @@ def mock_ps_phi4() -> dict:
 
 
 @pytest.fixture
-def mock_ps_qwen() -> dict:
-    """Resposta /api/ps com qwen3:0.6b carregado."""
-    return {"models": [{"name": "qwen3:0.6b", "size": 536870912}]}
+def mock_ps_small() -> dict:
+    """Resposta /api/ps com gemma3:1b carregado."""
+    return {"models": [{"name": "gemma3:1b", "size": 536870912}]}
 
 
 @pytest.fixture
@@ -197,7 +197,7 @@ class TestWarmupModel:
     def test_falha_rapido_se_modelo_nao_instalado(self, mock_ps_empty: dict) -> None:
         """Retorna erro antes do cold load quando o modelo não existe."""
         with patch("ollama_warmup._http_request") as mock_req:
-            mock_req.side_effect = [mock_ps_empty, {"models": [{"name": "qwen3:0.6b"}]}]
+            mock_req.side_effect = [mock_ps_empty, {"models": [{"name": "gemma3:1b"}]}]
             result = warmup_model(GPU0_HOST, "phi4-mini")
 
         assert result.success is False
@@ -219,7 +219,7 @@ class TestRunWarmup:
             ]
             mock_warmup.side_effect = [
                 WarmupResult(host=GPU0_HOST, model="phi4-mini", success=True, already_loaded=True),
-                WarmupResult(host=GPU1_HOST, model="qwen3:0.6b", success=True, already_loaded=True),
+                WarmupResult(host=GPU1_HOST, model="gemma3:1b", success=True, already_loaded=True),
             ]
             results, all_ok = run_warmup()
 
@@ -268,7 +268,7 @@ class TestRunWarmup:
             ]
             mock_warmup.side_effect = [
                 WarmupResult(host=GPU0_HOST, model="phi4-mini", success=False, error="OOM"),
-                WarmupResult(host=GPU1_HOST, model="qwen3:0.6b", success=True, load_time_ms=500),
+                WarmupResult(host=GPU1_HOST, model="gemma3:1b", success=True, load_time_ms=500),
             ]
             results, all_ok = run_warmup()
 
@@ -292,7 +292,7 @@ class TestShowStatus:
                 ),
                 GpuStatus(
                     host=GPU1_HOST, name="GPU1", online=True,
-                    version="0.17.6", loaded_models=["qwen3:0.6b"],
+                    version="0.17.6", loaded_models=["gemma3:1b"],
                 ),
             ]
             show_status()
@@ -431,9 +431,9 @@ class TestConfig:
         assert "trading-analyst:latest" in GPU0_MODELS
 
     def test_gpu1_modelo_padrao(self) -> None:
-        """GPU1 tem qwen3:0.6b como padrão."""
+        """GPU1 tem gemma3:1b como padrão."""
         from ollama_warmup import GPU1_MODELS
-        assert "qwen3:0.6b" in GPU1_MODELS
+        assert "gemma3:1b" in GPU1_MODELS
 
     def test_keep_alive_permanente(self) -> None:
         """keep_alive é -1 (permanente)."""

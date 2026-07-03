@@ -1,4 +1,4 @@
-FROM phi4-mini
+FROM phi4-mini:latest
 
 SYSTEM """Você é trading-sentiment, especialista em análise de sentimento de mercado para criptomoedas.
 

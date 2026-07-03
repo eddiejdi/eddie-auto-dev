@@ -97,13 +97,13 @@ def test_embedding_model_uses_embeddings_probe(tmp_path: Path) -> None:
 def test_generate_model_uses_generate_probe(tmp_path: Path) -> None:
     result, curl_calls = _run_check_gpu(
         tmp_path,
-        '{"models":[{"name":"qwen3-fast:gpu1","details":{"family":"qwen3","families":["qwen3"]}}]}',
+        '{"models":[{"name":"gemma3-fast:gpu1","details":{"family":"gemma3","families":["gemma3"]}}]}',
     )
 
     assert result.returncode == 0, result.stderr
     parts = result.stdout.strip().split()
     assert parts[:2] == ["1", "1"]
-    assert parts[-1] == "qwen3-fast:gpu1"
+    assert parts[-1] == "gemma3-fast:gpu1"
     assert "/api/generate" in curl_calls
     assert "/api/embeddings" not in curl_calls
 

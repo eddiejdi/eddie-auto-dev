@@ -9,5 +9,5 @@ mcpServers:
     env:
       HOMELAB_URL: "http://192.168.15.2:8503"
       SECRETS_AGENT_URL: "http://192.168.15.2:8088"
-      API_BASE_URL: "http://192.168.15.2:3456"
+      API_BASE_URL: "http://192.168.15.2:3000"
       DATABASE_URL: "postgresql://postgres:shared_memory_2026@localhost:5433/postgres"

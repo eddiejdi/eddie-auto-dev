@@ -23,8 +23,8 @@ ssh "$HOMELAB" "
   sudo systemctl restart grafana-selfheal.service
 "
 
-# 3. Atualiza rss-sentiment-exporter (modelo qwen3:1.7b)
-echo "[3/4] Atualizando rss-sentiment-exporter.service (qwen3:1.7b)..."
+# 3. Atualiza rss-sentiment-exporter (modelo phi4-mini:latest)
+echo "[3/4] Atualizando rss-sentiment-exporter.service (phi4-mini:latest)..."
 scp "${REPO_DIR}/systemd/rss-sentiment-exporter.service" "${HOMELAB}:/tmp/rss-sentiment-exporter.service"
 ssh "$HOMELAB" "
   sudo cp /tmp/rss-sentiment-exporter.service /etc/systemd/system/rss-sentiment-exporter.service

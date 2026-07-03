@@ -234,7 +234,7 @@ else
     # Testar inferência rápida
     echo -n "  Testando inferência... "
     TEST_RESP=$(curl -s -m 30 http://localhost:11434/api/generate \
-        -d '{"model":"qwen2.5-coder:7b","prompt":"say hi","stream":false}' 2>/dev/null || echo "")
+        -d '{"model":"mistral:7b","prompt":"say hi","stream":false}' 2>/dev/null || echo "")
     if echo "$TEST_RESP" | grep -q '"response"'; then
         echo "✅ Respondeu"
         # Checar load_duration vs prompt_eval_duration para inferir GPU vs CPU

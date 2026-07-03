@@ -120,7 +120,7 @@ PROFILE_ALIASES = {
     "git": "github", "repo": "github",
     "rapido": "fast", "quick": "fast",
     "avancado": "advanced", "complex": "advanced",
-    "deep": "deepseek",
+    "deep": "mistral",
     "pessoal": "assistant", "msg": "assistant", "mensagem": "assistant",
     "texto": "assistant", "amor": "assistant", "criativo": "assistant"
 }
@@ -2064,7 +2064,7 @@ class TelegramBot:
                 await self.api.send_message(chat_id,
                     f"🎭 *Seu perfil atual:* `{current}`\n\n"
                     f"Use /profile [nome] para mudar\n"
-                    f"Perfis: coder, homelab, general, fast, advanced, deepseek, github\n\n"
+                    f"Perfis: coder, homelab, general, fast, advanced, mistral, github\n\n"
                     f"_Aliases: code, dev, home, server, git, rapido, avancado_",
                     reply_to_message_id=msg_id)
                 return
@@ -2083,7 +2083,7 @@ class TelegramBot:
             else:
                 await self.api.send_message(chat_id,
                     f"❌ Perfil `{args}` não encontrado\n\n"
-                    f"Perfis disponíveis: coder, homelab, general, fast, advanced, deepseek, github",
+                    f"Perfis disponíveis: coder, homelab, general, fast, advanced, mistral, github",
                     reply_to_message_id=msg_id)
         
         elif cmd == "/auto_profile":

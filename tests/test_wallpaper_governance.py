@@ -27,7 +27,7 @@ def _registry_fixture(tmp_path: Path) -> Path:
         "policy": {
             "approved_model_primary": "phi4-mini:latest",
             "approved_host_primary": "http://192.168.15.2:11434",
-            "approved_model_secondary": "qwen3:0.6b",
+            "approved_model_secondary": "gemma3:1b",
             "approved_host_secondary": "http://192.168.15.2:11435",
             "rules": ["Toda arte precisa nascer de uma solicitacao registrada."]
         },

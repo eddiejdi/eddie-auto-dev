@@ -61,7 +61,7 @@ COOLDOWN_AFTER_RESTART = int(os.environ.get("TRADING_HEAL_COOLDOWN", "60"))  # s
 STALL_THRESHOLD = int(os.environ.get("TRADING_HEAL_STALL_THRESHOLD", "600"))  # 10 min
 CONSECUTIVE_FAILURES_THRESHOLD = int(os.environ.get("TRADING_HEAL_CONSECUTIVE_THRESHOLD", "4"))
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:8512")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "mistral:7b")
 PG_DSN = os.environ.get(
     "DATABASE_URL",
     "postgresql://postgres:shared_memory_2026@192.168.15.2:5433/postgres"

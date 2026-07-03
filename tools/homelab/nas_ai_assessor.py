@@ -24,7 +24,7 @@ GRAFANA_PROVISIONING_DIR = os.environ.get(
 )
 GRAFANA_PANEL_ID = int(os.environ.get("GRAFANA_PANEL_ID", "31"))
 OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3:0.6b")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma3:1b")
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT_SECONDS", "30"))
 
 QUERIES: Dict[str, str] = {

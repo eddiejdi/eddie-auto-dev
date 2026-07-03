@@ -48,7 +48,7 @@ DATABASE_URL = os.environ.get(
     "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading"
 )
 OLLAMA_HOST = "http://192.168.15.2:11434"
-OLLAMA_SENTIMENT_MODEL = "qwen2.5-coder:7b"
+OLLAMA_SENTIMENT_MODEL = "mistral:7b"
 
 RSS_FEEDS: List[Dict[str, str]] = [
     {"name": "coindesk", "url": "https://www.coindesk.com/arc/outboundfeeds/rss/"},

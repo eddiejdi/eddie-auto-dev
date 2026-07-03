@@ -227,8 +227,8 @@ occ app:update --all             # atualizar todos
 - Instalar:
 ```bash
 docker cp forks/rpa4all-nextcloud-authentik/apps/rpa4all_admin_actions \
-  nextcloud-rpa4all:/var/www/html/apps/
-docker exec nextcloud-rpa4all chown -R www-data:www-data /var/www/html/apps/rpa4all_admin_actions
+  nextcloud-app:/var/www/html/apps/
+docker exec nextcloud-app chown -R www-data:www-data /var/www/html/apps/rpa4all_admin_actions
 occ app:enable rpa4all_admin_actions
 ```
 
@@ -270,7 +270,7 @@ occ files:scan <username>
 occ files_external:list
 
 # Testar escrita no storage externo como www-data
-docker exec -u www-data nextcloud-rpa4all sh -lc \
+docker exec -u www-data nextcloud-app sh -lc \
   'p=/var/www/html/external/LTO/.probe; date > "$p"; stat "$p"; rm -f "$p"'
 ```
 
@@ -342,10 +342,10 @@ tail -n 20 /var/lib/ltfs-cache-flush/catalog.jsonl
 ### 8.1 Logs do Nextcloud
 ```bash
 # Log da aplicação Nextcloud
-docker exec nextcloud-rpa4all tail -n 100 /var/www/html/data/nextcloud.log
+docker exec nextcloud-app tail -n 100 /var/www/html/data/nextcloud.log
 
 # Logs do container
-docker logs nextcloud-rpa4all --tail 100 -f
+docker logs nextcloud-app --tail 100 -f
 
 # Log em JSON (Nextcloud)
 occ log:watch
@@ -429,7 +429,7 @@ occ maintenance:mode --off
 ### 9.3 Backup
 ```bash
 # Backup banco de dados
-docker exec nextcloud-db-rpa4all mysqldump -u root -p<senha_root> nextcloud \
+docker exec nextcloud-db mysqldump -u root -p<senha_root> nextcloud \
   > /mnt/raid1/backups/nextcloud_db_$(date +%Y%m%d).sql
 
 # Backup config (sem data directory)

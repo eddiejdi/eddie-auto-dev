@@ -602,12 +602,12 @@ def _parse_sentiment_response(response: str) -> SentimentResult:
     SENTIMENT: <n> | CONFIDENCE: <n> | DIRECTION: <word> | CATEGORY: <word>
 
     Compatível com o formato do trading-sentiment e com modelos genéricos.
-    Remove tags <think>...</think> do qwen3 antes de parsear.
+    Remove tags <think>...</think> de modelos com chain-of-thought antes de parsear.
     """
     result = SentimentResult()
 
     try:
-        # Remove thinking tags (qwen3 pode incluir)
+        # Remove thinking tags (alguns modelos podem incluir)
         clean = re.sub(r"<think>.*?</think>", "", response, flags=re.DOTALL).strip()
         if not clean:
             clean = response  # fallback se todo o conteúdo era thinking

@@ -29,7 +29,7 @@ model_data = {
         }
     },
     # CORRIGIDO: 14b não existe, usar 7b que está disponível no Ollama
-    "base_model_id": "qwen2.5-coder:7b",
+    "base_model_id": "mistral:7b",
     "params": {
         "system": """Você é o DIRETOR do sistema Shared Auto-Dev.
 

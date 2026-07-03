@@ -128,7 +128,7 @@ def main() -> None:
     """Ponto de entrada do benchmark GPU1."""
     parser = argparse.ArgumentParser(description="Benchmark GPU1 (GTX 1050)")
     parser.add_argument("--runs", type=int, default=2, help="Número de rodadas")
-    parser.add_argument("--model", default="qwen3:0.6b", help="Modelo Ollama")
+    parser.add_argument("--model", default="gemma3:1b", help="Modelo Ollama")
     parser.add_argument("--host", default="http://192.168.15.2:11435", help="Ollama GPU1 URL")
     args = parser.parse_args()
 

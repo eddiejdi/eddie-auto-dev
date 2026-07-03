@@ -57,15 +57,18 @@
     },
     {
       "id": "tape-component-quality",
-      "description": "Use when: validating the tape stack without media, scoring every component involved in LTFS/FC operation, and feeding Grafana with quality metrics",
+      "description": "Use when: validating tape stack readiness without requiring LTFS mount/format state, scoring every LTFS/FC component, and feeding Grafana with quality metrics",
       "sourceFile": ".github/agents/tape-component-quality.agent.md",
       "tools": [
-        "vscode",
-        "read",
-        "search",
-        "edit",
-        "execute",
-        "homelab/*"
+        "execute/runInTerminal",
+        "execute/getTerminalOutput",
+        "execute/sendToTerminal",
+        "read/readFile",
+        "read/problems",
+        "edit/editFiles",
+        "edit/createFile",
+        "search/codebase",
+        "search/fileSearch"
       ],
       "type": "agent"
     },

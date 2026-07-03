@@ -31,7 +31,7 @@ def tmp_registry(tmp_path: Path) -> Path:
             "owner": "TEST",
             "approved_model_primary": "phi4-mini:latest",
             "approved_host_primary": "http://localhost:11434",
-            "approved_model_secondary": "qwen3:0.6b",
+            "approved_model_secondary": "gemma3:1b",
             "approved_host_secondary": "http://localhost:11435",
             "response_contract": "JSON",
             "rules": ["Regra de teste"],

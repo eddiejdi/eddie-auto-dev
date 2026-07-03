@@ -11,16 +11,15 @@ Type=simple
 Restart=always
 RestartSec=10
 
-# CUDA backend via cuda_v12 (testado: CC 6.1 suportado).
-# cuda_v13 NÃO funciona nesta GPU (filtered "didn't fully initialize").
-# CUDA_VISIBLE_DEVICES=1 isola a GTX 1050 (PCI 03:00.0).
+# CUDA backend via cuda_v12 (Pascal CC 6.1 suportado).
+# CUDA_VISIBLE_DEVICES=1 isola a GTX 1050 (2GB VRAM).
 Environment=CUDA_VISIBLE_DEVICES=1
 Environment=OLLAMA_LLM_LIBRARY=cuda_v12
 Environment=OLLAMA_HOST=0.0.0.0:11435
 Environment=OLLAMA_NUM_GPU=999
 Environment=OLLAMA_KEEP_ALIVE=-1
 Environment=OLLAMA_LOAD_TIMEOUT=15m
-Environment=OLLAMA_PRELOAD_MODEL=qwen3:0.6b
+Environment=OLLAMA_PRELOAD_MODEL=gemma3:1b
 Environment=OLLAMA_KV_CACHE_TYPE=q4_0
 Environment=OLLAMA_FLASH_ATTENTION=1
 Environment=OLLAMA_NUM_PARALLEL=1
@@ -39,7 +38,7 @@ CPUAffinity=12-15
 # Prefixo "+" executa como root (ignora User=ollama); "-" ignora falha
 ExecStartPre=+/usr/bin/nvidia-smi -i 1 -pm 1
 ExecStartPre=-+/usr/bin/nvidia-smi -i 1 -c EXCLUSIVE_PROCESS
-ExecStartPre=+/usr/bin/nvidia-smi -i 1 -pl 70
+ExecStartPre=+/usr/bin/nvidia-smi -i 1 -pl 75
 
 # Pré-carrega o modelo configurado e falha cedo se ele não existir
 ExecStart=/usr/local/bin/ollama serve

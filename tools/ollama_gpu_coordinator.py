@@ -26,7 +26,9 @@ import http.client
 import json
 import logging
 import os
+import queue
 import re
+import signal
 import sys
 import threading
 import time
@@ -50,6 +52,14 @@ POLL_INTERVAL_SEC = float(os.environ.get("GPU_COORD_POLL_INTERVAL_SEC", "10"))
 HEALTH_TIMEOUT_SEC = float(os.environ.get("GPU_COORD_HEALTH_TIMEOUT_SEC", "3"))
 # Evicta modelo ocioso se VRAM livre cair abaixo deste valor (MB)
 EVICT_THRESHOLD_MB = int(os.environ.get("GPU_COORD_EVICT_THRESHOLD_MB", "2048"))
+# Falhas consecutivas de poll antes de marcar endpoint como unhealthy
+FAIL_THRESHOLD = int(os.environ.get("GPU_COORD_FAIL_THRESHOLD", "2"))
+# Poll bem-sucedido mais antigo que isso ⇒ estado stale ⇒ endpoint não-elegível
+STALE_AFTER_SEC = float(os.environ.get(
+    "GPU_COORD_STALE_AFTER_SEC", str(max(POLL_INTERVAL_SEC * 3, 30.0))
+))
+# Cap de acúmulo de chunks de streaming para preview (bytes)
+STREAM_PREVIEW_CAP = int(os.environ.get("GPU_COORD_STREAM_PREVIEW_CAP", str(256 * 1024)))
 
 # VRAM estimativas por padrão de nome (MB) — usado quando o modelo não está na VRAM
 _VRAM_ESTIMATES: list[tuple[str, int]] = [
@@ -104,7 +114,6 @@ _pg_queue: Optional[object] = None
 def _start_pg_writer() -> None:
     global _pg_queue
     try:
-        import queue as _queue
         import psycopg2  # type: ignore[import]
     except ImportError:
         log.info("psycopg2 não instalado — payload log apenas em memória")
@@ -112,14 +121,16 @@ def _start_pg_writer() -> None:
     if not _PG_DSN:
         log.info("DATABASE_URL não definida — payload log apenas em memória")
         return
-    _pg_queue = _queue.Queue(maxsize=500)
+    _pg_queue = queue.Queue(maxsize=500)
 
     def _writer() -> None:
         conn = None
         while True:
             try:
-                import queue as _q
                 entry = _pg_queue.get(timeout=5)  # type: ignore[union-attr]
+            except queue.Empty:
+                continue
+            try:
                 if conn is None or conn.closed:
                     conn = psycopg2.connect(_PG_DSN)
                     conn.autocommit = True
@@ -148,6 +159,11 @@ def _start_pg_writer() -> None:
                     )
             except Exception as exc:
                 log.warning("pg_writer: %s", exc)
+                try:
+                    if conn is not None:
+                        conn.close()
+                except Exception:
+                    pass
                 conn = None
 
     threading.Thread(target=_writer, daemon=True, name="pg-writer").start()
@@ -203,12 +219,17 @@ class EndpointState:
         self._model_last_used: dict[str, float] = {}  # model_name → monotonic timestamp
         self._healthy: bool = False
         self._last_poll: float = 0.0
+        self._last_ok_poll: float = 0.0
+        self._consec_fails: int = 0
         self._total_served: int = 0
 
     # ── propriedades ──────────────────────────────────────────────────────────
 
     @property
     def healthy(self) -> bool:
+        # Estado stale (poller morto/travado) invalida o healthy=True antigo
+        if self._healthy and time.monotonic() - self._last_ok_poll > STALE_AFTER_SEC:
+            return False
         return self._healthy
 
     @property
@@ -273,12 +294,31 @@ class EndpointState:
                     loaded[name] = vram
                 with self._lock:
                     self._loaded = loaded
+                    if not self._healthy:
+                        log.info("endpoint %s recuperado (healthy)", self.name)
                     self._healthy = True
-                    self._last_poll = time.monotonic()
+                    self._consec_fails = 0
+                    now = time.monotonic()
+                    self._last_poll = now
+                    self._last_ok_poll = now
         except Exception as exc:
             with self._lock:
-                self._healthy = False
-            log.warning("poll %s falhou: %s", self.name, exc)
+                self._consec_fails += 1
+                self._last_poll = time.monotonic()
+                if self._consec_fails >= FAIL_THRESHOLD and self._healthy:
+                    self._healthy = False
+                    log.warning("endpoint %s marcado unhealthy após %d falhas de poll",
+                                self.name, self._consec_fails)
+            log.warning("poll %s falhou (%d/%d): %s",
+                        self.name, self._consec_fails, FAIL_THRESHOLD, exc)
+
+    def mark_unhealthy(self, reason: str = "") -> None:
+        """Marca imediatamente como unhealthy (ex.: falha de conexão no forward)."""
+        with self._lock:
+            if self._healthy:
+                log.warning("endpoint %s marcado unhealthy: %s", self.name, reason or "forward falhou")
+            self._healthy = False
+            self._consec_fails = max(self._consec_fails, FAIL_THRESHOLD)
 
     # ── scoring ───────────────────────────────────────────────────────────────
 
@@ -287,7 +327,7 @@ class EndpointState:
 
         Retorna float('inf') se o endpoint não é elegível.
         """
-        if not self._healthy:
+        if not self.healthy:
             return float("inf")
 
         needed_mb = _estimate_vram_mb(model)
@@ -315,7 +355,8 @@ class EndpointState:
         return {
             "name": self.name,
             "host": self.host,
-            "healthy": self._healthy,
+            "healthy": self.healthy,
+            "consecutive_poll_failures": self._consec_fails,
             "active_requests": self._active,
             "total_served": self._total_served,
             "vram_total_mb": self.vram_total_mb,
@@ -333,25 +374,47 @@ class GPUCluster:
     def __init__(self, endpoints: list[EndpointState]):
         self._endpoints = endpoints
         self._poller: Optional[threading.Thread] = None
+        self._stop = threading.Event()
+
+    def _poll_all(self) -> None:
+        """Poll paralelo — um endpoint travado não atrasa os demais."""
+        threads = [
+            threading.Thread(target=ep.poll, daemon=True, name=f"poll-{ep.name}")
+            for ep in self._endpoints
+        ]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=HEALTH_TIMEOUT_SEC + 2)
 
     def start_poller(self) -> None:
         """Inicia thread daemon que mantém o estado dos endpoints atualizado."""
         # Poll inicial (síncrono) para ter estado antes da 1ª requisição
-        for ep in self._endpoints:
-            ep.poll()
-        self._evict_misplaced_models()
+        self._poll_all()
+        try:
+            self._evict_misplaced_models()
+        except Exception:
+            log.exception("eviction inicial falhou")
 
         def _loop() -> None:
-            while True:
-                time.sleep(POLL_INTERVAL_SEC)
-                for ep in self._endpoints:
-                    ep.poll()
-                self._evict_misplaced_models()
-                self._evict_under_pressure()
+            while not self._stop.is_set():
+                self._stop.wait(POLL_INTERVAL_SEC)
+                if self._stop.is_set():
+                    break
+                # Nenhuma exceção pode matar o poller — estado stale é pior que ciclo perdido
+                try:
+                    self._poll_all()
+                    self._evict_misplaced_models()
+                    self._evict_under_pressure()
+                except Exception:
+                    log.exception("ciclo do poller falhou — tentando novamente no próximo intervalo")
 
         self._poller = threading.Thread(target=_loop, daemon=True, name="gpu-poller")
         self._poller.start()
         log.info("poller iniciado (intervalo=%.0fs, endpoints=%d)", POLL_INTERVAL_SEC, len(self._endpoints))
+
+    def stop(self) -> None:
+        self._stop.set()
 
     def _unload_model(self, ep: EndpointState, model: str) -> None:
         """Descarrega um modelo da VRAM de um endpoint via keep_alive=0."""
@@ -420,13 +483,17 @@ class GPUCluster:
         ":nas":  "nas-rtx2060",
     }
 
-    def pick(self, model: str) -> Optional[EndpointState]:
-        """Retorna o melhor endpoint para o modelo. None se nenhum disponível."""
+    def pick(self, model: str, exclude: Optional[set[str]] = None) -> Optional[EndpointState]:
+        """Retorna o melhor endpoint para o modelo. None se nenhum disponível.
+
+        `exclude` permite failover: endpoints que acabaram de falhar no forward.
+        """
+        exclude = exclude or set()
         # Pinning por sufixo — nunca vaza para outra GPU
         for suffix, ep_name in self._PIN_SUFFIX.items():
             if model.endswith(suffix):
                 pinned = next((ep for ep in self._endpoints if ep.name == ep_name), None)
-                if pinned and pinned.healthy:
+                if pinned and pinned.healthy and pinned.name not in exclude:
                     log.info("roteando model=%s → %s [pinned] (active=%d vram_free=%.0fMB)",
                              model, pinned.name, pinned.active_requests, pinned.vram_free_mb)
                     return pinned
@@ -437,6 +504,8 @@ class GPUCluster:
         best_score = float("inf")
 
         for ep in self._endpoints:
+            if ep.name in exclude:
+                continue
             s = ep.score(model)
             log.debug("score %s model=%s → %.1f (active=%d vram_free=%.0fMB)",
                       ep.name, model, s, ep.active_requests, ep.vram_free_mb)
@@ -447,7 +516,7 @@ class GPUCluster:
         if best is None or best_score == float("inf"):
             # Tenta liberar VRAM evictando ociosos do endpoint com mais espaço livre
             candidate = max(
-                (ep for ep in self._endpoints if ep.healthy),
+                (ep for ep in self._endpoints if ep.healthy and ep.name not in exclude),
                 key=lambda ep: ep.vram_free_mb,
                 default=None,
             )
@@ -487,6 +556,11 @@ class GPUCluster:
         lines.append("# TYPE gpu_coord_healthy gauge")
         for ep in self._endpoints:
             lines.append(f'gpu_coord_healthy{{endpoint="{ep.name}"}} {1 if ep.healthy else 0}')
+
+        lines.append("# HELP gpu_coord_consecutive_poll_failures Falhas de poll consecutivas por endpoint")
+        lines.append("# TYPE gpu_coord_consecutive_poll_failures gauge")
+        for ep in self._endpoints:
+            lines.append(f'gpu_coord_consecutive_poll_failures{{endpoint="{ep.name}"}} {ep._consec_fails}')
 
         lines.append("# HELP gpu_coord_total_requests_served Total de requisições servidas por endpoint")
         lines.append("# TYPE gpu_coord_total_requests_served counter")
@@ -539,7 +613,10 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
     # ── leitura ───────────────────────────────────────────────────────────────
 
     def _read_body(self) -> bytes:
-        length = int(self.headers.get("Content-Length", 0))
+        try:
+            length = int(self.headers.get("Content-Length") or 0)
+        except (TypeError, ValueError):
+            length = 0
         return self.rfile.read(length) if length > 0 else b""
 
     def _extract_model(self, body: bytes) -> str:
@@ -575,8 +652,12 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
     # ── proxy ─────────────────────────────────────────────────────────────────
 
     def _forward(self, ep: EndpointState, method: str, path: str, body: bytes,
-                 streaming: bool) -> None:
-        """Encaminha a requisição para o endpoint escolhido."""
+                 streaming: bool) -> bool:
+        """Encaminha a requisição para o endpoint escolhido.
+
+        Retorna False se a falha ocorreu antes de qualquer byte ser enviado ao
+        cliente (retriável em outro endpoint); True caso contrário.
+        """
         parsed = urllib.parse.urlparse(ep.host)
         host = parsed.hostname
         port = parsed.port or 80
@@ -600,6 +681,8 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         with _STATS_LOCK:
             global _TOTAL_REQUESTS
             _TOTAL_REQUESTS += 1
+
+        conn = None
         try:
             conn = http.client.HTTPConnection(host, port, timeout=REQUEST_TIMEOUT_SEC)
             headers = {
@@ -613,22 +696,51 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
 
             conn.request(method, path, body=body or None, headers=headers)
             resp = conn.getresponse()
+        except Exception as exc:
+            # Nada foi enviado ao cliente ainda — falha retriável em outro endpoint
+            elapsed = round(time.monotonic() - t_start, 2)
+            log.warning("conexão com %s falhou (retriável): %s", ep.name, exc)
+            _ring_append({
+                "ts":       datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                "model":    model_name,
+                "endpoint": ep.name,
+                "path":     path,
+                "status":   503,
+                "elapsed_s": elapsed,
+                "prompt":   prompt_preview,
+                "response": "",
+                "error":    f"connect: {exc}",
+                "streaming": streaming,
+            })
+            ep.decrement(model_name)
+            try:
+                if conn is not None:
+                    conn.close()
+            except Exception:
+                pass
+            return False
 
+        try:
             resp_preview = ""
             if streaming:
                 self.send_response(resp.status)
                 self.send_header("Content-Type", resp.getheader("Content-Type", "application/json"))
                 self.send_header("X-GPU-Endpoint", ep.name)
-                self.send_header("Transfer-Encoding", "chunked")
+                # Sem Content-Length: fim do body sinalizado pelo fechamento da conexão
+                self.send_header("Connection", "close")
+                self.close_connection = True
                 self.end_headers()
-                chunks = []
+                chunks: list[bytes] = []
+                preview_bytes = 0
                 try:
                     while True:
                         chunk = resp.read(4096)
                         if not chunk:
                             break
                         self.wfile.write(chunk)
-                        chunks.append(chunk)
+                        if preview_bytes < STREAM_PREVIEW_CAP:
+                            chunks.append(chunk)
+                            preview_bytes += len(chunk)
                     self.wfile.flush()
                 except (BrokenPipeError, ConnectionResetError):
                     pass
@@ -680,8 +792,9 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
                     _REQUEST_ERRORS += 1
 
         except Exception as exc:
+            # Resposta já iniciada — não dá para retentar em outro endpoint
             elapsed = round(time.monotonic() - t_start, 2)
-            log.warning("forward para %s falhou: %s", ep.name, exc)
+            log.warning("forward para %s falhou durante relay: %s", ep.name, exc)
             _ring_append({
                 "ts":       datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 "model":    model_name,
@@ -696,13 +809,14 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
             })
             with _STATS_LOCK:
                 _REQUEST_ERRORS += 1
-            self._json_response(503, {"error": str(exc), "endpoint": ep.name})
+            self.close_connection = True
         finally:
             ep.decrement(model_name)
             try:
                 conn.close()
             except Exception:
                 pass
+        return True
 
     def _route_and_forward(self) -> None:
         """Lê body, escolhe GPU, encaminha."""
@@ -716,12 +830,27 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         except Exception:
             pass
 
-        ep = _cluster.pick(model) if _cluster else None
-        if ep is None:
-            self._json_response(503, {"error": "nenhum GPU disponível para model=" + model})
+        if _cluster is None:
+            self._json_response(503, {"error": "coordinator não inicializado"})
             return
 
-        self._forward(ep, "POST", self.path, body, streaming)
+        # Failover: se a conexão com o endpoint escolhido falhar antes de
+        # qualquer byte chegar ao cliente, tenta o próximo elegível.
+        tried: set[str] = set()
+        for _ in range(len(_cluster._endpoints)):
+            ep = _cluster.pick(model, exclude=tried)
+            if ep is None:
+                break
+            if self._forward(ep, "POST", self.path, body, streaming):
+                return
+            tried.add(ep.name)
+            ep.mark_unhealthy("falha de conexão no forward")
+            log.info("failover: tentando outro endpoint para model=%s (excluídos=%s)", model, sorted(tried))
+
+        with _STATS_LOCK:
+            global _REQUEST_ERRORS
+            _REQUEST_ERRORS += 1
+        self._json_response(503, {"error": "nenhum GPU disponível para model=" + model, "tried": sorted(tried)})
 
     def _passthrough_get(self, host: str) -> None:
         """GET simples passado para um host fixo."""
@@ -793,12 +922,16 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         elif self.path.startswith("/api/requests"):
             # Ring buffer das últimas requisições com preview de prompt/resposta
             params = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
-            limit = int(params.get("limit", ["50"])[0])
-            entries = _ring_snapshot()[:limit]
+            try:
+                limit = max(1, int(params.get("limit", ["50"])[0]))
+            except (TypeError, ValueError):
+                limit = 50
+            snapshot = _ring_snapshot()
+            entries = snapshot[:limit]
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.send_header("Access-Control-Allow-Origin", "*")
-            body = json.dumps({"requests": entries, "total": len(_ring_snapshot())}).encode()
+            body = json.dumps({"requests": entries, "total": len(snapshot)}).encode()
             self.send_header("Content-Length", str(len(body)))
             self.end_headers()
             try:
@@ -821,7 +954,9 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
             ep = _cluster._endpoints[0] if _cluster and _cluster._endpoints else None
             if ep:
                 body = self._read_body()
-                self._forward(ep, "POST", self.path, body, streaming=False)
+                if not self._forward(ep, "POST", self.path, body, streaming=False):
+                    ep.mark_unhealthy("falha de conexão no forward")
+                    self._json_response(503, {"error": "endpoint primário indisponível", "endpoint": ep.name})
             else:
                 self._json_response(503, {"error": "no endpoints configured"})
 
@@ -851,6 +986,12 @@ def main() -> None:
     server = ThreadingHTTPServer(("0.0.0.0", args.port), CoordinatorHandler)
     server.daemon_threads = True
 
+    def _graceful_stop(signum, _frame) -> None:
+        log.info("sinal %d recebido — encerrando", signum)
+        raise KeyboardInterrupt
+
+    signal.signal(signal.SIGTERM, _graceful_stop)
+
     log.info("🚀 GPU Coordinator v2 iniciado na porta %d", args.port)
     for ep in endpoints:
         log.info("   %s  %s  %dGB  healthy=%s  modelos=%s",
@@ -859,6 +1000,10 @@ def main() -> None:
     try:
         server.serve_forever()
     except KeyboardInterrupt:
+        pass
+    finally:
+        _cluster.stop()
+        server.server_close()
         log.info("Coordenador encerrado.")
 
 

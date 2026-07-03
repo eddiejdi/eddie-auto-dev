@@ -524,7 +524,7 @@ class TestQueryOllamaWithTimeout:
         mock_urlopen.return_value = mock_response
 
         success, text, gpu = _mod._query_ollama_with_timeout(
-            "http://localhost:11435", "qwen2.5-coder:7b", "test prompt", timeout=10, gpu_name="GPU1"
+            "http://localhost:11435", "mistral:7b", "test prompt", timeout=10, gpu_name="GPU1"
         )
         assert success is True
         assert "SENTIMENT" in text
@@ -613,7 +613,7 @@ class TestQueryOllama:
         mock_urlopen.return_value = mock_response
 
         success, text = _mod._query_ollama(
-            "http://localhost:11435", "qwen2.5-coder:7b", "test prompt"
+            "http://localhost:11435", "mistral:7b", "test prompt"
         )
         assert success is True
         assert "SENTIMENT" in text

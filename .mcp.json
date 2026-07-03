@@ -45,8 +45,8 @@
         "LLM_GPU1_HOST": "http://192.168.15.2:11545",
         "LLM_NAS_HOST": "http://192.168.15.4:11546",
         "LLM_GPU0_MODEL": "trading-analyst",
-        "LLM_GPU1_MODEL": "qwen3-fast:gpu1",
-        "LLM_NAS_MODEL": "qwen2.5:3b"
+        "LLM_GPU1_MODEL": "gemma3-fast:gpu1",
+        "LLM_NAS_MODEL": "phi4-mini:latest"
       }
     }
   }

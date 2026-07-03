@@ -63,9 +63,9 @@ class OllamaClient:
             keep_alive: Valor opcional para keep_alive do Ollama.
         """
         self.host = host or os.getenv('OLLAMA_HOST', 'http://192.168.15.2:11434')
-        self.model = model or os.getenv('OLLAMA_MODEL', 'qwen2.5:3b')
+        self.model = model or os.getenv('OLLAMA_MODEL', 'phi4-mini:latest')
         self.small_host = os.getenv('OLLAMA_HOST_GPU1', 'http://192.168.15.2:11435')
-        self.small_model = os.getenv('OLLAMA_SMALL_MODEL', 'qwen3:0.6b')
+        self.small_model = os.getenv('OLLAMA_SMALL_MODEL', 'gemma3:1b')
         self.keep_alive = keep_alive
         self.auto_route_small = os.getenv('OLLAMA_AUTO_ROUTE_SMALL', 'true').lower() not in {'0', 'false', 'no'}
         self.auto_small_max_prompt_chars = int(os.getenv('OLLAMA_AUTO_SMALL_MAX_PROMPT_CHARS', '400'))

@@ -6,7 +6,7 @@ no GPU0, que causa loop de 503 no coordinator :11437, degradando o trading agent
 para modo shadow (sem DCA automático).
 
 Diagnóstico:
-    - qwen3:0.6b com expires=2318 (pinado permanentemente) no GPU0
+    - gemma3:1b com expires=2318 (pinado permanentemente) no GPU0
     - GPU0 fica ocupado processando, fallback para GPU1 falha (modelo muito grande)
     - Coordinator retorna 503 para todos os agentes → ollama=shadow → sem DCA
 
@@ -14,7 +14,7 @@ Ação:
     1. Detecta se coordinator :11437 está retornando 503 para uma probe request
     2. Identifica modelos pinados (keep_alive=-1) no GPU0
     3. Descarrega via keep_alive=0 diretamente no GPU0
-    4. Pré-carrega qwen3:0.6b no GPU1 onde é o seu lugar correto
+    4. Pré-carrega gemma3:1b no GPU1 onde é o seu lugar correto
     5. Envia notificação Telegram com diagnóstico e ação tomada
 
 Usage:
@@ -48,9 +48,9 @@ TELEGRAM_TOKEN  = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT   = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 # Modelo que deve ficar no GPU1 (leve, <2GB) — não no GPU0
-LIGHT_MODELS = {"qwen3:0.6b", "qwen3-fast:gpu1", "qwen2.5:1.5b-instruct-q2_k"}
+LIGHT_MODELS = {"gemma3:1b", "gemma3-fast:gpu1", "llama3.2:1b"}
 # Modelo padrão a pré-carregar no GPU1 após limpeza
-GPU1_WARMUP_MODEL = os.environ.get("GPU1_WARMUP_MODEL", "qwen3:0.6b")
+GPU1_WARMUP_MODEL = os.environ.get("GPU1_WARMUP_MODEL", "gemma3:1b")
 
 PROBE_TIMEOUT = 15  # segundos para a probe request ao coordinator
 UNLOAD_TIMEOUT = 30

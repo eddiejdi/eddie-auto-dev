@@ -2,7 +2,7 @@
 """
 Telegram MCP Server — Agente de pré-processamento com IA local (Ollama/homelab)
 Baixa texto, fotos, documentos, áudio e vídeo do Telegram.
-Analisa tudo com visão (moondream) e linguagem (qwen2.5) antes de entregar
+Analisa tudo com visão (moondream) e linguagem (gemma3) antes de entregar
 ao chamador — retorno já "mastigado" para reduzir tokens e tempo.
 """
 
@@ -28,7 +28,7 @@ TG_BASE    = f"https://api.telegram.org/bot{TG_TOKEN}"
 TG_FILE    = f"https://api.telegram.org/file/bot{TG_TOKEN}"
 
 OLLAMA_BASE    = os.environ.get("OLLAMA_BASE", "http://192.168.15.2:11434")
-TEXT_MODEL     = os.environ.get("TEXT_MODEL", "qwen2.5:3b")
+TEXT_MODEL     = os.environ.get("TEXT_MODEL", "phi4-mini:latest")
 VISION_MODEL   = os.environ.get("VISION_MODEL", "moondream:latest")
 MEDIA_DIR      = Path(os.environ.get("MEDIA_DIR", "/tmp/tg_media"))
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)

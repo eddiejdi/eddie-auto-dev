@@ -140,7 +140,7 @@ for doc in results:
         "documentos_treinados": 14,
         "idiomas_suportados": 3,
         "qualidade_rag": "Pronta para produção",
-        "llm_base": "Ollama (qwen2.5-coder:7b)",
+        "llm_base": "Ollama (mistral:7b)",
         "status_geral": "🟢 OPERACIONAL"
     }
     

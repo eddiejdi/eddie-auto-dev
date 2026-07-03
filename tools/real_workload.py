@@ -41,7 +41,7 @@ CHECK_INTERVAL = int(os.getenv("CHECK_INTERVAL", "10"))
 
 # Modelos para inferência (devem existir no GPU1 — ver /api/tags)
 MODELS = [
-    "qwen3:0.6b",            # modelo leve no GPU1 (GTX 1050 2GB)
+    "gemma3:1b",            # modelo leve no GPU1 (GTX 1050 2GB)
 ]
 
 # Prompts produtivos para inferência
