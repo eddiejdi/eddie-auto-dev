@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-03T21:44:57.368719+00:00",
+  "generated_at": "2026-07-03T21:47:59.314805+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 159,
+    "repo_services": 161,
     "critical_services": 66,
     "domains": {
       "identity": 4,
@@ -14,7 +14,7 @@
       "network": 16,
       "operations": 88,
       "storage": 32,
-      "trading": 5
+      "trading": 7
     }
   },
   "netbox_devices": [
@@ -1291,6 +1291,22 @@
       "domain": "trading",
       "kind": "systemd",
       "source": "systemd/clear-trading-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "kucoin-postgres-sync.service",
+      "domain": "trading",
+      "kind": "systemd",
+      "source": "systemd/kucoin-postgres-sync.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "kucoin-postgres-sync.timer",
+      "domain": "trading",
+      "kind": "systemd",
+      "source": "systemd/kucoin-postgres-sync.timer",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },

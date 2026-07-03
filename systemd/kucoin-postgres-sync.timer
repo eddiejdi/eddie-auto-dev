@@ -1,0 +1,13 @@
+[Unit]
+Description=KuCoin → PostgreSQL sync — a cada 15 minutos
+
+[Timer]
+# OnCalendar em vez de OnUnitActiveSec: após a queda de energia de
+# 2026-07-02 o timer ficou "elapsed" sem próxima execução (OnUnitActiveSec
+# só re-arma relativo à última ativação; se a cadeia quebra, morre).
+OnCalendar=*:00/15
+Persistent=true
+Unit=kucoin-postgres-sync.service
+
+[Install]
+WantedBy=timers.target
