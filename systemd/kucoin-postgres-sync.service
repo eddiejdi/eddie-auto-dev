@@ -1,0 +1,26 @@
+[Unit]
+Description=KuCoin → PostgreSQL balance/fills sync (one-shot)
+After=network.target postgresql.service secrets_agent.service
+Wants=secrets_agent.service
+
+[Service]
+Type=oneshot
+User=btc-trading
+Group=btc-trading
+WorkingDirectory=/apps/crypto-trader/trading/btc_trading_agent
+
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=BTC_AGENT_DIR=/apps/crypto-trader/trading/btc_trading_agent
+EnvironmentFile=-/apps/crypto-trader/envfiles/trading-database.env
+
+ExecStart=/usr/bin/python3 /apps/crypto-trader/trading/scripts/kucoin_postgres_sync.py
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kucoin-postgres-sync
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/apps/crypto-trader
