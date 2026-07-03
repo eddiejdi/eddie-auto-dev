@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-07-03T15:07:06.398699+00:00",
-  "repo_root": "/workspace/eddie-auto-dev",
+  "generated_at": "2026-07-03T16:50:32.851830+00:00",
+  "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/96a7591a-a91a-4914-890c-10dd9d8edbc5/scratchpad/migration",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 159,
-    "critical_services": 66,
+    "repo_services": 158,
+    "critical_services": 65,
     "domains": {
       "identity": 4,
       "monitoring": 14,
       "network": 16,
       "operations": 88,
-      "storage": 32,
+      "storage": 31,
       "trading": 5
     }
   },
@@ -1119,14 +1119,6 @@
       "candidate_system": "NetBox service model"
     },
     {
-      "name": "ltfs-button-watch.service",
-      "domain": "storage",
-      "kind": "systemd",
-      "source": "systemd/ltfs-button-watch.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
       "name": "ltfs-deep-recovery.service",
       "domain": "storage",
       "kind": "systemd",
@@ -1645,13 +1637,6 @@
         "name": "ltfs-boot-reconcile.service",
         "domain": "storage",
         "source": "systemd/ltfs-boot-reconcile.service",
-        "kind": "systemd",
-        "critical": true
-      },
-      {
-        "name": "ltfs-button-watch.service",
-        "domain": "storage",
-        "source": "systemd/ltfs-button-watch.service",
         "kind": "systemd",
         "critical": true
       },
