@@ -138,7 +138,7 @@ class WikiRefactorSkill:
         self.gpu0_url = LLM_CONFIG.get("base_url", "http://192.168.15.2:11434")
         self.gpu1_url = LLM_GPU1_CONFIG.get("base_url", "http://192.168.15.2:11435")
         self.gpu0_model = LLM_CONFIG.get("model", "shared-coder")
-        self.gpu1_model = LLM_GPU1_CONFIG.get("model", "qwen3:0.6b")
+        self.gpu1_model = LLM_GPU1_CONFIG.get("model", "gemma3:1b")
         self.gpu0_num_ctx_cap = _env_int("WIKI_REFACTOR_GPU0_NUM_CTX_CAP", 4096)
         self.gpu1_num_ctx_cap = _env_int("WIKI_REFACTOR_GPU1_NUM_CTX_CAP", 2048)
         self.max_cluster_pages = _env_int("WIKI_REFACTOR_MAX_CLUSTER_PAGES", 6)

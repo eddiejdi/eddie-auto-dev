@@ -60,7 +60,7 @@ SMTP_STARTTLS = os.getenv("SMTP_STARTTLS", "true").lower() in {"1", "true", "yes
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434").rstrip("/")
 NEXTCLOUD_ONBOARDING_OLLAMA_MODEL = os.getenv(
     "NEXTCLOUD_ONBOARDING_OLLAMA_MODEL",
-    os.getenv("OLLAMA_MODEL", "qwen2.5:3b"),
+    os.getenv("OLLAMA_MODEL", "gemma3:1b"),
 )
 NEXTCLOUD_ONBOARDING_MEDIA_BASE_URL = os.getenv(
     "NEXTCLOUD_ONBOARDING_MEDIA_BASE_URL",

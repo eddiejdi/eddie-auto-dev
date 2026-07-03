@@ -74,8 +74,8 @@ _NC_RESOLVED_CONTAINER: str | None = None
 
 _OLLAMA_GPU0 = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 _OLLAMA_GPU1 = os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435")
-_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
-_OLLAMA_SMALL = os.getenv("OLLAMA_SMALL_MODEL", "qwen3:0.6b")
+_OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma3:1b")
+_OLLAMA_SMALL = os.getenv("OLLAMA_SMALL_MODEL", "gemma3:1b")
 _OLLAMA_TIMEOUT = int(os.getenv("NEXTCLOUD_OLLAMA_TIMEOUT", "60"))
 
 # Mantem limite defensivo no endpoint do agente para evitar payloads enormes em JSON/base64.
