@@ -1,0 +1,23 @@
+[Unit]
+Description=Relatorio diario de balanço/trading via Ollama + Telegram
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=homelab
+WorkingDirectory=/home/homelab/myClaude
+# eddie-common é a fonte canônica de TELEGRAM_BOT_TOKEN e DATABASE_URL
+# (btc_trading). O .env do myClaude tem token defasado e causava
+# InvalidToken no envio — não usar aqui.
+EnvironmentFile=/etc/default/eddie-common
+Environment=PYTHONUNBUFFERED=1
+Environment=OLLAMA_HOST=http://192.168.15.2:11437
+Environment=OLLAMA_TRADING_MODEL=trading-analyst:latest
+Environment=TELEGRAM_CHAT_ID=948686300
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/scripts/trading_daily_report.py
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

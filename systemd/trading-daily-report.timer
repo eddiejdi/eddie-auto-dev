@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer para relatório diário de balanço/trading (10:00 BRT)
+
+[Timer]
+OnCalendar=*-*-* 10:00:00
+Persistent=true
+Unit=trading-daily-report.service
+
+[Install]
+WantedBy=timers.target
