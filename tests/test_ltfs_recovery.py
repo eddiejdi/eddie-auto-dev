@@ -259,7 +259,7 @@ def test_self_heal_runs_ltfsck_and_recovers(tmp_path, monkeypatch):
             return CompletedProcess(cmd, 1, "", "")
         if cmd[0] == "ltfsck":
             return CompletedProcess(cmd, 0, "recovered", "")
-        if cmd[0] == "systemctl" and cmd[1] in {"stop", "restart"}:
+        if cmd[0] == "systemctl":
             return CompletedProcess(cmd, 0, "", "")
         raise AssertionError(cmd)
 
@@ -313,6 +313,9 @@ def test_self_heal_runs_deep_recovery_and_resumes_units(tmp_path, monkeypatch):
         if cmd[0] == "df":
             return CompletedProcess(cmd, 0, "space", "")
         if cmd[:2] == ["systemctl", "is-active"]:
+            # Timer auxiliar ativo antes da suspensão — deve ser religado no resume
+            if cmd[2].endswith(".timer"):
+                return CompletedProcess(cmd, 0, "active\n", "")
             return CompletedProcess(cmd, 0, "failed\n", "")
         if cmd[0] == "journalctl":
             return CompletedProcess(
@@ -322,7 +325,7 @@ def test_self_heal_runs_deep_recovery_and_resumes_units(tmp_path, monkeypatch):
                 "LTFS17148E Use ltfsck with the --deep-recovery option.",
                 "",
             )
-        if cmd[0] == "systemctl" and cmd[1] in {"stop", "start", "reset-failed"}:
+        if cmd[0] == "systemctl":
             return CompletedProcess(cmd, 0, "", "")
         raise AssertionError(cmd)
 
@@ -380,7 +383,7 @@ def test_self_heal_escalates_from_remount_to_ltfsck(tmp_path, monkeypatch):
             return CompletedProcess(cmd, 0, "remount failed", "")
         if cmd[0] == "ltfsck":
             return CompletedProcess(cmd, 0, "recovered", "")
-        if cmd[0] == "systemctl" and cmd[1] == "stop":
+        if cmd[0] == "systemctl":
             return CompletedProcess(cmd, 0, "", "")
         raise AssertionError(cmd)
 
@@ -426,7 +429,7 @@ def test_self_heal_intervenes_outside_window_when_service_is_thrashing(tmp_path,
             if any(item[0] == "ltfsck" for item in calls):
                 return CompletedProcess(cmd, 0, "OK", "")
             return CompletedProcess(cmd, 2, "", "broken")
-        if cmd[0] == "systemctl" and cmd[1] == "stop":
+        if cmd[0] == "systemctl":
             return CompletedProcess(cmd, 0, "", "")
         raise AssertionError(cmd)
 
