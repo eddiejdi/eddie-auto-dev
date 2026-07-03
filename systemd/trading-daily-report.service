@@ -13,8 +13,10 @@ EnvironmentFile=/etc/default/eddie-common
 Environment=PYTHONUNBUFFERED=1
 Environment=OLLAMA_HOST=http://192.168.15.2:11437
 Environment=OLLAMA_TRADING_MODEL=trading-analyst:latest
-Environment=TELEGRAM_CHAT_ID=948686300
-ExecStart=/usr/bin/python3 /home/homelab/myClaude/scripts/trading_daily_report.py
+# Grupo exclusivo "BTC Trade Agent" (2026-07-03). Definido no ExecStart via
+# env porque EnvironmentFile (eddie-common traz o chat privado) sobrepõe
+# qualquer Environment= da unit.
+ExecStart=/usr/bin/env TELEGRAM_CHAT_ID=-1004434951297 /usr/bin/python3 /home/homelab/myClaude/scripts/trading_daily_report.py
 
 StandardOutput=journal
 StandardError=journal
