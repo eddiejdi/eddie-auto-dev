@@ -68,6 +68,7 @@ class MetricsCollector:
         conn.autocommit = True
         cur = conn.cursor()
         cur.execute("SET search_path TO btc, public")
+        cur.execute("SET statement_timeout TO '5000ms'")
         cur.close()
         return conn
 
@@ -437,9 +438,14 @@ class MetricsCollector:
                 metrics[f'{prefix}last_trade_pnl'] = result[4] if result[4] else 0
 
         # ── Decisões por tipo (global — COM filtro symbol) ──
-        cursor.execute("SELECT action, COUNT(*) FROM decisions WHERE symbol=%s AND profile=%s GROUP BY action", (self.symbol, self.profile))
-        for row in cursor.fetchall():
-            metrics[f'decisions_{row[0].lower()}'] = row[1]
+        # This table can be heavily bloated after churn; do not let this
+        # secondary metric block the whole Prometheus scrape.
+        try:
+            cursor.execute("SELECT action, COUNT(*) FROM decisions WHERE symbol=%s AND profile=%s GROUP BY action", (self.symbol, self.profile))
+            for row in cursor.fetchall():
+                metrics[f'decisions_{row[0].lower()}'] = row[1]
+        except Exception as e:
+            print(f"⚠️ decisions global count skipped: {e}", file=sys.stderr)
 
         # Decisões última hora (COM filtro symbol)
         cursor.execute("""

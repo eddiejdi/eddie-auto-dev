@@ -150,6 +150,16 @@ ALTER TABLE {SCHEMA}.trades
 ALTER TABLE {SCHEMA}.trades
     ALTER COLUMN profile SET NOT NULL;
 
+ALTER TABLE {SCHEMA}.trades
+    ADD COLUMN IF NOT EXISTS servidor TEXT NOT NULL DEFAULT 'homelab';
+ALTER TABLE {SCHEMA}.trades
+    ALTER COLUMN servidor SET DEFAULT 'homelab';
+
+ALTER TABLE {SCHEMA}.decisions
+    ADD COLUMN IF NOT EXISTS servidor TEXT NOT NULL DEFAULT 'homelab';
+ALTER TABLE {SCHEMA}.decisions
+    ALTER COLUMN servidor SET DEFAULT 'homelab';
+
 ALTER TABLE {SCHEMA}.decisions
     ADD COLUMN IF NOT EXISTS profile TEXT;
 UPDATE {SCHEMA}.decisions
@@ -337,21 +347,24 @@ class TrainingDatabase:
     def record_trade(self, symbol: str, side: str, price: float,
                      size: float = None, funds: float = None,
                      order_id: str = None, dry_run: bool = False,
-                     metadata: Dict = None, profile: str = 'default') -> int:
+                     metadata: Dict = None, profile: str = 'default',
+                     servidor: str = None) -> int:
         """Registra um trade executado"""
+        import socket as _socket
+        _servidor = servidor or _socket.gethostname()
         with self._get_conn() as conn:
             cur = conn.cursor()
             cur.execute(f"""
                 INSERT INTO {SCHEMA}.trades
                     (timestamp, symbol, side, price, size, funds,
-                     order_id, dry_run, metadata, profile)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     order_id, dry_run, metadata, profile, servidor)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
                 time.time(), symbol, side, price, size, funds,
                 order_id, dry_run,
                 json.dumps(metadata) if metadata else None,
-                profile
+                profile, _servidor
             ))
             return cur.fetchone()[0]
 
@@ -475,20 +488,22 @@ class TrainingDatabase:
     # ====================== DECISIONS ======================
     def record_decision(self, symbol: str, action: str, confidence: float,
                         price: float, reason: str = None, profile: str = "default",
-                        features: Dict = None) -> int:
+                        features: Dict = None, servidor: str = None) -> int:
         """Registra uma decisão do modelo."""
+        import socket as _socket
+        _servidor = servidor or _socket.gethostname()
         with self._get_conn() as conn:
             cur = conn.cursor()
             cur.execute(f"""
                 INSERT INTO {SCHEMA}.decisions
-                    (timestamp, symbol, action, confidence, price, reason, features, profile)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    (timestamp, symbol, action, confidence, price, reason, features, profile, servidor)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             """, (
                 time.time(), symbol, action,
                 _safe_float(confidence), _safe_float(price), reason,
                 json.dumps(features, cls=_NumpyEncoder) if features else None,
-                profile
+                profile, _servidor
             ))
             return cur.fetchone()[0]
 
