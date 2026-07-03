@@ -104,39 +104,6 @@ scrape_configs:
           servidor: 'homelab'
 
   # ---------------------------------------------------------------------------
-  # OrangePi (192.168.15.3) — agentes BTC rodando em servidor externo
-  # ---------------------------------------------------------------------------
-  - job_name: 'crypto-exporter-orangepi-conservative'
-    scrape_interval: 30s
-    static_configs:
-      - targets: ['192.168.15.3:9094']
-        labels:
-          coin: 'BTC-USDT'
-          instance: 'btc_usdt_conservative'
-          profile: 'conservative'
-          servidor: 'orangepi'
-
-  - job_name: 'crypto-exporter-orangepi-aggressive'
-    scrape_interval: 30s
-    static_configs:
-      - targets: ['192.168.15.3:9095']
-        labels:
-          coin: 'BTC-USDT'
-          instance: 'btc_usdt_aggressive'
-          profile: 'aggressive'
-          servidor: 'orangepi'
-
-  - job_name: 'crypto-exporter-orangepi-shadow'
-    scrape_interval: 30s
-    static_configs:
-      - targets: ['192.168.15.3:9099']
-        labels:
-          coin: 'BTC-USDT'
-          instance: 'btc_usdt_shadow'
-          profile: 'shadow'
-          servidor: 'orangepi'
-
-  # ---------------------------------------------------------------------------
   # ollama-metrics — proxy Prometheus para os 3 endpoints Ollama do cluster GPU
   # Métricas: tokens, latência, modelos carregados, uso de VRAM por GPU
   # ---------------------------------------------------------------------------
