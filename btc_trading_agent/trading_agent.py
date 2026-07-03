@@ -816,6 +816,53 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         """Serializa contexto compacto para reduzir tokens nos prompts estruturados."""
         return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str)
 
+    def _fetch_db_perf_context(self, profile: str = "default") -> Dict[str, Any]:
+        """Retorna resumo compacto de performance 7d do DB para injeção em prompts LLM."""
+        try:
+            perf = self.db.calculate_performance(self.symbol, days=7)
+            recent = self.db.get_recent_trades(
+                self.symbol, limit=3, include_dry=False, profile=profile
+            )
+            last_trades = [
+                {
+                    "side": t.get("side", "?"),
+                    "pnl_pct": round(float(t.get("pnl_pct") or 0), 4),
+                    "price": round(float(t.get("price") or 0), 2),
+                }
+                for t in recent
+                if t.get("side") is not None
+            ]
+            return {
+                "perf_7d_wr": round(float(perf.get("win_rate", 0)), 3),
+                "perf_7d_pnl": round(float(perf.get("total_pnl", 0)), 4),
+                "perf_7d_trades": int(perf.get("total_trades", 0)),
+                "last_trades": last_trades,
+            }
+        except Exception as e:
+            logger.debug(f"_fetch_db_perf_context error: {e}")
+            return {}
+
+    def _format_db_perf_plan_block(self, profile: str = "default") -> str:
+        """Retorna bloco de texto com histórico de performance 7d para o prompt do AI plan."""
+        ctx = self._fetch_db_perf_context(profile)
+        if not ctx:
+            return ""
+        lines = [
+            "HISTÓRICO DB (últimos 7 dias, trades reais):",
+            f"- Win rate: {ctx.get('perf_7d_wr', 0):.1%} | "
+            f"PnL total: {ctx.get('perf_7d_pnl', 0):+.4f} USDT | "
+            f"Total trades: {ctx.get('perf_7d_trades', 0)}",
+        ]
+        last_trades = ctx.get("last_trades") or []
+        if last_trades:
+            trades_str = ", ".join(
+                f"{t['side'].upper()}@${t['price']:,.0f}({t['pnl_pct']:+.2%})"
+                for t in last_trades
+            )
+            lines.append(f"- Últimos trades: {trades_str}")
+        lines.append("")
+        return "\n".join(lines) + "\n"
+
     def _request_ollama_structured(
         self,
         *,
@@ -2003,6 +2050,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             controls_limits["min_sell_pnl_pct_min"] = round(0.002, 4)
             controls_limits["min_sell_pnl_pct_max"] = round(min(0.010, baseline_sell_pnl + 0.005), 4)
             controls_context["baseline_min_sell_pnl_pct"] = round(baseline_sell_pnl, 5)
+            controls_context.update(self._fetch_db_perf_context(profile))
 
             prompt = (
                 "Retorne somente um objeto JSON válido, sem markdown, com as chaves "
@@ -2202,6 +2250,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 "rag_min_confidence": round(float(controls.min_confidence), 3),
                 "rag_min_trade_interval": int(controls.min_trade_interval),
             }
+            window_context.update(self._fetch_db_perf_context(profile))
+
             prompt = (
                 "Retorne somente um objeto JSON válido, sem markdown, com as chaves "
                 "entry_low,entry_high,target_sell,min_confidence,min_trade_interval,ttl_seconds.\n"
@@ -2721,6 +2771,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 f"sizing={rag_adj.ai_position_size_pct*100:.1f}%×{rag_adj.ai_max_entries}, "
                 f"agressividade={rag_adj.ai_aggressiveness:.0%}\n"
                 f"- Win rate: {self.state.winning_trades}/{self.state.total_trades} trades\n\n"
+                f"{self._format_db_perf_plan_block(profile)}"
                 f"{self._format_portfolio_evo_prompt(portfolio_evo)}"
                 f"{news_prompt_block}"
                 f"CONDIÇÕES DE VENDA (resumo atual):\n"
@@ -4785,7 +4836,15 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     amount_usdt = self._calculate_trade_size(signal, price)
                     min_trade_amount = self._get_runtime_risk_caps()["min_trade_amount"]
                     if amount_usdt < min_trade_amount:
-                        logger.warning(f"⚠️ Trade amount too small: ${amount_usdt:.2f}")
+                        # Starvation de capital: sem throttle isso loga a cada poll (5s)
+                        now_ts = time.time()
+                        if now_ts - getattr(self, "_last_small_amount_log_ts", 0.0) >= 3600:
+                            self._last_small_amount_log_ts = now_ts
+                            logger.warning(
+                                f"⚠️ Trade amount too small: ${amount_usdt:.2f} "
+                                f"(min ${min_trade_amount:.2f}; capital do perfil esgotado — "
+                                f"aviso limitado a 1/h)"
+                            )
                         if not getattr(self.state, "last_trade_block_reason", ""):
                             self._block_trade(
                                 "buy_amount_too_small",

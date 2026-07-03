@@ -1,10 +1,10 @@
-FROM qwen3:0.6b
+FROM llama3.1:8b
 
 # trading-analyst — Modelo especializado em decisões de trading BTC/USDT
-# GPU0 (RTX 2060 SUPER 8GB) — porta :11434
-# Criado em: 2026-04-20
-# Base: qwen3:0.6b (temporária — aguardando phi4-mini download em background)
-# Upgrade: quando phi4-mini estiver disponível, alterar para FROM phi4-mini e recriar
+# GPU0 (RTX 3060 12GB) — porta :11434
+# Atualizado em: 2026-07-01
+# Base: llama3.1:8b Q4_K_M (~5GB VRAM) — substituiu qwen3:14b por política de soberania de dados
+# Template padrão do Llama 3.1 (nativo Ollama) — sem customização de formato necessária
 
 SYSTEM """Você é trading-analyst, um especialista quantitativo em trading de criptomoedas, especializado em BTC/USDT.
 
@@ -88,7 +88,7 @@ PARAMETER top_p 0.85
 PARAMETER num_predict 256
 PARAMETER repeat_penalty 1.1
 PARAMETER num_ctx 4096
-PARAMETER num_gpu 1
+PARAMETER num_gpu 99
 
 # Stop tokens para garantir JSON limpo
 PARAMETER stop "```"

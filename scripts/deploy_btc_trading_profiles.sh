@@ -256,6 +256,9 @@ sync_trading_runtime() {
     "${REPO_ROOT}/btc_trading_agent/slot_exit_policy.py" \
     "${TARGET_DIR}/slot_exit_policy.py"
   sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/llm.py" \
+    "${TARGET_DIR}/llm.py"
+  sync_runtime_file \
     "${REPO_ROOT}/btc_trading_agent/fast_model.py" \
     "${TARGET_DIR}/fast_model.py"
   sync_runtime_file \
@@ -276,6 +279,9 @@ sync_trading_runtime() {
   sync_runtime_file \
     "${REPO_ROOT}/grafana/exporters/requirements.txt" \
     "${EXPORTERS_DIR}/requirements.txt"
+  sync_runtime_file \
+    "${REPO_ROOT}/scripts/kucoin_postgres_sync.py" \
+    "${SCRIPTS_DIR}/kucoin_postgres_sync.py"
   sync_runtime_file \
     "${REPO_ROOT}/scripts/candle_collector.py" \
     "${SCRIPTS_DIR}/candle_collector.py"

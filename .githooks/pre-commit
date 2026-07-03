@@ -120,7 +120,7 @@ fi
 # ─── Check 7: Grafana dashboard UID uniqueness ────────────────────────────────
 # Detecta UIDs duplicados em monitoring/grafana/provisioning/dashboards/**
 # Arquivos .disabled.* e .bak são ignorados. Bloqueia commit se houver duplicata.
-echo "  [7/7] Checking Grafana dashboard UID uniqueness..."
+echo "  [7/8] Checking Grafana dashboard UID uniqueness..."
 GRAFANA_JSON=$(git diff --cached --name-only | grep -E "\.json$" | grep -E "grafana" || true)
 if [ -n "$GRAFANA_JSON" ]; then
     python3 - <<'PYEOF' || exit 1
@@ -151,6 +151,27 @@ if errors:
     sys.exit(1)
 print('  ✅ UIDs de dashboards únicos')
 PYEOF
+fi
+
+# ─── Check 8: Tarefa incompleta (stubs / NotImplementedError / elipse de código) ──
+# Rejeita commit com marcadores de alto sinal de trabalho incompleto nas linhas staged.
+# Cobre qualquer ferramenta (Copilot, Codex, Claude Code, edição manual) — todas commitam.
+# Escape: ALLOW_INCOMPLETE=1, `# stub-ok` na linha, ou git commit --no-verify.
+echo "  [8/8] Checking for incomplete tasks (stubs / NotImplementedError)..."
+if [ -z "$ALLOW_INCOMPLETE" ]; then
+    if [ -f "tools/hooks/incomplete_markers.py" ]; then
+        # Código 2 = incompletude → bloqueia. Qualquer outro código != 0 é erro
+        # interno do detector → não-bloqueante (fail-open), para nunca travar commits.
+        rc=0
+        python3 tools/hooks/incomplete_markers.py --staged || rc=$?
+        if [ "$rc" -eq 2 ]; then
+            exit 1
+        elif [ "$rc" -ne 0 ]; then
+            echo "     ⚠️ detector de incompletude retornou código $rc (não-bloqueante)"
+        fi
+    fi
+else
+    echo "     (ALLOW_INCOMPLETE set — pulando checagem de incompletude)"
 fi
 
 echo ""

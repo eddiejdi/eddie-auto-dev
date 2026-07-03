@@ -1,20 +1,20 @@
 {
-  "generated_at": "2026-07-02T22:54:11.051235+00:00",
-  "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/389fb9a1-3a39-40ca-8380-632f0738fbf8/scratchpad/wt-nodeploy",
+  "generated_at": "2026-07-03T12:49:19.094150+00:00",
+  "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 156,
-    "critical_services": 65,
+    "repo_services": 158,
+    "critical_services": 66,
     "domains": {
       "identity": 4,
       "monitoring": 14,
       "network": 16,
       "operations": 88,
-      "storage": 31,
-      "trading": 3
+      "storage": 32,
+      "trading": 4
     }
   },
   "netbox_devices": [
@@ -1119,6 +1119,14 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "ltfs-button-watch.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-button-watch.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "ltfs-deep-recovery.service",
       "domain": "storage",
       "kind": "systemd",
@@ -1283,6 +1291,14 @@
       "domain": "trading",
       "kind": "systemd",
       "source": "systemd/clear-trading-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "trading-daily-report.service",
+      "domain": "trading",
+      "kind": "systemd",
+      "source": "systemd/trading-daily-report.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     }
@@ -1621,6 +1637,13 @@
         "name": "ltfs-boot-reconcile.service",
         "domain": "storage",
         "source": "systemd/ltfs-boot-reconcile.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ltfs-button-watch.service",
+        "domain": "storage",
+        "source": "systemd/ltfs-button-watch.service",
         "kind": "systemd",
         "critical": true
       },

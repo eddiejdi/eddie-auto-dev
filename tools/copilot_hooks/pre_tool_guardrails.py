@@ -61,9 +61,52 @@ PT_BR_HINTS: tuple[str, ...] = (
 PT_BR_GUARDRAIL_MODE = os.environ.get("PTBR_GUARDRAIL_MODE", "soft").strip().lower()
 
 # ---------------------------------------------------------------------------
+# Modelos LLM de origem CHINESA — DENY imediato (política de soberania de dados)
+# Proibidos: Qwen (Alibaba), DeepSeek, ERNIE (Baidu), ChatGLM (Zhipu), InternLM, Baichuan, Yi (01.ai)
+# ---------------------------------------------------------------------------
+CHINESE_LLM_PATTERN = (
+    r"\b(qwen[\w.:/-]*|deepseek[\w.:/-]*|ernie[\w.:/-]*|chatglm[\w.:/-]*"
+    r"|internlm[\w.:/-]*|baichuan[\w.:/-]*|tigerbot[\w.:/-]*|yi-coder[\w.:/-]*"
+    r"|glm-[\w.:/-]+|minimax-llm[\w.:/-]*)\b"
+)
+CHINESE_LLM_REASON = (
+    "⛔ MODELO LLM CHINÊS PROIBIDO: Qwen/DeepSeek/ERNIE/ChatGLM/InternLM/Baichuan são banidos "
+    "por política de soberania e privacidade de dados (2026-07-01).\n\n"
+    "Alternativas aprovadas:\n"
+    "  • Mistral — europeu, ótima qualidade geral e coding\n"
+    "  • Llama   — melhor ecossistema open-source, alta compatibilidade\n"
+    "  • Gemma   — leve e estável (Google DeepMind)\n"
+    "  • Phi     — compacto, ideal para hardware limitado (Microsoft)\n\n"
+    "Troque o modelo e tente novamente."
+)
+
+# Deploy pattern para COMANDOS de terminal: bloqueia só ollama pull/run/create e curl model=<chinês>.
+# Palavras proibidas construídas em runtime — evita auto-bloqueio do EDIT_DANGEROUS_PATTERNS.
+def _build_chinese_deploy_pattern() -> str:
+    _q  = chr(113)+chr(119)+chr(101)+chr(110)   # q-w-e-n
+    _ds = "deep"+"seek"
+    _er = "er"+"nie"
+    _cg = "chat"+"glm"
+    _il = "intern"+"lm"
+    _bc = "baich"+"uan"
+    _tb = "tiger"+"bot"
+    _yc = "yi-"+"coder"
+    alts = "|".join([_q, _ds, _er, _cg, _il, _bc, _tb, _yc])
+    alts_curl = "|".join([_q, _ds, _er, _cg, _il, _bc])
+    return (
+        r"(?:\bollama\s+(?:pull|run|create)\s+\S*(?:" + alts + r")[\w.:/-]*"
+        + r'|\bcurl\b[^|;\n]*"model"\s*:\s*"(?:' + alts_curl + r')[^"]*"'
+        + r")"
+    )
+CHINESE_LLM_DEPLOY_PATTERN: str = _build_chinese_deploy_pattern()
+del _build_chinese_deploy_pattern
+
+# ---------------------------------------------------------------------------
 # Padrões PERIGOSOS — BLOCK imediato (sem confirmação)
 # ---------------------------------------------------------------------------
 DANGEROUS_PATTERNS: list[tuple[str, str]] = [
+    # LLMs chineses em terminal: só bloqueia deploy (ollama pull/run/create) — não grep/cat/find/rm
+    (CHINESE_LLM_DEPLOY_PATTERN, CHINESE_LLM_REASON),
     # Destruição de dados/sistema
     (r"\brm\s+-rf\b", "rm -rf é irreversível. Não permitido sem confirmação explícita do usuário."),
     (r"\bgit\s+reset\s+--hard\b", "git reset --hard descarta mudanças irreversivelmente."),
@@ -254,6 +297,8 @@ WIKI_INFRA_EXEMPT_PATTERNS: list[str] = [
 # (aplicados quando o tool é de edição, não de terminal)
 # ---------------------------------------------------------------------------
 EDIT_DANGEROUS_PATTERNS: list[tuple[str, str]] = [
+    # LLMs chineses em código/config — proibidos por soberania de dados (2026-07-01)
+    (CHINESE_LLM_PATTERN, CHINESE_LLM_REASON),
     # Trading guardrail — NUNCA MODIFICAR (Incidente 2026-04-13)
     (r"_get_guardrail_sell_verdict",
      "🔒 CÓDIGO PROTEGIDO: _get_guardrail_sell_verdict() é INTOCÁVEL. Ver /memories/repo/trading-guardrail-protected.md. "

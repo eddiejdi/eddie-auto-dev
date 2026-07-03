@@ -1,18 +1,19 @@
 #!/usr/bin/env python3
 """
 Homelab MCP Server — Integra Cline com Communication Bus, Secrets Agent,
-API Estou Aqui e PostgreSQL via Model Context Protocol (stdio).
+API Estou Aqui, PostgreSQL e Trading Agent via Model Context Protocol (stdio).
 
 Uso:
     python3 scripts/homelab_mcp_server.py
 
 Configuração via variáveis de ambiente:
-    HOMELAB_URL          - URL do Communication Bus (default: http://192.168.15.2:8503)
-    SECRETS_AGENT_URL    - URL do Secrets Agent (default: http://192.168.15.2:8088)
+    HOMELAB_URL           - URL do Communication Bus (default: http://192.168.15.2:8503)
+    SECRETS_AGENT_URL     - URL do Secrets Agent (default: http://192.168.15.2:8088)
     SECRETS_AGENT_API_KEY - Chave de API do Secrets Agent
-    API_BASE_URL         - URL da API Estou Aqui (default: http://localhost:3000)
-    DATABASE_URL         - Connection string PostgreSQL
-    CHROMA_DB_PATH       - Path do ChromaDB (default: /home/homelab/myClaude/chroma_db)
+    API_BASE_URL          - URL da API Estou Aqui (default: http://localhost:3000)
+    DATABASE_URL          - Connection string PostgreSQL (Estou Aqui / governance)
+    TRADING_DATABASE_URL  - Connection string PostgreSQL do trading agent (btc_trading DB)
+    CHROMA_DB_PATH        - Path do ChromaDB (default: /home/homelab/myClaude/chroma_db)
 """
 import importlib.util
 import json
@@ -44,6 +45,7 @@ SECRETS_AGENT_URL = os.environ.get("SECRETS_AGENT_URL", "http://192.168.15.2:808
 SECRETS_AGENT_API_KEY = os.environ.get("SECRETS_AGENT_API_KEY", "")
 API_BASE_URL = os.environ.get("API_BASE_URL", "http://192.168.15.2:3000")
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
+TRADING_DATABASE_URL = os.environ.get("TRADING_DATABASE_URL", "")
 
 # Token JWT em memória para API calls autenticadas
 _jwt_token: Optional[str] = None
@@ -119,9 +121,12 @@ mcp = FastMCP(
     name="homelab",
     instructions=(
         "MCP Server para integração com o homelab Eddie. "
-        "Fornece acesso ao Communication Bus (tarefas e heartbeat), "
-        "Secrets Agent (credenciais), API Estou Aqui (eventos/check-ins/chat) "
-        "e PostgreSQL (queries diretas)."
+        "Fornece acesso ao: Communication Bus (bus_*), Secrets Agent (secrets_*), "
+        "API Estou Aqui (api_*), PostgreSQL genérico (db_*), "
+        "Agent Governance (intent_*, journal_*), Memória compartilhada (memory_*) "
+        "e Trading Agent BTC (trading_*). "
+        "Para análise de mercado use trading_summary() como ponto de entrada. "
+        "Dados de trading são somente-leitura do schema btc.* no PostgreSQL."
     ),
 )
 
@@ -904,6 +909,400 @@ def memory_store(fact: str, source: str = "agent", tags: str = "", ttl_days: int
         return json.dumps({"ok": True, "memory_id": mem_id}, ensure_ascii=False)
     except Exception as exc:
         return json.dumps({"error": str(exc)})
+
+
+# ═══════════════════════════  TRADING AGENT  ══════════════════════════════
+#
+# Ferramentas do BTC Trading Agent — leitura somente do schema btc.*
+# DB connection: env TRADING_DATABASE_URL ou secrets agent eddie/database_url
+
+_trading_db_url_cache: Optional[str] = None
+
+
+def _get_trading_db_url() -> Optional[str]:
+    """Resolve a connection string do trading DB sem hardcodar credenciais."""
+    global _trading_db_url_cache
+    if _trading_db_url_cache:
+        return _trading_db_url_cache
+
+    # 1. Variável de ambiente injetada pelo deploy/YAML
+    url = TRADING_DATABASE_URL
+    if url:
+        _trading_db_url_cache = url
+        return url
+
+    # 2. Secrets agent — mesmo padrão do secrets_helper.py do trading agent
+    for secret_name in ("eddie/database_url", "shared/database_url", "crypto/database_url"):
+        result = _http_get(
+            f"{SECRETS_AGENT_URL}/secrets/local/{secret_name}?field=url",
+            headers=_secrets_headers(),
+        )
+        if result.get("ok"):
+            val = (result.get("data") or {}).get("value", "")
+            if val:
+                _trading_db_url_cache = val
+                return val
+
+    logger.warning("⚠️ TRADING_DATABASE_URL não configurado e secret não encontrado")
+    return None
+
+
+def _btc_query(sql: str, params: tuple = ()) -> dict:
+    """Executa SELECT read-only no schema btc.* do trading DB."""
+    url = _get_trading_db_url()
+    if not url:
+        return {"ok": False, "error": "Trading DB não configurado (TRADING_DATABASE_URL ou eddie/database_url)."}
+    try:
+        import psycopg2
+        import psycopg2.extras
+
+        conn = psycopg2.connect(url)
+        conn.set_session(readonly=True, autocommit=True)
+        cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(sql, params or None)
+        rows = cur.fetchall()
+        cols = [d[0] for d in cur.description] if cur.description else []
+        cur.close()
+        conn.close()
+        serialized = [
+            {k: (str(v) if not isinstance(v, (str, int, float, bool, type(None))) else v)
+             for k, v in dict(r).items()}
+            for r in rows
+        ]
+        return {"ok": True, "rows": serialized, "count": len(serialized), "columns": cols}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+@mcp.tool()
+def trading_performance(symbol: str = "BTC-USDT", days: int = 7, profile: str = "") -> str:
+    """Retorna estatísticas de performance do trading agent para o símbolo/período.
+
+    Args:
+        symbol:  Par de trading (default: BTC-USDT).
+        days:    Período em dias (default: 7).
+        profile: Perfil do agente (default: todos).
+    """
+    import time
+    cutoff = time.time() - days * 86400
+    base_sql = """
+        SELECT
+            COUNT(*) AS total_trades,
+            SUM(CASE WHEN pnl > 0 THEN 1 ELSE 0 END) AS winning_trades,
+            COALESCE(SUM(pnl), 0) AS total_pnl,
+            COALESCE(AVG(pnl), 0) AS avg_pnl,
+            COALESCE(AVG(pnl_pct), 0) AS avg_pnl_pct,
+            MAX(created_at) AS last_trade_at
+        FROM btc.trades
+        WHERE symbol = %s AND timestamp > %s AND dry_run = FALSE
+    """
+    params: list = [symbol, cutoff]
+    if profile:
+        base_sql += " AND profile = %s"
+        params.append(profile)
+
+    result = _btc_query(base_sql, tuple(params))
+    if not result["ok"] or not result["rows"]:
+        return json.dumps(result, ensure_ascii=False, indent=2)
+
+    row = result["rows"][0]
+    total = int(row.get("total_trades") or 0)
+    wins  = int(row.get("winning_trades") or 0)
+    win_rate = round(wins / total, 3) if total > 0 else 0.0
+    return json.dumps({
+        "ok": True,
+        "symbol": symbol,
+        "days": days,
+        "profile": profile or "all",
+        "total_trades": total,
+        "winning_trades": wins,
+        "win_rate": win_rate,
+        "total_pnl": round(float(row.get("total_pnl") or 0), 4),
+        "avg_pnl": round(float(row.get("avg_pnl") or 0), 4),
+        "avg_pnl_pct": round(float(row.get("avg_pnl_pct") or 0), 4),
+        "last_trade_at": str(row.get("last_trade_at") or ""),
+    }, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def trading_recent_trades(
+    symbol: str = "BTC-USDT", limit: int = 10,
+    profile: str = "", include_dry: bool = False,
+) -> str:
+    """Lista os trades mais recentes do trading agent.
+
+    Args:
+        symbol:      Par de trading (default: BTC-USDT).
+        limit:       Número máximo de trades (default: 10).
+        profile:     Perfil do agente (vazio = todos).
+        include_dry: Incluir trades em dry_run (default: False).
+    """
+    sql = """
+        SELECT id, side, price, size, funds, pnl, pnl_pct, dry_run,
+               profile, servidor, status, created_at
+        FROM btc.trades
+        WHERE symbol = %s AND dry_run = %s
+    """
+    params: list = [symbol, include_dry]
+    if profile:
+        sql += " AND profile = %s"
+        params.append(profile)
+    sql += f" ORDER BY timestamp DESC LIMIT {max(1, min(limit, 100))}"
+
+    result = _btc_query(sql, tuple(params))
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def trading_positions(symbol: str = "BTC-USDT", profile: str = "") -> str:
+    """Retorna posições abertas (buys sem close correspondente) do trading agent.
+
+    Args:
+        symbol:  Par de trading (default: BTC-USDT).
+        profile: Perfil do agente (vazio = todos).
+    """
+    sql = """
+        SELECT id, price, size, funds, profile, servidor, created_at,
+               metadata
+        FROM btc.trades
+        WHERE symbol = %s AND side = 'buy' AND status != 'closed' AND dry_run = FALSE
+    """
+    params: list = [symbol]
+    if profile:
+        sql += " AND profile = %s"
+        params.append(profile)
+    sql += " ORDER BY timestamp DESC LIMIT 50"
+
+    result = _btc_query(sql, tuple(params))
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def trading_market_state(symbol: str = "BTC-USDT", limit: int = 5) -> str:
+    """Retorna os estados de mercado mais recentes registrados pelo trading agent.
+
+    Inclui preço, RSI, momentum, volatilidade, orderbook e trade flow.
+
+    Args:
+        symbol: Par de trading (default: BTC-USDT).
+        limit:  Número de registros (default: 5).
+    """
+    sql = f"""
+        SELECT price, bid, ask, spread, orderbook_imbalance, trade_flow,
+               rsi, momentum, volatility, trend, volume, created_at
+        FROM btc.market_states
+        WHERE symbol = %s
+        ORDER BY timestamp DESC
+        LIMIT {max(1, min(limit, 50))}
+    """
+    result = _btc_query(sql, (symbol,))
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def trading_decisions(
+    symbol: str = "BTC-USDT", limit: int = 10, profile: str = "",
+) -> str:
+    """Lista as decisões recentes do modelo de trading (comprar/vender/manter).
+
+    Args:
+        symbol:  Par de trading (default: BTC-USDT).
+        limit:   Número máximo de decisões (default: 10).
+        profile: Perfil do agente (vazio = todos).
+    """
+    sql = """
+        SELECT action, confidence, price, reason, executed, profile, servidor, created_at
+        FROM btc.decisions
+        WHERE symbol = %s
+    """
+    params: list = [symbol]
+    if profile:
+        sql += " AND profile = %s"
+        params.append(profile)
+    sql += f" ORDER BY timestamp DESC LIMIT {max(1, min(limit, 100))}"
+
+    result = _btc_query(sql, tuple(params))
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def trading_candles(
+    symbol: str = "BTC-USDT", ktype: str = "1min", limit: int = 60,
+) -> str:
+    """Retorna candles OHLCV armazenados pelo trading agent.
+
+    Args:
+        symbol: Par de trading (default: BTC-USDT).
+        ktype:  Timeframe (default: 1min).
+        limit:  Número de candles (default: 60).
+    """
+    sql = f"""
+        SELECT timestamp, open, high, low, close, volume
+        FROM btc.candles
+        WHERE symbol = %s AND ktype = %s
+        ORDER BY timestamp DESC
+        LIMIT {max(1, min(limit, 1000))}
+    """
+    result = _btc_query(sql, (symbol, ktype))
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def trading_ai_controls(
+    symbol: str = "BTC-USDT", profile: str = "default", limit: int = 3,
+) -> str:
+    """Retorna os últimos parâmetros de controle sugeridos pela IA para o trading.
+
+    Inclui min_confidence, min_trade_interval, max_position_pct, max_positions.
+
+    Args:
+        symbol:  Par de trading (default: BTC-USDT).
+        profile: Perfil do agente (default: default).
+        limit:   Número de registros (default: 3).
+    """
+    sql = f"""
+        SELECT trigger, mode, model,
+               suggested_min_confidence, suggested_min_trade_interval,
+               suggested_max_position_pct, suggested_max_positions,
+               applied_min_confidence, applied_min_trade_interval,
+               applied_max_position_pct, applied_max_positions,
+               rationale, created_at
+        FROM btc.ai_trade_controls
+        WHERE symbol = %s AND profile = %s
+        ORDER BY timestamp DESC
+        LIMIT {max(1, min(limit, 20))}
+    """
+    result = _btc_query(sql, (symbol, profile))
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def trading_ai_plan(
+    symbol: str = "BTC-USDT", profile: str = "default", limit: int = 1,
+) -> str:
+    """Retorna o(s) último(s) plano(s) gerado(s) pela IA para o trading.
+
+    O plano é uma análise textual em português com a estratégia atual do agente.
+
+    Args:
+        symbol:  Par de trading (default: BTC-USDT).
+        profile: Perfil do agente (default: default).
+        limit:   Número de planos (default: 1).
+    """
+    sql = f"""
+        SELECT plan_text, model, regime, price, profile, created_at
+        FROM btc.ai_plans
+        WHERE symbol = %s AND profile = %s
+        ORDER BY timestamp DESC
+        LIMIT {max(1, min(limit, 5))}
+    """
+    result = _btc_query(sql, (symbol, profile))
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def trading_ai_window(
+    symbol: str = "BTC-USDT", profile: str = "default",
+) -> str:
+    """Retorna a janela operacional ativa calculada pela IA (entry_low/high, target_sell, TTL).
+
+    Args:
+        symbol:  Par de trading (default: BTC-USDT).
+        profile: Perfil do agente (default: default).
+    """
+    sql = """
+        SELECT regime, reference_price, entry_low, entry_high, target_sell,
+               min_confidence, min_trade_interval, ttl_seconds,
+               to_timestamp(valid_until) AS valid_until,
+               rationale, model, mode, created_at
+        FROM btc.ai_trade_windows
+        WHERE symbol = %s AND profile = %s
+          AND valid_until > extract(epoch FROM now())
+        ORDER BY timestamp DESC
+        LIMIT 1
+    """
+    result = _btc_query(sql, (symbol, profile))
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def trading_news_sentiment(limit: int = 10, coin: str = "BTC") -> str:
+    """Retorna notícias recentes com sentimento para BTC/GENERAL.
+
+    Args:
+        limit: Número máximo de notícias (default: 10).
+        coin:  Moeda a filtrar (BTC, GENERAL ou vazio = todas).
+    """
+    sql = """
+        SELECT source, title, sentiment, confidence, category, coin, created_at
+        FROM btc.news_sentiment
+        WHERE timestamp > NOW() - INTERVAL '24 hours'
+          AND confidence >= 0.30
+    """
+    params: list = []
+    if coin:
+        sql += " AND coin = ANY(%s)"
+        params.append([coin, "GENERAL"])
+    sql += f" ORDER BY timestamp DESC LIMIT {max(1, min(limit, 50))}"
+
+    result = _btc_query(sql, tuple(params))
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def trading_learning_stats(symbol: str = "BTC-USDT") -> str:
+    """Retorna estatísticas de Q-learning do trading agent (rewards acumulados).
+
+    Args:
+        symbol: Par de trading (default: BTC-USDT).
+    """
+    sql = """
+        SELECT
+            COUNT(*) AS total_episodes,
+            COALESCE(SUM(reward), 0) AS total_reward,
+            COALESCE(AVG(reward), 0) AS avg_reward,
+            COALESCE(MAX(reward), 0) AS max_reward,
+            COALESCE(MIN(reward), 0) AS min_reward,
+            SUM(CASE WHEN action = 0 THEN 1 ELSE 0 END) AS hold_count,
+            SUM(CASE WHEN action = 1 THEN 1 ELSE 0 END) AS buy_count,
+            SUM(CASE WHEN action = 2 THEN 1 ELSE 0 END) AS sell_count
+        FROM btc.learning_rewards
+        WHERE symbol = %s
+    """
+    result = _btc_query(sql, (symbol,))
+    return json.dumps(result, ensure_ascii=False, indent=2)
+
+
+@mcp.tool()
+def trading_summary(symbol: str = "BTC-USDT", profile: str = "default") -> str:
+    """Resumo completo do estado atual do trading agent — ideal para análise por LLM.
+
+    Combina performance 7d, posições abertas, último estado de mercado,
+    último plano IA e janela operacional ativa em uma única chamada.
+
+    Args:
+        symbol:  Par de trading (default: BTC-USDT).
+        profile: Perfil do agente (default: default).
+    """
+    import json as _json
+
+    perf   = _json.loads(trading_performance(symbol, 7, profile))
+    market = _json.loads(trading_market_state(symbol, 1))
+    plan   = _json.loads(trading_ai_plan(symbol, profile, 1))
+    window = _json.loads(trading_ai_window(symbol, profile))
+    pos    = _json.loads(trading_positions(symbol, profile))
+    ctrl   = _json.loads(trading_ai_controls(symbol, profile, 1))
+
+    return json.dumps({
+        "symbol": symbol,
+        "profile": profile,
+        "performance_7d": perf,
+        "open_positions": pos.get("rows", []),
+        "latest_market_state": (market.get("rows") or [{}])[0],
+        "latest_ai_plan": (plan.get("rows") or [{}])[0],
+        "active_trade_window": (window.get("rows") or [{}])[0],
+        "latest_ai_controls": (ctrl.get("rows") or [{}])[0],
+    }, ensure_ascii=False, indent=2)
 
 
 # ═══════════════════════════  ENTRYPOINT  ═════════════════════════════════

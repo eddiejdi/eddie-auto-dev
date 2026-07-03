@@ -11,7 +11,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 tools/copilot_hooks/inject_memory_context.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/copilot_hooks/inject_memory_context.py",
             "timeout": 5
           }
         ]
@@ -21,7 +21,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 tools/copilot_hooks/pre_tool_guardrails.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/copilot_hooks/pre_tool_guardrails.py",
             "timeout": 10
           }
         ]
@@ -31,7 +31,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 tools/hooks/record_stopped.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/record_stopped.py",
             "timeout": 5
           }
         ]
@@ -43,7 +43,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 tools/copilot_hooks/post_edit_validate.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/copilot_hooks/post_edit_validate.py",
             "timeout": 10
           }
         ]
@@ -53,7 +53,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 tools/copilot_hooks/ai_response_analyzer.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/copilot_hooks/ai_response_analyzer.py",
             "timeout": 10
           }
         ]
@@ -64,7 +64,16 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 tools/hooks/restore_stopped.py",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/block_incomplete_stop.py",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/restore_stopped.py",
             "timeout": 60
           }
         ]
