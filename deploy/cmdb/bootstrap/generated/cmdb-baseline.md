@@ -1,9 +1,9 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-03T21:44:57.368719+00:00`
+- Generated at: `2026-07-03T21:47:59.314805+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `159`
+- Repo services discovered: `161`
 - Critical services flagged for MVP: `66`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
@@ -15,7 +15,7 @@
 - `network`: 16
 - `operations`: 88
 - `storage`: 32
-- `trading`: 5
+- `trading`: 7
 
 ## NetBox seed candidates
 
