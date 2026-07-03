@@ -1959,7 +1959,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Evolução patrimonial live da conta (equity = USDT + BTC marcado a mercado). Fonte: btc.exchange_snapshots; visão global da conta, não segmentada por profile.",
+      "description": "Patrimônio (balance × preço em USDT) por conta KuCoin da conta master — main, trade e total. Fonte: btc.exchange_balance_snapshots (~15 min). Subcontas não são sincronizadas.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2020,49 +2020,12 @@
           {
             "matcher": {
               "id": "byName",
-              "options": "Patrimônio Total"
+              "options": "Total"
             },
             "properties": [
               {
                 "id": "custom.lineWidth",
                 "value": 3
-              },
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#73BF69",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "USDT Disponível"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#5794F2",
-                  "mode": "fixed"
-                }
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "BTC (em USDT)"
-            },
-            "properties": [
-              {
-                "id": "color",
-                "value": {
-                  "fixedColor": "#FF9830",
-                  "mode": "fixed"
-                }
               }
             ]
           }
@@ -2102,7 +2065,7 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT\n  to_timestamp(timestamp) AS time,\n  equity_usdt AS \"Patrimônio Total\",\n  usdt_balance AS \"USDT Disponível\",\n  btc_balance * btc_price AS \"BTC (em USDT)\"\nFROM btc.exchange_snapshots\nWHERE to_timestamp(timestamp) BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY 1",
+          "rawSql": "SELECT\n  synced_at AS time,\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END))\n    FILTER (WHERE account_type = 'main') AS \"Conta Main\",\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END))\n    FILTER (WHERE account_type = 'trade') AS \"Conta Trade\",\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END)) AS \"Total\"\nFROM btc.exchange_balance_snapshots\nWHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1\nORDER BY 1",
           "refId": "A",
           "sql": {
             "columns": [],
@@ -2114,7 +2077,7 @@
           ]
         }
       ],
-      "title": "📈 Evolução Patrimonial",
+      "title": "📈 Evolução Patrimonial por Conta (USDT)",
       "type": "timeseries"
     },
     {
