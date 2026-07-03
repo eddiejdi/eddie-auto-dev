@@ -169,6 +169,34 @@ def _snapshot_balances(conn) -> int:
                     ),
                 )
                 counts += 1
+
+        # Subcontas KuCoin (account_type = "sub:<nome>"); best-effort — a
+        # chave master pode não ter permissão ou não existirem subcontas.
+        try:
+            sub_balances = kucoin_api.get_sub_account_balances()
+        except Exception as exc:
+            logging.getLogger(__name__).warning("Sub-account snapshot skipped: %s", exc)
+            sub_balances = []
+        for balance in sub_balances:
+            if balance.get("balance", 0) <= 0 and balance.get("available", 0) <= 0:
+                continue
+            cur.execute(
+                f"""
+                INSERT INTO {SCHEMA}.exchange_balance_snapshots
+                    (account_type, currency, balance, available, holds, price_usdt, metadata)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    f"sub:{balance['sub_name']}",
+                    balance["currency"],
+                    _safe_float(balance["balance"]),
+                    _safe_float(balance["available"]),
+                    _safe_float(balance["holds"]),
+                    price_in_usdt(balance["currency"]),
+                    json.dumps({"source": "kucoin_sync", "sub_account_type": balance["account_type"]}),
+                ),
+            )
+            counts += 1
         cur.execute(
             f"""
             INSERT INTO {SCHEMA}.exchange_sync_state (sync_key, synced_at, metadata, updated_at)

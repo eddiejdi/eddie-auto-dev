@@ -111,16 +111,27 @@ Agora, a partir de `btc.exchange_balance_snapshots` (~15 min): **Conta Main**,
 - Shadow reiniciou 2× em 2026-07-02 porque o Postgres não estava pronto no boot
   pós-queda de energia; o retry do systemd resolveu.
 
-## 5. Pendências (decisão do usuário)
+## 5. Pendências — resolução (atualizado no fim de 2026-07-03)
 
-1. **Stop loss desligado no conservative** (`auto_stop_loss.enabled: false` com
-   `stop_loss_pct: 0.03` definido) — PnL negativo com WR alto indica perdas
-   assimétricas; habilitar ou justificar.
-2. **Credencial do DB inline no unit systemd** (`systemctl cat crypto-agent@...`
-   expõe `DATABASE_URL`) — mover para envfile com permissão 600.
-3. **Sincronizar subcontas KuCoin** no `kucoin_postgres_sync` se os saldos delas
-   devem aparecer no dashboard.
-4. **Snapshots esparsos em 2026-07-03** (5 até 10:53 vs ~95/dia) — verificar
-   cadência do sync se o gráfico patrimonial ficar com buracos.
-5. `trading_agent.py` com 5.857 linhas — extrair `_generate_ai_plan` (~600 linhas)
-   para módulo próprio; 70 blocos `except Exception` genéricos.
+1. **Stop loss** — decisão do usuário: *"deve ser o mínimo de lucro acima dos
+   custos (positivo)"* → nunca realizar prejuízo. Já era o comportamento
+   vigente (`guardrails_positive_only_sells` + `min_sell_pnl_pct 0.3%` >
+   taxas 0.2%); `auto_stop_loss` fica **desabilitado por design**.
+2. **Credencial do DB** — movida para o Secrets Agent/Authentik
+   (`shared/database_url`, field `url`; item `secret-shared-database-url-url`
+   no Authentik). Linha `Environment=DATABASE_URL=` removida do drop-in
+   `crypto-agent@.service.d/common.conf` (host e repo); o agente resolve via
+   `secrets_helper.get_database_url()` (testado ponta-a-ponta). Vale a partir
+   do próximo restart dos agentes. **Ainda inline no drop-in**:
+   `TELEGRAM_BOT_TOKEN` — candidato à mesma migração.
+3. **Subcontas KuCoin** — implementado: `get_sub_account_balances()` em
+   `kucoin_api.py` + snapshot com `account_type="sub:<nome>"` no
+   `kucoin_postgres_sync`. Subconta **sub:BTCAgressive** detectada e já
+   aparece no gráfico patrimonial (formato longo, linhas dinâmicas por conta),
+   no total e no relatório diário.
+4. **Snapshots esparsos** — root cause: `kucoin-postgres-sync.timer` morto
+   desde o boot de 2026-07-02 (`OnUnitActiveSec` não re-armou); corrigido com
+   `OnCalendar=*:00/15` (PR #194) e units versionadas.
+5. **Modularização** — aprovada; plano faseado em
+   `docs/TRADING_ETH_ACTIVATION_PLAN.md` (seção 2), junto com o plano de
+   ativação de ETH-USDT (shadow → validação → live).
