@@ -6,7 +6,7 @@
   "consecutive_failures_threshold": 4,
   "ollama_enabled": true,
   "ollama_host": "http://192.168.15.2:8512",
-  "ollama_model": "qwen2.5-coder:7b",
+  "ollama_model": "mistral:7b",
   "ollama_timeout_seconds": 15,
   "agents": [
     {

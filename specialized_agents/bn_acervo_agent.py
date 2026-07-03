@@ -2228,7 +2228,7 @@ class BnAcervoAgent:
         gpu0_host = os.getenv("BN_ACERVO_GPU0_HOST", os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"))
         gpu1_host = os.getenv("BN_ACERVO_GPU1_HOST", os.getenv("OLLAMA_HOST_GPU1", str(LLM_GPU1_CONFIG.get("base_url", "http://192.168.15.2:11435"))))
         self.story_host = gpu0_host.rstrip("/")
-        self.story_model = os.getenv("BN_ACERVO_STORY_MODEL", "qwen2.5:1.5b")
+        self.story_model = os.getenv("BN_ACERVO_STORY_MODEL", "gemma3:1b")
         self.vision_host = os.getenv("BN_ACERVO_VISION_HOST", gpu0_host).rstrip("/")
         self.vision_model = os.getenv("BN_ACERVO_VISION_MODEL", "moondream:latest")
         self.planner_host = gpu1_host.rstrip("/")

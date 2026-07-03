@@ -36,7 +36,7 @@ from urllib.request import Request, urlopen
 WORKSPACE       = Path("/workspace/eddie-auto-dev")
 WIKI_GQL        = "http://192.168.15.2:3009/graphql"
 OLLAMA_API      = "http://192.168.15.2:11437/api/generate"
-OLLAMA_MODEL    = "qwen3:8b"
+OLLAMA_MODEL    = "mistral:7b"
 GPU_EXPORTER    = "http://192.168.15.2:9835/metrics"
 GPU_CHECK_EVERY = 5          # checar GPU a cada N publicações
 LOG_FILE        = WORKSPACE / "logs" / f"wiki_bulk_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"

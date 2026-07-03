@@ -5,8 +5,8 @@ from __future__ import annotations
 import os
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5-coder:7b")
-OLLAMA_FALLBACK_MODEL = "deepseek-coder:6.7b"
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral:7b")
+OLLAMA_FALLBACK_MODEL = "phi4-mini:latest"
 DOCKER_HOST = os.getenv("DOCKER_HOST", "unix:///var/run/docker.sock")
 
 # Project storage

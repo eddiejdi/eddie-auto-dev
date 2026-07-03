@@ -40,8 +40,8 @@ if diretor:
     print(f"    Encontrado: {diretor.get('name')}")
     print(f"    base_model_id atual: {diretor.get('info', {}).get('base_model_id')}")
     
-    # 2. Atualizar para usar qwen2.5-coder:7b
-    print(f"\n[2] Atualizando base_model_id para qwen2.5-coder:7b...")
+    # 2. Atualizar para usar mistral:7b
+    print(f"\n[2] Atualizando base_model_id para mistral:7b...")
     
     # Pegar info atual
     info = diretor.get('info', {})
@@ -50,7 +50,7 @@ if diretor:
     # Preparar payload para update
     update_payload = {
         "id": "diretor-shared",
-        "base_model_id": "qwen2.5-coder:7b",  # CORREÇÃO!
+        "base_model_id": "mistral:7b",  # CORREÇÃO!
         "name": "👔 Diretor Shared",
         "meta": {
             "profile_image_url": meta.get("profile_image_url", ""),
@@ -89,7 +89,7 @@ for m in models:
     if m.get('id') == 'diretor-shared':
         new_base = m.get('info', {}).get('base_model_id')
         print(f"    base_model_id agora: {new_base}")
-        if new_base == 'qwen2.5-coder:7b':
+        if new_base == 'mistral:7b':
             print(f"    ✅ CORRIGIDO!")
         else:
             print(f"    ❌ Ainda errado, tentando deletar e recriar...")
@@ -101,7 +101,7 @@ for m in models:
             # Recriar
             new_model = {
                 "id": "diretor-shared",
-                "base_model_id": "qwen2.5-coder:7b",
+                "base_model_id": "mistral:7b",
                 "name": "👔 Diretor Shared",
                 "meta": {
                     "profile_image_url": "",

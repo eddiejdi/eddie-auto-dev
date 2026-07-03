@@ -7,8 +7,8 @@ Fornece fallback automático:
 - Usado como fallback quando GPUs não estão disponíveis
 
 Roteamento por complexidade (economiza tokens Claude/Copilot):
-  TRIVIAL   → GPU1 qwen3:0.6b  (explain, summarize, commit, translate)
-  MODERATE  → GPU0 qwen2.5-coder:7b  (review, document, rename, format)
+  TRIVIAL   → GPU1 gemma3:1b  (explain, summarize, commit, translate)
+  MODERATE  → GPU0 mistral:7b  (review, document, rename, format)
   COMPLEX   → Cloud / Claude / Copilot  (implement, architect, debug, security)
 """
 
@@ -60,8 +60,8 @@ def classify_request_complexity(messages: list[dict]) -> str:
     Classifica a complexidade de um conjunto de mensagens de chat.
 
     Returns:
-        "TRIVIAL"  — seguro para GPU1 (qwen3:0.6b)
-        "MODERATE" — usar GPU0 (qwen2.5-coder:7b)
+        "TRIVIAL"  — seguro para GPU1 (gemma3:1b)
+        "MODERATE" — usar GPU0 (mistral:7b)
         "COMPLEX"  — escalar para cloud/Claude/Copilot
     """
     text = " ".join(
@@ -88,8 +88,8 @@ class CopilotModelRouter:
     Roteador de modelos para GitHub Copilot com fallback automático.
     
     Ordem de tentativa:
-    1. GPU0 (Ollama local - qwen2.5-coder:7b)
-    2. GPU1 (Ollama GPU1 - qwen3:0.6b)
+    1. GPU0 (Ollama local - mistral:7b)
+    2. GPU1 (Ollama GPU1 - gemma3:1b)
     3. OpenAI-compatible (sk-or-v1 via OpenRouter)
     """
     
@@ -123,15 +123,15 @@ class CopilotModelRouter:
 
         Args:
             complexity: "TRIVIAL" | "MODERATE" | "COMPLEX"
-                TRIVIAL  → prefere GPU1 (qwen3:0.6b) — rápido, barato
-                MODERATE → usa GPU0 (qwen2.5-coder:7b)
+                TRIVIAL  → prefere GPU1 (gemma3:1b) — rápido, barato
+                MODERATE → usa GPU0 (mistral:7b)
                 COMPLEX  → escala direto para cloud (evita respostas rasas)
 
         Returns:
             {"provider", "model", "base_url", "gpu", "available"}
         """
-        gpu0_model = LLM_CONFIG.get("model", "qwen2.5-coder:7b")
-        gpu1_model = LLM_GPU1_CONFIG.get("model", "qwen3:0.6b")
+        gpu0_model = LLM_CONFIG.get("model", "mistral:7b")
+        gpu1_model = LLM_GPU1_CONFIG.get("model", "gemma3:1b")
 
         # Tarefas COMPLEX pulam direto para cloud se disponível
         if complexity == "COMPLEX":
@@ -200,8 +200,8 @@ class CopilotModelRouter:
         Proxy para chat completion com classificação automática de complexidade.
 
         Fluxo GPU-first para economizar tokens Claude/Copilot:
-          TRIVIAL  → GPU1 qwen3:0.6b  (explain, summarize, commit)
-          MODERATE → GPU0 qwen2.5-coder:7b  (review, document)
+          TRIVIAL  → GPU1 gemma3:1b  (explain, summarize, commit)
+          MODERATE → GPU0 mistral:7b  (review, document)
           COMPLEX  → cloud / Claude / Copilot  (implement, debug, architect)
         """
         complexity = classify_request_complexity(messages)

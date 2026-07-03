@@ -21,7 +21,7 @@ TRAINING_DIR = BASE_DIR / "agent_training"
 LLM_CONFIG = {
     "base_url": os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"),
     "model": os.getenv("OLLAMA_MODEL", "codellama:13b"),
-    "fallback_model": "deepseek-coder:6.7b",
+    "fallback_model": "phi4-mini:latest",
     "temperature": 0.7,
     "max_tokens": 4096,
     "timeout": 120

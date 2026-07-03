@@ -12,7 +12,7 @@ WorkingDirectory=/apps/crypto-trader/tools
 Environment=OLLAMA_COORD_URL=http://127.0.0.1:11437
 Environment=OLLAMA_GPU0_URL=http://127.0.0.1:11434
 Environment=OLLAMA_GPU1_URL=http://127.0.0.1:11435
-Environment=GPU1_WARMUP_MODEL=qwen3:0.6b
+Environment=GPU1_WARMUP_MODEL=gemma3:1b
 Environment="TELEGRAM_BOT_TOKEN=1105143633:AAHUCLBKxG-NVd7k9RBCcnPOFySfSeUCFbk"
 Environment="TELEGRAM_CHAT_ID=948686300"
 

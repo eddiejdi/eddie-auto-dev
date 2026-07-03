@@ -1,0 +1,19 @@
+FROM gemma3:1b
+
+# gemma3-fast:gpu1 — modelo rápido pinado na GPU1 (GTX 1050 2GB, porta :11435)
+# Substitui qwen3-fast:gpu1 (política de soberania de dados, 2026-07-01).
+# Parâmetros espelhados do modelo anterior; gemma3:1b não usa chain-of-thought,
+# então dispensa /no_think e strip de <think>.
+# Criação (na máquina homelab):
+#   ollama create gemma3-fast:gpu1 -f models/Modelfile.gemma3-fast
+
+PARAMETER temperature 0.05
+PARAMETER top_p 0.8
+PARAMETER top_k 20
+PARAMETER num_ctx 2048
+PARAMETER num_predict 256
+PARAMETER repeat_penalty 1.1
+PARAMETER num_gpu 99
+PARAMETER stop "```"
+PARAMETER stop "Resposta:"
+PARAMETER stop "Análise:"

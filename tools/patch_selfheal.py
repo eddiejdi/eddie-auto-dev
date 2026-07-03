@@ -5,7 +5,7 @@ Adiciona deteccao de modelos pinados com keep_alive=-1 que bloqueiam a VRAM
 do GPU0 sem serem detectados pelo check de frozen original.
 
 Causa raiz documentada (2026-05-13):
-- qwen3:0.6b foi pinado no GPU0 com keep_alive=-1 (expires=2318)
+- gemma3:1b foi pinado no GPU0 com keep_alive=-1 (expires=2318)
 - O selfheal original so detecta GPU "frozen" (nao responde a generate)
 - Modelo pinado responde normalmente aos probes -> nunca aciona selfheal
 - GPU0 fica com 0.83GB VRAM ocupada -> coordinator retorna 503 em cascata

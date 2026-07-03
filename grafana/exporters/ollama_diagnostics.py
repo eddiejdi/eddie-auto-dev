@@ -168,7 +168,7 @@ def main() -> None:
     print("\n[5] PRÓXIMOS PASSOS")
     print("-" * 70)
     print("1. Carregar modelo de sentimento:")
-    print("   ollama pull qwen2.5-coder:7b")
+    print("   ollama pull mistral:7b")
     print("2. Iniciar RSS Sentiment Exporter:")
     print("   sudo systemctl start rss-sentiment-exporter")
     print("3. Monitorar logs:")

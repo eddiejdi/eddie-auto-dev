@@ -315,56 +315,56 @@ def test_buy_target_tolerance_pct_allows_conservative_oversold_reversal() -> Non
     assert agent._get_buy_target_tolerance_pct(rag_adj, signal) == pytest.approx(0.0015)
 
 
-def test_trade_window_targets_use_qwen_on_conservative_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_trade_window_targets_use_secondary_on_conservative_gpu(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OLLAMA_TRADE_WINDOW_HOST", raising=False)
     monkeypatch.delenv("OLLAMA_TRADE_WINDOW_FALLBACK_HOST", raising=False)
     monkeypatch.delenv("OLLAMA_STRUCTURED_CROSS_MODEL_FALLBACK", raising=False)
     agent = _agent("conservative")
     agent._OLLAMA_TRADE_WINDOW_HOST = "http://gpu0:11434"
     agent._OLLAMA_TRADE_WINDOW_MODEL = "phi4-mini:latest"
-    agent._OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = "qwen3:0.6b"
-    agent._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = "qwen3:0.6b"
+    agent._OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = "gemma3:1b"
+    agent._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = "gemma3:1b"
 
     primary_host, primary_model, fallback_host, fallback_model = agent._get_trade_window_ollama_targets()
 
     assert primary_host.endswith(":11435")
-    assert primary_model == "qwen3:0.6b"
+    assert primary_model == "gemma3:1b"
     assert fallback_host == ""
     assert fallback_model == ""
 
 
-def test_trade_window_targets_prefer_qwen_on_gpu1_for_aggressive(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_trade_window_targets_prefer_secondary_on_gpu1_for_aggressive(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OLLAMA_TRADE_WINDOW_HOST", raising=False)
     monkeypatch.delenv("OLLAMA_TRADE_WINDOW_FALLBACK_HOST", raising=False)
     monkeypatch.delenv("OLLAMA_STRUCTURED_CROSS_MODEL_FALLBACK", raising=False)
     agent = _agent("aggressive")
     agent._OLLAMA_TRADE_WINDOW_HOST = "http://gpu0:11434"
     agent._OLLAMA_TRADE_WINDOW_MODEL = "phi4-mini:latest"
-    agent._OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = "qwen3:0.6b"
-    agent._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = "qwen3:0.6b"
+    agent._OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = "gemma3:1b"
+    agent._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = "gemma3:1b"
 
     primary_host, primary_model, fallback_host, fallback_model = agent._get_trade_window_ollama_targets()
 
     assert primary_host.endswith(":11435")
-    assert primary_model == "qwen3:0.6b"
+    assert primary_model == "gemma3:1b"
     assert fallback_host == ""
     assert fallback_model == ""
 
 
-def test_trade_controls_targets_prefer_qwen_on_gpu1(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_trade_controls_targets_prefer_secondary_on_gpu1(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("OLLAMA_TRADE_PARAMS_HOST", raising=False)
     monkeypatch.delenv("OLLAMA_TRADE_PARAMS_FALLBACK_HOST", raising=False)
     monkeypatch.delenv("OLLAMA_STRUCTURED_CROSS_MODEL_FALLBACK", raising=False)
     agent = _agent("aggressive")
     agent._OLLAMA_TRADE_PARAMS_HOST = "http://gpu0:11434"
     agent._OLLAMA_TRADE_PARAMS_MODEL = "phi4-mini:latest"
-    agent._OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = "qwen3:0.6b"
-    agent._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = "qwen3:0.6b"
+    agent._OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = "gemma3:1b"
+    agent._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = "gemma3:1b"
 
     primary_host, primary_model, fallback_host, fallback_model = agent._get_trade_controls_ollama_targets()
 
     assert primary_host.endswith(":11435")
-    assert primary_model == "qwen3:0.6b"
+    assert primary_model == "gemma3:1b"
     assert fallback_host == ""
     assert fallback_model == ""
 
@@ -376,13 +376,13 @@ def test_trade_controls_targets_allow_cross_model_fallback_when_opted_in(monkeyp
     agent = _agent("aggressive")
     agent._OLLAMA_TRADE_PARAMS_HOST = "http://gpu0:11434"
     agent._OLLAMA_TRADE_PARAMS_MODEL = "phi4-mini:latest"
-    agent._OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = "qwen3:0.6b"
-    agent._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = "qwen3:0.6b"
+    agent._OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = "gemma3:1b"
+    agent._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = "gemma3:1b"
 
     primary_host, primary_model, fallback_host, fallback_model = agent._get_trade_controls_ollama_targets()
 
     assert primary_host.endswith(":11435")
-    assert primary_model == "qwen3:0.6b"
+    assert primary_model == "gemma3:1b"
     assert fallback_host.endswith(":11434")
     assert fallback_model == "phi4-mini:latest"
 
@@ -423,7 +423,7 @@ def test_request_ollama_structured_retries_with_fallback(monkeypatch: pytest.Mon
         primary_host="http://gpu0:11434",
         primary_model="phi4-mini:latest",
         fallback_host="http://gpu1:11435",
-        fallback_model="qwen3:0.6b",
+        fallback_model="gemma3:1b",
         primary_timeout_sec=45,
         fallback_timeout_sec=30,
         options={"temperature": 0.0},
@@ -432,7 +432,7 @@ def test_request_ollama_structured_retries_with_fallback(monkeypatch: pytest.Mon
 
     assert parsed["entry_high"] == pytest.approx(100.1)
     assert raw.startswith('{"entry_low"')
-    assert meta["model"] == "qwen3:0.6b"
+    assert meta["model"] == "gemma3:1b"
     assert meta["host"] == "http://gpu1:11435"
     assert meta["fallback_used"] is True
 
@@ -471,7 +471,7 @@ def test_request_ollama_structured_retries_same_target_before_fallback(monkeypat
         label="trade window",
         prompt="unit test",
         primary_host="http://gpu1:11435",
-        primary_model="qwen3:0.6b",
+        primary_model="gemma3:1b",
         fallback_host="http://gpu0:11434",
         fallback_model="phi4-mini:latest",
         primary_timeout_sec=45,
@@ -483,7 +483,7 @@ def test_request_ollama_structured_retries_same_target_before_fallback(monkeypat
 
     assert parsed["entry_high"] == pytest.approx(100.1)
     assert raw.startswith('{"entry_low"')
-    assert meta["model"] == "qwen3:0.6b"
+    assert meta["model"] == "gemma3:1b"
     assert meta["host"] == "http://gpu1:11435"
     assert meta["fallback_used"] is False
     assert meta["target_attempt"] == 2
@@ -527,7 +527,7 @@ def test_request_ollama_structured_repairs_primary_payload_without_fallback(
         primary_host="http://gpu0:11434",
         primary_model="phi4-mini:latest",
         fallback_host="http://gpu1:11435",
-        fallback_model="qwen3:0.6b",
+        fallback_model="gemma3:1b",
         primary_timeout_sec=45,
         fallback_timeout_sec=30,
         options={"temperature": 0.0},

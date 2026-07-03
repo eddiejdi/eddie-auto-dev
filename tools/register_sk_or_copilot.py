@@ -38,7 +38,7 @@ def register_sk_or_model(vscode_user_path: Path) -> bool:
                 "id": "sk-or-v1",
                 "name": "sk-or v1 (Ollama Fallback)",
                 "endpoint": "http://localhost:8503/v1",
-                "model": "qwen2.5-coder:1.5b",
+                "model": "llama3.2:1b",
                 "capabilities": ["chat"],
                 "enabled": True
             })

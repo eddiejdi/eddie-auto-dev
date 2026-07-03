@@ -92,7 +92,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--profiles", nargs="+", default=["aggressive", "conservative"])
     parser.add_argument("--ollama-host", default=os.getenv("OLLAMA_TRADE_WINDOW_HOST", "http://192.168.15.2:11434"))
     parser.add_argument("--ollama-model", default=os.getenv("OLLAMA_TRADE_WINDOW_MODEL", "phi4-mini:latest"))
-    parser.add_argument("--fallback-model", default=os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_MODEL", "qwen3:0.6b"))
+    parser.add_argument("--fallback-model", default=os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_MODEL", "gemma3:1b"))
     parser.add_argument("--output", default=str(ROOT / "analysis_results" / "trade_window_history_replay.json"))
     return parser.parse_args()
 

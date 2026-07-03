@@ -35,7 +35,7 @@ GPU1_HOST = os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435")
 
 # Modelos padrão para manter warm em cada GPU
 GPU0_MODELS = _csv_env("OLLAMA_WARM_MODELS_GPU0", os.getenv("OLLAMA_WARM_MODEL_GPU0", "trading-analyst:latest"))
-GPU1_MODELS = _csv_env("OLLAMA_WARM_MODELS_GPU1", os.getenv("OLLAMA_WARM_MODEL_GPU1", "qwen3:0.6b"))
+GPU1_MODELS = _csv_env("OLLAMA_WARM_MODELS_GPU1", os.getenv("OLLAMA_WARM_MODEL_GPU1", "gemma3:1b"))
 
 WARMUP_PROMPT = "ping"
 TIMEOUT_SECONDS = 120  # cold load pode levar >30s (phi4-mini ~2.5GB)

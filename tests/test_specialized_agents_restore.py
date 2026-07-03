@@ -10,16 +10,16 @@ sys.path.insert(0, str(ROOT_DIR))
 def test_get_dynamic_num_ctx_table_values() -> None:
     from specialized_agents.config import get_dynamic_num_ctx
 
-    assert get_dynamic_num_ctx("qwen2.5-coder:1.5b") == 32768
-    assert get_dynamic_num_ctx("deepseek-coder-v2:16b") == 8192
+    assert get_dynamic_num_ctx("gemma3:1.5b") == 32768
+    assert get_dynamic_num_ctx("mistral-nemo:12b") == 8192
     assert get_dynamic_num_ctx("unknown-model:30b") == 4096
 
 
 def test_get_dynamic_num_ctx_env_override(monkeypatch) -> None:
     from specialized_agents.config import get_dynamic_num_ctx
 
-    monkeypatch.setenv("OLLAMA_NUM_CTX_QWEN3_14B", "4096")
-    assert get_dynamic_num_ctx("qwen3:14b") == 4096
+    monkeypatch.setenv("OLLAMA_NUM_CTX_MISTRAL_NEMO_14B", "4096")
+    assert get_dynamic_num_ctx("mistral-nemo:14b") == 4096
 
 
 class DummyMetric:

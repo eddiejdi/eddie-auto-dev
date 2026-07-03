@@ -71,8 +71,6 @@ TOOL_TIMEOUT = int(os.getenv("TOOL_TIMEOUT", "60"))
 
 # Modelos que suportam tool calling nativo
 TOOL_CAPABLE_MODELS = {
-    "qwen3", "qwen2.5", "qwen2.5-coder", "qwen2.5-coder:7b",
-    "qwen3:8b", "qwen3:1.7b", "qwen3:0.6b", "qwen3:4b",
     "llama3.1", "llama3.2", "llama3.3", "llama4",
     "mistral", "mistral-nemo", "mistral-small",
     "command-r", "command-r-plus",

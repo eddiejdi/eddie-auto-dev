@@ -184,7 +184,7 @@ class TestParseOllamaResponse(unittest.TestCase):
         self.assertAlmostEqual(s, -1.0)
 
     def test_remove_thinking_tags(self) -> None:
-        """Tags <think>...</think> do qwen3 devem ser removidas."""
+        """Tags <think>...</think> de chain-of-thought devem ser removidas."""
         resp = "<think>Let me analyze...</think>SENTIMENT: 0.7 | CONFIDENCE: 0.85 | DIRECTION: BULLISH | CATEGORY: adoption"
         s, c, d, _ = _parse_ollama_response(resp)
         self.assertAlmostEqual(s, 0.7)
@@ -716,7 +716,7 @@ class TestOllamaRequest(unittest.TestCase):
         mock_urlopen.return_value.__enter__ = MagicMock(return_value=mock_resp)
         mock_urlopen.return_value.__exit__ = MagicMock(return_value=False)
 
-        ok, text = _ollama_request("http://localhost:11434", "qwen3:1.7b", "test prompt", timeout=5)
+        ok, text = _ollama_request("http://localhost:11434", "phi4-mini:latest", "test prompt", timeout=5)
 
         self.assertTrue(ok)
         self.assertIn("SENTIMENT: 0.5", text)
@@ -748,20 +748,20 @@ class TestParseModelfileToApiPayload(unittest.TestCase):
 
     def test_extrai_from(self) -> None:
         """Deve extrair o modelo base do campo FROM."""
-        mf = 'FROM qwen3:1.7b\nSYSTEM """sou expert"""\n'
+        mf = 'FROM phi4-mini:latest\nSYSTEM """sou expert"""\n'
         payload = _parse_modelfile_to_api_payload(mf, "trading-sentiment:latest")
-        self.assertEqual(payload["from"], "qwen3:1.7b")
+        self.assertEqual(payload["from"], "phi4-mini:latest")
 
     def test_extrai_system(self) -> None:
         """Deve extrair o bloco SYSTEM triple-quoted."""
-        mf = 'FROM qwen3:1.7b\nSYSTEM """Você é trading-sentiment."""\n'
+        mf = 'FROM phi4-mini:latest\nSYSTEM """Você é trading-sentiment."""\n'
         payload = _parse_modelfile_to_api_payload(mf, "trading-sentiment:latest")
         self.assertEqual(payload["system"], "Você é trading-sentiment.")
 
     def test_extrai_parameters_float(self) -> None:
         """Deve extrair PARAMETERs com valores float/int."""
         mf = (
-            "FROM qwen3:1.7b\n"
+            "FROM phi4-mini:latest\n"
             "PARAMETER temperature 0.05\n"
             "PARAMETER num_predict 80\n"
             "PARAMETER repeat_penalty 1.1\n"
@@ -774,7 +774,7 @@ class TestParseModelfileToApiPayload(unittest.TestCase):
     def test_extrai_messages(self) -> None:
         """Deve extrair pares MESSAGE user/assistant."""
         mf = (
-            "FROM qwen3:1.7b\n"
+            "FROM phi4-mini:latest\n"
             'MESSAGE user """Coin: BTC\nTitle: ETF"""\n'
             'MESSAGE assistant """SENTIMENT: 0.9 | CONFIDENCE: 0.85"""\n'
         )
@@ -791,12 +791,12 @@ class TestParseModelfileToApiPayload(unittest.TestCase):
 
     def test_nome_modelo_incluido(self) -> None:
         """O nome do modelo sempre deve estar no payload."""
-        payload = _parse_modelfile_to_api_payload("FROM qwen3:1.7b\n", "trading-sentiment:latest")
+        payload = _parse_modelfile_to_api_payload("FROM phi4-mini:latest\n", "trading-sentiment:latest")
         self.assertEqual(payload["model"], "trading-sentiment:latest")
 
     def test_stream_sempre_true(self) -> None:
         """stream deve ser True no payload."""
-        payload = _parse_modelfile_to_api_payload("FROM qwen3:1.7b\n", "m")
+        payload = _parse_modelfile_to_api_payload("FROM phi4-mini:latest\n", "m")
         self.assertTrue(payload["stream"])
 
 
@@ -818,7 +818,7 @@ class TestCreateOllamaModel(unittest.TestCase):
         mock_urlopen.return_value.__enter__ = MagicMock(return_value=mock_resp)
         mock_urlopen.return_value.__exit__ = MagicMock(return_value=False)
 
-        result = _mod.create_ollama_model("FROM qwen3:1.7b\n", OLLAMA_HOST_GPU0)
+        result = _mod.create_ollama_model("FROM phi4-mini:latest\n", OLLAMA_HOST_GPU0)
         self.assertTrue(result)
 
     @patch("urllib.request.urlopen")
@@ -832,7 +832,7 @@ class TestCreateOllamaModel(unittest.TestCase):
         mock_urlopen.return_value.__enter__ = MagicMock(return_value=mock_resp)
         mock_urlopen.return_value.__exit__ = MagicMock(return_value=False)
 
-        result = _mod.create_ollama_model("FROM qwen3:1.7b\n", OLLAMA_HOST_GPU0)
+        result = _mod.create_ollama_model("FROM phi4-mini:latest\n", OLLAMA_HOST_GPU0)
         self.assertFalse(result)
 
     @patch("urllib.request.urlopen")
@@ -841,7 +841,7 @@ class TestCreateOllamaModel(unittest.TestCase):
         import urllib.error
         mock_urlopen.side_effect = urllib.error.URLError("connection refused")
 
-        result = _mod.create_ollama_model("FROM qwen3:1.7b\n", "http://bad:9999")
+        result = _mod.create_ollama_model("FROM phi4-mini:latest\n", "http://bad:9999")
         self.assertFalse(result)
 
 

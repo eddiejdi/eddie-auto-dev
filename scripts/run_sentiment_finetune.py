@@ -2,7 +2,7 @@
 """Rotina completa de fine-tuning do trading-sentiment.
 
 Executa pipeline completo:
-  1. Reclassifica artigos existentes no DB com phi4-mini (substituindo qwen3:1.7b)
+  1. Reclassifica artigos existentes no DB com phi4-mini (substituindo o classificador anterior)
   2. Coleta novos artigos dos feeds RSS
   3. Correlaciona todos com dados de preço (btc.candles)
   4. Treina trading-sentiment:latest com os melhores exemplos
@@ -189,7 +189,7 @@ PRICE_IMPACT_HOURS = 4
 def reclassify_existing(conn: psycopg2.extensions.connection) -> int:
     """Reclassifica todos os artigos que foram classificados com modelo antigo.
 
-    Usa phi4-mini para reclassificar artigos previamente classificados por qwen3:1.7b.
+    Usa phi4-mini para reclassificar artigos previamente classificados pelo modelo anterior.
     Também recalcula ground_truth e prediction_correct.
 
     Returns:

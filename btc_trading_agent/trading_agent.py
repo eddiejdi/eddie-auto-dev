@@ -767,14 +767,14 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             fallback_model=self._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL,
         )
         if not os.getenv("OLLAMA_TRADE_WINDOW_HOST", "").strip():
-            qwen_host = self._secondary_ollama_host(self._OLLAMA_TRADE_WINDOW_HOST)
-            qwen_model = (
+            secondary_host = self._secondary_ollama_host(self._OLLAMA_TRADE_WINDOW_HOST)
+            secondary_model = (
                 self._OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL
                 or self._OLLAMA_TRADE_WINDOW_FALLBACK_MODEL
                 or primary_model
             ).strip()
-            if qwen_host and qwen_model:
-                primary_host, primary_model = qwen_host, qwen_model
+            if secondary_host and secondary_model:
+                primary_host, primary_model = secondary_host, secondary_model
                 if not os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_HOST", "").strip():
                     if cross_model_fallback_enabled:
                         fallback_host = self._OLLAMA_TRADE_WINDOW_HOST
@@ -798,10 +798,10 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             fallback_model=self._OLLAMA_TRADE_PARAMS_FALLBACK_MODEL,
         )
         if not os.getenv("OLLAMA_TRADE_PARAMS_HOST", "").strip():
-            qwen_host = self._secondary_ollama_host(self._OLLAMA_TRADE_PARAMS_HOST)
-            qwen_model = (self._OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL or primary_model).strip()
-            if qwen_host and qwen_model:
-                primary_host, primary_model = qwen_host, qwen_model
+            secondary_host = self._secondary_ollama_host(self._OLLAMA_TRADE_PARAMS_HOST)
+            secondary_model = (self._OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL or primary_model).strip()
+            if secondary_host and secondary_model:
+                primary_host, primary_model = secondary_host, secondary_model
                 if not os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_HOST", "").strip():
                     if cross_model_fallback_enabled:
                         fallback_host = self._OLLAMA_TRADE_PARAMS_HOST
@@ -1563,22 +1563,22 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         int(os.getenv("OLLAMA_AI_PLAN_RETENTION", "288")),
     )  # ~48h por perfil com análises a cada ~10min
     _OLLAMA_PLAN_HOST = os.getenv("OLLAMA_PLAN_HOST", "http://192.168.15.2:11434")
-    _OLLAMA_PLAN_MODEL = os.getenv("OLLAMA_PLAN_MODEL", "qwen2.5:3b")
+    _OLLAMA_PLAN_MODEL = os.getenv("OLLAMA_PLAN_MODEL", "phi4-mini:latest")
     _OLLAMA_PLAN_FALLBACK_MODEL = os.getenv("OLLAMA_PLAN_FALLBACK_MODEL", "").strip()
     _OLLAMA_TRADE_PARAMS_HOST = os.getenv("OLLAMA_TRADE_PARAMS_HOST", _OLLAMA_PLAN_HOST)
     _OLLAMA_TRADE_PARAMS_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_MODEL", _OLLAMA_PLAN_MODEL)
-    _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL", "qwen3:0.6b")
-    _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "qwen3:0.6b")
+    _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL", "gemma3:1b")
+    _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "gemma3:1b")
     _OLLAMA_TRADE_PARAMS_MODE = os.getenv("OLLAMA_TRADE_PARAMS_MODE", "apply")
     _OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC", "300"))
-    # qwen3-fast gera 64 tokens em ~1s mas pode esperar até 60s na fila do coordinator;
+    # gemma3-fast gera 64 tokens em ~1s mas pode esperar até 60s na fila do coordinator;
     # 120s cobre geração + fila com margem.
     _OLLAMA_TRADE_PARAMS_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_TIMEOUT_SEC", "120"))
     _OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC = float(os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_TIMEOUT_SEC", "90"))
     _OLLAMA_TRADE_WINDOW_HOST = os.getenv("OLLAMA_TRADE_WINDOW_HOST", _OLLAMA_TRADE_PARAMS_HOST)
     _OLLAMA_TRADE_WINDOW_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_MODEL", _OLLAMA_TRADE_PARAMS_MODEL)
     _OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL", _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL)
-    _OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_MODEL", "qwen3:0.6b")
+    _OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_MODEL", "gemma3:1b")
     _OLLAMA_TRADE_WINDOW_MODE = os.getenv("OLLAMA_TRADE_WINDOW_MODE", "apply")
     _OLLAMA_TRADE_WINDOW_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_MIN_INTERVAL_SEC", "30"))
     _OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC", "20"))

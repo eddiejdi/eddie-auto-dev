@@ -14,7 +14,7 @@ from typing import List, Dict
 OLLAMA_HOST = "192.168.15.2"
 OLLAMA_PORT = "11434"
 OLLAMA_API = f"http://{OLLAMA_HOST}:{OLLAMA_PORT}"
-BASE_MODEL = "qwen2.5-coder:7b"
+BASE_MODEL = "mistral:7b"
 NEW_MODEL = "shared-coder"
 
 CHATS_DIR = Path("/home/homelab/myClaude/training_data/chats_raw")

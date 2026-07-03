@@ -484,10 +484,10 @@ class TestOllamaHomelab:
         r = requests.get(f"{OLLAMA_GPU0}/api/tags", timeout=OLLAMA_TIMEOUT)
         r.raise_for_status()
         modelos = [m["name"] for m in r.json().get("models", [])]
-        # Aceita trading-analyst (padrão atual), shared-coder (legado) ou qwen3
+        # Aceita trading-analyst (padrão atual), shared-coder (legado) ou modelos aprovados
         trading_models = [
             m for m in modelos
-            if any(k in m.lower() for k in ("trading", "analyst", "coder", "shared", "qwen"))
+            if any(k in m.lower() for k in ("trading", "analyst", "coder", "shared", "gemma", "phi", "mistral", "llama"))
         ]
         assert trading_models, (
             f"Nenhum modelo de trading disponível no GPU0. "

@@ -8,7 +8,7 @@ Type=oneshot
 User=edenilson
 WorkingDirectory=/home/edenilson/eddie-auto-dev
 Environment=OLLAMA_WARM_MODEL_GPU0=trading-analyst:latest
-Environment=OLLAMA_WARM_MODEL_GPU1=qwen3:0.6b
+Environment=OLLAMA_WARM_MODEL_GPU1=gemma3:1b
 ExecStart=/home/edenilson/eddie-auto-dev/.venv/bin/python3 /home/edenilson/eddie-auto-dev/scripts/ollama_warmup.py --verbose
 TimeoutStartSec=120
 StandardOutput=journal

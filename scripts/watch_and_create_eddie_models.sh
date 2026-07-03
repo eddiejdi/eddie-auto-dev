@@ -2,7 +2,7 @@
 set -euo pipefail
 # watcher: cria shared-coder e shared-whatsapp quando base model estiver disponível
 REPO_DIR="/home/homelab/shared-auto-dev"
-BASE_MODEL="qwen2.5-coder:7b"
+BASE_MODEL="mistral:7b"
 LOG_FILE="/var/log/watch_shared_models.log"
 MODEL1="shared-coder"
 MODEL2="shared-whatsapp"

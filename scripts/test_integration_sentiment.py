@@ -3,7 +3,7 @@
 
 Verifica end-to-end:
   1. GPU0 online + phi4-mini carregado
-  2. GPU1 online + qwen3:0.6b carregado
+  2. GPU1 online + gemma3:1b carregado
   3. trading-sentiment disponível na GPU0
   4. Classificação via phi4-mini (GPU0) funciona
   5. Classificação via trading-sentiment (GPU0) funciona
@@ -344,7 +344,7 @@ def main() -> int:
         test_model_loaded(GPU0, "GPU0", "phi4-mini")
         test_model_available(GPU0, "GPU0", "trading-sentiment")
     if gpu1_ok:
-        test_model_loaded(GPU1, "GPU1", "qwen3:0.6b")
+        test_model_loaded(GPU1, "GPU1", "gemma3:1b")
 
     print("\n🧠 3. Classificação ao vivo")
     if gpu0_ok:

@@ -7,7 +7,7 @@ import json
 
 OLLAMA_HOST = "http://192.168.15.2:11434"
 
-modelfile = '''FROM qwen2.5-coder:7b
+modelfile = '''FROM mistral:7b
 
 SYSTEM """
 Você é Shared, um assistente de IA pessoal amigável e prestativo.

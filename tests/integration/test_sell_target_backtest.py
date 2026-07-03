@@ -148,7 +148,7 @@ def _get_loaded_model() -> str | None:
 
 def _ask_ollama(prompt: str, timeout: int = 30) -> str | None:
     """
-    Consulta Ollama. Usa /api/chat para modelos com template de chat (trading-analyst/qwen).
+    Consulta Ollama. Usa /api/chat para modelos com template de chat (trading-analyst).
     Retorna o conteúdo texto da resposta.
     """
     model = OLLAMA_MODEL or _get_loaded_model()
@@ -160,7 +160,7 @@ def _ask_ollama(prompt: str, timeout: int = 30) -> str | None:
             json={
                 "model": model,
                 "stream": False,
-                "think": False,   # desativa thinking mode (qwen3/trading-analyst)
+                "think": False,   # desativa thinking mode (trading-analyst)
                 "messages": [{"role": "user", "content": prompt}],
             },
             timeout=timeout,

@@ -28,27 +28,20 @@ for d in [DATA_DIR, BACKUP_DIR, PROJECTS_DIR, RAG_DIR, UPLOAD_DIR]:
 
 _MODEL_CTX_TABLE: Dict[str, int] = {
     # ── micro (≤ 2 GB) ──────────────────────
-    "qwen2.5-coder:1.5b":  32768,
-    "qwen2.5:1.5b":        32768,
-    "qwen2.5:3b":          32768,
+    "gemma3:1b":           32768,
+    "smollm2:iq3m":        32768,
+    "llama3.2:1b":         32768,
     "phi3:mini":            16384,
     # ── small (2-5 GB, cabe na VRAM) ────────
-    "qwen2.5-coder:7b":    32768,
-    "qwen2.5:7b":          32768,
-    "deepseek-coder:6.7b":  16384,
+    "mistral:7b":           32768,
+    "phi3:3.8b-mini-128k-instruct-q3_k_m": 32768,
+    "phi4-mini:latest":     16384,
     "codellama:7b":          16384,
     "llama3.1:8b":           16384,
-    "mistral:7b":            16384,
     "shared-coder":           16384,
-    # ── medium (5-8 GB, limite VRAM) ────────
-    "qwen3:8b":              16384,
-    "deepseek-coder-v2:16b":  8192,
     # ── large (>8 GB, split CPU/GPU) ────────
-    "qwen3:14b":              8192,
-    "qwen2.5-coder:14b":      8192,
     "codellama:34b":           4096,
     "llama3.1:70b":            4096,
-    "deepseek-coder:33b":      4096,
 }
 
 _DEFAULT_NUM_CTX = 8192
@@ -59,17 +52,17 @@ def get_dynamic_num_ctx(model: Optional[str] = None) -> int:
     """Retorna num_ctx ideal para o modelo, sem desperdiçar VRAM/RAM.
 
     Ordem de resolução:
-        1. Variável de ambiente ``OLLAMA_NUM_CTX_<MODEL_SLUG>`` (ex.: OLLAMA_NUM_CTX_QWEN3_14B=4096)
+        1. Variável de ambiente ``OLLAMA_NUM_CTX_<MODEL_SLUG>`` (ex.: OLLAMA_NUM_CTX_MISTRAL_7B=4096)
         2. Tabela ``_MODEL_CTX_TABLE``
         3. Heurística por tamanho (padrão no sufixo ":XB")
         4. ``_DEFAULT_NUM_CTX``
     """
     if not model:
-        model = os.getenv("OLLAMA_MODEL", "qwen2.5:3b")
+        model = os.getenv("OLLAMA_MODEL", "gemma3:1b")
 
     model_lower = model.lower().strip()
 
-    # 1. Env override  (OLLAMA_NUM_CTX_QWEN3_14B)
+    # 1. Env override  (OLLAMA_NUM_CTX_MISTRAL_7B)
     slug = model_lower.replace(":", "_").replace("-", "_").replace(".", "_").upper()
     env_val = os.getenv(f"OLLAMA_NUM_CTX_{slug}")
     if env_val and env_val.isdigit():
@@ -119,7 +112,7 @@ if USE_GEMINI and os.getenv("GOOGLE_AI_API_KEY"):
         "fallback": {
             "provider": "ollama",
             "base_url": os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"),
-            "model": "qwen2.5-coder:7b",
+            "model": "mistral:7b",
         }
     }
 else:
@@ -127,9 +120,9 @@ else:
     LLM_CONFIG = {
         "provider": "ollama",
         "base_url": os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434"),
-        "model": os.getenv("OLLAMA_MODEL", "qwen2.5:3b"),
-        "fallback_model": "qwen2.5-coder:7b",
-        "heavy_model": "deepseek-coder-v2:16b",
+        "model": os.getenv("OLLAMA_MODEL", "phi4-mini:latest"),
+        "fallback_model": "mistral:7b",
+        "heavy_model": "mistral-nemo:12b",
         "temperature": 0.3,
         "max_tokens": 8192,
         "timeout": 120,
@@ -176,12 +169,12 @@ HUGGINGFACE_INFERENCE_CONFIG = {
 # ─── Sub-Agent GPU1 (GTX 1050 CC 6.1 via CUDA cuda_v12) ────────────────
 # Instância Ollama separada na GPU1 para controller permanente.
 # CUDA via cuda_v12 (testado 2026-03-06: 56.6 tok/s, CC 6.1 suportado).
-# Modelo fixo qwen3:0.6b (523MB) loaded Forever — controla geração de mídia.
+# Modelo fixo gemma3:1b (815MB) loaded Forever — controla geração de mídia.
 # VRAM: 1085/2048 MiB usado (53%), ~963 MiB livre para KV cache.
 LLM_GPU1_CONFIG = {
     "enabled": os.getenv("OLLAMA_GPU1_ENABLED", "true").lower() == "true",
     "base_url": os.getenv("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435"),
-    "model": os.getenv("OLLAMA_MODEL_GPU1", "qwen3:0.6b"),
+    "model": os.getenv("OLLAMA_MODEL_GPU1", "gemma3:1b"),
     "backend": "cuda_v12",  # cuda_v13 não suporta CC 6.1
     "keep_alive": -1,  # modelo permanente
     "timeout": 60,
@@ -598,7 +591,7 @@ FILE_EXTENSIONS = {
 
 # ─── Configuração de Geração de Mídia (GPU0 RTX 2060 SUPER 8GB) ───────
 # GPU0 alterna entre Ollama LLM e pipelines diffusers (exclusão mútua).
-# GPU1 (GTX 1050 2GB) controla a orquestração via qwen3:0.6b.
+# GPU1 (GTX 1050 2GB) controla a orquestração via gemma3:1b.
 # Modelos sob demanda em /mnt/raid1/models/ (~29 GB total se todos instalados).
 MEDIA_GENERATION_CONFIG = {
     "enabled": os.getenv("MEDIA_GEN_ENABLED", "true").lower() == "true",

@@ -401,7 +401,7 @@ sudo sed -i \
   -e 's|^Environment=OLLAMA_TRADE_WINDOW_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_HOST=http://192.168.15.2:11437|' \
   -e 's|^Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11437|' \
   /etc/systemd/system/crypto-agent@.service.d/common.conf 2>/dev/null || true
-echo "🔀 Routing: agents → coordenador :11437 (qwen2.5:1.5b-instruct-q2_k)"
+echo "🔀 Routing: agents → coordenador :11437 (llama3.2:1b)"
 
 # Habilita e reinicia RSS sentiment
 sudo systemctl enable rss-sentiment-exporter.service 2>/dev/null || true

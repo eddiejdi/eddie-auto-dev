@@ -69,9 +69,9 @@ OLLAMA_HOST_GPU1 = os.environ.get("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435
 OLLAMA_HOST_GPU0 = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434")
 
 # Modelos por GPU para classificação de sentimento
-# GPU0 (RTX 2060 8GB): qwen3:1.7b — 1.4GB, cabe com trading-analyst (5.4+1.5=6.9GB < 7.68GB)
+# GPU0 (RTX 2060 8GB): phi4-mini:latest — 1.4GB, cabe com trading-analyst (5.4+1.5=6.9GB < 7.68GB)
 # GPU1 (GTX 1050 2GB): gemma3:1b — 815MB, cabe sozinho (1.1GB < 1.9GB disponível)
-CLASSIFIER_MODEL_GPU0 = os.environ.get("OLLAMA_CLASSIFIER_MODEL_GPU0", "qwen3:1.7b")
+CLASSIFIER_MODEL_GPU0 = os.environ.get("OLLAMA_CLASSIFIER_MODEL_GPU0", "phi4-mini:latest")
 CLASSIFIER_MODEL_GPU1 = os.environ.get("OLLAMA_CLASSIFIER_MODEL_GPU1", "gemma3:1b")
 # Alias para compatibilidade (usado em logs)
 CLASSIFIER_MODEL = CLASSIFIER_MODEL_GPU0
@@ -81,7 +81,7 @@ SENTIMENT_MODEL_NAME = "trading-sentiment"
 SENTIMENT_MODEL_TAG = "latest"
 
 # Base model para o Modelfile
-BASE_MODEL = os.environ.get("OLLAMA_BASE_MODEL", "qwen3:1.7b")
+BASE_MODEL = os.environ.get("OLLAMA_BASE_MODEL", "phi4-mini:latest")
 
 # Limiar de variação de preço para considerar como bullish/bearish
 PRICE_CHANGE_THRESHOLD_PCT = float(os.environ.get("PRICE_THRESHOLD_PCT", "1.5"))
@@ -487,9 +487,9 @@ def _ollama_request(
 
 
 def classify_with_ollama(title: str, description: str, coin: str) -> Tuple[float, float, str, str]:
-    """Classifica sentimento usando GPU0 (qwen3:1.7b) → GPU1 (gemma3:1b) como fallback.
+    """Classifica sentimento usando GPU0 (phi4-mini:latest) → GPU1 (gemma3:1b) como fallback.
 
-    GPU0 (RTX 2060 8GB) primário — qwen3:1.7b (1.4GB) cabe com trading-analyst (5.4+1.5=6.9GB).
+    GPU0 (RTX 2060 8GB) primário — phi4-mini:latest (1.4GB) cabe com trading-analyst (5.4+1.5=6.9GB).
     GPU1 (GTX 1050 2GB) fallback — gemma3:1b (815MB) cabe sozinho (~1.1GB < 1.9GB disponível).
     Modelos configurados por OLLAMA_CLASSIFIER_MODEL_GPU0 / OLLAMA_CLASSIFIER_MODEL_GPU1.
 
@@ -504,7 +504,7 @@ Coin: {coin}
 Title: {title}
 Summary: {description[:300]}"""
 
-    # Tenta GPU0 primeiro (RTX 2060 — qwen3:1.7b mais robusto)
+    # Tenta GPU0 primeiro (RTX 2060 — phi4-mini:latest mais robusto)
     ok, text = _ollama_request(OLLAMA_HOST_GPU0, CLASSIFIER_MODEL_GPU0, prompt, timeout=30)
     if not ok:
         log.debug("GPU0 falhou, tentando GPU1: %s", text[:60])
@@ -531,7 +531,7 @@ def _parse_ollama_response(response: str) -> Tuple[float, float, str, str]:
     category = "general"
 
     try:
-        # Remove thinking tags se presentes (qwen3 pode incluir)
+        # Remove thinking tags se presentes (alguns modelos podem incluir)
         response = re.sub(r"<think>.*?</think>", "", response, flags=re.DOTALL).strip()
         # Remove </think> residual quando <think> foi consumido no stream
         response = re.sub(r"^\s*</think>\s*", "", response).strip()

@@ -47,17 +47,17 @@ def test_clean_generated_text_remove_think_and_fences() -> None:
 
 def test_iter_gpu1_models_preserva_ordem_e_remove_duplicatas() -> None:
     models = tts_tool.iter_gpu1_models(
-        "qwen3:0.6b",
-        "qwen2.5:1.5b-instruct-q2_k, qwen3:0.6b",
+        "gemma3:1b",
+        "llama3.2:1b, gemma3:1b",
     )
 
-    assert models == ["qwen3:0.6b", "qwen2.5:1.5b-instruct-q2_k"]
+    assert models == ["gemma3:1b", "llama3.2:1b"]
 
 
 def test_generate_with_gpu1_models_usa_fallback_quando_modelo_primario_falha(monkeypatch) -> None:
     _FakeOllamaClient.responses_by_model = {
-        "qwen3:0.6b": [RuntimeError("server busy, please try again. maximum pending requests exceeded")],
-        "qwen2.5:1.5b-instruct-q2_k": ["Texto final de teste, com contexto suficiente e tres frases. Segunda frase aqui. Terceira frase aqui."],
+        "gemma3:1b": [RuntimeError("server busy, please try again. maximum pending requests exceeded")],
+        "llama3.2:1b": ["Texto final de teste, com contexto suficiente e tres frases. Segunda frase aqui. Terceira frase aqui."],
     }
     _FakeOllamaClient.attempts = []
     monkeypatch.setattr(tts_tool, "OllamaClient", _FakeOllamaClient)
@@ -65,8 +65,8 @@ def test_generate_with_gpu1_models_usa_fallback_quando_modelo_primario_falha(mon
     result = tts_tool.generate_with_gpu1_models(
         prompt="prompt teste",
         host="http://gpu1:11435",
-        primary_model="qwen3:0.6b",
-        fallback_models_arg="qwen2.5:1.5b-instruct-q2_k",
+        primary_model="gemma3:1b",
+        fallback_models_arg="llama3.2:1b",
         validator=lambda text: (bool(text.strip()), "vazio"),
         num_predict=128,
         num_ctx=1024,
@@ -75,7 +75,7 @@ def test_generate_with_gpu1_models_usa_fallback_quando_modelo_primario_falha(mon
     )
 
     assert "Texto final de teste" in result
-    assert _FakeOllamaClient.attempts == ["qwen3:0.6b", "qwen2.5:1.5b-instruct-q2_k"]
+    assert _FakeOllamaClient.attempts == ["gemma3:1b", "llama3.2:1b"]
 
 
 def test_build_gpu1_expansion_prompt_exige_contexto_de_autoria_e_relatoria() -> None:
