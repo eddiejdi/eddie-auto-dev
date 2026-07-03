@@ -33,6 +33,8 @@ logging.basicConfig(
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
 )
 
+OPERATIONAL_PROFILES = ("conservative", "aggressive", "shadow")
+
 # ── Configuração ─────────────────────────────────────────────────────────────
 
 DATABASE_URL = os.getenv(
@@ -82,6 +84,7 @@ def collect_context_data() -> dict:
                 FROM btc.trades
                 WHERE dry_run = false
                   AND symbol = 'BTC-USDT'
+                  AND profile IN ('conservative', 'aggressive', 'shadow')
                   AND to_timestamp(timestamp) >= NOW() - INTERVAL '24 hours'
                 GROUP BY profile
                 ORDER BY profile
@@ -97,33 +100,78 @@ def collect_context_data() -> dict:
                     ROUND(SUM(CASE WHEN side='sell' THEN COALESCE(pnl,0) ELSE 0 END)::numeric, 4) AS pnl_total
                 FROM btc.trades
                 WHERE dry_run = false AND symbol = 'BTC-USDT'
+                  AND profile IN ('conservative', 'aggressive', 'shadow')
                 GROUP BY profile
                 ORDER BY profile
             """)
             history = [dict(r) for r in cur.fetchall()]
 
-            # Posições abertas (buy sem sell emparelhado — aproximação por perfil)
+            # Posições abertas por perfil, reconstruídas a partir do último SELL
+            # de cada perfil. Isso evita reportar BUY antigo como posição aberta
+            # depois de a estratégia já ter zerado o perfil.
             cur.execute("""
+                WITH profiles AS (
+                    SELECT DISTINCT profile
+                    FROM btc.trades
+                    WHERE symbol = 'BTC-USDT'
+                      AND dry_run = false
+                      AND profile IN ('conservative', 'aggressive', 'shadow')
+                      AND profile IS NOT NULL
+                ),
+                latest_sell AS (
+                    SELECT profile, MAX(timestamp) AS last_sell_ts
+                    FROM btc.trades
+                    WHERE dry_run = false
+                      AND symbol = 'BTC-USDT'
+                      AND profile IN ('conservative', 'aggressive', 'shadow')
+                      AND side = 'sell'
+                    GROUP BY profile
+                ),
+                open_buys AS (
+                    SELECT t.*
+                    FROM btc.trades t
+                    LEFT JOIN latest_sell s ON s.profile = t.profile
+                    WHERE t.dry_run = false
+                      AND t.symbol = 'BTC-USDT'
+                      AND t.profile IN ('conservative', 'aggressive', 'shadow')
+                      AND t.side = 'buy'
+                      AND COALESCE(t.metadata->>'source', '') != 'external_deposit'
+                      AND t.timestamp > COALESCE(s.last_sell_ts, 0)
+                )
                 SELECT
-                    profile,
-                    COUNT(*) AS n_entries,
-                    ROUND(SUM(size)::numeric, 8) AS total_btc,
-                    ROUND(AVG(price)::numeric, 2) AS avg_entry
-                FROM btc.trades
-                WHERE dry_run = false
-                  AND symbol = 'BTC-USDT'
-                  AND side = 'buy'
-                  AND to_timestamp(timestamp) >= NOW() - INTERVAL '30 days'
-                GROUP BY profile
-                ORDER BY profile
+                    p.profile,
+                    COALESCE(COUNT(o.*), 0) AS n_entries,
+                    COALESCE(ROUND(SUM(o.size)::numeric, 8), 0) AS total_btc,
+                    COALESCE(
+                        ROUND((SUM(COALESCE(NULLIF(o.funds, 0), o.size * o.price)) / NULLIF(SUM(o.size), 0))::numeric, 2),
+                        0
+                    ) AS avg_entry
+                FROM profiles p
+                LEFT JOIN open_buys o ON o.profile = p.profile
+                GROUP BY p.profile
+                HAVING COALESCE(SUM(o.size), 0) > 0
+                ORDER BY p.profile
             """)
             open_pos = [dict(r) for r in cur.fetchall()]
+
+            # Balanço de contas KuCoin (main/trade) do último snapshot
+            cur.execute("""
+                WITH latest AS (
+                    SELECT MAX(synced_at) AS s FROM btc.exchange_balance_snapshots
+                )
+                SELECT account_type, currency, balance, price_usdt, synced_at
+                FROM btc.exchange_balance_snapshots, latest
+                WHERE synced_at = latest.s
+            """)
+            snapshot_rows = [dict(r) for r in cur.fetchall()]
+            balance = _build_balance_summary(snapshot_rows)
 
             # Total de trades hoje
             total_24h = sum(r["buys"] + r["sells"] for r in trades_24h)
             total_pnl_24h = sum(float(r["pnl_24h"]) for r in trades_24h)
 
             return {
+                "balance": balance,
                 "current_price": current_price,
                 "trades_24h": trades_24h,
                 "history": history,
@@ -134,6 +182,69 @@ def collect_context_data() -> dict:
             }
     finally:
         conn.close()
+
+
+def _build_balance_summary(rows: list[dict]) -> dict:
+    """Resume o último snapshot de saldos em totais por conta e por moeda.
+
+    Subcontas KuCoin não são sincronizadas — apenas main/trade da conta master.
+    """
+    def to_usdt(row: dict) -> float:
+        price = row.get("price_usdt")
+        if price is None:
+            price = 1.0 if row["currency"] == "USDT" else 0.0
+        return float(row["balance"]) * float(price)
+
+    per_account: dict[str, float] = {}
+    per_currency: dict[str, dict] = {}
+    brl_rate = 0.0
+    synced_at = None
+    for r in rows:
+        per_account[r["account_type"]] = per_account.get(r["account_type"], 0.0) + to_usdt(r)
+        cur_entry = per_currency.setdefault(r["currency"], {"qty": 0.0, "usdt": 0.0})
+        cur_entry["qty"] += float(r["balance"])
+        cur_entry["usdt"] += to_usdt(r)
+        if r["currency"] == "BRL" and r.get("price_usdt"):
+            brl_rate = float(r["price_usdt"])
+        synced_at = r.get("synced_at") or synced_at
+
+    total_usdt = sum(per_account.values())
+    return {
+        "brl_rate": brl_rate or None,
+        "per_account": {k: round(v, 2) for k, v in sorted(per_account.items())},
+        "per_account_brl": {
+            k: round(v / brl_rate, 2) for k, v in sorted(per_account.items())
+        } if brl_rate else {},
+        "per_currency": {
+            k: {"qty": round(v["qty"], 8), "usdt": round(v["usdt"], 2)}
+            for k, v in sorted(per_currency.items())
+            if v["usdt"] >= 0.01
+        },
+        "total_usdt": round(total_usdt, 2),
+        "total_brl": round(total_usdt / brl_rate, 2) if brl_rate else None,
+        "synced_at": synced_at.isoformat() if synced_at else None,
+    }
+
+
+def format_balance_block(balance: dict) -> str:
+    """Formata o balanço de contas em texto para prompt e fallback."""
+    if not balance or not balance.get("per_account"):
+        return "  Snapshot de saldos indisponível\n"
+    lines = []
+    per_brl = balance.get("per_account_brl") or {}
+    for account, usdt in balance["per_account"].items():
+        brl = per_brl.get(account)
+        brl_txt = f" (≈ R$ {brl:,.2f})" if brl is not None else ""
+        lines.append(f"  - Conta {account}: ${usdt:,.2f} USDT{brl_txt}")
+    for currency, v in balance.get("per_currency", {}).items():
+        lines.append(f"  - {currency}: {v['qty']:g} (≈ ${v['usdt']:,.2f} USDT)")
+    total_line = f"  - TOTAL: ${balance['total_usdt']:,.2f} USDT"
+    if balance.get("total_brl"):
+        total_line += f" (≈ R$ {balance['total_brl']:,.2f})"
+    lines.append(total_line)
+    if balance.get("synced_at"):
+        lines.append(f"  - Snapshot: {balance['synced_at']}")
+    return "\n".join(lines) + "\n"
 
 
 def save_report(
@@ -172,7 +283,7 @@ def save_report(
                 report_text,
                 pnl_24h,
                 profiles,
-                json.dumps(metadata),
+                json.dumps(metadata, default=str),
                 model_used,
             ))
         logger.info("Relatório salvo em btc.daily_reports para %s", date.today())
@@ -293,6 +404,8 @@ Regras:
 - Se PnL for positivo: destaque como vitória; se negativo: mencione cautela
 - Analise tendências: se avg_entry > preço_atual, posições estão no negativo (underwater)
 - Identifique alertas críticos: agentes parados, perda > -5%, posições muito abertas
+- Estado de posição deve ser SEMPRE por perfil; não diga "sem posição aberta" global se algum perfil tiver BTC aberto
+- Inclua sempre a seção 💰 Balanço de Contas com os saldos main/trade/total fornecidos (USDT e R$)
 - Seja objetivo e baseado somente nos dados fornecidos
 - NUNCA invente dados ou métricas que não foram fornecidas"""
 
@@ -344,10 +457,11 @@ def generate_report(context: dict, live_data: dict, model: str) -> str:
             f"PnL não realizado: ${unrealized:+.4f} ({pct:+.2f}%)\n"
         )
     if not pos_str:
-        pos_str = "  Nenhuma posição aberta no período\n"
+        pos_str = "  Nenhuma posição aberta nos perfis analisados\n"
 
     # Formatar saldo KuCoin
     kucoin_str = live_data.get("kucoin_balance", "INDISPONÍVEL")
+    balance_str = format_balance_block(context.get("balance") or {})
 
     # Formatar status agents
     agents_str = "\n".join(
@@ -366,13 +480,15 @@ ${price:,.2f}
 PnL total 24h: ${context['total_pnl_24h']:+.4f}
 Total execuções: {context['total_trades_24h']}
 
-### Posições Abertas (últimos 30 dias, sem sell emparelhado)
+### Posições Abertas por Perfil (reconstruídas após o último SELL do perfil)
 {pos_str}
 
 ### Performance Histórica Acumulada
 {history_str}
 
-### Saldo KuCoin Live
+### Balanço de Contas KuCoin (main/trade/total — último snapshot)
+{balance_str}
+### Saldo KuCoin Live (conta trade)
 {kucoin_str}
 
 ### Status dos Agentes
@@ -389,7 +505,61 @@ Com base nesses dados, gere o relatório completo formatado com emojis para Tele
             tools=[],  # Sem MCP tools — dados já foram coletados
         )
 
-    return report
+    # Remover blocos <think> de modelos reasoning antes do envio
+    import re as _re
+    report = _re.sub(r"<think>.*?</think>", "", report or "", flags=_re.DOTALL)
+    report = report.strip()
+    if report:
+        return report
+
+    logger.warning("Ollama retornou relatório vazio; usando fallback determinístico")
+    return build_deterministic_report(context, live_data)
+
+
+def build_deterministic_report(context: dict, live_data: dict) -> str:
+    """Gera relatório local quando o LLM retorna vazio ou falha."""
+    today = context["report_date"]
+    price = context["current_price"]
+    lines = [
+        f"📊 Trading Report BTC-USDT — {today}",
+        "",
+        f"Preço atual: ${price:,.2f}",
+        f"PnL realizado 24h: ${context['total_pnl_24h']:+.4f}",
+        f"Execuções 24h: {context['total_trades_24h']}",
+        "",
+        "Trades 24h por perfil:",
+    ]
+    if context["trades_24h"]:
+        for t in context["trades_24h"]:
+            lines.append(
+                f"- {t['profile']}: {t['buys']} buys, {t['sells']} sells, "
+                f"{t['wins']}W/{t['losses']}L, PnL ${float(t['pnl_24h']):+.4f}"
+            )
+    else:
+        lines.append("- Nenhum trade nas últimas 24h")
+
+    lines.extend(["", "Posições abertas por perfil:"])
+    if context["open_positions"]:
+        for p in context["open_positions"]:
+            avg = float(p["avg_entry"])
+            btc = float(p["total_btc"])
+            unrealized = round((price - avg) * btc, 4)
+            pct = round((price / avg - 1) * 100, 2) if avg > 0 else 0
+            lines.append(
+                f"- {p['profile']}: {p['n_entries']} entradas, {btc:.8f} BTC, "
+                f"avg ${avg:,.2f}, PnL não realizado ${unrealized:+.4f} ({pct:+.2f}%)"
+            )
+    else:
+        lines.append("- Nenhuma posição aberta nos perfis analisados")
+
+    lines.extend(["", "💰 Balanço de contas (main/trade/total):"])
+    lines.append(format_balance_block(context.get("balance") or {}).rstrip())
+    lines.extend(["", "Saldo KuCoin live (conta trade):", str(live_data.get("kucoin_balance", "INDISPONÍVEL"))])
+    agents = live_data.get("agents_status", {})
+    if agents:
+        lines.extend(["", "Status dos agentes:"])
+        lines.extend(f"- {name}: {status}" for name, status in agents.items())
+    return "\n".join(lines)
 
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
@@ -462,10 +632,17 @@ def main() -> None:
         return
 
     # 3. Salvar no banco
-    profiles = [r["profile"] for r in context["trades_24h"]]
+    profiles = sorted({
+        r["profile"]
+        for rows in (context["trades_24h"], context["open_positions"])
+        for r in rows
+        if r.get("profile")
+    })
     metadata = {
         "current_price": context["current_price"],
         "total_trades_24h": context["total_trades_24h"],
+        "open_positions": context["open_positions"],
+        "balance": context.get("balance"),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
     try:
