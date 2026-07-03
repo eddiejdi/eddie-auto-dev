@@ -1959,7 +1959,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Patrimônio em USDT por conta KuCoin (main, trade, total) e por moeda (BTC convertido, USDT). Fonte: btc.exchange_balance_snapshots (~15 min). Subcontas não são sincronizadas.",
+      "description": "Patrimônio em USDT por conta KuCoin (main, trade e subcontas sub:*, dinâmico) e por moeda (BTC convertido, USDT), com Total destacado. Fonte: btc.exchange_balance_snapshots (~15 min).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2101,7 +2101,7 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT\n  synced_at AS time,\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END))\n    FILTER (WHERE account_type = 'main') AS \"Conta Main\",\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END))\n    FILTER (WHERE account_type = 'trade') AS \"Conta Trade\",\n  SUM(balance * price_usdt) FILTER (WHERE currency = 'BTC') AS \"BTC (em USDT)\",\n  SUM(balance) FILTER (WHERE currency = 'USDT') AS \"USDT\",\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END)) AS \"Total\"\nFROM btc.exchange_balance_snapshots\nWHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "WITH snap AS (\n  SELECT synced_at, account_type, currency,\n         balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END) AS usdt\n  FROM btc.exchange_balance_snapshots\n  WHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n)\nSELECT synced_at AS time, 'Conta ' || account_type AS metric, SUM(usdt) AS value FROM snap GROUP BY 1, 2\nUNION ALL\nSELECT synced_at, 'Total', SUM(usdt) FROM snap GROUP BY 1\nUNION ALL\nSELECT synced_at, 'BTC (em USDT)', SUM(usdt) FROM snap WHERE currency = 'BTC' GROUP BY 1\nUNION ALL\nSELECT synced_at, 'USDT', SUM(usdt) FROM snap WHERE currency = 'USDT' GROUP BY 1\nORDER BY 1",
           "refId": "A",
           "sql": {
             "columns": [],

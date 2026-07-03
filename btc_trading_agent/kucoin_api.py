@@ -746,6 +746,40 @@ def get_balances(account_type: str = "trade") -> List[Dict[str, Any]]:
         for a in accounts if a.get("type") == account_type
     ]
 
+def get_sub_account_balances() -> List[Dict[str, Any]]:
+    """Obtém saldos de todas as subcontas da conta master.
+
+    Retorna lista plana com um item por (subconta, tipo, moeda):
+    {sub_name, account_type, currency, balance, available, holds}.
+    Lista vazia se não houver subcontas.
+    """
+    r = _signed_request("GET", "/api/v1/sub-accounts", timeout=10)
+    if r.status_code != 200:
+        raise RuntimeError(f"API error: {r.status_code}")
+
+    data = r.json().get("data") or []
+    # v1 retorna lista; formatos paginados usam {"items": [...]}
+    subs = data.get("items", []) if isinstance(data, dict) else data
+    out: List[Dict[str, Any]] = []
+    for sub in subs:
+        name = sub.get("subName") or sub.get("subUserId") or "sub"
+        for bucket, acc_type in (
+            ("mainAccounts", "main"),
+            ("tradeAccounts", "trade"),
+            ("marginAccounts", "margin"),
+        ):
+            for a in sub.get(bucket) or []:
+                out.append({
+                    "sub_name": name,
+                    "account_type": acc_type,
+                    "currency": a.get("currency"),
+                    "balance": float(a.get("balance", 0)),
+                    "available": float(a.get("available", 0)),
+                    "holds": float(a.get("holds", 0)),
+                })
+    return out
+
+
 def get_balance(currency: str = "USDT") -> float:
     """Obtém saldo específico da conta TRADE."""
     balances = get_balances(account_type="trade")
