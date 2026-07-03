@@ -2322,7 +2322,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Saldo disponível na conta trade convertido para BRL a partir do último snapshot sincronizado da exchange.",
+      "description": "Saldo total disponível na KuCoin convertido para BRL, somando as contas main e trade da conta master (subcontas não são sincronizadas). Taxa BRL do último snapshot.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2379,11 +2379,11 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "WITH latest_sync AS (\n  SELECT MAX(synced_at) AS synced_at\n  FROM btc.exchange_balance_snapshots\n  WHERE account_type = 'trade'\n), latest_balances AS (\n  SELECT currency, available, price_usdt\n  FROM btc.exchange_balance_snapshots ebs\n  JOIN latest_sync ls ON ebs.synced_at = ls.synced_at\n  WHERE ebs.account_type = 'trade' AND ebs.available > 0\n), brl_rate AS (\n  SELECT COALESCE(\n    MAX(CASE WHEN currency = 'BRL' THEN NULLIF(price_usdt, 0) END),\n    1\n  ) AS brl_price_usdt\n  FROM latest_balances\n)\nSELECT ROUND(COALESCE(SUM(\n  CASE\n    WHEN lb.currency = 'BRL' THEN lb.available\n    WHEN br.brl_price_usdt IS NULL OR br.brl_price_usdt = 0 THEN 0\n    ELSE (lb.available * COALESCE(lb.price_usdt, CASE WHEN lb.currency = 'USDT' THEN 1 END, 0)) / br.brl_price_usdt\n  END\n), 0)::numeric, 2) AS value\nFROM latest_balances lb\nCROSS JOIN brl_rate br",
+          "rawSql": "WITH latest_sync AS (\n  SELECT MAX(synced_at) AS synced_at\n  FROM btc.exchange_balance_snapshots\n), latest_balances AS (\n  SELECT account_type, currency, available, price_usdt\n  FROM btc.exchange_balance_snapshots ebs\n  JOIN latest_sync ls ON ebs.synced_at = ls.synced_at\n  WHERE ebs.available > 0\n), brl_rate AS (\n  SELECT MAX(CASE WHEN currency = 'BRL' THEN NULLIF(price_usdt, 0) END) AS brl_price_usdt\n  FROM latest_balances\n)\nSELECT ROUND(COALESCE(SUM(\n  CASE\n    WHEN lb.currency = 'BRL' THEN lb.available\n    WHEN br.brl_price_usdt IS NULL OR br.brl_price_usdt = 0 THEN 0\n    ELSE (lb.available * COALESCE(lb.price_usdt, CASE WHEN lb.currency = 'USDT' THEN 1 END, 0)) / br.brl_price_usdt\n  END\n), 0)::numeric, 2) AS value\nFROM latest_balances lb\nCROSS JOIN brl_rate br",
           "refId": "A"
         }
       ],
-      "title": "💸 Disponível para Saque (R$)",
+      "title": "💸 Saldo Exchange em R$ (main+trade)",
       "type": "stat"
     },
     {
