@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-MODULE_PATH = ROOT / "forks" / "rpa4all-nextcloud-authentik" / "scripts" / "configure_authentik_nextcloud_oidc.py"
+MODULE_PATH = ROOT / "tools" / "authentik_management" / "configure_authentik_nextcloud_oidc.py"
 spec = importlib.util.spec_from_file_location("configure_authentik_nextcloud_oidc", MODULE_PATH)
 configure_authentik = importlib.util.module_from_spec(spec)
 assert spec is not None and spec.loader is not None

@@ -249,6 +249,46 @@ class TestTelegramAlerts:
         assert mock_post.call_args.args[0] == "https://api.telegram.org/botenv-token/sendMessage"
         assert mock_post.call_args.kwargs["json"]["chat_id"] == "999"
 
+    def test_send_telegram_alert_prefere_trading_chat_id_quando_configurado(self) -> None:
+        with (
+            patch("kucoin_api._fetch_from_secrets_agent", return_value=None),
+            patch.dict(
+                "kucoin_api.os.environ",
+                {
+                    "TELEGRAM_BOT_TOKEN": "env-token",
+                    "TELEGRAM_CHAT_ID": "999",
+                    "TRADING_TELEGRAM_CHAT_ID": "-100777",
+                },
+                clear=False,
+            ),
+            patch("kucoin_api.requests.post") as mock_post,
+        ):
+            kucoin_api._send_telegram_alert("teste")
+
+        mock_post.assert_called_once()
+        assert mock_post.call_args.kwargs["json"]["chat_id"] == "-100777"
+
+    def test_send_telegram_alert_inclui_thread_id_quando_configurado(self) -> None:
+        with (
+            patch("kucoin_api._fetch_from_secrets_agent", return_value=None),
+            patch.dict(
+                "kucoin_api.os.environ",
+                {
+                    "TELEGRAM_BOT_TOKEN": "env-token",
+                    "TRADING_TELEGRAM_CHAT_ID": "-100777",
+                    "TRADING_TELEGRAM_THREAD_ID": "42",
+                },
+                clear=False,
+            ),
+            patch("kucoin_api.requests.post") as mock_post,
+        ):
+            kucoin_api._send_telegram_alert("teste")
+
+        mock_post.assert_called_once()
+        payload = mock_post.call_args.kwargs["json"]
+        assert payload["chat_id"] == "-100777"
+        assert payload["message_thread_id"] == 42
+
 
 class TestLoadCredentials:
     """Testes para resolução de credenciais da KuCoin."""

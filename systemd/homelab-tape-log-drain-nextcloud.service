@@ -6,7 +6,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 Environment=ROUTE_NAME=nextcloud
-Environment=ROUTE_TARGET_ROOT=/mnt/raid1/lto6-cache/logs
+Environment=ROUTE_TARGET_ROOT=/mnt/pretape/lto6-cache/logs
 ExecStart=/usr/local/sbin/tape-log-spool-drain
 User=root
 Group=root

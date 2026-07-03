@@ -41,11 +41,19 @@ class HomeAssistantLightController(
         return haPost("services/light/turn_on", tokenResult.getOrThrow(), body).map { Unit }
     }
 
-    suspend fun volumeUp(): Result<Unit> = mediaService("volume_up", config.volumeEntityId)
+    suspend fun volumeUp(): Result<Unit> =
+        if (config.useNotebookVolume()) notebookPost("up")
+        else mediaService("volume_up", config.volumeEntityId)
 
-    suspend fun volumeDown(): Result<Unit> = mediaService("volume_down", config.volumeEntityId)
+    suspend fun volumeDown(): Result<Unit> =
+        if (config.useNotebookVolume()) notebookPost("down")
+        else mediaService("volume_down", config.volumeEntityId)
 
     suspend fun volumeSet(level: Float): Result<Unit> {
+        if (config.useNotebookVolume()) {
+            val pct = (level.coerceIn(0f, 1f) * 100).toInt()
+            return notebookPost("set?pct=$pct")
+        }
         val tokenResult = ensureToken()
         if (tokenResult.isFailure) return Result.failure(tokenResult.exceptionOrNull()!!)
         val body = JSONObject()
@@ -53,6 +61,33 @@ class HomeAssistantLightController(
             .put("volume_level", level.coerceIn(0f, 1f).toDouble())
             .toString()
         return haPost("services/media_player/volume_set", tokenResult.getOrThrow(), body).map { Unit }
+    }
+
+    // Returns current volume as 0-100 int, or -1 on error
+    suspend fun volumeGet(): Result<Int> = withContext(Dispatchers.IO) {
+        if (!config.useNotebookVolume()) return@withContext Result.success(-1)
+        val request = Request.Builder()
+            .url("${config.notebookVolumeUrl}/volume")
+            .get()
+            .build()
+        runCatching {
+            client.newCall(request).execute().use { response ->
+                val raw = response.body?.string().orEmpty()
+                JSONObject(raw).getInt("volume_pct")
+            }
+        }
+    }
+
+    private suspend fun notebookPost(action: String): Result<Unit> = withContext(Dispatchers.IO) {
+        val request = Request.Builder()
+            .url("${config.notebookVolumeUrl}/volume/$action")
+            .post("".toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+        runCatching {
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) error("Volume server HTTP ${response.code}")
+            }
+        }
     }
 
     private suspend fun mediaService(action: String, entityId: String): Result<Unit> {

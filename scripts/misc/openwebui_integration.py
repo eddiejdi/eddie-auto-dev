@@ -61,24 +61,24 @@ Ajude com qualquer tarefa solicitada.""",
         "max_tokens": 2048,
     },
     "fast": {
-        "model": "qwen2.5-coder:1.5b",
+        "model": "gemma3:1b",
         "description": "Modelo rápido para respostas simples",
         "system_prompt": "Responda de forma direta e concisa.",
         "temperature": 0.5,
         "max_tokens": 1024,
     },
     "advanced": {
-        "model": "codestral:22b",
+        "model": "phi4-mini:latest",
         "description": "Modelo avançado para tarefas complexas",
         "system_prompt": """Você é um assistente avançado para tarefas complexas.
 Forneça análises detalhadas e soluções completas.""",
         "temperature": 0.5,
         "max_tokens": 8192,
     },
-    "deepseek": {
-        "model": "deepseek-coder-v2:16b",
-        "description": "DeepSeek Coder para código complexo",
-        "system_prompt": """Você é um expert em programação usando DeepSeek.
+    "mistral": {
+        "model": "mistral:7b",
+        "description": "Mistral 7B — coding e análise de alta qualidade",
+        "system_prompt": """Você é um expert em programação usando Mistral.
 Foco em código de alta qualidade e soluções eficientes.""",
         "temperature": 0.3,
         "max_tokens": 4096,
@@ -108,9 +108,11 @@ FRIENDLY_MODEL_NAMES = {
     "shared-assistant": "Shared Assistant",
     "shared-coder": "Shared Coder",
     "shared-homelab": "Shared Homelab",
-    "qwen2.5-coder": "Qwen 2.5 Coder",
+    "mistral": "Mistral 7B",
+    "gemma3": "Gemma 3",
+    "phi4-mini": "Phi-4 Mini",
     "llama3.2": "Llama 3.2",
-    "deepseek-v3.1": "DeepSeek v3.1",
+    "moondream": "Moondream",
     "nomic-embed-text": "Nomic Embed",
 }
 

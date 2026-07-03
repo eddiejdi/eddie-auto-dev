@@ -1,17 +1,20 @@
 #!/bin/bash
-# iot-vpn-bypass.sh — Roteia dispositivos IoT (Tuya/smart home) diretamente
-# via ISP, bypassando ProtonVPN. Resolve "rede anormal" de travas Tuya e
-# dispositivos que rejeitam IPs de datacenter VPN.
+# iot-vpn-bypass.sh — Roteia dispositivos IoT (Tuya/smart home) e serviços
+# bloqueados por VPN diretamente via ISP, bypassando ProtonVPN.
 #
 # Problema: homelab-lan-gateway roteia TODA a LAN via protonvpn (tabela 205).
-# Dispositivos Tuya detectam o IP ProtonVPN como VPN/datacenter e bloqueiam.
+# Dispositivos Tuya e serviços como Max/HBO Max detectam IP de datacenter VPN.
 #
 # Solução: policy routing — tabela 210 com default via ISP gateway.
-# ip rule: from <IoT-IP> → tabela 210 (prioridade 150, antes da 205/protonvpn).
+#   - Por dispositivo: ip rule from <IP-fonte> → tabela 210 (prioridade 150)
+#   - Por destino:     ip rule to <IP-destino> → tabela 210 (prioridade 145)
 #
 # Uso: sudo ./iot-vpn-bypass.sh --apply [--isp-gw 192.168.15.1]
 #      sudo ./iot-vpn-bypass.sh --add-device 192.168.15.XXX
 #      sudo ./iot-vpn-bypass.sh --remove-device 192.168.15.XXX
+#      sudo ./iot-vpn-bypass.sh --add-domain max.com
+#      sudo ./iot-vpn-bypass.sh --preset hbomax
+#      sudo ./iot-vpn-bypass.sh --refresh-domains
 #      sudo ./iot-vpn-bypass.sh --list
 #      sudo ./iot-vpn-bypass.sh --check
 #
@@ -22,7 +25,8 @@ set -euo pipefail
 readonly LAN_INTERFACE="${LAN_INTERFACE:-eth-onboard}"
 readonly ISP_TABLE="${ISP_TABLE:-210}"
 readonly ISP_TABLE_NAME="${ISP_TABLE_NAME:-isp-bypass}"
-readonly ISP_RULE_PRIORITY="${ISP_RULE_PRIORITY:-150}"    # antes da 205 (protonvpn)
+readonly ISP_RULE_PRIORITY="${ISP_RULE_PRIORITY:-150}"    # bypass por source (IoT)
+readonly DEST_RULE_PRIORITY="${DEST_RULE_PRIORITY:-145}"  # bypass por destino (serviços)
 readonly RT_TABLES="/etc/iproute2/rt_tables"
 readonly PERSIST_FILE="/etc/iot-vpn-bypass.conf"
 
@@ -165,6 +169,205 @@ remove_device() {
 }
 
 # ─────────────────────────────────────────────────────────
+# Bypass por DESTINO — serviços bloqueados por VPN (ex: Max/HBO Max)
+# ip rule to <dest-cidr> → tabela 210 (prioridade 145, antes do source 150)
+# ─────────────────────────────────────────────────────────
+add_dest() {
+    local dest_cidr="$1"
+
+    if ! ip rule show | grep -qP "to ${dest_cidr//./\\.}(/32)? lookup (${ISP_TABLE}|${ISP_TABLE_NAME})"; then
+        ip rule add to "$dest_cidr" table "$ISP_TABLE" priority "$DEST_RULE_PRIORITY"
+        log "ip rule adicionado: to $dest_cidr → tabela $ISP_TABLE (prioridade $DEST_RULE_PRIORITY)"
+    else
+        log "ip rule para destino $dest_cidr já existe"
+    fi
+}
+
+remove_dest() {
+    local dest_cidr="$1"
+
+    ip rule del to "$dest_cidr" table "$ISP_TABLE" priority "$DEST_RULE_PRIORITY" 2>/dev/null && \
+        log "ip rule removido: to $dest_cidr" || true
+
+    if [[ -f "$PERSIST_FILE" ]]; then
+        sed -i "/^DEST=${dest_cidr//\//\\/}$/d" "$PERSIST_FILE"
+    fi
+}
+
+resolve_domain_ips() {
+    local domain="$1"
+    local ips=""
+
+    if command -v dig &>/dev/null; then
+        ips="$(dig +short "$domain" A 2>/dev/null | grep -E '^[0-9]+\.' | sort -u)"
+    fi
+    if [[ -z "$ips" ]] && command -v host &>/dev/null; then
+        ips="$(host -t A "$domain" 2>/dev/null | awk '/has address/ {print $4}' | sort -u)"
+    fi
+    if [[ -z "$ips" ]]; then
+        ips="$(getent hosts "$domain" 2>/dev/null | awk '{print $1}' | grep -E '^[0-9]+\.' | sort -u)"
+    fi
+    echo "$ips"
+}
+
+add_dest_domain() {
+    local domain="$1"
+    log "Resolvendo $domain..."
+
+    local isp_gw
+    isp_gw="$(grep "^ISP_GW=" "$PERSIST_FILE" 2>/dev/null | cut -d= -f2 || true)"
+    if [[ -z "$isp_gw" ]]; then
+        isp_gw="$(detect_isp_gateway)"
+    fi
+    setup_isp_table "$isp_gw"
+
+    local ips
+    ips="$(resolve_domain_ips "$domain")"
+
+    if [[ -z "$ips" ]]; then
+        error "Nenhum IP resolvido para $domain"
+        return 1
+    fi
+
+    local count=0
+    while read -r ip; do
+        add_dest "${ip}/32"
+        touch "$PERSIST_FILE"
+        if ! grep -q "^DEST=${ip}/32$" "$PERSIST_FILE" 2>/dev/null; then
+            echo "DEST=${ip}/32" >> "$PERSIST_FILE"
+        fi
+        ((count++))
+    done <<< "$ips"
+
+    touch "$PERSIST_FILE"
+    if ! grep -q "^DOMAIN=${domain}$" "$PERSIST_FILE" 2>/dev/null; then
+        echo "DOMAIN=${domain}" >> "$PERSIST_FILE"
+    fi
+
+    success "$count IPs de $domain adicionados ao bypass ISP"
+}
+
+refresh_domains() {
+    if [[ ! -f "$PERSIST_FILE" ]]; then
+        log "Nenhum arquivo de config — nada a atualizar"
+        return 0
+    fi
+
+    log "Limpando IPs antigos e re-resolvendo domínios..."
+
+    while IFS= read -r line; do
+        if [[ "$line" =~ ^DEST=(.+)$ ]]; then
+            ip rule del to "${BASH_REMATCH[1]}" table "$ISP_TABLE" \
+                priority "$DEST_RULE_PRIORITY" 2>/dev/null || true
+        fi
+    done < "$PERSIST_FILE"
+
+    sed -i '/^DEST=/d' "$PERSIST_FILE"
+
+    local domains=()
+    mapfile -t domains < <(grep "^DOMAIN=" "$PERSIST_FILE" | cut -d= -f2)
+    for domain in "${domains[@]}"; do
+        add_dest_domain "$domain"
+    done
+
+    ip route flush cache 2>/dev/null || true
+    save_iptables
+    success "Domínios refreshed (${#domains[@]} domínios)"
+}
+
+# ─────────────────────────────────────────────────────────
+# Presets de serviços conhecidos
+# ─────────────────────────────────────────────────────────
+preset_hbomax() {
+    local domains=(
+        "max.com"
+        "hbomax.com"
+        "play.max.com"
+        "api.max.com"
+        "secure2.max.com"
+    )
+
+    log "=== Configurando bypass ISP para Max/HBO Max ==="
+
+    local isp_gw
+    isp_gw="$(detect_isp_gateway)"
+    setup_isp_table "$isp_gw"
+
+    for domain in "${domains[@]}"; do
+        add_dest_domain "$domain" || true
+    done
+
+    save_iptables
+    success "Max/HBO Max liberado da VPN — tráfego vai via ISP direto"
+    log "Para manter IPs atualizados: sudo $0 --refresh-domains"
+    log "Para persistir no boot:      sudo $0 --install-service"
+}
+
+preset_amazonprime() {
+    local domains=(
+        "primevideo.com"
+        "atv-ps.amazon.com"
+        "aiv-cdn.net"
+        "aiv-delivery.net"
+        "d25xi40x97liuc.cloudfront.net"
+        "fls-na.amazon.com"
+        "api.amazon.com"
+    )
+
+    log "=== Configurando bypass ISP para Amazon Prime Video ==="
+
+    local isp_gw
+    isp_gw="$(detect_isp_gateway)"
+    setup_isp_table "$isp_gw"
+
+    for domain in "${domains[@]}"; do
+        add_dest_domain "$domain" || warn "Falha ao resolver $domain — continuando..."
+    done
+
+    save_iptables
+    success "Amazon Prime Video liberado da VPN — tráfego vai via ISP direto"
+    log "Para manter IPs atualizados: sudo $0 --refresh-domains"
+    log "Para persistir no boot:      sudo $0 --install-service"
+}
+
+install_refresh_timer() {
+    local script_path="/usr/local/bin/iot-vpn-bypass.sh"
+    local service_file="/etc/systemd/system/iot-vpn-domain-refresh.service"
+    local timer_file="/etc/systemd/system/iot-vpn-domain-refresh.timer"
+
+    cat > "$service_file" << EOF
+[Unit]
+Description=Refresh IPs de domínios no bypass VPN (CDN muda frequentemente)
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=${script_path} --refresh-domains
+StandardOutput=journal
+StandardError=journal
+EOF
+
+    cat > "$timer_file" << EOF
+[Unit]
+Description=Atualiza IPs de domínios no bypass VPN a cada 6h
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=6h
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
+    systemctl daemon-reload
+    systemctl enable --now iot-vpn-domain-refresh.timer
+
+    success "Timer de refresh instalado (a cada 6h)"
+    log "Status: systemctl status iot-vpn-domain-refresh.timer"
+}
+
+# ─────────────────────────────────────────────────────────
 # Persiste device no arquivo de config
 # ─────────────────────────────────────────────────────────
 persist_device() {
@@ -187,7 +390,7 @@ persist_device() {
 # Lista dispositivos e estado atual
 # ─────────────────────────────────────────────────────────
 list_devices() {
-    log "=== DISPOSITIVOS IoT COM BYPASS VPN ==="
+    log "=== BYPASS VPN — DISPOSITIVOS E SERVIÇOS ==="
     echo ""
 
     if [[ -f "$PERSIST_FILE" ]]; then
@@ -198,8 +401,18 @@ list_devices() {
         echo "(nenhum arquivo de config: $PERSIST_FILE)"
     fi
 
-    echo "ip rules ativos (tabela $ISP_TABLE / $ISP_TABLE_NAME):"
-    ip rule show | grep -E "lookup (${ISP_TABLE}|${ISP_TABLE_NAME})" || echo "  (nenhuma)"
+    echo "ip rules ativos — por DISPOSITIVO (from) tabela $ISP_TABLE:"
+    ip rule show | grep -E "from .+ lookup (${ISP_TABLE}|${ISP_TABLE_NAME})" || echo "  (nenhuma)"
+    echo ""
+
+    echo "ip rules ativos — por DESTINO (to) tabela $ISP_TABLE:"
+    ip rule show | grep -E "to .+ lookup (${ISP_TABLE}|${ISP_TABLE_NAME})" || echo "  (nenhuma)"
+    echo ""
+
+    echo "Domínios registrados:"
+    if [[ -f "$PERSIST_FILE" ]]; then
+        grep "^DOMAIN=" "$PERSIST_FILE" | cut -d= -f2 || echo "  (nenhum)"
+    fi
     echo ""
 
     echo "MASQUERADE IoT ativos:"
@@ -314,11 +527,13 @@ restore_from_config() {
     while IFS= read -r line; do
         if [[ "$line" =~ ^DEVICE=(.+)$ ]]; then
             add_device "${BASH_REMATCH[1]}"
+        elif [[ "$line" =~ ^DEST=(.+)$ ]]; then
+            add_dest "${BASH_REMATCH[1]}"
         fi
     done < "$PERSIST_FILE"
 
     save_iptables
-    success "Bypass IoT restaurado"
+    success "Bypass IoT/destinos restaurado"
 }
 
 # ─────────────────────────────────────────────────────────
@@ -387,6 +602,68 @@ main() {
             save_iptables
             ;;
 
+        --add-domain)
+            require_root
+            local domain="${1:-}"
+            if [[ -z "$domain" ]]; then
+                error "Informe o domínio: sudo $0 --add-domain max.com"
+                exit 1
+            fi
+            add_dest_domain "$domain"
+            save_iptables
+            ;;
+
+        --remove-domain)
+            require_root
+            local domain="${1:-}"
+            if [[ -z "$domain" ]]; then
+                error "Informe o domínio: sudo $0 --remove-domain max.com"
+                exit 1
+            fi
+            # Remove DEST entries associadas ao domínio (re-resolve para saber os IPs)
+            local ips
+            ips="$(resolve_domain_ips "$domain")"
+            while read -r ip; do
+                remove_dest "${ip}/32"
+            done <<< "$ips"
+            sed -i "/^DOMAIN=${domain//\./\\.}$/d" "$PERSIST_FILE" 2>/dev/null || true
+            save_iptables
+            ;;
+
+        --add-dest)
+            require_root
+            local dest_cidr="${1:-}"
+            if [[ -z "$dest_cidr" ]]; then
+                error "Informe o CIDR: sudo $0 --add-dest 1.2.3.4/32"
+                exit 1
+            fi
+            local isp_gw
+            isp_gw="$(grep "^ISP_GW=" "$PERSIST_FILE" 2>/dev/null | cut -d= -f2 || true)"
+            if [[ -z "$isp_gw" ]]; then
+                isp_gw="$(detect_isp_gateway)"
+            fi
+            setup_isp_table "$isp_gw"
+            add_dest "$dest_cidr"
+            touch "$PERSIST_FILE"
+            grep -q "^DEST=${dest_cidr}$" "$PERSIST_FILE" 2>/dev/null || echo "DEST=${dest_cidr}" >> "$PERSIST_FILE"
+            save_iptables
+            ;;
+
+        --refresh-domains)
+            require_root
+            refresh_domains
+            ;;
+
+        --preset)
+            require_root
+            local preset_name="${1:-}"
+            case "$preset_name" in
+                hbomax|max) preset_hbomax ;;
+                amazonprime|prime) preset_amazonprime ;;
+                *) error "Preset desconhecido: $preset_name. Disponíveis: hbomax, amazonprime" ; exit 1 ;;
+            esac
+            ;;
+
         --list)
             list_devices
             ;;
@@ -405,32 +682,51 @@ main() {
             install_service
             ;;
 
+        --install-refresh-timer)
+            require_root
+            install_refresh_timer
+            ;;
+
         --help|*)
             cat << 'EOF'
-iot-vpn-bypass.sh — Roteia dispositivos IoT (Tuya/smart home) via ISP direto
+iot-vpn-bypass.sh — Roteia IoT e serviços bloqueados por VPN via ISP direto
 
 Uso: sudo ./iot-vpn-bypass.sh <comando>
 
-Comandos:
-  --apply [--isp-gw <IP>]   Configura tabela ISP bypass (detecta gateway auto)
-  --add-device <IP>          Adiciona dispositivo IoT ao bypass VPN
-  --remove-device <IP>       Remove dispositivo do bypass
-  --list                     Lista dispositivos e regras ativas
-  --check                    Verifica se o bypass está funcionando
-  --restore                  Restaura config do arquivo (usado pelo service)
-  --install-service          Instala serviço systemd para persistir no boot
+=== POR DISPOSITIVO (source) ===
+  --apply [--isp-gw <IP>]    Configura tabela ISP bypass (detecta gateway auto)
+  --add-device <IP>           Adiciona dispositivo IoT ao bypass VPN
+  --remove-device <IP>        Remove dispositivo do bypass
 
-Fluxo rápido:
-  1. Descubra o IP do Tuya no roteador/DHCP
-  2. sudo ./iot-vpn-bypass.sh --apply
-  3. sudo ./iot-vpn-bypass.sh --add-device 192.168.15.XXX
-  4. sudo ./iot-vpn-bypass.sh --install-service  (persistir no boot)
+=== POR SERVIÇO/DOMÍNIO (destino) ===
+  --add-domain <domínio>      Resolve domínio e adiciona bypass por destino
+  --remove-domain <domínio>   Remove domínio do bypass
+  --add-dest <CIDR>           Adiciona CIDR específico ao bypass por destino
+  --refresh-domains           Atualiza IPs de todos os domínios (CDN muda)
+  --preset hbomax             Libera Max/HBO Max da VPN (atalho)
+  --install-refresh-timer     Timer systemd: refresh automático a cada 6h
+
+=== UTILITÁRIOS ===
+  --list                      Lista dispositivos e regras ativas
+  --check                     Verifica se o bypass está funcionando
+  --restore                   Restaura config do arquivo (usado pelo service)
+  --install-service           Instala serviço systemd para persistir no boot
+
+Fluxo rápido — Max/HBO Max:
+  sudo ./iot-vpn-bypass.sh --preset hbomax
+  sudo ./iot-vpn-bypass.sh --install-refresh-timer   (mantém IPs CDN atualizados)
+  sudo ./iot-vpn-bypass.sh --install-service         (persiste no boot)
+
+Fluxo rápido — dispositivo IoT:
+  sudo ./iot-vpn-bypass.sh --apply
+  sudo ./iot-vpn-bypass.sh --add-device 192.168.15.XXX
+  sudo ./iot-vpn-bypass.sh --install-service
 
 Por que funciona:
-  Cria tabela 210 (isp-bypass) com rota default via ISP gateway (eth-onboard).
-  Adiciona "ip rule from <IoT-IP> lookup 210" com prioridade 150 — antes da
-  tabela 205 (protonvpn). O kernel escolhe a tabela ISP primeiro para esse IP.
-  MASQUERADE garante que o pacote sai com IP real da operadora.
+  Tabela 210 (isp-bypass) tem rota default via ISP gateway.
+  Por device: "ip rule from <IP> lookup 210" prio 150 — antes do ProtonVPN (205).
+  Por destino: "ip rule to <IP> lookup 210" prio 145 — antes do source (150).
+  MASQUERADE garante saída com IP real da operadora.
 
 EOF
             ;;

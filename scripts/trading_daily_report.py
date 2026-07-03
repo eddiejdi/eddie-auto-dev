@@ -497,7 +497,9 @@ Total execuções: {context['total_trades_24h']}
 ---
 Com base nesses dados, gere o relatório completo formatado com emojis para Telegram em PT-BR."""
 
-    with OllamaMCPBridge(model=model) as bridge:
+    # num_predict maior: modelos reasoning gastam o orçamento em <think> e
+    # truncavam o relatório no meio da frase com o default de 2048.
+    with OllamaMCPBridge(model=model, num_predict=4096) as bridge:
         # Enviar sem tools — apenas formatação/análise dos dados já coletados
         report = bridge.run_with_tools(
             system=SYSTEM_PROMPT,
@@ -509,6 +511,13 @@ Com base nesses dados, gere o relatório completo formatado com emojis para Tele
     import re as _re
     report = _re.sub(r"<think>.*?</think>", "", report or "", flags=_re.DOTALL)
     report = report.strip()
+
+    # Garantir a seção de balanço mesmo se o modelo truncar/omitir
+    if report and "balanço" not in report.lower():
+        report += (
+            "\n\n💰 Balanço de Contas (main/trade/total):\n"
+            + format_balance_block(context.get("balance") or {}).rstrip()
+        )
     if report:
         return report
 

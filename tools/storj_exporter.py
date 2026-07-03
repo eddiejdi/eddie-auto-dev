@@ -234,11 +234,16 @@ class StorjMetrics:
             current = payout.get("currentMonth", {})
             egress_pay = current.get("egressBandwidthPayout", 0)
             disk_pay = current.get("diskSpacePayout", 0)
+            repair_audit_pay = current.get("egressRepairAuditPayout", 0)
             held = current.get("held", 0)
             net_payout = current.get("payout", 0)
             month_estimate = payout.get("currentMonthExpectations", 0)
+            gross_total = egress_pay + disk_pay + repair_audit_pay
+            self._metric(lines, "storj_payout_current_gross_total_cents",
+                         gross_total,
+                         "Ganhos brutos totais mês atual (egress+storage+repair, centavos USD)")
             self._metric(lines, "storj_payout_current_month_cents",
-                         egress_pay + disk_pay,
+                         gross_total,
                          "Ganhos brutos mês atual (centavos USD)")
             self._metric(lines, "storj_payout_net_payout_cents",
                          net_payout,
@@ -252,18 +257,26 @@ class StorjMetrics:
             self._metric(lines, "storj_payout_current_storage_cents",
                          disk_pay,
                          "Ganhos storage mês atual (centavos USD)")
+            self._metric(lines, "storj_payout_current_repair_audit_cents",
+                         repair_audit_pay,
+                         "Ganhos repair/audit mês atual (centavos USD)")
             self._metric(lines, "storj_payout_current_held_cents",
                          held,
                          "Valor retido (held) mês atual (centavos USD)")
 
             previous = payout.get("previousMonth", {})
+            prev_repair_audit = previous.get("egressRepairAuditPayout", 0)
             prev_total = (
                 previous.get("egressBandwidthPayout", 0)
                 + previous.get("diskSpacePayout", 0)
+                + prev_repair_audit
             )
             self._metric(lines, "storj_payout_previous_month_cents",
                          prev_total,
                          "Ganhos mês anterior (centavos USD)")
+            self._metric(lines, "storj_payout_previous_repair_audit_cents",
+                         prev_repair_audit,
+                         "Ganhos repair/audit mês anterior (centavos USD)")
 
         # --- ETH wallet balance (zkSync Era — valor cacheado por thread de background) ---
         if sno:

@@ -28,11 +28,19 @@ class FakeTelegramAPI:
         chat_id: int,
         text: str,
         reply_to_message_id: int | None = None,
+        message_thread_id: int | None = None,
+        parse_mode: str = "Markdown",
+        reply_markup: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         self.messages.append(text)
         return {"ok": True, "result": {"message_id": 1}}
 
-    async def send_chat_action(self, chat_id: int, action: str = "typing") -> dict[str, Any]:
+    async def send_chat_action(
+        self,
+        chat_id: int,
+        action: str = "typing",
+        message_thread_id: int | None = None,
+    ) -> dict[str, Any]:
         self.actions.append(action)
         return {"ok": True, "result": True}
 

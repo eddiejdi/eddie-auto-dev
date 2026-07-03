@@ -229,7 +229,7 @@ force_protonvpn_route() {
     ensure_table_docker_routes
 
     # Só faz del+add se a regra estiver ausente ou incorreta; evita janela sem rota
-    if ! ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:.*fwmark not.*lookup ${PROTONVPN_TABLE}"; then
+    if ! ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:.*not.*fwmark.*lookup ${PROTONVPN_TABLE}"; then
         while ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:"; do
             ip rule del pref "$POLICY_RULE_PRIORITY" >/dev/null 2>&1 || break
         done

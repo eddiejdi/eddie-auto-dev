@@ -2,8 +2,10 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-NEXTCLOUD_DIR="${SCRIPT_DIR}/../forks/rpa4all-nextcloud-authentik"
-NEXTCLOUD_ENV_FILE="${NEXTCLOUD_DIR}/.env"
+REPO_ROOT="${SCRIPT_DIR}/.."
+NEXTCLOUD_ENV_FILE="${REPO_ROOT}/.env"
+CONFIGURE_SCRIPT="${REPO_ROOT}/tools/authentik_management/configure_authentik_nextcloud_oidc.py"
+BOOTSTRAP_SCRIPT="${REPO_ROOT}/tools/authentik_management/bootstrap_nextcloud_oidc.sh"
 NAS_HOST=""
 NAS_USER="root"
 NAS_SSH_PASS=""
@@ -26,8 +28,8 @@ The old direct LTFS reactivation flow was retired after the
   - docs/INCIDENTS/NEXTCLOUD_TANK_LTO_UPLOAD_2026-04-23.md
 
 It assumes the repository checkout contains:
-  - forks/rpa4all-nextcloud-authentik/scripts/bootstrap_nextcloud_oidc.sh
-  - forks/rpa4all-nextcloud-authentik/scripts/configure_authentik_nextcloud_oidc.py
+  - tools/authentik_management/bootstrap_nextcloud_oidc.sh
+  - tools/authentik_management/configure_authentik_nextcloud_oidc.py
 EOF
   exit 1
 }
@@ -61,13 +63,18 @@ while [[ $# -gt 0 ]]; do
 done
 
 run_nextcloud_bootstrap() {
-  if [[ ! -d "${NEXTCLOUD_DIR}" ]]; then
-    echo "ERROR: Nextcloud bootstrap directory not found: ${NEXTCLOUD_DIR}" >&2
+  if [[ ! -f "${CONFIGURE_SCRIPT}" ]]; then
+    echo "ERROR: Nextcloud OIDC configure script not found: ${CONFIGURE_SCRIPT}" >&2
+    exit 1
+  fi
+
+  if [[ ! -f "${BOOTSTRAP_SCRIPT}" ]]; then
+    echo "ERROR: Nextcloud OIDC bootstrap script not found: ${BOOTSTRAP_SCRIPT}" >&2
     exit 1
   fi
 
   echo "[*] Aplicando configuração Authentik/OIDC no Nextcloud..."
-  pushd "${NEXTCLOUD_DIR}" >/dev/null
+  pushd "${REPO_ROOT}" >/dev/null
 
   if [[ -f "${NEXTCLOUD_ENV_FILE}" ]]; then
     set -a
@@ -76,8 +83,8 @@ run_nextcloud_bootstrap() {
     set +a
   fi
 
-  python3 scripts/configure_authentik_nextcloud_oidc.py
-  bash scripts/bootstrap_nextcloud_oidc.sh
+  python3 "${CONFIGURE_SCRIPT}"
+  bash "${BOOTSTRAP_SCRIPT}"
   popd >/dev/null
 }
 

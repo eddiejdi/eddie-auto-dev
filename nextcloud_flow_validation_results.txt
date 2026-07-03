@@ -1,0 +1,6 @@
+Validação do Fluxo Nextcloud → Staging → Fita LTO
+Data: 2026-06-28T23:31:25-03:00
+
+
+=== 1. Mount Point /mnt/lto6-nc ===
+[1;33m⚠[0m Mount /mnt/lto6-nc não existe (dev environment?)
