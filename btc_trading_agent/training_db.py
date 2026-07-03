@@ -215,6 +215,10 @@ class TrainingDatabase:
         """Garante que o schema e tabelas existem"""
         with self._get_conn() as conn:
             cur = conn.cursor()
+            # Serializa a migração entre agentes que sobem simultaneamente
+            # (deploy reinicia os 3 profiles juntos → DeadlockDetected nos
+            # ALTER TABLE concorrentes). Lock liberado no commit/rollback.
+            cur.execute("SELECT pg_advisory_xact_lock(hashtext('btc_ensure_schema'))")
             cur.execute(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}")
 
             cur.execute(f"""
