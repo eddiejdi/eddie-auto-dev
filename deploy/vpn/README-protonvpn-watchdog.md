@@ -1,29 +1,37 @@
 # ProtonVPN Routing Watchdog — À Prova de Acidentes
 
-**Problema:** Reversão acidental da rota VPN para eth-onboard.
-**Solução:** Watchdog automático + contrato explícito de gateway da LAN em `192.168.15.2`
+**Problema:** Reversão acidental da rota VPN para eth-onboard; LAN fica sem internet quando ip rules 32764/32765 somem.  
+**Solução:** Três camadas de proteção — dispatcher NM (imediato) + drop-in ExecStartPost (t+5s) + watchdog timer (a cada 5min).
+
+> **Princípio:** VPN é a regra. Bypass é a exceção explícita para IoT.  
+> Veja arquitetura completa em [`docs/PROTONVPN_LAN_ROUTING_ARCHITECTURE.md`](../../docs/PROTONVPN_LAN_ROUTING_ARCHITECTURE.md).
 
 ---
 
 ## Arquitetura
 
-### 1. **SystemD NetworkD Drop-in** (`99-force-protonvpn-routing.network`)
-- **Prioridade máxima (99)** — sobrescreve qualquer outra config
-- **Rota padrão prioritária (50)** — ganha de eth-onboard (600)
-- **À prova de netplan** — ignora mudanças em netplan
+### 1. **NM Dispatcher** (`51-protonvpn-policy-routing`) ✅ _principal_
+- **Imediato** — executado pelo NetworkManager assim que `protonvpn` sobe
+- Restaura as regras `32764` e `32765` sem nenhum delay
+- Cobre reconexões automáticas do ProtonVPN
+- **Deploy:** `sudo cp deploy/vpn/51-protonvpn-policy-routing /etc/NetworkManager/dispatcher.d/ && sudo chmod 755 ...`
 
-### 2. **Watchdog Service + Timer**
-- **Executa a cada 5 minutos** — monitora rota ProtonVPN
-- **Health check** — verifica IP público + tabela 205 + caminho efetivo da LAN
-- **Auto-fix** — se rota quebrar, corrige automaticamente via `systemctl restart wg-quick@protonvpn`
-- **Persistent** — recupera se servidor reiniciar
+### 2. **Drop-in ExecStartPost** (`restore-iprules.conf`)
+- Backup para o caso de wg-quick sem NM gerenciar a interface
+- `sleep 5` antes de chamar o watchdog — aguarda handshake inicial
+- **Localização:** `/etc/systemd/system/wg-quick@protonvpn.service.d/restore-iprules.conf`
 
-### 3. **Gateway da LAN**
+### 3. **Watchdog Service + Timer**
+- **Executa a cada 5 minutos** — health check completo
+- Verifica: interface, tabela 205, ip rules 32764/32765, caminho efetivo da LAN, rotas Docker, IP público
+- **Auto-fix** — restaura tudo automaticamente se detectar desvio
+
+### 4. **Gateway da LAN**
 - **Contrato operacional:** clientes da LAN usam `192.168.15.2` como gateway e DNS
 - **Sem dependência ativa de `192.168.15.1`**
 - **Watchdog dedicado:** `homelab-lan-gateway.sh` reaplica NAT/forwarding e valida DNS da LAN
 
-### 4. **Pre-Deploy Validator**
+### 5. **Pre-Deploy Validator**
 - **Integração CI/CD** — bloqueia deploy se rota estiver quebrada
 
 ---
@@ -39,20 +47,24 @@ bash /workspace/eddie-auto-dev/deploy/vpn/deploy-homelab-lan-gateway.sh
 
 ### Manual Setup
 ```bash
-# 1. Copia script
+# 1. Dispatcher NM (principal — aplica regras imediatamente ao subir protonvpn)
+sudo cp deploy/vpn/51-protonvpn-policy-routing /etc/NetworkManager/dispatcher.d/
+sudo chmod 755 /etc/NetworkManager/dispatcher.d/51-protonvpn-policy-routing
+
+# 2. Copia script do watchdog
 sudo cp deploy/vpn/protonvpn-routing-watchdog.sh /usr/local/bin/
 sudo chmod +x /usr/local/bin/protonvpn-routing-watchdog.sh
 
-# 2. Copia SystemD units
+# 3. Copia SystemD units
 sudo cp deploy/vpn/protonvpn-routing-watchdog*.{service,timer} /etc/systemd/system/
 sudo cp deploy/vpn/99-force-protonvpn-routing.network /etc/systemd/network/
 
-# 3. Ativa
+# 4. Ativa
 sudo systemctl daemon-reload
 sudo systemctl enable --now protonvpn-routing-watchdog.timer
 sudo systemctl restart systemd-networkd
 
-# 4. Valida
+# 5. Valida
 /usr/local/bin/protonvpn-routing-watchdog.sh --health-check
 ```
 
@@ -132,6 +144,22 @@ sudo wg-quick up protonvpn
 sudo systemctl restart wg-quick@protonvpn
 ```
 
+### "Dispositivo LAN sem internet (exceto IoT)"
+```bash
+# 1. Verificar se as ip rules críticas existem
+ip rule list | grep -E '32764|32765'
+
+# 2. Verificar rota efetiva do dispositivo
+ip route get 1.1.1.1 from <IP-DISPOSITIVO> iif eth-onboard
+# Esperado: "dev protonvpn table 205"
+# Problema:  "Network is unreachable" → rules 32764/32765 ausentes
+
+# 3. Fix
+sudo /usr/local/bin/protonvpn-routing-watchdog.sh --fix
+```
+
+> Não adicione dispositivos normais ao bypass IoT. Diagnóstico completo em `docs/PROTONVPN_LAN_ROUTING_ARCHITECTURE.md`.
+
 ### "Rota padrão está via eth-onboard"
 ```bash
 # Force manual
@@ -150,8 +178,13 @@ sudo bash deploy/vpn/recover-protonvpn-ssh-lockout.sh --auto
 
 ## Referência
 
-- **Timer config:** `/etc/systemd/system/protonvpn-routing-watchdog.timer`
-- **Service config:** `/etc/systemd/system/protonvpn-routing-watchdog*.service`
-- **NetworkD drop-in:** `/etc/systemd/network/99-force-protonvpn-routing.network`
-- **Script:** `/usr/local/bin/protonvpn-routing-watchdog.sh`
-- **WireGuard config:** `/etc/wireguard/protonvpn.conf`
+| Arquivo | Localização | Função |
+|---|---|---|
+| `51-protonvpn-policy-routing` | `/etc/NetworkManager/dispatcher.d/` | Aplica ip rules **imediatamente** ao subir |
+| `restore-iprules.conf` | `/etc/systemd/system/wg-quick@protonvpn.service.d/` | Backup ExecStartPost t+5s |
+| `protonvpn-routing-watchdog.sh` | `/usr/local/bin/` | Health check + auto-fix |
+| `protonvpn-routing-watchdog.timer` | `/etc/systemd/system/` | Timer 5min |
+| `99-force-protonvpn-routing.network` | `/etc/systemd/network/` | NetworkD drop-in |
+| `homelab-proxy.nft` | carregado no boot | DROP rule LAN→eth-wan sem bypass |
+
+**Documentação de arquitetura:** [`docs/PROTONVPN_LAN_ROUTING_ARCHITECTURE.md`](../../docs/PROTONVPN_LAN_ROUTING_ARCHITECTURE.md)

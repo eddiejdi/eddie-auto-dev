@@ -1,0 +1,50 @@
+#!/bin/bash
+# /etc/NetworkManager/dispatcher.d/51-protonvpn-policy-routing
+#
+# Restaura regras de policy routing para ProtonVPN imediatamente quando
+# a interface protonvpn sobe — sem delay.
+#
+# Princípio: VPN é a regra, bypass é a exceção.
+# Todo dispositivo LAN não-IoT roteia via ProtonVPN (tabela 205).
+# Dispositivos IoT/bypass têm regras explícitas em prio 150 (isp-bypass).
+#
+# Regras mantidas:
+#   32764: not fwmark 0xca6c → table 205 (todo tráfego não-VPN via ProtonVPN)
+#   32765: lookup main suppress_prefixlength 0 (previne loop default route)
+#
+# Chamado pelo NM a cada evento de interface. Só age quando iface=protonvpn e action=up.
+
+IFACE="$1"
+ACTION="$2"
+
+readonly PROTONVPN_IFACE="protonvpn"
+readonly PROTONVPN_FWMARK="0xca6c"
+readonly PROTONVPN_TABLE="205"
+readonly RULE_PRIO="32764"
+readonly SUPPRESS_PRIO="32765"
+
+[[ "$IFACE" != "$PROTONVPN_IFACE" ]] && exit 0
+[[ "$ACTION" != "up" ]] && exit 0
+
+log() { logger -t "protonvpn-dispatcher" "$*"; }
+
+added=0
+
+if ! ip rule show | grep -Eq "^${RULE_PRIO}:.*not.*fwmark.*lookup ${PROTONVPN_TABLE}"; then
+    ip rule add not fwmark "$PROTONVPN_FWMARK" table "$PROTONVPN_TABLE" pref "$RULE_PRIO"
+    log "rule $RULE_PRIO added: not fwmark $PROTONVPN_FWMARK → table $PROTONVPN_TABLE"
+    added=1
+fi
+
+if ! ip rule show | grep -Eq "^${SUPPRESS_PRIO}:.*lookup main suppress_prefixlength 0"; then
+    ip rule add lookup main suppress_prefixlength 0 pref "$SUPPRESS_PRIO"
+    log "rule $SUPPRESS_PRIO added: suppress_prefixlength 0"
+    added=1
+fi
+
+if [[ "$added" -eq 1 ]]; then
+    ip route flush cache
+    log "route cache flushed — LAN routing via ProtonVPN restored"
+fi
+
+exit 0

@@ -90,6 +90,20 @@ def _resolve_telegram_bot_token() -> str:
 def _resolve_telegram_chat_id() -> str:
     """Resolve o chat_id priorizando o cofre padrão do projeto."""
     for secret_name, field in (
+        ("shared/trading_telegram_chat_id", "chat_id"),
+        ("authentik/shared/trading_telegram_chat_id", "chat_id"),
+        ("shared/trading_telegram_chat_id", "password"),
+        ("authentik/shared/trading_telegram_chat_id", "password"),
+    ):
+        value = _fetch_from_secrets_agent(secret_name, field)
+        if value:
+            return value
+
+    trading_chat_id = (os.getenv("TRADING_TELEGRAM_CHAT_ID", "") or "").strip()
+    if trading_chat_id:
+        return trading_chat_id
+
+    for secret_name, field in (
         ("shared/telegram_chat_id", "chat_id"),
         ("authentik/shared/telegram_chat_id", "chat_id"),
         ("shared/telegram_chat_id", "password"),
@@ -101,20 +115,39 @@ def _resolve_telegram_chat_id() -> str:
     return os.getenv("TELEGRAM_CHAT_ID", "") or os.getenv("ADMIN_CHAT_ID", "948686300")
 
 
+def _resolve_telegram_thread_id() -> str:
+    """Resolve thread de destino para tópicos de fórum no Telegram (opcional)."""
+    for secret_name, field in (
+        ("shared/trading_telegram_thread_id", "thread_id"),
+        ("authentik/shared/trading_telegram_thread_id", "thread_id"),
+        ("shared/trading_telegram_thread_id", "password"),
+        ("authentik/shared/trading_telegram_thread_id", "password"),
+    ):
+        value = _fetch_from_secrets_agent(secret_name, field)
+        if value:
+            return value
+
+    return (os.getenv("TRADING_TELEGRAM_THREAD_ID", "") or "").strip()
+
+
 def _send_telegram_alert(message: str) -> None:
     """Envia alerta via Telegram para o admin (best-effort, nunca lança exceção)."""
     try:
         bot_token = _resolve_telegram_bot_token()
         chat_id = _resolve_telegram_chat_id()
+        thread_id = _resolve_telegram_thread_id()
         if not bot_token:
             logger.warning("⚠️ Telegram alert skipped: no bot token available")
             return
         if not chat_id:
             logger.warning("⚠️ Telegram alert skipped: no chat_id available")
             return
+        payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
+        if thread_id:
+            payload["message_thread_id"] = int(thread_id)
         requests.post(
             f"https://api.telegram.org/bot{bot_token}/sendMessage",
-            json={"chat_id": chat_id, "text": message, "parse_mode": "Markdown"},
+            json=payload,
             timeout=5,
         )
     except Exception as e:

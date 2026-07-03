@@ -9,7 +9,7 @@
 'oidc_login_use_access_token_payload' => false,
 'oidc_login_button_text' => 'Log in with Authentik',
 'oidc_login_hide_password_form' => true,
-'oidc_login_default_group' => 'oidc',
+'oidc_login_default_group' => 'users',
 'oidc_login_use_access_token_payload' => false,
 'oidc_create_groups' => true,
 'oidc_login_webdav_enabled' => false,

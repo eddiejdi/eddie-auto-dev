@@ -59,6 +59,42 @@ def get_telegram_chat_id() -> str:
         client.close()
 
 
+def get_trading_telegram_chat_id() -> str:
+    """Retorna o chat_id dedicado ao canal de trading via Secrets Agent."""
+    client = _get_client()
+    try:
+        for secret_name, field in (
+            ("shared/trading_telegram_chat_id", "chat_id"),
+            ("authentik/shared/trading_telegram_chat_id", "chat_id"),
+            ("shared/trading_telegram_chat_id", "password"),
+            ("authentik/shared/trading_telegram_chat_id", "password"),
+        ):
+            val = client.get_local_secret(secret_name, field=field)
+            if val:
+                return val
+        return ""
+    finally:
+        client.close()
+
+
+def get_trading_telegram_thread_id() -> str:
+    """Retorna o thread_id dedicado ao canal de trading via Secrets Agent."""
+    client = _get_client()
+    try:
+        for secret_name, field in (
+            ("shared/trading_telegram_thread_id", "thread_id"),
+            ("authentik/shared/trading_telegram_thread_id", "thread_id"),
+            ("shared/trading_telegram_thread_id", "password"),
+            ("authentik/shared/trading_telegram_thread_id", "password"),
+        ):
+            val = client.get_local_secret(secret_name, field=field)
+            if val:
+                return val
+        return ""
+    finally:
+        client.close()
+
+
 def get_fly_token() -> str:
     """Retorna o Fly API token via Secrets Agent."""
     client = _get_client()

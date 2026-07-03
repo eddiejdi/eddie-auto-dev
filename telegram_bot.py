@@ -113,6 +113,56 @@ ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "948686300"))
 AGENTS_API = os.getenv("AGENTS_API", "http://localhost:8503")
 OPENWEBUI_HOST = os.getenv("OPENWEBUI_HOST", f"http://{HOMELAB_HOST}:3000")
 
+
+def _parse_optional_int_env(name: str) -> Optional[int]:
+    """Converte env var em inteiro opcional sem interromper o boot do bot."""
+    raw = (os.getenv(name, "") or "").strip()
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        print(f"⚠️ {name} inválido ({raw!r}) — ignorando configuração")
+        return None
+
+
+def _parse_optional_int(value: str, label: str) -> Optional[int]:
+    """Converte string em inteiro opcional com warning não-bloqueante."""
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    try:
+        return int(raw)
+    except ValueError:
+        print(f"⚠️ {label} inválido ({raw!r}) — ignorando configuração")
+        return None
+
+
+def _resolve_trading_fixed_chat_id() -> Optional[int]:
+    env_value = _parse_optional_int_env("TRADING_TELEGRAM_CHAT_ID")
+    if env_value is not None:
+        return env_value
+    try:
+        from tools.secrets_loader import get_trading_telegram_chat_id
+        return _parse_optional_int(get_trading_telegram_chat_id(), "TRADING_TELEGRAM_CHAT_ID(secret)")
+    except Exception:
+        return None
+
+
+def _resolve_trading_fixed_thread_id() -> Optional[int]:
+    env_value = _parse_optional_int_env("TRADING_TELEGRAM_THREAD_ID")
+    if env_value is not None:
+        return env_value
+    try:
+        from tools.secrets_loader import get_trading_telegram_thread_id
+        return _parse_optional_int(get_trading_telegram_thread_id(), "TRADING_TELEGRAM_THREAD_ID(secret)")
+    except Exception:
+        return None
+
+
+TRADING_FIXED_CHAT_ID = _resolve_trading_fixed_chat_id()
+TRADING_FIXED_THREAD_ID = _resolve_trading_fixed_thread_id()
+
 # Mapeamento de perfis para uso rápido
 PROFILE_ALIASES = {
     "code": "coder", "dev": "coder", "programar": "coder",
@@ -176,12 +226,20 @@ class TelegramAPI:
             return {"ok": False, "error": str(e)}
     
     # ========== Mensagens ==========
-    async def send_message(self, chat_id: int, text: str, parse_mode: str = "Markdown",
-                          reply_to_message_id: int = None, reply_markup: dict = None) -> dict:
+    async def send_message(
+        self,
+        chat_id: int,
+        text: str,
+        parse_mode: str = "Markdown",
+        reply_to_message_id: int = None,
+        reply_markup: dict = None,
+        message_thread_id: int = None,
+    ) -> dict:
         """Envia mensagem de texto"""
         return await self._request("sendMessage", chat_id=chat_id, text=text[:4096],
                                    parse_mode=parse_mode, reply_to_message_id=reply_to_message_id,
-                                   reply_markup=reply_markup)
+                                   reply_markup=reply_markup,
+                                   message_thread_id=message_thread_id)
     
     async def forward_message(self, chat_id: int, from_chat_id: int, message_id: int) -> dict:
         """Encaminha mensagem"""
@@ -203,9 +261,11 @@ class TelegramAPI:
         """Deleta mensagem"""
         return await self._request("deleteMessage", chat_id=chat_id, message_id=message_id)
     
-    async def send_chat_action(self, chat_id: int, action: str = "typing") -> dict:
+    async def send_chat_action(self, chat_id: int, action: str = "typing",
+                               message_thread_id: int = None) -> dict:
         """Envia ação (typing, upload_photo, etc)"""
-        return await self._request("sendChatAction", chat_id=chat_id, action=action)
+        return await self._request("sendChatAction", chat_id=chat_id, action=action,
+                                   message_thread_id=message_thread_id)
     
     # ========== Mídia ==========
     async def send_photo(self, chat_id: int, photo: str, caption: str = None) -> dict:
@@ -2736,8 +2796,26 @@ class TelegramBot:
                     "⚠️ Módulo de trading não disponível.",
                     reply_to_message_id=msg_id)
                 return
+
+            trading_chat_id = TRADING_FIXED_CHAT_ID or chat_id
+            trading_thread_id = TRADING_FIXED_THREAD_ID if TRADING_FIXED_CHAT_ID else None
+            source_is_trading_target = trading_chat_id == chat_id
+
+            if TRADING_FIXED_CHAT_ID and not source_is_trading_target:
+                await self.api.send_message(
+                    chat_id,
+                    (
+                        "📌 Comandos de trading usam canal fixo. "
+                        "A resposta foi enviada no canal dedicado do Trading Agent."
+                    ),
+                    reply_to_message_id=msg_id,
+                )
             
-            await self.api.send_chat_action(chat_id, "typing")
+            await self.api.send_chat_action(
+                trading_chat_id,
+                "typing",
+                message_thread_id=trading_thread_id,
+            )
             
             try:
                 if cmd == "/relatorio":
@@ -2762,14 +2840,23 @@ class TelegramBot:
                     response = await trading_client.get_status()
                 
                 # Enviar resposta (split se > 4000 chars)
+                reply_target_msg_id = msg_id if source_is_trading_target else None
                 if len(response) > 4000:
                     parts = [response[i:i+4000] for i in range(0, len(response), 4000)]
                     for part in parts:
-                        await self.api.send_message(chat_id, part,
-                                                    reply_to_message_id=msg_id)
+                        await self.api.send_message(
+                            trading_chat_id,
+                            part,
+                            reply_to_message_id=reply_target_msg_id,
+                            message_thread_id=trading_thread_id,
+                        )
                 else:
-                    await self.api.send_message(chat_id, response,
-                                                reply_to_message_id=msg_id)
+                    await self.api.send_message(
+                        trading_chat_id,
+                        response,
+                        reply_to_message_id=reply_target_msg_id,
+                        message_thread_id=trading_thread_id,
+                    )
             except Exception as e:
                 print(f"[Trading] Error: {e}")
                 await self.api.send_message(chat_id,

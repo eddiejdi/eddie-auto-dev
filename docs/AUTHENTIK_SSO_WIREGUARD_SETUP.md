@@ -82,7 +82,7 @@ graph TB
 
 | Serviço | Client ID | Redirect URI | Status |
 |---------|-----------|-------------|--------|
-| Nextcloud | authentik-nextcloud | /apps/user_oidc/code | ✅ user_oidc v8.5.0 |
+| Nextcloud | authentik-nextcloud | /apps/oidc_login/oidc (+ compat /apps/user_oidc/code) | ✅ oidc_login configurado |
 | Grafana | authentik-grafana | /login/generic_oauth | ✅ Botão "Authentik" no login |
 | OpenWebUI | authentik-openwebui | /oauth/oidc/callback | ✅ OIDC habilitado |
 

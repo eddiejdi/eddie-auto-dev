@@ -443,12 +443,19 @@ class PositionManagerMixin:
         # 3. Enviar via Telegram — usa proxy Squid se TELEGRAM_PROXY_URL configurado
         try:
             import requests as _req
-            from kucoin_api import _resolve_telegram_bot_token, _resolve_telegram_chat_id
+            from kucoin_api import (
+                _resolve_telegram_bot_token,
+                _resolve_telegram_chat_id,
+                _resolve_telegram_thread_id,
+            )
             bot_token = _resolve_telegram_bot_token()
             chat_id = _resolve_telegram_chat_id()
+            thread_id = _resolve_telegram_thread_id()
             if bot_token and chat_id:
                 url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
                 payload = {"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"}
+                if thread_id:
+                    payload["message_thread_id"] = int(thread_id)
                 proxy_url = (os.getenv("TELEGRAM_PROXY_URL", "") or "").strip()
                 response = None
 

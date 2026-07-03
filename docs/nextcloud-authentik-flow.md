@@ -8,12 +8,17 @@ de 2026-04-23 ele deve usar staging em disco, com flush controlado para a fita.
 
 ### Componentes principais
 
-- `forks/rpa4all-nextcloud-authentik/`
-  - `docker-compose.yml`: stack Nextcloud + MariaDB + Redis.
-  - `scripts/configure_authentik_nextcloud_oidc.py`: provisiona o provider OIDC do Nextcloud no Authentik.
-  - `scripts/bootstrap_nextcloud_oidc.sh`: instala o app `oidc_login`, habilita `groupfolders` e aplica a configuração OIDC no Nextcloud.
-  - `scripts/sync_authentik_hierarchy_groups.py`: exporta a hierarquia de grupos/usuários do Authentik.
-  - `scripts/apply_nextcloud_team_folders.py`: cria grupos e Group Folders no Nextcloud com base na hierarquia do Authentik.
+- `tools/authentik_management/configure_authentik_nextcloud_oidc.py`
+  - Provisiona ou atualiza o provider OAuth2/OIDC `authentik-nextcloud` no Authentik.
+  - Mantém duas redirect URIs: `oidc_login` como fluxo principal e `user_oidc` apenas para compatibilidade de migração.
+
+- `tools/authentik_management/bootstrap_nextcloud_oidc.sh`
+  - Habilita `oidc_login` e `groupfolders` no Nextcloud.
+  - Aplica a configuração OIDC via `occ` no container `nextcloud-app`.
+
+- `specialized_agents/api.py` e `specialized_agents/user_management.py`
+  - Publicam o painel `/nextcloud-access/` em `auth.rpa4all.com`.
+  - Criam usuários no Authentik e dependem do auto-provisionamento OIDC do Nextcloud no primeiro login.
 
 - `docs/NEXTCLOUD_LTO_STAGING_ARCHITECTURE_2026-04-23.md`
   - Define o contrato correto: `/LTO` no Nextcloud aponta para staging em disco.
@@ -28,21 +33,19 @@ de 2026-04-23 ele deve usar staging em disco, com flush controlado para a fita.
 1. Autenticação
    - Authentik atua como IdP OIDC.
    - Nextcloud usa o app `oidc_login` para autenticar via Authentik.
-   - O script `configure_authentik_nextcloud_oidc.py` registra o provider OIDC no Authentik com:
+   - O script `tools/authentik_management/configure_authentik_nextcloud_oidc.py` registra o provider OIDC no Authentik com:
      - client_id `authentik-nextcloud`
      - client_secret `nextcloud-sso-secret-2026`
      - redirect URIs:
        - `https://nextcloud.rpa4all.com/apps/oidc_login/oidc`
-       - `https://nextcloud.rpa4all.com/apps/user_oidc/code`
-   - `bootstrap_nextcloud_oidc.sh` configura o Nextcloud para usar Authentik como provedor.
+       - `https://nextcloud.rpa4all.com/apps/user_oidc/code` apenas para compatibilidade durante migração
+   - `tools/authentik_management/bootstrap_nextcloud_oidc.sh` configura o Nextcloud para usar Authentik como provedor.
 
 2. Provisionamento de usuários e grupos
    - Authentik sincroniza usuários e hierarquia de gestores/subordinados.
-   - `sync_authentik_hierarchy_groups.py` exporta os dados de grupos e membros.
-   - `apply_nextcloud_team_folders.py` converte esse mapeamento em:
-     - grupos Nextcloud
-     - Group Folders correspondentes
-     - permissões do grupo sobre a pasta
+   - O painel `/nextcloud-access/users` cria o usuário no Authentik com os grupos padrão para Nextcloud.
+   - O grupo padrão do fluxo é `users`, alinhado com `specialized_agents/user_management.py`.
+   - Grupos extras e grupos de equipe `NC_TEAM_*` podem ser adicionados no provisionamento.
 
 3. Arquivos e armazenamento
    - O Nextcloud enxerga `/LTO` via bind de staging em disco (`/mnt/lto6-nc -> /var/www/html/external/LTO`).
@@ -55,18 +58,19 @@ de 2026-04-23 ele deve usar staging em disco, com flush controlado para a fita.
    - Grupos de equipe recebem acesso automático a Group Folders.
    - A integração com LTFS fornece um caminho de armazenamento físico para arquivos grandes.
 
-## Achados do site oficial do Nextcloud
+## Distinção importante de fluxos
 
-A documentação oficial confirma:
+Existem dois fluxos diferentes e eles não devem ser confundidos:
 
-- O app `user_oidc` permite ao Nextcloud autenticar usuários usando provedores OIDC externos.
-- Se o Nextcloud deve ser identity provider, o app `oidc` é usado.
-- Para validação de tokens bearer em APIs, o Nextcloud pode aceitar tokens OIDC e acess tokens.
-- No modo IdP, o `user_oidc` precisa de `oidc_provider_bearer_validation=true` para validar tokens via o app `oidc`.
+- Login do usuário final no Nextcloud:
+  - URL: `https://nextcloud.rpa4all.com`
+  - Plugin principal: `oidc_login`
+  - Callback principal: `/apps/oidc_login/oidc`
 
-Isso valida a arquitetura do workspace:
-- `oidc_login` no Nextcloud é a forma adequada para login via Authentik.
-- Authentik é configurado como provider OIDC com as URLs de callback que o Nextcloud espera.
+- Painel administrativo protegido por Authentik:
+  - URL: `https://auth.rpa4all.com/nextcloud-access/`
+  - Proxy: `site/deploy/auth-nextcloud-access-location.nginx.conf`
+  - Backend: FastAPI do projeto
 
 ## Reativação completa do fluxo
 
@@ -78,15 +82,14 @@ O fluxo antigo de "reativar LTFS no NAS e bindar direto no Nextcloud" foi aposen
    - Confirme que `/mnt/lto6-nc` aponta para staging em disco, nao para LTFS
    - Confirme que apenas `ltfs-cache-flush` escreve na fita
 2. Reconfigurar o Nextcloud para Authentik:
-   - `cd forks/rpa4all-nextcloud-authentik`
    - `set -a; source .env; set +a`
-   - `python3 scripts/configure_authentik_nextcloud_oidc.py`
-   - `bash scripts/bootstrap_nextcloud_oidc.sh`
+   - `python3 tools/authentik_management/configure_authentik_nextcloud_oidc.py`
+   - `bash tools/authentik_management/bootstrap_nextcloud_oidc.sh`
 
 ### Ordem esperada
 
 - Primeiro, valide que `/LTO` usa staging em disco e que LTFS nao esta no caminho online do Nextcloud.
-- Depois, execute o bootstrap OIDC no Nextcloud para garantir que o provider Authentik esteja disponível e os apps necessários estejam habilitados.
+- Depois, execute o bootstrap OIDC no Nextcloud para garantir que o provider Authentik esteja disponível e os apps `oidc_login` e `groupfolders` estejam habilitados.
 
 ## Pontos de expansão sugeridos
 
@@ -94,14 +97,12 @@ O fluxo antigo de "reativar LTFS no NAS e bindar direto no Nextcloud" foi aposen
 - Remover ou aposentar automações que bindem LTFS diretamente em `/srv/nextcloud/external/LTO`.
 - Adicionar validação de `NEXTCLOUD_URL` e `NEXTCLOUD_BASE_PATH` no portal de contratos para garantir que os links de workspace sempre funcionem.
 - Consolidar o fluxo de grupo do Authentik → Nextcloud Group Folders em um único script/documento de operação.
-- Confirmar se o `oidc_login` app e o `groupfolders` app estão instalados automaticamente no bootstrap e se há rollback em caso de falha.
+- Adicionar um teste do bootstrap `occ` se o fluxo passar a ser exercitado em CI com container do Nextcloud.
 
 ## Conclusão
 
-O workspace já contém um fluxo Nextcloud robusto:
-- autenticação via Authentik,
-- provisioning de equipe e Group Folders,
-- armazenamento externo via staging em disco com flush controlado para LTFS,
-- portal de contratos ligado ao Nextcloud.
-
-A pesquisa externa mostra o modelo oficial do Nextcloud OIDC ser compatível com esta implementação e reforça que o `oidc_login` plugin é o caminho certo para este caso.
+O workspace agora tem um fluxo menos ambíguo:
+- autenticação principal via `oidc_login`,
+- callback legacy `user_oidc` apenas para compatibilidade,
+- bootstrap versionado em `tools/authentik_management/`,
+- painel administrativo separado do login do usuário final.
