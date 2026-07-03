@@ -847,6 +847,54 @@ def inner_transfer(currency: str, amount: float,
     return {"success": True, "orderId": order_id}
 
 
+def sub_transfer(currency: str, amount: float, sub_user_id: str,
+                 direction: str = "OUT",
+                 account_type: str = "TRADE",
+                 sub_account_type: str = "TRADE") -> Dict[str, Any]:
+    """Transferência master ↔ subconta KuCoin.
+
+    Args:
+        currency: Moeda a transferir (ex: 'USDT').
+        amount: Quantidade.
+        sub_user_id: UID da subconta (ex: '257506830').
+        direction: 'OUT' (master→sub) ou 'IN' (sub→master).
+        account_type: Conta do master ('MAIN' ou 'TRADE').
+        sub_account_type: Conta da subconta ('MAIN' ou 'TRADE').
+
+    Returns:
+        Dict com 'success' e 'orderId' ou 'error'.
+    """
+    import uuid
+    validate_credentials()
+
+    endpoint = "/api/v2/accounts/sub-transfer"
+    payload = {
+        "clientOid": str(uuid.uuid4()),
+        "currency": currency,
+        "amount": str(round(amount, 8)),
+        "direction": direction,
+        "accountType": account_type,
+        "subAccountType": sub_account_type,
+        "subUserId": str(sub_user_id),
+    }
+    body_str = json.dumps(payload, separators=(",", ":"))
+
+    logger.info(
+        f"💸 Sub transfer: {amount:.8f} {currency} "
+        f"master({account_type}) {direction} sub {sub_user_id}({sub_account_type})"
+    )
+
+    r = _signed_request("POST", endpoint, body_str=body_str, timeout=10)
+    result = r.json()
+    if result.get("code") != "200000":
+        logger.error(f"❌ Sub transfer failed: {result}")
+        return {"success": False, "error": result.get("msg", "Unknown")}
+
+    order_id = (result.get("data") or {}).get("orderId", "")
+    logger.info(f"✅ Sub transfer OK: {order_id}")
+    return {"success": True, "orderId": order_id}
+
+
 @retry_on_failure(max_retries=3)
 def place_market_order(symbol: str, side: str, funds: float = None,
                        size: float = None) -> Dict[str, Any]:
