@@ -130,6 +130,12 @@ def _resolve_telegram_thread_id() -> str:
     return (os.getenv("TRADING_TELEGRAM_THREAD_ID", "") or "").strip()
 
 
+def _get_extra_telegram_chat_ids() -> list:
+    """Retorna lista de chat_ids extras para notificações de trading (TRADING_TELEGRAM_EXTRA_CHAT_IDS)."""
+    raw = (os.getenv("TRADING_TELEGRAM_EXTRA_CHAT_IDS", "") or "").strip()
+    return [c.strip() for c in raw.split(",") if c.strip()] if raw else []
+
+
 def _send_telegram_alert(message: str) -> None:
     """Envia alerta via Telegram para o admin (best-effort, nunca lança exceção)."""
     try:
@@ -150,6 +156,15 @@ def _send_telegram_alert(message: str) -> None:
             json=payload,
             timeout=5,
         )
+        for _extra in _get_extra_telegram_chat_ids():
+            try:
+                requests.post(
+                    f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                    json={"chat_id": _extra, "text": message, "parse_mode": "Markdown"},
+                    timeout=5,
+                )
+            except Exception as _ex:
+                logger.warning("⚠️ Telegram extra alert failed (%s): %s", _extra, _ex)
     except Exception as e:
         logger.warning(f"⚠️ Failed to send Telegram alert: {e}")
 
