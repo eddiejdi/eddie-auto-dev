@@ -1959,7 +1959,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Patrimônio (balance × preço em USDT) por conta KuCoin da conta master — main, trade e total. Fonte: btc.exchange_balance_snapshots (~15 min). Subcontas não são sincronizadas.",
+      "description": "Patrimônio em USDT por conta KuCoin (main, trade, total) e por moeda (BTC convertido, USDT). Fonte: btc.exchange_balance_snapshots (~15 min). Subcontas não são sincronizadas.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2028,6 +2028,42 @@
                 "value": 3
               }
             ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "BTC (em USDT)"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    6,
+                    4
+                  ],
+                  "fill": "dash"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "USDT"
+            },
+            "properties": [
+              {
+                "id": "custom.lineStyle",
+                "value": {
+                  "dash": [
+                    6,
+                    4
+                  ],
+                  "fill": "dash"
+                }
+              }
+            ]
           }
         ]
       },
@@ -2065,7 +2101,7 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "SELECT\n  synced_at AS time,\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END))\n    FILTER (WHERE account_type = 'main') AS \"Conta Main\",\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END))\n    FILTER (WHERE account_type = 'trade') AS \"Conta Trade\",\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END)) AS \"Total\"\nFROM btc.exchange_balance_snapshots\nWHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  synced_at AS time,\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END))\n    FILTER (WHERE account_type = 'main') AS \"Conta Main\",\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END))\n    FILTER (WHERE account_type = 'trade') AS \"Conta Trade\",\n  SUM(balance * price_usdt) FILTER (WHERE currency = 'BTC') AS \"BTC (em USDT)\",\n  SUM(balance) FILTER (WHERE currency = 'USDT') AS \"USDT\",\n  SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END)) AS \"Total\"\nFROM btc.exchange_balance_snapshots\nWHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1\nORDER BY 1",
           "refId": "A",
           "sql": {
             "columns": [],
