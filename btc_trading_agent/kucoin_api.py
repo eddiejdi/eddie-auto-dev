@@ -922,7 +922,7 @@ def get_symbol_increments(symbol: str) -> Dict[str, str]:
     if symbol not in _symbol_increment_cache:
         try:
             r = requests.get(
-                f"{BASE_URL}/api/v2/symbols/{symbol}", timeout=8,
+                f"{KUCOIN_BASE}/api/v2/symbols/{symbol}", timeout=8,
             )
             data = (r.json() or {}).get("data") or {}
             _symbol_increment_cache[symbol] = {
