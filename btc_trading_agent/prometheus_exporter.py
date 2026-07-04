@@ -174,8 +174,9 @@ class MetricsCollector:
         """
         try:
             from kucoin_api import get_balance
+            base_currency = (self.symbol or "BTC-USDT").split("-")[0].upper()
             usdt = get_balance("USDT")
-            btc = get_balance("BTC")
+            btc = get_balance(base_currency)
             return {"usdt": usdt, "btc": btc, "success": True}
         except Exception as e:
             print(f"⚠️ Falha ao buscar saldos da exchange: {e}")
