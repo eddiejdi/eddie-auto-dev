@@ -1,0 +1,16 @@
+[Unit]
+Description=Tradutor de Reuniões RPA4All — página web + bot Meet/Teams
+After=network.target
+
+[Service]
+Type=simple
+User=homelab
+WorkingDirectory=/apps/meeting-translator
+Environment=PYTHONUNBUFFERED=1
+Environment=MEETING_TRANSLATOR_PORT=8712
+ExecStart=/usr/bin/python3 /apps/meeting-translator/server.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

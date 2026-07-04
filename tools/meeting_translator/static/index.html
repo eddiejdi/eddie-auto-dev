@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tradutor de Reuniões — RPA4All</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    background: #0f1420; color: #e8ecf4;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .card {
+    width: min(680px, 94vw); background: #171e2e; border: 1px solid #26304a;
+    border-radius: 14px; padding: 28px 30px; box-shadow: 0 10px 40px rgba(0,0,0,.45);
+  }
+  h1 { margin: 0 0 4px; font-size: 1.35rem; display: flex; align-items: center; gap: 10px; }
+  h1 .logo { font-size: 1.6rem; }
+  .sub { color: #93a0b8; font-size: .88rem; margin: 0 0 22px; }
+  .row { display: flex; gap: 10px; }
+  input[type=url] {
+    flex: 1; padding: 12px 14px; border-radius: 9px; border: 1px solid #33405f;
+    background: #0d1322; color: #e8ecf4; font-size: .95rem; outline: none;
+  }
+  input[type=url]:focus { border-color: #5b8cff; }
+  button {
+    padding: 12px 20px; border-radius: 9px; border: 0; cursor: pointer;
+    background: #3b6ef5; color: #fff; font-weight: 600; font-size: .95rem;
+  }
+  button:disabled { background: #2b3a5c; color: #7d8aa5; cursor: wait; }
+  .hint { font-size: .78rem; color: #7d8aa5; margin-top: 8px; }
+  .platform { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 20px;
+    font-size: .72rem; background: #22304f; color: #9fb6e8; }
+  #status { margin-top: 22px; }
+  .job { border: 1px solid #26304a; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; background: #121828; }
+  .job .head { display: flex; justify-content: space-between; font-size: .84rem; color: #aeb9cf; }
+  .state { font-weight: 700; }
+  .state.entrando { color: #f5c542; }
+  .state.na_reuniao { color: #46d68c; }
+  .state.erro { color: #f56565; }
+  .state.finalizado { color: #8a93a8; }
+  .log { margin: 8px 0 0; padding: 0; list-style: none; font-size: .8rem; color: #93a0b8; max-height: 130px; overflow-y: auto; }
+  .log li { padding: 1px 0; }
+  .phase2 { margin-top: 18px; font-size: .78rem; color: #6b7690; border-top: 1px dashed #26304a; padding-top: 12px; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1><span class="logo">🌐</span> Tradutor de Reuniões <span class="platform">RPA4All</span></h1>
+    <p class="sub">Cole o link da reunião — o agente <b>Tradutor RPA4All</b> entra na sala e pede para participar.</p>
+    <div class="row">
+      <input id="url" type="url" placeholder="https://meet.google.com/xxx-yyyy-zzz  ou  https://teams.microsoft.com/…" autofocus>
+      <button id="join">Entrar na reunião</button>
+    </div>
+    <div class="hint">Suporta <b>Google Meet</b> e <b>Microsoft Teams</b> · 1 reunião simultânea · admita o bot quando ele bater na porta 🚪</div>
+    <div id="status"></div>
+    <div class="phase2">🎧 Fase 2 (em breve): legenda traduzida ao vivo — áudio → Whisper (GPU0) → Gemma (GPU1), latência alvo ~2–4 s.</div>
+  </div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
