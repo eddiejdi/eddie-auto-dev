@@ -387,9 +387,14 @@ class PositionManagerMixin:
         """Executa em background: sync balanço KuCoin → Ollama GPU1 → Telegram."""
         # 1. Sync exchange balance snapshot
         try:
+            # O sync precisa das credenciais MASTER para enxergar todas as
+            # contas; herdar KUCOIN_SECRET_NAMES da subconta do perfil gerava
+            # snapshots parciais (~$50) que derrubavam o gráfico patrimonial.
+            sync_env = os.environ.copy()
+            sync_env.pop("KUCOIN_SECRET_NAMES", None)
             proc = subprocess.run(
                 ["python3", self._SELL_NOTIFY_SCRIPT],
-                env=os.environ.copy(),
+                env=sync_env,
                 timeout=45,
                 capture_output=True,
             )
