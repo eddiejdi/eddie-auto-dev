@@ -391,6 +391,11 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 raise
         return dict(_config)
 
+    @property
+    def _news_coin(self) -> str:
+        """Moeda base do símbolo para filtrar btc.news_sentiment (ex: ETH-USDT → ETH)."""
+        return (self.symbol or "BTC-USDT").split("-")[0].upper()
+
     def _current_profile(self) -> str:
         """Sincroniza o profile em memória com o profile do config ativo da instância."""
         live_cfg = self._load_live_config()
@@ -1128,9 +1133,10 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     """
                     SELECT EXTRACT(EPOCH FROM MAX(timestamp))
                     FROM btc.news_sentiment
-                    WHERE coin IN ('BTC', 'GENERAL')
+                    WHERE coin IN (%s, 'GENERAL')
                       AND timestamp > NOW() - INTERVAL '6 hours'
-                    """
+                    """,
+                    (self._news_coin,),
                 )
                 row = cur.fetchone()
                 latest_ts = float(row[0] or 0.0)
@@ -1156,19 +1162,19 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     cur.execute("""
                         SELECT AVG(sentiment::float), COUNT(*)
                         FROM btc.news_sentiment
-                        WHERE coin IN ('BTC', 'GENERAL')
+                        WHERE coin IN (%s, 'GENERAL')
                           AND timestamp > NOW() - INTERVAL '4 hours'
                           AND confidence >= 0.30
                           AND source = ANY(%s)
-                    """, (_trusted_src,))
+                    """, (self._news_coin, _trusted_src))
                 else:
                     cur.execute("""
                         SELECT AVG(sentiment::float), COUNT(*)
                         FROM btc.news_sentiment
-                        WHERE coin IN ('BTC', 'GENERAL')
+                        WHERE coin IN (%s, 'GENERAL')
                           AND timestamp > NOW() - INTERVAL '4 hours'
                           AND confidence >= 0.30
-                    """)
+                    """, (self._news_coin,))
                 row = cur.fetchone()
                 cur.close()
             if row and row[1] and int(row[1]) >= 3:
@@ -1197,19 +1203,19 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                             ns.source,
                             ns.sentiment,
                             (SELECT m.price FROM btc.market_states m
-                             WHERE m.symbol = 'BTC-USDT'
+                             WHERE m.symbol = %s
                                AND m.timestamp BETWEEN EXTRACT(epoch FROM ns.timestamp) - 300
                                                    AND EXTRACT(epoch FROM ns.timestamp) + 300
                              ORDER BY ABS(m.timestamp - EXTRACT(epoch FROM ns.timestamp))
                              LIMIT 1) AS price_at,
                             (SELECT m.price FROM btc.market_states m
-                             WHERE m.symbol = 'BTC-USDT'
+                             WHERE m.symbol = %s
                                AND m.timestamp BETWEEN EXTRACT(epoch FROM ns.timestamp) + 13950
                                                    AND EXTRACT(epoch FROM ns.timestamp) + 14850
                              ORDER BY ABS(m.timestamp - (EXTRACT(epoch FROM ns.timestamp) + 14400))
                              LIMIT 1) AS price_4h
                         FROM btc.news_sentiment ns
-                        WHERE ns.coin IN ('BTC', 'GENERAL')
+                        WHERE ns.coin IN (%s, 'GENERAL')
                           AND ns.sentiment != 0
                           AND NOT (ns.sentiment = 0 AND ns.confidence = 0.25)
                           AND ns.timestamp > NOW() - INTERVAL '7 days'
@@ -1229,7 +1235,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     FROM acertos
                     WHERE previsoes >= 5
                       AND ROUND(100.0 * acertos / NULLIF(previsoes, 0), 1) >= 50
-                """)
+                """, (self.symbol, self.symbol, self._news_coin))
                 trusted = [row[0] for row in cur.fetchall()]
                 cur.close()
             if trusted:
@@ -1989,23 +1995,23 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                         cur.execute("""
                             SELECT source, title, sentiment::float, confidence::float
                             FROM btc.news_sentiment
-                            WHERE coin IN ('BTC', 'GENERAL')
+                            WHERE coin IN (%s, 'GENERAL')
                               AND timestamp > NOW() - INTERVAL '4 hours'
                               AND confidence >= 0.30
                               AND source = ANY(%s)
                             ORDER BY timestamp DESC
                             LIMIT 5
-                        """, (_trusted_src,))
+                        """, (self._news_coin, _trusted_src))
                     else:
                         cur.execute("""
                             SELECT source, title, sentiment::float, confidence::float
                             FROM btc.news_sentiment
-                            WHERE coin IN ('BTC', 'GENERAL')
+                            WHERE coin IN (%s, 'GENERAL')
                               AND timestamp > NOW() - INTERVAL '4 hours'
                               AND confidence >= 0.30
                             ORDER BY timestamp DESC
                             LIMIT 5
-                        """)
+                        """, (self._news_coin,))
                     for source, title, sentiment, confidence in cur.fetchall():
                         news_lines.append(
                             f"- [{source}] sent={sentiment:+.2f} conf={confidence:.0%} :: {title}"
@@ -2708,24 +2714,24 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                             SELECT source, title, sentiment::float, confidence::float,
                                    category, url, coin
                             FROM btc.news_sentiment
-                            WHERE coin IN ('BTC', 'GENERAL')
+                            WHERE coin IN (%s, 'GENERAL')
                               AND timestamp > NOW() - INTERVAL '4 hours'
                               AND confidence >= 0.30
                               AND source = ANY(%s)
                             ORDER BY timestamp DESC
                             LIMIT 10
-                        """, (_trusted_src,))
+                        """, (self._news_coin, _trusted_src))
                     else:
                         cur.execute("""
                             SELECT source, title, sentiment::float, confidence::float,
                                    category, url, coin
                             FROM btc.news_sentiment
-                            WHERE coin IN ('BTC', 'GENERAL')
+                            WHERE coin IN (%s, 'GENERAL')
                               AND timestamp > NOW() - INTERVAL '4 hours'
                               AND confidence >= 0.30
                             ORDER BY timestamp DESC
                             LIMIT 10
-                        """)
+                        """, (self._news_coin,))
                     news_articles = [
                         {
                             "source": r[0], "title": r[1], "sentiment": r[2],
