@@ -32,7 +32,17 @@ Transferências de 50 USDT executadas em 2026-07-03 via
 `kucoin/homelab`). Ou seja, por perfil basta o envfile apontar para o secret
 da subconta.
 
-## Passos restantes (bloqueado por ação do usuário)
+## Status (2026-07-03 ~23h30)
+
+- ✅ **aggressive** migrado para `sub:BTCAgressive` ($100; sem posição aberta no momento da troca — migração limpa).
+- ✅ **conservative** migrado para `sub:BTCConservative` ($50 + 0.00015964 BTC transferido antes da troca; posição restaurada 1:1, sem falso depósito externo).
+- ✅ Exporters reiniciados — métricas `exchange_usdt_balance` refletem as subcontas.
+- ⏳ **shadow** permanece no master (sem subconta; ficou com ~$10 USDT + BTC das posições dele).
+- ⏳ **ETH** aguarda Fase A do plano de ativação (subcontas já fundeadas e credenciais validadas).
+- Credenciais: 4×(api_key, api_secret, passphrase) no Secrets Agent com sync Authentik confirmado; passphrases recuperadas do Bitwarden do usuário (ver memória `feedback-bw-gmail-otp-flow`).
+- ⚠️ Os envfiles ainda contêm as credenciais do master inline (fallback); com `KUCOIN_SECRET_NAMES` ativo elas não são usadas — remover em limpeza futura.
+
+## Passos originais (histórico — executados acima)
 
 1. **Usuário**: criar API key em cada subconta (KuCoin → API Management →
    subconta → permissões *General* + *Spot Trading*; mesma whitelist de IP do
