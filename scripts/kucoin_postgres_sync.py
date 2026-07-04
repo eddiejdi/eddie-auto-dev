@@ -137,6 +137,8 @@ def _snapshot_balances(conn) -> int:
     usdt_brl = get_price_fast("USDT-BRL", timeout=5) or 0.0
     btc_usdt = get_price_fast("BTC-USDT", timeout=5) or 0.0
 
+    _price_cache: Dict[str, Optional[float]] = {}
+
     def price_in_usdt(currency: str) -> Optional[float]:
         if currency == "USDT":
             return 1.0
@@ -144,7 +146,14 @@ def _snapshot_balances(conn) -> int:
             return btc_usdt or None
         if currency == "BRL" and usdt_brl > 0:
             return 1.0 / usdt_brl
-        return None
+        # Demais moedas (ETH, KCS, ...): cotar <CUR>-USDT sob demanda, com
+        # cache por execução — sem isso os saldos ficam avaliados em 0.
+        if currency not in _price_cache:
+            try:
+                _price_cache[currency] = get_price_fast(f"{currency}-USDT", timeout=5) or None
+            except Exception:
+                _price_cache[currency] = None
+        return _price_cache[currency]
 
     with conn.cursor() as cur:
         for account_type in ("trade", "main"):
