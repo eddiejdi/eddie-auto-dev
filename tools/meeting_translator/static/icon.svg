@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <rect width="96" height="96" rx="20" fill="#3b6ef5"/>
+  <circle cx="48" cy="44" r="22" fill="none" stroke="#fff" stroke-width="4"/>
+  <ellipse cx="48" cy="44" rx="10" ry="22" fill="none" stroke="#fff" stroke-width="3"/>
+  <line x1="26" y1="44" x2="70" y2="44" stroke="#fff" stroke-width="3"/>
+  <path d="M30 74 h36 a4 4 0 0 1 0 8 h-10 l-8 8 v-8 h-18 a4 4 0 0 1 0-8z" fill="#fff"/>
+  <text x="48" y="81.5" font-family="sans-serif" font-size="8" font-weight="bold" fill="#3b6ef5" text-anchor="middle">PT↔EN</text>
+</svg>
