@@ -32,7 +32,7 @@ def test_workflow_watches_slot_exit_runtime_files() -> None:
 def test_workflow_watches_dashboard_copies() -> None:
     content = _load_workflow()
     assert "grafana/btc_trading_dashboard_v3_prometheus.json" in content
-    assert "grafana/dashboards/btc_trading_monitor.json" in content
+    assert "grafana/dashboards/btc-trading-monitor.json" in content
 
 
 def test_workflow_validates_slot_based_tests_before_deploy() -> None:

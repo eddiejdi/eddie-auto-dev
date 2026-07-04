@@ -22,7 +22,7 @@ CONSERVATIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_conservative_optimized.json"
 AGGRESSIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_aggressive_optimized.json"
 CONSERVATIVE_DST="${TARGET_DIR}/config_BTC_USDT_conservative.json"
 AGGRESSIVE_DST="${TARGET_DIR}/config_BTC_USDT_aggressive.json"
-BTC_DASHBOARD_SRC="${REPO_ROOT}/grafana/dashboards/btc_trading_monitor.json"
+BTC_DASHBOARD_SRC="${REPO_ROOT}/grafana/dashboards/btc-trading-monitor.json"
 BTC_DASHBOARD_DST="${GRAFANA_PROVISIONING_DIR}/btc-trading-monitor.json"
 BTC_DASHBOARD_DUPLICATE_PATHS=(
   "${GRAFANA_PROVISIONING_DIR}/btc_trading_monitor.json"
