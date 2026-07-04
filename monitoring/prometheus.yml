@@ -123,6 +123,16 @@ scrape_configs:
           profile: 'conservative'
           servidor: 'homelab'
 
+  - job_name: 'crypto-exporter-eth_usdt_aggressive'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9098']
+        labels:
+          coin: 'ETH-USDT'
+          instance: 'eth_usdt_aggressive'
+          profile: 'aggressive'
+          servidor: 'homelab'
+
   # ---------------------------------------------------------------------------
   # ollama-metrics — proxy Prometheus para os 3 endpoints Ollama do cluster GPU
   # Métricas: tokens, latência, modelos carregados, uso de VRAM por GPU
