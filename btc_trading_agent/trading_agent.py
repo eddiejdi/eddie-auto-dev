@@ -2761,10 +2761,10 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 news_prompt_block = "\n".join(lines) + "\n\n"
 
             prompt = (
-                f"Você é um analista de trading de BTC. Analise o estado atual e gere um "
+                f"Você é um analista de trading de {self._news_coin}. Analise o estado atual e gere um "
                 f"resumo dos PRÓXIMOS PASSOS da estratégia em português do Brasil.\n\n"
                 f"DADOS ATUAIS:\n"
-                f"- Preço BTC: ${market_state.price:,.2f}\n"
+                f"- Preço {self._news_coin}: ${market_state.price:,.2f}\n"
                 f"- RSI: {rsi:.1f} | Momentum: {momentum:.3f} | Volatilidade: {volatility:.4f}\n"
                 f"- Regime: {rag_stats['current_regime']} (confiança {rag_stats['regime_confidence']:.0%})\n"
                 f"- Orderbook: imbalance={market_state.orderbook_imbalance:.2f}, "
@@ -2832,19 +2832,19 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             # Prompt compacto para modelos instruct pequenos (GPU1)
             # Usa vocabulário explícito de trading para passar no _sanitize_ai_plan
             _pos_str = (
-                f"Posição aberta do profile {profile}: {self.state.position:.6f} BTC, "
+                f"Posição aberta do profile {profile}: {self.state.position:.6f} {self._news_coin}, "
                 f"entry=${self.state.entry_price:,.2f}, "
                 f"PnL={current_net_pnl:+.4f} USDT"
                 if has_open_position else f"Profile {profile}: sem posição aberta"
             )
             prompt_fallback = (
-                f"Analise o mercado de Bitcoin (BTC/USDT) e descreva o que o agente de trading vai fazer.\n\n"
-                f"Dados: preço BTC=${market_state.price:,.2f}, RSI={rsi:.1f}, "
+                f"Analise o mercado de {self._news_coin} ({self.symbol}) e descreva o que o agente de trading vai fazer.\n\n"
+                f"Dados: preço {self._news_coin}=${market_state.price:,.2f}, RSI={rsi:.1f}, "
                 f"regime={rag_stats['current_regime']}, "
                 f"volatilidade={volatility:.4f}, momentum={momentum:.4f}.\n"
                 f"{_pos_str}. Saldo USDT=${usdt_bal:.2f}.\n\n"
                 f"Responda em 2 parágrafos em português:\n"
-                f"1. Análise do mercado BTC: tendência, risco, oportunidade de compra ou venda.\n"
+                f"1. Análise do mercado {self._news_coin}: tendência, risco, oportunidade de compra ou venda.\n"
                 f"2. Próxima ação: comprar, vender ou aguardar, com preço-alvo e stop-loss."
             )
 
@@ -2886,7 +2886,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                                         {
                                             "role": "system",
                                             "content": (
-                                                "Você é um analista de trading de Bitcoin. "
+                                                f"Você é um analista de trading de {self._news_coin}. "
                                                 "Responda SEMPRE em português do Brasil (PT-BR). "
                                                 "Seja direto e objetivo, sem markdown headers."
                                             ),
@@ -2929,7 +2929,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                                                 "model": model,
                                                 "messages": [
                                                     {"role": "system", "content": (
-                                                        "Você é um analista de trading de Bitcoin. "
+                                                        f"Você é um analista de trading de {self._news_coin}. "
                                                         "Responda SEMPRE em português do Brasil (PT-BR). "
                                                         "Seja direto e objetivo, sem markdown headers."
                                                     )},
