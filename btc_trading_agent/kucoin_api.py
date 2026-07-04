@@ -151,11 +151,26 @@ def _send_telegram_alert(message: str) -> None:
         payload = {"chat_id": chat_id, "text": message, "parse_mode": "Markdown"}
         if thread_id:
             payload["message_thread_id"] = int(thread_id)
-        requests.post(
+        r = requests.post(
             f"https://api.telegram.org/bot{bot_token}/sendMessage",
             json=payload,
-            timeout=5,
+            timeout=10,
         )
+        if r.status_code != 200:
+            # Markdown inválido ou thread inexistente → retry texto puro
+            logger.warning(
+                "⚠️ Telegram alert HTTP %s: %s — retry sem parse_mode",
+                r.status_code, r.text[:120],
+            )
+            payload.pop("parse_mode", None)
+            payload.pop("message_thread_id", None)
+            r = requests.post(
+                f"https://api.telegram.org/bot{bot_token}/sendMessage",
+                json=payload,
+                timeout=10,
+            )
+            if r.status_code != 200:
+                logger.error("❌ Telegram alert falhou de vez: %s", r.text[:150])
         for _extra in _get_extra_telegram_chat_ids():
             try:
                 requests.post(
@@ -895,6 +910,43 @@ def sub_transfer(currency: str, amount: float, sub_user_id: str,
     return {"success": True, "orderId": order_id}
 
 
+_symbol_increment_cache: Dict[str, Dict[str, str]] = {}
+
+
+def get_symbol_increments(symbol: str) -> Dict[str, str]:
+    """Retorna baseIncrement/quoteIncrement do símbolo (cache por processo).
+
+    Fallback conservador (8 casas) se a API falhar — equivale ao
+    comportamento antigo, válido para BTC-USDT.
+    """
+    if symbol not in _symbol_increment_cache:
+        try:
+            r = requests.get(
+                f"{BASE_URL}/api/v2/symbols/{symbol}", timeout=8,
+            )
+            data = (r.json() or {}).get("data") or {}
+            _symbol_increment_cache[symbol] = {
+                "baseIncrement": data.get("baseIncrement") or "0.00000001",
+                "quoteIncrement": data.get("quoteIncrement") or "0.01",
+            }
+        except Exception as e:
+            logger.warning(f"⚠️ Falha ao obter increments de {symbol}: {e}")
+            return {"baseIncrement": "0.00000001", "quoteIncrement": "0.01"}
+    return _symbol_increment_cache[symbol]
+
+
+def _floor_to_increment(value: float, increment: str) -> str:
+    """Trunca value para múltiplo do increment, como string decimal exata.
+
+    KuCoin rejeita ordens com mais casas que o increment do símbolo
+    ('Order size increment invalid' — ex.: ETH-USDT usa 7 casas, não 8).
+    """
+    from decimal import Decimal, ROUND_DOWN
+    inc = Decimal(increment)
+    quantized = (Decimal(str(value)) / inc).to_integral_value(rounding=ROUND_DOWN) * inc
+    return format(quantized.normalize(), "f")
+
+
 @retry_on_failure(max_retries=3)
 def place_market_order(symbol: str, side: str, funds: float = None,
                        size: float = None) -> Dict[str, Any]:
@@ -911,10 +963,11 @@ def place_market_order(symbol: str, side: str, funds: float = None,
         "type": "market",
     }
 
+    increments = get_symbol_increments(symbol)
     if funds is not None:
         payload["funds"] = str(round(float(funds), 2))
     elif size is not None:
-        payload["size"] = str(round(float(size), 8))
+        payload["size"] = _floor_to_increment(float(size), increments["baseIncrement"])
     else:
         raise ValueError("Must specify 'funds' or 'size'")
 

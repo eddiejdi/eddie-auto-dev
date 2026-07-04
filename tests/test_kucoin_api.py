@@ -191,6 +191,7 @@ class TestTelegramAlerts:
             patch("kucoin_api._fetch_from_secrets_agent", side_effect=fake_secret),
             patch("kucoin_api.requests.post") as mock_post,
         ):
+            mock_post.return_value.status_code = 200
             kucoin_api._send_telegram_alert("teste")
 
         mock_post.assert_called_once()
@@ -209,6 +210,7 @@ class TestTelegramAlerts:
             patch("kucoin_api._fetch_from_secrets_agent", side_effect=fake_secret),
             patch("kucoin_api.requests.post") as mock_post,
         ):
+            mock_post.return_value.status_code = 200
             kucoin_api._send_telegram_alert("teste")
 
         mock_post.assert_called_once()
@@ -227,6 +229,7 @@ class TestTelegramAlerts:
             patch("kucoin_api._fetch_from_secrets_agent", side_effect=fake_secret),
             patch("kucoin_api.requests.post") as mock_post,
         ):
+            mock_post.return_value.status_code = 200
             kucoin_api._send_telegram_alert("teste")
 
         mock_post.assert_called_once()
@@ -243,6 +246,7 @@ class TestTelegramAlerts:
             ),
             patch("kucoin_api.requests.post") as mock_post,
         ):
+            mock_post.return_value.status_code = 200
             kucoin_api._send_telegram_alert("teste")
 
         mock_post.assert_called_once()
@@ -263,6 +267,7 @@ class TestTelegramAlerts:
             ),
             patch("kucoin_api.requests.post") as mock_post,
         ):
+            mock_post.return_value.status_code = 200
             kucoin_api._send_telegram_alert("teste")
 
         mock_post.assert_called_once()
@@ -282,12 +287,35 @@ class TestTelegramAlerts:
             ),
             patch("kucoin_api.requests.post") as mock_post,
         ):
+            mock_post.return_value.status_code = 200
             kucoin_api._send_telegram_alert("teste")
 
         mock_post.assert_called_once()
         payload = mock_post.call_args.kwargs["json"]
         assert payload["chat_id"] == "-100777"
         assert payload["message_thread_id"] == 42
+
+    def test_send_telegram_alert_retry_sem_markdown_em_http_400(self) -> None:
+        with (
+            patch("kucoin_api._fetch_from_secrets_agent", return_value=None),
+            patch.dict(
+                "kucoin_api.os.environ",
+                {
+                    "TELEGRAM_BOT_TOKEN": "env-token",
+                    "TRADING_TELEGRAM_CHAT_ID": "-100777",
+                },
+                clear=False,
+            ),
+            patch("kucoin_api.requests.post") as mock_post,
+        ):
+            bad = type("R", (), {"status_code": 400, "text": "Bad Request: can't parse entities"})()
+            ok = type("R", (), {"status_code": 200, "text": "ok"})()
+            mock_post.side_effect = [bad, ok]
+            kucoin_api._send_telegram_alert("teste *quebrado")
+
+        assert mock_post.call_count == 2
+        retry_payload = mock_post.call_args.kwargs["json"]
+        assert "parse_mode" not in retry_payload
 
 
 class TestLoadCredentials:

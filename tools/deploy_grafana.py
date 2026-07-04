@@ -2,7 +2,7 @@
 """Deploy e consulta de dashboards Grafana via API.
 
 Uso:
-  python3 tools/deploy_grafana.py deploy --dashboard grafana/dashboards/btc_trading_monitor.json
+  python3 tools/deploy_grafana.py deploy --dashboard grafana/dashboards/btc-trading-monitor.json
   python3 tools/deploy_grafana.py export --uid btc-trading-monitor
   python3 tools/deploy_grafana.py query --uid btc-trading-monitor --panel 96
   python3 tools/deploy_grafana.py list

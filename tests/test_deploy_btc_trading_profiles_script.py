@@ -14,7 +14,7 @@ def _load_script() -> str:
 
 def test_script_syncs_btc_dashboard_to_canonical_remote_filename() -> None:
     content = _load_script()
-    assert 'BTC_DASHBOARD_SRC="${REPO_ROOT}/grafana/dashboards/btc_trading_monitor.json"' in content
+    assert 'BTC_DASHBOARD_SRC="${REPO_ROOT}/grafana/dashboards/btc-trading-monitor.json"' in content
     assert 'BTC_DASHBOARD_DST="${GRAFANA_PROVISIONING_DIR}/btc-trading-monitor.json"' in content
     assert "sync_btc_grafana_dashboard" in content
 

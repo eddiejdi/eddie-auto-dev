@@ -28,7 +28,7 @@ on:
       - 'grafana/exporters/rss_sentiment_exporter.py'
       - 'grafana/exporters/requirements.txt'
       - 'grafana/btc_trading_dashboard_v3_prometheus.json'
-      - 'grafana/dashboards/btc_trading_monitor.json'
+      - 'grafana/dashboards/btc-trading-monitor.json'
       - 'systemd/rss-sentiment-exporter.service'
       - 'systemd/ollama-gpu-coordinator.service'
       - 'tools/ollama_gpu_coordinator.py'

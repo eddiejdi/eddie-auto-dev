@@ -2459,7 +2459,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Variação do patrimônio total (equity) por dia calendário — equivalente ao PnL diário que a KuCoin exibe. Inclui posição aberta (não só trades fechados).",
+      "description": "Variação diária do patrimônio total em USDT: soma de todas as contas (main, trade e subcontas) do último snapshot de cada horário. Datas anteriores aos snapshots por conta usam a equity legada do master.",
       "fieldConfig": {
         "defaults": {
           "thresholds": {
@@ -2512,11 +2512,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH all_snapshots AS (\n    SELECT\n        synced_at AS ts,\n        SUM(CASE\n            WHEN currency = 'USDT' THEN balance\n            WHEN currency NOT IN ('USDT', 'BRL') THEN balance * COALESCE(price_usdt, 0)\n            ELSE 0\n        END) AS equity_usdt\n    FROM btc.exchange_balance_snapshots\n    WHERE account_type = 'trade'\n      AND $__timeFilter(synced_at)\n    GROUP BY synced_at\n\n    UNION ALL\n\n    SELECT\n        to_timestamp(timestamp) AS ts,\n        equity_usdt\n    FROM btc.exchange_snapshots\n    WHERE timestamp BETWEEN $__unixEpochFrom() AND $__unixEpochTo()\n),\ndaily AS (\n    SELECT\n        ts::date::text AS day,\n        equity_usdt,\n        FIRST_VALUE(equity_usdt) OVER w AS day_open,\n        LAST_VALUE(equity_usdt)  OVER w AS day_close\n    FROM all_snapshots\n    WINDOW w AS (\n        PARTITION BY ts::date\n        ORDER BY ts\n        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING\n    )\n)\nSELECT DISTINCT\n    day,\n    ROUND(((day_close - day_open) / NULLIF(day_open, 0) * 100)::numeric, 3) AS pnl_pct,\n    ROUND((day_close - day_open)::numeric, 2)                               AS pnl_usdt\nFROM daily\nORDER BY day ASC",
+          "rawSql": "WITH balance_equity AS (\n    SELECT\n        synced_at AS ts,\n        SUM(balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END)) AS equity_usdt\n    FROM btc.exchange_balance_snapshots\n    WHERE $__timeFilter(synced_at)\n    GROUP BY synced_at\n),\nlegacy AS (\n    -- equity antiga (exporter master) apenas para datas anteriores aos\n    -- snapshots por conta; depois da migração para subcontas ela é parcial\n    SELECT to_timestamp(timestamp) AS ts, equity_usdt\n    FROM btc.exchange_snapshots\n    WHERE timestamp BETWEEN $__unixEpochFrom() AND $__unixEpochTo()\n      AND to_timestamp(timestamp) < (SELECT COALESCE(MIN(synced_at), 'infinity'::timestamptz)\n                                     FROM btc.exchange_balance_snapshots)\n),\nall_snapshots AS (\n    SELECT * FROM balance_equity\n    UNION ALL\n    SELECT * FROM legacy\n),\ndaily AS (\n    SELECT\n        ts::date::text AS day,\n        equity_usdt,\n        FIRST_VALUE(equity_usdt) OVER w AS day_open,\n        LAST_VALUE(equity_usdt)  OVER w AS day_close\n    FROM all_snapshots\n    WINDOW w AS (\n        PARTITION BY ts::date\n        ORDER BY ts\n        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING\n    )\n)\nSELECT DISTINCT\n    day,\n    ROUND(((day_close - day_open) / NULLIF(day_open, 0) * 100)::numeric, 3) AS pnl_pct,\n    ROUND((day_close - day_open)::numeric, 2)                               AS pnl_usdt\nFROM daily\nORDER BY day ASC",
           "refId": "A"
         }
       ],
-      "title": "📅 Calendário de PnL Diário",
+      "title": "📅 Calendário de PnL Diário — equity global (todas as contas)",
       "type": "marcusolsson-dynamictext-panel"
     },
     {
