@@ -1,5 +1,10 @@
 # Plano de Ativação — Negociação ETH-USDT
 
+> **STATUS 2026-07-04: EXECUTADO (acelerado).** Fase A rodou ~10h; o usuário
+> autorizou live direto (Fase B encurtada). Frota 6/6 em modo real — ver
+> `TRADING_MULTI_SYMBOL_LIVE_2026-07-04.md`. A modularização (seção 2)
+> continua pendente e válida.
+
 Planejado em 2026-07-03 a pedido do usuário. Pré-requisito: modularização mínima
 do `trading_agent.py` (seção 2), porque ativar um segundo símbolo multiplica o
 custo de manutenção do monolito.
