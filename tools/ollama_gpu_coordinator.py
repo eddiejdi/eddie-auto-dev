@@ -60,6 +60,14 @@ STALE_AFTER_SEC = float(os.environ.get(
 ))
 # Cap de acúmulo de chunks de streaming para preview (bytes)
 STREAM_PREVIEW_CAP = int(os.environ.get("GPU_COORD_STREAM_PREVIEW_CAP", str(256 * 1024)))
+# Modelos protegidos de eviction mesmo ociosos (prefixo do nome, csv).
+# trading-analyst é o maior modelo da GPU0 e seria o 1º da fila de despejo;
+# reload de 5GB custaria 30-60s no próximo plano de qualquer perfil.
+PROTECTED_MODELS = tuple(
+    p.strip() for p in os.environ.get(
+        "GPU_COORD_PROTECTED_MODELS", "trading-analyst"
+    ).split(",") if p.strip()
+)
 
 # VRAM estimativas por padrão de nome (MB) — usado quando o modelo não está na VRAM
 _VRAM_ESTIMATES: list[tuple[str, int]] = [
@@ -272,6 +280,8 @@ class EndpointState:
                 if self._model_active.get(name, 0) > 0:
                     continue
                 if any(name.endswith(s) for s in (":gpu0", ":gpu1", ":nas")):
+                    continue
+                if any(name.startswith(p) for p in PROTECTED_MODELS):
                     continue
                 result.append((vram, name))
         return sorted(result, reverse=True)
