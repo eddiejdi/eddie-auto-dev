@@ -175,10 +175,12 @@ class AuthentikSecretManager:
         """Busca secret no Authentik por client_id exato."""
         client_id = self._client_id(name, field)
         try:
+            # search do Authentik indexa o campo name (icontains), não o
+            # client_id — buscar pelo nome e filtrar por client_id exato.
             r = self._http.get(
                 f"{self._base}/api/v3/providers/oauth2/",
                 headers=self._headers,
-                params={"search": client_id, "page_size": 20},
+                params={"search": name, "page_size": 20},
                 timeout=10,
             )
             if r.status_code != 200:
@@ -197,7 +199,7 @@ class AuthentikSecretManager:
             r = self._http.get(
                 f"{self._base}/api/v3/providers/oauth2/",
                 headers=self._headers,
-                params={"search": prefix, "page_size": 50},
+                params={"search": name, "page_size": 50},
                 timeout=10,
             )
             if r.status_code != 200:
@@ -228,7 +230,7 @@ class AuthentikSecretManager:
             r = self._http.get(
                 f"{self._base}/api/v3/providers/oauth2/",
                 headers=self._headers,
-                params={"search": client_id, "page_size": 10},
+                params={"search": payload.name, "page_size": 50},
                 timeout=10,
             )
             existing_pk = None
@@ -296,7 +298,7 @@ class AuthentikSecretManager:
             r = self._http.get(
                 f"{self._base}/api/v3/providers/oauth2/",
                 headers=self._headers,
-                params={"search": client_id, "page_size": 10},
+                params={"search": name, "page_size": 50},
                 timeout=10,
             )
             if r.status_code != 200:
