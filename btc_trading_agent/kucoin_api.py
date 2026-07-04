@@ -192,8 +192,12 @@ def _format_market_order_notification(
     size: float | None = None,
     order_id: str | None = None,
     error: str | None = None,
+    notify_extra: Dict[str, float] | None = None,
 ) -> str:
-    """Monta mensagem Telegram para execução de ordem de mercado."""
+    """Monta mensagem Telegram para execução de ordem de mercado.
+
+    notify_extra (opcional, para SELL): invested, proceeds, pnl, pnl_pct.
+    """
     action = side.upper()
     icon = "🟢" if action == "BUY" else "🔴" if action == "SELL" else "📤"
     status = "EXECUTADA" if not error else "FALHOU"
@@ -207,6 +211,15 @@ def _format_market_order_notification(
         lines.append(f"• Valor: `{float(funds):.2f} USDT`")
     if size is not None:
         lines.append(f"• Quantidade: `{float(size):.8f}`")
+    extra = notify_extra or {}
+    if extra.get("invested") is not None:
+        lines.append(f"• Valor investido: `{float(extra['invested']):.2f} USDT`")
+    if extra.get("proceeds") is not None:
+        lines.append(f"• Valor da venda: `{float(extra['proceeds']):.2f} USDT`")
+    if extra.get("pnl") is not None:
+        pnl = float(extra["pnl"])
+        pct = float(extra.get("pnl_pct") or 0.0)
+        lines.append(f"• PnL líquido: `{pnl:+.4f} USDT ({pct:+.2f}%)`")
     if order_id:
         lines.append(f"• Order ID: `{order_id}`")
     if error:
@@ -949,8 +962,13 @@ def _floor_to_increment(value: float, increment: str) -> str:
 
 @retry_on_failure(max_retries=3)
 def place_market_order(symbol: str, side: str, funds: float = None,
-                       size: float = None) -> Dict[str, Any]:
-    """Executa ordem de mercado"""
+                       size: float = None,
+                       notify_extra: Dict[str, float] = None) -> Dict[str, Any]:
+    """Executa ordem de mercado.
+
+    notify_extra: contexto opcional para a notificação Telegram
+    (invested, proceeds, pnl, pnl_pct) — usado nos SELLs.
+    """
     validate_credentials()
 
     endpoint = "/api/v1/orders"
@@ -988,6 +1006,7 @@ def place_market_order(symbol: str, side: str, funds: float = None,
                 funds=funds,
                 size=size,
                 error=error_msg,
+                notify_extra=notify_extra,
             )
         )
         return {"success": False, "error": error_msg, "raw": result}
@@ -1001,6 +1020,7 @@ def place_market_order(symbol: str, side: str, funds: float = None,
             funds=funds,
             size=size,
             order_id=order_id,
+            notify_extra=notify_extra,
         )
     )
 

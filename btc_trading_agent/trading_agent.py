@@ -4991,7 +4991,15 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                         logger.info(f"🔴 [DRY] SELL {size:.6f} BTC @ ${price:,.2f} "
                                   f"(PnL: ${pnl:.2f} / {pnl_pct:.2f}% net, fees=${sell_fee+buy_fee:.4f})")
                     else:
-                        result = place_market_order(self.symbol, "sell", size=size)
+                        result = place_market_order(
+                            self.symbol, "sell", size=size,
+                            notify_extra={
+                                "invested": self.state.entry_price * size,
+                                "proceeds": price * size,
+                                "pnl": pnl,
+                                "pnl_pct": pnl_pct,
+                            },
+                        )
                         if not result.get("success"):
                             logger.error(f"❌ Order failed: {result}")
                             self._block_trade(

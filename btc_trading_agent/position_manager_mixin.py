@@ -221,7 +221,15 @@ class PositionManagerMixin:
                         entry_idx + 1, f"{size:.6f}", price, pnl, pnl_pct, reason,
                     )
                 else:
-                    result = place_market_order(self.symbol, "sell", size=size)
+                    result = place_market_order(
+                        self.symbol, "sell", size=size,
+                        notify_extra={
+                            "invested": entry_price * size,
+                            "proceeds": price * size,
+                            "pnl": pnl,
+                            "pnl_pct": pnl_pct,
+                        },
+                    )
                     if not result.get("success"):
                         logger.error("❌ Slot sell failed: %s", result)
                         err_code = str(
