@@ -147,3 +147,28 @@ class TestWinRateCalculation:
         assert old_wr > new_wr, "Novo win_rate deve ser <= ao antigo (denominador maior)"
         assert abs(old_wr - 0.5704) < 0.001
         assert abs(new_wr - 0.5390) < 0.001
+
+
+class TestEquityDailyChanges:
+    """Cards Hoje/Ontem devem usar a mesma base completa do calendário."""
+
+    def test_daily_changes_use_balance_snapshots_and_compute_open_close(self):
+        collector = _build_collector()
+
+        cursor = MagicMock()
+        cursor.fetchone.return_value = (100.0, 110.0, 200.0, 190.0)
+
+        conn = MagicMock()
+        conn.cursor.return_value = cursor
+        collector._get_conn = MagicMock(return_value=conn)
+
+        result = collector._get_equity_daily_changes()
+
+        sql = cursor.execute.call_args[0][0]
+        assert "btc.exchange_balance_snapshots" in sql
+        assert "COUNT(DISTINCT account_type) >= 3" in sql
+        assert "btc.exchange_snapshots" not in sql
+        assert result["equity_change_today_usdt"] == 10.0
+        assert result["equity_change_today_pct"] == 10.0
+        assert result["equity_change_yesterday_usdt"] == -10.0
+        assert result["equity_change_yesterday_pct"] == -5.0

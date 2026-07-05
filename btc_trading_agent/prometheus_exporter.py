@@ -224,7 +224,7 @@ class MetricsCollector:
 
 
     def _get_equity_daily_changes(self) -> Dict:
-        """Variação de equity por dia calendário (hoje e ontem) via exchange_snapshots.
+        """Variação de equity por dia calendário via snapshots completos.
 
         Equivalente ao PnL que a KuCoin exibe como "variação do dia" — inclui
         posição aberta, ao contrário do PnL realizado da tabela trades.
@@ -239,28 +239,45 @@ class MetricsCollector:
             conn = self._get_conn()
             cur = conn.cursor()
             cur.execute("""
-                WITH bounds AS (
+                WITH balance_equity AS (
                     SELECT
-                        EXTRACT(EPOCH FROM date_trunc('day', NOW()))                        AS today_start,
-                        EXTRACT(EPOCH FROM date_trunc('day', NOW() - INTERVAL '1 day'))     AS yday_start,
-                        EXTRACT(EPOCH FROM date_trunc('day', NOW() - INTERVAL '2 days'))    AS d2_start
+                        synced_at AS ts,
+                        SUM(
+                            balance * COALESCE(
+                                price_usdt,
+                                CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END
+                            )
+                        ) AS equity_usdt
+                    FROM btc.exchange_balance_snapshots
+                    WHERE synced_at >= date_trunc('day', NOW() - INTERVAL '1 day')
+                      AND synced_at <  date_trunc('day', NOW() + INTERVAL '1 day')
+                      AND synced_at IN (
+                        SELECT synced_at
+                        FROM btc.exchange_balance_snapshots
+                        GROUP BY synced_at
+                        HAVING COUNT(DISTINCT account_type) >= 3
+                            OR MIN(synced_at) < TIMESTAMPTZ '2026-07-03 21:00:00+00'
+                      )
+                    GROUP BY synced_at
+                ),
+                daily AS (
+                    SELECT
+                        ts::date AS day,
+                        FIRST_VALUE(equity_usdt) OVER w AS day_open,
+                        LAST_VALUE(equity_usdt)  OVER w AS day_close
+                    FROM balance_equity
+                    WINDOW w AS (
+                        PARTITION BY ts::date
+                        ORDER BY ts
+                        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+                    )
                 )
                 SELECT
-                    -- today_open = fechamento de ontem (último snapshot antes de hoje),
-                    -- evita distorção quando o exporter ficou offline parte do dia
-                    (SELECT equity_usdt FROM btc.exchange_snapshots
-                     WHERE timestamp >= b.yday_start AND timestamp < b.today_start
-                     ORDER BY timestamp DESC LIMIT 1)                               AS today_open,
-                    (SELECT equity_usdt FROM btc.exchange_snapshots
-                     ORDER BY timestamp DESC LIMIT 1)                               AS today_close,
-                    -- yday_open = fechamento de anteontem
-                    (SELECT equity_usdt FROM btc.exchange_snapshots
-                     WHERE timestamp >= b.d2_start AND timestamp < b.yday_start
-                     ORDER BY timestamp DESC LIMIT 1)                               AS yday_open,
-                    (SELECT equity_usdt FROM btc.exchange_snapshots
-                     WHERE timestamp >= b.yday_start AND timestamp < b.today_start
-                     ORDER BY timestamp DESC LIMIT 1)                               AS yday_close
-                FROM bounds b
+                    MAX(day_open)  FILTER (WHERE day = CURRENT_DATE)     AS today_open,
+                    MAX(day_close) FILTER (WHERE day = CURRENT_DATE)     AS today_close,
+                    MAX(day_open)  FILTER (WHERE day = CURRENT_DATE - 1) AS yday_open,
+                    MAX(day_close) FILTER (WHERE day = CURRENT_DATE - 1) AS yday_close
+                FROM daily
             """)
             row = cur.fetchone()
             if row:
