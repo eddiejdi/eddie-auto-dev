@@ -375,6 +375,8 @@ class TestPostSellNotifyWorker:
             patch("position_manager_mixin.subprocess.run", return_value=SimpleNamespace(returncode=0, stderr=b"")),
             patch("kucoin_api._resolve_telegram_bot_token", return_value="token"),
             patch("kucoin_api._resolve_telegram_chat_id", return_value="chat"),
+            patch("kucoin_api._resolve_telegram_thread_id", return_value="", create=True),
+            patch("kucoin_api._get_extra_telegram_chat_ids", return_value=[], create=True),
             patch("requests.post", side_effect=[ollama_resp, telegram_resp]) as post_mock,
             patch.dict("os.environ", {}, clear=False),
         ):
@@ -400,6 +402,8 @@ class TestPostSellNotifyWorker:
             patch("position_manager_mixin.subprocess.run", return_value=SimpleNamespace(returncode=0, stderr=b"")),
             patch("kucoin_api._resolve_telegram_bot_token", return_value="token"),
             patch("kucoin_api._resolve_telegram_chat_id", return_value="chat"),
+            patch("kucoin_api._resolve_telegram_thread_id", return_value="", create=True),
+            patch("kucoin_api._get_extra_telegram_chat_ids", return_value=[], create=True),
             patch("requests.post", side_effect=_post_side_effect) as post_mock,
             patch.dict("os.environ", {"TELEGRAM_PROXY_URL": "http://127.0.0.1:3128"}, clear=False),
         ):
