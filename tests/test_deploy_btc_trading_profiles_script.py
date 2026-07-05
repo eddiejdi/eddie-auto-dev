@@ -40,3 +40,16 @@ def test_script_installs_canonical_btc_trading_sudoers_file() -> None:
     assert "sudo rm -f /etc/sudoers.d/trading-svc-ollama" in content
     assert 'systemd/btc-trading-ollama.sudoers' in content
     assert "/etc/sudoers.d/btc-trading-ollama" in content
+
+
+def test_script_restarts_all_crypto_exporters_using_shared_exporter_code() -> None:
+    content = _load_script()
+    for unit in (
+        "crypto-exporter@BTC_USDT_conservative.service",
+        "crypto-exporter@BTC_USDT_aggressive.service",
+        "crypto-exporter@BTC_USDT_shadow.service",
+        "crypto-exporter@ETH_USDT_conservative.service",
+        "crypto-exporter@ETH_USDT_aggressive.service",
+        "crypto-exporter@ETH_USDT_shadow.service",
+    ):
+        assert unit in content

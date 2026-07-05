@@ -37,6 +37,10 @@ AGENT_SERVICES=(
 EXPORTER_SERVICES=(
   "crypto-exporter@BTC_USDT_conservative.service"
   "crypto-exporter@BTC_USDT_aggressive.service"
+  "crypto-exporter@BTC_USDT_shadow.service"
+  "crypto-exporter@ETH_USDT_conservative.service"
+  "crypto-exporter@ETH_USDT_aggressive.service"
+  "crypto-exporter@ETH_USDT_shadow.service"
 )
 
 LEGACY_EXPORTER_SERVICES=(
