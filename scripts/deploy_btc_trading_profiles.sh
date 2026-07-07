@@ -248,6 +248,9 @@ sync_trading_runtime() {
     "${REPO_ROOT}/btc_trading_agent/trading_agent.py" \
     "${TARGET_DIR}/trading_agent.py"
   sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/training_db.py" \
+    "${TARGET_DIR}/training_db.py"
+  sync_runtime_file \
     "${REPO_ROOT}/btc_trading_agent/sell_target_mixin.py" \
     "${TARGET_DIR}/sell_target_mixin.py"
   sync_runtime_file \
@@ -379,6 +382,7 @@ sudo install -o "${SERVICE_USER}" -g "${SERVICE_GROUP}" -m 0644 "${AGGRESSIVE_SR
 # Remove pycache to avoid permission conflicts with files created by the running service
 sudo rm -rf "${TARGET_DIR}/__pycache__"
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/trading_agent.py"
+sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/training_db.py"
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/sell_target_mixin.py"
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/risk_guardian_mixin.py"
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/position_manager_mixin.py"
