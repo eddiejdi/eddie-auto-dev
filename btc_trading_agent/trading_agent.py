@@ -2109,6 +2109,15 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 raw=raw,
                 request_meta=request_meta,
             )
+            self._record_llm_call(
+                call_type="controls",
+                prompt=prompt,
+                response_text=raw,
+                model=str((request_meta or {}).get("model", primary_model)),
+                host=str((request_meta or {}).get("host", primary_host)),
+                latency_ms=(request_meta or {}).get("latency_ms"),
+                trigger=trigger,
+            )
             logger.info(
                 "🧠 AI trade controls "
                 f"[{self._OLLAMA_TRADE_PARAMS_MODE}] trigger={trigger} "
@@ -2169,6 +2178,79 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             )
         except Exception as e:
             logger.warning(f"⚠️ Failed to save AI trade controls: {e}")
+
+    # Cache curto da config de log de LLM (o painel altera; agentes leem com TTL).
+    _LLM_LOG_CFG_TTL_SEC: float = 30.0
+    _LLM_LOG_TYPE_KEY = {"controls": "log_controls", "window": "log_window", "plan": "log_plan"}
+
+    def _llm_log_config(self) -> Dict[str, Any]:
+        """Retorna a config de log de LLM, cacheada por _LLM_LOG_CFG_TTL_SEC.
+
+        Best-effort: se o DB falhar, cai nos defaults (logar tudo) — a decisão de
+        trading nunca depende disto.
+        """
+        now = time.monotonic()
+        cached = getattr(self, "_llm_log_cfg_cache", None)
+        if cached is not None and (now - cached[0]) < self._LLM_LOG_CFG_TTL_SEC:
+            return cached[1]
+        try:
+            cfg = self.db.get_llm_log_config()
+        except Exception:
+            cfg = dict(getattr(type(self.db), "LLM_LOG_CONFIG_DEFAULTS", {
+                "enabled": True, "log_controls": True, "log_window": True,
+                "log_plan": True, "sample_rate": 1.0, "max_prompt_chars": 0,
+            }))
+        self._llm_log_cfg_cache = (now, cfg)
+        return cfg
+
+    def _record_llm_call(
+        self,
+        *,
+        call_type: str,
+        prompt: str,
+        response_text: Optional[str] = None,
+        response_json: Optional[Dict[str, Any]] = None,
+        model: Optional[str] = None,
+        host: Optional[str] = None,
+        latency_ms: Optional[float] = None,
+        trigger: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Loga o prompt+resposta bruta de uma chamada ao Ollama (dataset de fine-tuning).
+
+        Respeita a config de runtime (painel): enabled, toggle por call_type,
+        sample_rate e truncagem de prompt. Best-effort e NÃO-BLOQUEANTE: qualquer
+        falha aqui é engolida para nunca interferir na decisão de trading.
+        """
+        try:
+            cfg = self._llm_log_config()
+            if not cfg.get("enabled", True):
+                return
+            type_key = self._LLM_LOG_TYPE_KEY.get(call_type)
+            if type_key and not cfg.get(type_key, True):
+                return
+            sample_rate = float(cfg.get("sample_rate", 1.0) or 1.0)
+            if sample_rate < 1.0 and random.random() > sample_rate:
+                return
+            max_chars = int(cfg.get("max_prompt_chars", 0) or 0)
+            if max_chars > 0 and prompt and len(prompt) > max_chars:
+                prompt = prompt[:max_chars]
+
+            self.db.record_llm_call(
+                call_type=call_type,
+                symbol=self.symbol,
+                profile=self._current_profile(),
+                prompt=prompt,
+                response_text=response_text,
+                response_json=response_json,
+                model=model,
+                host=host,
+                latency_ms=latency_ms,
+                trigger=trigger,
+                metadata=metadata,
+            )
+        except Exception as e:
+            logger.debug(f"llm_call log skipped ({call_type}): {e}")
 
     def _generate_ai_trade_window(self, market_state: "MarketState", trigger: str = "periodic") -> None:
         """Gera uma janela operacional curta em background para manter a consulta fresca."""
@@ -2311,6 +2393,15 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 }
             }
             self._save_ai_trade_window(payload=payload, raw=raw)
+            self._record_llm_call(
+                call_type="window",
+                prompt=prompt,
+                response_text=raw,
+                model=str(request_meta.get("model", primary_model)),
+                host=str(request_meta.get("host", primary_host)),
+                latency_ms=request_meta.get("latency_ms"),
+                trigger=trigger,
+            )
             logger.info(
                 "🪟 AI trade window "
                 f"[{self._OLLAMA_TRADE_WINDOW_MODE}] trigger={trigger} "
@@ -3003,6 +3094,14 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
 
                     plan_text = candidate_plan
                     used_model = model
+                    self._record_llm_call(
+                        call_type="plan",
+                        prompt=(prompt_fallback if _use_chat_plan else prompt),
+                        response_text=raw_text,
+                        model=used_model,
+                        host=host,
+                        trigger="ai_plan",
+                    )
                     logger.info(f"🧠 AI plan accepted from {model}@{host}")
                     break
                 except Exception as plan_err:

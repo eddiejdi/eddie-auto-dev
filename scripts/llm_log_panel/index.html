@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Log de LLM — Painel (Fase 1 · Fine-tuning trading-analyst)</title>
+  <style>
+    :root {
+      --bg: #0f1420; --card: #182031; --ink: #e7ecf5; --muted: #93a1bd;
+      --line: #263149; --accent: #4f8cff; --ok: #34d399; --off: #6b7280;
+      --warn: #f59e0b; --danger: #f87171;
+    }
+    @media (prefers-color-scheme: light) {
+      :root { --bg:#f4f6fb; --card:#fff; --ink:#141a26; --muted:#5a6a86;
+              --line:#e2e8f2; --accent:#2f6fed; }
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+           font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 20px; margin: 4px 0 2px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
+            padding:18px 18px; margin-bottom:16px; }
+    .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em;
+               color:var(--muted); margin:0 0 14px; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:12px;
+           padding:10px 0; border-bottom:1px dashed var(--line); }
+    .row:last-child { border-bottom:0; }
+    .row .label { font-weight:600; }
+    .row .hint { color:var(--muted); font-size:12px; font-weight:400; }
+    /* toggle */
+    .switch { position:relative; width:48px; height:28px; flex:0 0 auto; }
+    .switch input { opacity:0; width:0; height:0; }
+    .slider { position:absolute; inset:0; background:var(--off); border-radius:999px;
+              transition:.15s; cursor:pointer; }
+    .slider::before { content:""; position:absolute; width:22px; height:22px; left:3px;
+              top:3px; background:#fff; border-radius:50%; transition:.15s; }
+    .switch input:checked + .slider { background:var(--accent); }
+    .switch input:checked + .slider::before { transform:translateX(20px); }
+    .switch input:disabled + .slider { opacity:.45; cursor:not-allowed; }
+    input[type=number] { width:110px; background:var(--bg); color:var(--ink);
+              border:1px solid var(--line); border-radius:8px; padding:7px 9px; font:inherit; }
+    input[type=range] { width:180px; accent-color:var(--accent); }
+    .val { min-width:44px; text-align:right; font-variant-numeric:tabular-nums; }
+    .master { display:flex; align-items:center; gap:14px; }
+    .master .state { font-weight:700; }
+    .state.on { color:var(--ok); } .state.off { color:var(--danger); }
+    .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+    .stat { background:var(--bg); border:1px solid var(--line); border-radius:10px; padding:12px; }
+    .stat .n { font-size:22px; font-weight:700; font-variant-numeric:tabular-nums; }
+    .stat .k { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+    .actions { display:flex; align-items:center; gap:12px; margin-top:8px; }
+    button { background:var(--accent); color:#fff; border:0; border-radius:10px;
+             padding:11px 18px; font:600 15px/1 inherit; cursor:pointer; }
+    button.ghost { background:transparent; color:var(--muted); border:1px solid var(--line); }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .msg { font-size:13px; min-height:18px; }
+    .msg.ok { color:var(--ok); } .msg.err { color:var(--danger); }
+    .foot { color:var(--muted); font-size:12px; margin-top:6px; }
+    .dim { opacity:.5; pointer-events:none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Log de chamadas ao LLM</h1>
+    <div class="sub">Fase 1 do fine-tuning do <b>trading-analyst</b> · alimenta <code>btc.llm_calls</code>.
+      Não altera trading — só controla o que é gravado para o dataset.</div>
+
+    <div class="card">
+      <h2>Estado geral</h2>
+      <div class="master">
+        <label class="switch"><input type="checkbox" id="enabled" /><span class="slider"></span></label>
+        <div>
+          <div class="state off" id="enabledState">Desativado</div>
+          <div class="hint">Liga/desliga todo o log. Os agentes aplicam em até 30s.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="paramsCard">
+      <h2>Parâmetros</h2>
+      <div class="row">
+        <div><div class="label">Logar trade controls</div><div class="hint">JSON de parâmetros de risco</div></div>
+        <label class="switch"><input type="checkbox" id="log_controls" /><span class="slider"></span></label>
+      </div>
+      <div class="row">
+        <div><div class="label">Logar trade window</div><div class="hint">JSON de banda de preço</div></div>
+        <label class="switch"><input type="checkbox" id="log_window" /><span class="slider"></span></label>
+      </div>
+      <div class="row">
+        <div><div class="label">Logar AI plan</div><div class="hint">texto livre PT-BR</div></div>
+        <label class="switch"><input type="checkbox" id="log_plan" /><span class="slider"></span></label>
+      </div>
+      <div class="row">
+        <div><div class="label">Amostragem</div><div class="hint">fração das chamadas gravadas (1.0 = todas)</div></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="range" id="sample_rate" min="0" max="1" step="0.05" />
+          <span class="val" id="sample_rate_val">1.00</span>
+        </div>
+      </div>
+      <div class="row">
+        <div><div class="label">Truncar prompt (chars)</div><div class="hint">0 = sem truncagem</div></div>
+        <input type="number" id="max_prompt_chars" min="0" step="256" />
+      </div>
+      <div class="row">
+        <div><div class="label">Retenção (dias)</div><div class="hint">usado pelo prune de manutenção</div></div>
+        <input type="number" id="prune_days" min="1" step="1" />
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="save" disabled>Salvar</button>
+      <button class="ghost" id="reload">Recarregar</button>
+      <span class="msg" id="msg"></span>
+    </div>
+    <div class="foot" id="updated"></div>
+
+    <div class="card" style="margin-top:18px">
+      <h2>Estatísticas (btc.llm_calls)</h2>
+      <div class="stats" id="stats"></div>
+      <div class="foot" id="statsFoot"></div>
+    </div>
+  </div>
+
+  <script src="/llm_log_panel.js"></script>
+</body>
+</html>
