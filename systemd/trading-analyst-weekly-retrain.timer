@@ -1,0 +1,11 @@
+[Unit]
+Description=Timer do retreino semanal do trading-analyst-candidate (sabado 23:00 BRT)
+
+[Timer]
+# Sábado à noite (baixa atividade); horário do sistema (BRT).
+OnCalendar=Sat *-*-* 23:00:00
+Persistent=true
+Unit=trading-analyst-weekly-retrain.service
+
+[Install]
+WantedBy=timers.target
