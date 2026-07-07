@@ -113,6 +113,15 @@ ADMIN_CHAT_ID = int(os.getenv("ADMIN_CHAT_ID", "948686300"))
 AGENTS_API = os.getenv("AGENTS_API", "http://localhost:8503")
 OPENWEBUI_HOST = os.getenv("OPENWEBUI_HOST", f"http://{HOMELAB_HOST}:3000")
 
+# Grupo exclusivo "BTC Trade Agent". Neste chat o bot conversa com o cérebro do
+# Trading Analyst — sempre via orquestrador (specialized-agents API).
+try:
+    TRADING_GROUP_CHAT_ID = int(
+        os.getenv("TELEGRAM_TRADING_CHAT_ID", "-1004434951297")
+    )
+except ValueError:
+    TRADING_GROUP_CHAT_ID = -1004434951297
+
 
 def _parse_optional_int_env(name: str) -> Optional[int]:
     """Converte env var em inteiro opcional sem interromper o boot do bot."""
@@ -593,7 +602,30 @@ class AgentsClient:
             return r.json()
         except Exception as e:
             return {"error": str(e)}
-    
+
+    async def trading_converse(self, question: str, chat_id: int = None,
+                               user: str = None, profile: str = "default") -> dict:
+        """Conversa com o Trading Analyst a partir do orquestrador (Diretor).
+
+        O bot NÃO fala com o modelo de trading diretamente: a integração passa
+        pela specialized-agents API (/orchestrator/trading/converse), que delega
+        ao cérebro do agent trading com contexto ao vivo de btc.*.
+        """
+        try:
+            r = await self.client.post(
+                f"{self.base_url}/orchestrator/trading/converse",
+                json={
+                    "question": question,
+                    "profile": profile,
+                    "chat_id": str(chat_id) if chat_id is not None else None,
+                    "user": user,
+                },
+                timeout=300.0,
+            )
+            return r.json()
+        except Exception as e:
+            return {"error": str(e)}
+
     async def close(self):
         await self.client.aclose()
 
@@ -1527,6 +1559,8 @@ class TelegramBot:
             self.keep_alive_seconds = 3600
         self.last_update_id = 0
         self.running = True
+        self.bot_username = ""  # Preenchido no run() via getMe (detecção de menção)
+        self.bot_id = None      # id do próprio bot (detecção de reply)
         self.user_contexts: Dict[int, List[dict]] = {}  # Contexto por usuário
         self.auto_dev_enabled = True  # Flag para habilitar/desabilitar auto-dev
         self._lock_file = None
@@ -2835,7 +2869,17 @@ class TelegramBot:
                     if not args:
                         response = get_trading_help()
                     else:
-                        response = await trading_client.ask_question(args)
+                        # Pergunta livre → cérebro do agent trading via orquestrador.
+                        # Fallback para o roteador local se o orquestrador falhar.
+                        _uname = message["from"].get("first_name", "Usuário")
+                        result = await self.agents.trading_converse(
+                            args, chat_id=chat_id, user=_uname
+                        )
+                        response = ""
+                        if isinstance(result, dict) and result.get("answer"):
+                            response = result["answer"]
+                        if not response:
+                            response = await trading_client.ask_question(args)
                 else:
                     response = await trading_client.get_status()
                 
@@ -3198,6 +3242,65 @@ class TelegramBot:
             print(f"[yt-dlp] Error: {e}")
             return []
 
+    def _is_addressed_to_bot(self, message: dict) -> bool:
+        """True se a mensagem menciona o bot ou é reply a uma mensagem dele.
+
+        Usado no grupo de trading para responder apenas quando endereçado
+        (comportamento conservador — evita spam e não exige desligar o privacy
+        mode do bot no BotFather, pois menção/reply já são entregues ao bot).
+        """
+        reply = message.get("reply_to_message")
+        if reply and self.bot_id and reply.get("from", {}).get("id") == self.bot_id:
+            return True
+
+        if self.bot_username:
+            text = (message.get("text") or "").lower()
+            if f"@{self.bot_username}" in text:
+                return True
+
+        return False
+
+    async def _handle_trading_group_message(self, chat_id: int, msg_id: int,
+                                            user_name: str, text: str):
+        """Encaminha a pergunta do grupo de trading ao orquestrador e responde."""
+        question = text
+        if self.bot_username:
+            question = re.sub(
+                rf"@{re.escape(self.bot_username)}", "", question, flags=re.IGNORECASE
+            ).strip()
+
+        if not question:
+            await self.api.send_message(
+                chat_id,
+                "📈 Pergunte algo sobre o trading (ex.: como está o BTC hoje?).",
+                reply_to_message_id=msg_id,
+            )
+            return
+
+        print(f"[Trading] {user_name} no grupo: {question[:60]}...")
+        await self.api.send_chat_action(chat_id, "typing")
+
+        result = await self.agents.trading_converse(
+            question, chat_id=chat_id, user=user_name
+        )
+
+        answer = ""
+        if isinstance(result, dict):
+            answer = result.get("answer") or ""
+            if not answer and result.get("error"):
+                answer = (
+                    "⚠️ O orquestrador de trading está indisponível no momento "
+                    f"({result['error']}). Tente novamente em instantes."
+                )
+        if not answer:
+            answer = "⚠️ Não obtive resposta do Trading Analyst."
+
+        for i in range(0, len(answer), 4000):
+            await self.api.send_message(
+                chat_id, answer[i:i + 4000],
+                reply_to_message_id=msg_id if i == 0 else None,
+            )
+
     async def handle_message(self, message: dict):
         """Processa mensagem recebida com sistema de Auto-Desenvolvimento e Calendário"""
         chat_id = message["chat"]["id"]
@@ -3212,6 +3315,13 @@ class TelegramBot:
         # Comandos
         if text.startswith("/"):
             await self.handle_command(message)
+            return
+
+        # === Grupo de trading: conversa com o cérebro do agent trading ===
+        # Só responde quando é diretamente endereçado (menção ou reply ao bot),
+        # para não poluir o grupo. A integração passa pelo orquestrador.
+        if chat_id == TRADING_GROUP_CHAT_ID and self._is_addressed_to_bot(message):
+            await self._handle_trading_group_message(chat_id, msg_id, user_name, text)
             return
 
         # Detecta post do X/Twitter sem exigir comando /x.
@@ -3535,10 +3645,20 @@ class TelegramBot:
                 await asyncio.sleep(10)
             print("[Info] Lock adquirido. Continuando.")
         
+        # Descobrir identidade do bot (para detectar menção/reply no grupo de trading)
+        try:
+            me = await self.api.get_me()
+            if me.get("ok"):
+                self.bot_username = (me["result"].get("username") or "").lower()
+                self.bot_id = me["result"].get("id")
+                print(f"[Info] Bot identidade: @{self.bot_username} (id={self.bot_id})")
+        except Exception as e:
+            print(f"[Warn] Falha ao obter identidade do bot (getMe): {e}")
+
         # Resetar sessão de polling do Telegram
         await self.api._request("deleteWebhook", drop_pending_updates=True)
         await asyncio.sleep(1)
-        
+
         # Carregar last_update_id do state salvo (já feito em __init__)
         # Não chamar getUpdates(offset=0) separadamente — causa 409 no loop principal
         print(f"[Info] Sessão de polling resetada. last_update_id={self.last_update_id}")
