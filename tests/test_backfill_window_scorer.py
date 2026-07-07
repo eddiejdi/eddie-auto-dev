@@ -88,6 +88,25 @@ def test_positive_labels_constant(mod):
     assert mod.POSITIVE_LABELS == ("win", "flat_pos")
 
 
+def test_is_positive_win_always_kept(mod):
+    assert mod.is_positive_example("win", {"pnl_pct": 0.0}, min_flat_pnl=0.15) is True
+
+
+def test_is_positive_flat_pos_respects_floor(mod):
+    # flat_pos acima do piso conta; abaixo é descartado.
+    assert mod.is_positive_example("flat_pos", {"pnl_pct": 0.20}, min_flat_pnl=0.15) is True
+    assert mod.is_positive_example("flat_pos", {"pnl_pct": 0.05}, min_flat_pnl=0.15) is False
+
+
+def test_is_positive_negatives_never_kept(mod):
+    for lbl in ("loss", "flat_neg", "no_entry", "invalid"):
+        assert mod.is_positive_example(lbl, {"pnl_pct": 99.0}, min_flat_pnl=0.0) is False
+
+
+def test_shadow_has_window_settings(mod):
+    assert "shadow" in mod.WINDOW_SETTINGS
+
+
 def test_build_target_is_sorted_json(mod):
     w = {"entry_low": 100.126, "entry_high": 101.44, "target_sell": 103.9,
          "min_confidence": 0.6123, "min_trade_interval": 120, "ttl_seconds": 60}

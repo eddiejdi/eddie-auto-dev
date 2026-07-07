@@ -67,6 +67,8 @@ log = logging.getLogger("backfill-window")
 WINDOW_SETTINGS = {
     "aggressive": {"window_depth_pct": 0.0028, "max_chase_pct": 0.0012, "target_cap_pct": 0.0100, "ttl_seconds": 60},
     "conservative": {"window_depth_pct": 0.0025, "max_chase_pct": 0.0009, "target_cap_pct": 0.0090, "ttl_seconds": 90},
+    # shadow espelha o modelo com contexto próprio; usa os clamps default.
+    "shadow": {"window_depth_pct": 0.0030, "max_chase_pct": 0.0012, "target_cap_pct": 0.0100, "ttl_seconds": 60},
     "default": {"window_depth_pct": 0.0030, "max_chase_pct": 0.0012, "target_cap_pct": 0.0100, "ttl_seconds": 60},
 }
 
@@ -79,11 +81,31 @@ WINDOW_PROMPT_PREAMBLE = (
 )
 
 DEFAULT_DAYS = 90
-DEFAULT_HORIZON_MIN = 30
+# 60min > 30min: dá tempo do target (~1%) ser atingido, dobrando os `win` fortes
+# (evidência empírica no histórico BTC) sem perder volume.
+DEFAULT_HORIZON_MIN = 60
 DEFAULT_STOP_PCT = 0.02
 DEFAULT_MIN_SAMPLES = 50
+# PnL mínimo (%) no fim do horizonte para um `flat_pos` (timeout positivo) contar como
+# exemplo de treino — filtra os "quase-zero" que não carregam sinal. `win` sempre conta.
+DEFAULT_MIN_FLAT_PNL = 0.15
 DEFAULT_OUTPUT_DIR = Path("/tmp/eddie-finetune")
+# Rótulos candidatos a positivo (flat_pos ainda passa pelo piso de PnL — ver is_positive_example).
 POSITIVE_LABELS = ("win", "flat_pos")
+
+
+def is_positive_example(label: str, detail: Dict[str, Any], min_flat_pnl: float) -> bool:
+    """Decide se um resultado vira exemplo de treino positivo.
+
+    `win` (atingiu target antes do stop) sempre entra. `flat_pos` (timeout positivo)
+    só entra se o PnL no fim do horizonte for >= `min_flat_pnl` (%), descartando os
+    positivos marginais/ruído.
+    """
+    if label == "win":
+        return True
+    if label == "flat_pos":
+        return float(detail.get("pnl_pct", 0.0)) >= min_flat_pnl
+    return False
 
 
 # ── Scorer contrafactual (função pura, testável) ─────────────────────────────
@@ -330,22 +352,25 @@ def build_target(w: Dict[str, Any]) -> str:
 
 def build_dataset(
     db: TrainingDatabase, *, symbol: str, profiles: Sequence[str], since_ts: float,
-    horizon_sec: int, stop_pct: float,
+    horizon_sec: int, stop_pct: float, min_flat_pnl: float,
 ) -> Tuple[List[Dict[str, str]], Dict[str, int]]:
     """Gera exemplos SFT positivos + estatísticas de rótulo."""
     # db._get_conn() é um context manager (@contextmanager), não uma conexão crua.
     with db._get_conn() as conn:
         windows = fetch_windows(conn, symbol, profiles, since_ts)
-        stats: Dict[str, int] = {"windows": len(windows), "kept": 0, "no_prompt": 0}
+        stats: Dict[str, int] = {"windows": len(windows), "kept": 0, "no_prompt": 0,
+                                 "flat_weak": 0}
         examples: List[Dict[str, str]] = []
         for w in windows:
             bars = fetch_bars(conn, symbol, w["timestamp"], w["timestamp"] + horizon_sec)
-            label, _detail = score_price_path(
+            label, detail = score_price_path(
                 bars, float(w["entry_low"]), float(w["entry_high"]),
                 float(w["target_sell"]), stop_pct,
             )
             stats[label] = stats.get(label, 0) + 1
-            if label not in POSITIVE_LABELS:
+            if not is_positive_example(label, detail, min_flat_pnl):
+                if label == "flat_pos":  # positivo marginal descartado pelo piso de PnL
+                    stats["flat_weak"] += 1
                 continue
             prompt = reconstruct_prompt(conn, w, symbol)
             if not prompt:
@@ -359,13 +384,15 @@ def build_dataset(
 def main() -> int:
     parser = argparse.ArgumentParser(description="Backfill contrafactual do dataset window (Fase 2)")
     parser.add_argument("--symbol", default="BTC-USDT")
-    parser.add_argument("--profiles", default="aggressive,conservative",
+    parser.add_argument("--profiles", default="aggressive,conservative,shadow",
                         help="Perfis separados por vírgula")
     parser.add_argument("--days", type=int, default=DEFAULT_DAYS)
     parser.add_argument("--horizon-min", type=int, default=DEFAULT_HORIZON_MIN,
                         help="Horizonte de avaliação do contrafactual, em minutos")
     parser.add_argument("--stop-pct", type=float, default=DEFAULT_STOP_PCT,
                         help="Excursão adversa máxima tolerada (fração, ex. 0.02)")
+    parser.add_argument("--min-flat-pnl", type=float, default=DEFAULT_MIN_FLAT_PNL,
+                        help="PnL%% mínimo no fim do horizonte p/ um flat_pos contar (win sempre conta)")
     parser.add_argument("--min-samples", type=int, default=DEFAULT_MIN_SAMPLES)
     parser.add_argument("--out", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--stats-only", action="store_true")
@@ -378,15 +405,17 @@ def main() -> int:
     db = TrainingDatabase()
     examples, stats = build_dataset(
         db, symbol=args.symbol, profiles=profiles, since_ts=since_ts,
-        horizon_sec=horizon_sec, stop_pct=args.stop_pct,
+        horizon_sec=horizon_sec, stop_pct=args.stop_pct, min_flat_pnl=args.min_flat_pnl,
     )
     db.close()
 
-    dist = {k: v for k, v in sorted(stats.items()) if k not in ("windows", "kept", "no_prompt")}
-    log.info("Janelas avaliadas: %d | horizonte=%dmin stop=%.1f%%",
-             stats["windows"], args.horizon_min, args.stop_pct * 100)
+    dist = {k: v for k, v in sorted(stats.items())
+            if k not in ("windows", "kept", "no_prompt", "flat_weak")}
+    log.info("Janelas avaliadas: %d | horizonte=%dmin stop=%.1f%% min_flat_pnl=%.2f%%",
+             stats["windows"], args.horizon_min, args.stop_pct * 100, args.min_flat_pnl)
     log.info("Distribuição de rótulos: %s", dist)
-    log.info("Exemplos positivos (%s) mantidos: %d", "/".join(POSITIVE_LABELS), stats["kept"])
+    log.info("Positivos mantidos: %d (win=%d + flat_pos>=%.2f%%; %d flat_pos fracos descartados)",
+             stats["kept"], stats.get("win", 0), args.min_flat_pnl, stats.get("flat_weak", 0))
 
     enough = len(examples) >= args.min_samples
     if not enough:
@@ -401,7 +430,8 @@ def main() -> int:
         manifest = {
             "generated_at": time.time(), "symbol": args.symbol, "profiles": profiles,
             "days": args.days, "horizon_min": args.horizon_min, "stop_pct": args.stop_pct,
-            "label_distribution": dist, "kept": stats["kept"],
+            "min_flat_pnl": args.min_flat_pnl, "label_distribution": dist,
+            "flat_pos_discarded_weak": stats.get("flat_weak", 0), "kept": stats["kept"],
             "source": "counterfactual price backfill (bootstrap v0)",
             "fidelity": "target+label exatos; prompt reconstruído aproximado — validar em shadow com prompts reais",
         }
