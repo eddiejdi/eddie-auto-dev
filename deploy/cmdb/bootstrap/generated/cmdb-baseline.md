@@ -1,6 +1,6 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-07T12:28:46.121656+00:00`
+- Generated at: `2026-07-07T12:35:06.015259+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
 - Repo services discovered: `163`
