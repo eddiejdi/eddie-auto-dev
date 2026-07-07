@@ -18,8 +18,10 @@ exec > >(tee -a "$LOG") 2>&1
 echo "=== Weekly retrain start $(date) ==="
 export PYTHONPATH="$AGENT_PP"
 export FT_TARGET_MODEL=trading-analyst-candidate
-DBURL="$(sudo grep -E '^DATABASE_URL=' /etc/default/eddie-common | head -1 | cut -d= -f2- || true)"
-export DATABASE_URL="$DBURL"
+# Via systemd vem de EnvironmentFile=/etc/default/eddie-common; fallback p/ run manual.
+if [[ -z "${DATABASE_URL:-}" ]]; then
+  export DATABASE_URL="$(sudo grep -E '^DATABASE_URL=' /etc/default/eddie-common | head -1 | cut -d= -f2- || true)"
+fi
 LOSS="n/d"; DSN=0; STATUS="OK"; FAILSTEP=""
 
 fail() { STATUS="FALHA"; FAILSTEP="$1"; echo "!!! FALHA em: $1"; }

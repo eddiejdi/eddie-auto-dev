@@ -10,6 +10,8 @@ Group=homelab
 # Janela ampla: o ciclo (dataset+treino+shadow) leva ~30-60min.
 TimeoutStartSec=7200
 Environment=PYTHONUNBUFFERED=1
+# Fonte canônica de DATABASE_URL + TELEGRAM_BOT_TOKEN (garante o envio do relatório).
+EnvironmentFile=/etc/default/eddie-common
 ExecStart=/home/homelab/finetune/trading_analyst_weekly_retrain.sh
 StandardOutput=journal
 StandardError=journal
