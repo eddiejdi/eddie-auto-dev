@@ -102,9 +102,12 @@ def _btc_query(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
 
 def _collect_symbol(symbol: str, profile: str) -> dict[str, Any]:
     """Snapshot compacto de um símbolo: preço, PnL 24h, posições abertas."""
+    # market_states.timestamp é epoch (double precision) e a tabela não tem
+    # created_at — expõe to_timestamp(timestamp) como created_at.
     market = _btc_query(
         """
-        SELECT price, rsi, momentum, volatility, trend, created_at
+        SELECT price, rsi, momentum, volatility, trend,
+               to_timestamp(timestamp) AS created_at
         FROM btc.market_states
         WHERE symbol = %s
         ORDER BY timestamp DESC
@@ -180,11 +183,12 @@ def collect_trading_context(
             context["symbols"][symbol] = {"symbol": symbol}
 
     # Sinais globais dos agentes relacionados (não por símbolo).
+    # news_sentiment.timestamp é timestamptz (não epoch) — usa intervalo SQL.
     context["news"] = _btc_query(
         """
         SELECT source, title, sentiment, confidence, coin, created_at
         FROM btc.news_sentiment
-        WHERE timestamp > extract(epoch FROM now()) - 86400
+        WHERE timestamp > NOW() - INTERVAL '24 hours'
           AND confidence >= 0.30
         ORDER BY timestamp DESC
         LIMIT 6
