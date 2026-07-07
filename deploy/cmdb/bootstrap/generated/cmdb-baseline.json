@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-07-04T21:30:39.351691+00:00",
+  "generated_at": "2026-07-07T01:24:09.785063+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 162,
+    "repo_services": 163,
     "critical_services": 66,
     "domains": {
       "identity": 4,
       "monitoring": 14,
       "network": 16,
-      "operations": 89,
+      "operations": 90,
       "storage": 32,
       "trading": 7
     }
@@ -707,6 +707,14 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/journal-ingestor.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "llm-log-panel.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/llm-log-panel.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
