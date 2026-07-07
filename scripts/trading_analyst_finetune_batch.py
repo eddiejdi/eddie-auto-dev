@@ -113,8 +113,13 @@ def load_dataset_files(dataset_dir: Path) -> Path:
 
 # ── Treino QLoRA (Unsloth) ──────────────────────────────────────────────────────
 
-def run_qlora_training(data_path: Path) -> bool:
-    """Fine-tuning QLoRA multi-task. Mesma mecânica do pipeline do trading-sentiment."""
+def run_qlora_training(data_path: Path, adapters_only: bool = False) -> bool:
+    """Fine-tuning QLoRA multi-task. Mesma mecânica do pipeline do trading-sentiment.
+
+    Se ``adapters_only`` for True, para após salvar os adapters LoRA e NÃO faz o
+    merge→GGUF (que materializa o modelo 8B em fp16 ~16GB). Uso: NAS com pouca RAM
+    (8GB) treina o adapter; o merge/GGUF roda numa máquina com RAM folgada (homelab).
+    """
     log.info("=" * 60)
     log.info("QLoRA trading-analyst-candidate | base=%s | rank=%d | epochs=%d",
              BASE_MODEL_HF, LORA_RANK, EPOCHS)
@@ -183,6 +188,14 @@ def run_qlora_training(data_path: Path) -> bool:
         log.info("Loss final: %.4f, steps: %d", result.training_loss, result.global_step)
 
         trainer.save_model(str(LORA_OUTPUT))
+
+        if adapters_only:
+            log.info("--adapters-only: LoRA salvo em %s. Pulando merge/GGUF "
+                     "(rodar numa máquina com RAM folgada, ex. homelab).", LORA_OUTPUT)
+            del model, tokenizer, trainer
+            torch.cuda.empty_cache()
+            return True
+
         log.info("Merge LoRA → modelo completo...")
         model.save_pretrained_merged(str(MERGED_OUTPUT), tokenizer, save_method="merged_16bit")
         log.info("Export GGUF (Q4_K_M)...")
@@ -263,6 +276,8 @@ def main() -> int:
     parser.add_argument("--dataset-dir", type=Path, default=DATASET_DIR)
     parser.add_argument("--dry-run", action="store_true", help="Só valida o dataset, não treina")
     parser.add_argument("--skip-import", action="store_true", help="Treina mas não importa no Ollama")
+    parser.add_argument("--adapters-only", action="store_true",
+                        help="Para após salvar o LoRA; não faz merge/GGUF (NAS com pouca RAM)")
     args = parser.parse_args()
 
     start = time.time()
@@ -275,9 +290,16 @@ def main() -> int:
         log.info("DRY-RUN: %d amostras válidas em %s", samples, data_path)
         return 0
 
-    if not run_qlora_training(data_path):
+    if not run_qlora_training(data_path, adapters_only=args.adapters_only):
         write_run_report(False, samples, time.time() - start)
         return 1
+
+    if args.adapters_only:
+        write_run_report(True, samples, time.time() - start)
+        log.info("CONCLUÍDO (adapters-only) em %.1f min — LoRA em %s. "
+                 "Merge/GGUF e import ficam para a etapa no homelab.",
+                 (time.time() - start) / 60, LORA_OUTPUT)
+        return 0
 
     modelfile = generate_modelfile()
     if not args.skip_import and not import_to_ollama(modelfile):
