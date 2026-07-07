@@ -72,10 +72,6 @@ collect_ollama_metrics() {
     if [ -n "$ps_response" ]; then
         local active_models=$(echo "$ps_response" | jq -r '.models | length' 2>/dev/null || echo "0")
         export_metric "ollama_models_active" "gauge" "Number of currently active models" "$active_models"
-        # Alias com label endpoint para o painel "Modelos Carregados por GPU"
-        # (dashboard ollama-gpu-cluster consulta ollama_loaded_models{endpoint="gpu0"}).
-        # Este exporter cobre o OLLAMA_HOST local = gpu0 (RTX 3060).
-        export_metric "ollama_loaded_models" "gauge" "Loaded (in-VRAM) models per GPU endpoint" "$active_models" '{endpoint="gpu0"}'
         
         # Memória VRAM usada por modelos ativos
         local vram_used=$(echo "$ps_response" | jq -r '[.models[].size_vram] | add // 0' 2>/dev/null || echo "0")
