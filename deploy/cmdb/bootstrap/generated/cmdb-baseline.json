@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-07T18:02:08.876901+00:00",
+  "generated_at": "2026-07-07T19:01:12.190628+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 163,
+    "repo_services": 165,
     "critical_services": 66,
     "domains": {
       "identity": 4,
@@ -14,7 +14,7 @@
       "network": 16,
       "operations": 90,
       "storage": 32,
-      "trading": 7
+      "trading": 9
     }
   },
   "netbox_devices": [
@@ -1323,6 +1323,22 @@
       "domain": "trading",
       "kind": "systemd",
       "source": "systemd/kucoin-postgres-sync.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "trading-analyst-weekly-retrain.service",
+      "domain": "trading",
+      "kind": "systemd",
+      "source": "systemd/trading-analyst-weekly-retrain.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "trading-analyst-weekly-retrain.timer",
+      "domain": "trading",
+      "kind": "systemd",
+      "source": "systemd/trading-analyst-weekly-retrain.timer",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
