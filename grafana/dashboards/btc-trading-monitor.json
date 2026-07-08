@@ -2524,6 +2524,66 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 16,
+        "w": 24,
+        "x": 0,
+        "y": 84
+      },
+      "id": 203,
+      "options": {
+        "afterRender": "",
+        "content": "{{{trading_month_report data.[0]}}}",
+        "contentPartials": [],
+        "defaultContent": "<p style='color:#8e8ea0;padding:16px'>Sem dados do mês corrente.</p>",
+        "editor": {
+          "format": "auto",
+          "language": "handlebars"
+        },
+        "editors": [],
+        "externalStyles": [],
+        "helpers": "const handlebars = context.handlebars;\n\nhandlebars.registerHelper('trading_month_report', function(rows) {\n  if (!rows || !rows.length) {\n    return new handlebars.SafeString('<p style=\"color:#888;padding:12px\">Sem dados para o mês corrente.</p>');\n  }\n  function esc(v) {\n    if (v === null || v === undefined) return '';\n    return String(v).replace(/[&<>\"']/g, function(c) {\n      return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c];\n    });\n  }\n  function num(v, digits, signed) {\n    var n = parseFloat(v || 0);\n    var s = n.toFixed(digits);\n    return signed && n >= 0 ? '+' + s : s;\n  }\n  function cls(v) {\n    var n = parseFloat(v || 0);\n    if (n > 0) return 'pos';\n    if (n < 0) return 'neg';\n    return 'zero';\n  }\n  var meta = rows.find(function(r) { return r.kind === 'meta'; }) || {};\n  var accounts = rows.filter(function(r) { return r.kind === 'account'; });\n  var daily = rows.filter(function(r) { return r.kind === 'daily'; });\n  var updated = meta.last_seen ? String(meta.last_seen).slice(0, 16).replace('T', ' ') : '--';\n  var html = '<div class=\"tmr\">'\n    + '<div class=\"tmr-head\"><div><div class=\"tmr-title\">Relatório mensal do agent trading</div>'\n    + '<div class=\"tmr-sub\">Atualiza pelo refresh do dashboard; novos fechamentos de slot entram quando o SELL e os snapshots chegam ao Postgres.</div></div>'\n    + '<div class=\"tmr-chip\">Atualizado: ' + esc(updated) + '</div></div>'\n    + '<div class=\"tmr-meta\"><span>Realizado no mês: <b class=\"' + cls(meta.value_usdt) + '\">' + num(meta.value_usdt, 4, true) + ' USDT</b></span><span>' + esc(meta.balances || '') + '</span></div>';\n  html += '<div class=\"tmr-section\">Saldo atual</div><table><thead><tr><th>Conta</th><th class=\"num\">Valor USDT</th><th>Saldos</th></tr></thead><tbody>';\n  accounts.forEach(function(r) {\n    html += '<tr><td>' + esc(r.label) + '</td><td class=\"num\">' + num(r.value_usdt, 2, false) + '</td><td>' + esc(r.balances) + '</td></tr>';\n  });\n  html += '</tbody></table>';\n  html += '<div class=\"tmr-section\">Rendimento dia a dia do mês</div><table><thead><tr><th>Dia</th><th class=\"num\">Saldo inicial</th><th class=\"num\">Saldo final</th><th class=\"num\">Var. MTM</th><th class=\"num\">Var. %</th><th class=\"num\">PnL realizado</th><th class=\"num\">Compras</th><th class=\"num\">Vendas</th></tr></thead><tbody>';\n  daily.forEach(function(r) {\n    html += '<tr title=\"' + esc(r.note || '') + '\"><td>' + esc(r.label) + (r.note ? ' <span class=\"warn\">*</span>' : '') + '</td>'\n      + '<td class=\"num\">' + num(r.start_usdt, 2, false) + '</td>'\n      + '<td class=\"num\">' + num(r.end_usdt, 2, false) + '</td>'\n      + '<td class=\"num ' + cls(r.mtm_change_usdt) + '\">' + num(r.mtm_change_usdt, 2, true) + '</td>'\n      + '<td class=\"num ' + cls(r.mtm_pct) + '\">' + num(r.mtm_pct, 3, true) + '%</td>'\n      + '<td class=\"num ' + cls(r.realized_pnl_usdt) + '\">' + num(r.realized_pnl_usdt, 4, true) + '</td>'\n      + '<td class=\"num\">' + esc(r.buys || 0) + '</td><td class=\"num\">' + esc(r.sells || 0) + '</td></tr>';\n  });\n  html += '</tbody></table>';\n  var notes = daily.filter(function(r) { return r.note; }).map(function(r) { return '<div><b>' + esc(r.label) + ':</b> ' + esc(r.note) + '</div>'; }).join('');\n  if (notes) html += '<div class=\"tmr-note\">' + notes + '</div>';\n  html += '</div>';\n  return new handlebars.SafeString(html);\n});",
+        "renderMode": "data",
+        "status": "All",
+        "styles": ".tmr { font-family: Inter, sans-serif; padding: 10px 12px 16px; color: #d8d9da; height: 100%; overflow: auto; box-sizing: border-box; }\n.tmr-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; margin-bottom: 8px; }\n.tmr-title { font-size: 16px; font-weight: 700; color: #f2f3f5; }\n.tmr-sub { color: #9da2a8; font-size: 11px; margin-top: 2px; }\n.tmr-chip { border: 1px solid rgba(255,255,255,0.14); border-radius: 4px; padding: 4px 8px; font-size: 11px; white-space: nowrap; color: #c8ccd0; }\n.tmr-meta { display: flex; flex-wrap: wrap; gap: 8px 16px; color: #bec3c7; font-size: 12px; margin: 8px 0 12px; }\n.tmr-section { font-size: 13px; font-weight: 700; color: #f2f3f5; margin: 12px 0 6px; }\n.tmr table { width: 100%; border-collapse: collapse; table-layout: auto; font-size: 12px; }\n.tmr th { color: #bfc3c8; font-weight: 700; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.12); padding: 7px 8px; }\n.tmr td { border-bottom: 1px solid rgba(255,255,255,0.07); padding: 7px 8px; vertical-align: top; }\n.tmr .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }\n.tmr .pos { color: #73bf69; }\n.tmr .neg { color: #f2495c; }\n.tmr .zero { color: #d8d9da; }\n.tmr .warn { color: #ffb357; font-weight: 700; }\n.tmr-note { color: #b8bdc3; font-size: 11px; margin-top: 8px; line-height: 1.35; }",
+        "wrap": true
+      },
+      "pluginVersion": "11.5.2",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH params AS (\n  SELECT\n    date_trunc('month', now() AT TIME ZONE 'America/Sao_Paulo')::date AS month_start,\n    (now() AT TIME ZONE 'America/Sao_Paulo')::date AS today\n), scoped AS (\n  SELECT\n    e.*,\n    (e.synced_at AT TIME ZONE 'America/Sao_Paulo')::date AS dia,\n    COALESCE(e.price_usdt, CASE WHEN e.currency = 'USDT' THEN 1.0 END) AS px\n  FROM btc.exchange_balance_snapshots e\n  CROSS JOIN params p\n  WHERE e.synced_at >= (p.month_start::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND e.synced_at < ((p.month_start + INTERVAL '1 month')::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND e.account_type IN ('trade','sub:BTCAgressive','sub:BTCConservative','sub:ETHAgressive','sub:ETHConservative')\n    AND e.currency IN ('USDT','BTC','ETH')\n), latest_balances AS (\n  SELECT DISTINCT ON (account_type, currency)\n    account_type, currency, synced_at, balance, available, holds, px\n  FROM scoped\n  WHERE px IS NOT NULL\n  ORDER BY account_type, currency, synced_at DESC\n), current_accounts AS (\n  SELECT\n    account_type,\n    max(synced_at) AS last_seen,\n    round(sum(balance * px)::numeric, 2) AS value_usdt,\n    string_agg(currency || ' ' || round(balance::numeric, 8)::text, ', ' ORDER BY currency) AS balances\n  FROM latest_balances\n  GROUP BY account_type\n), current_rows AS (\n  SELECT\n    'account'::text AS kind,\n    CASE WHEN account_type = 'TOTAL' THEN 0 ELSE 1 END AS sort_group,\n    account_type AS label,\n    NULL::date AS dia,\n    max(last_seen) AS last_seen,\n    value_usdt,\n    balances,\n    NULL::numeric AS start_usdt,\n    NULL::numeric AS end_usdt,\n    NULL::numeric AS mtm_change_usdt,\n    NULL::numeric AS mtm_pct,\n    NULL::numeric AS realized_pnl_usdt,\n    NULL::bigint AS buys,\n    NULL::bigint AS sells,\n    NULL::text AS note\n  FROM (\n    SELECT 'TOTAL'::text AS account_type, max(last_seen) AS last_seen, round(sum(value_usdt)::numeric, 2) AS value_usdt,\n           string_agg(account_type || ' $' || value_usdt::text, '; ' ORDER BY account_type) AS balances\n    FROM current_accounts\n    UNION ALL\n    SELECT account_type, last_seen, value_usdt, balances\n    FROM current_accounts\n  ) x\n  GROUP BY account_type, value_usdt, balances\n), first_rows AS (\n  SELECT DISTINCT ON (dia, account_type, currency)\n    dia, account_type, currency, synced_at, balance, px\n  FROM scoped\n  WHERE px IS NOT NULL\n  ORDER BY dia, account_type, currency, synced_at ASC\n), last_rows AS (\n  SELECT DISTINCT ON (dia, account_type, currency)\n    dia, account_type, currency, synced_at, balance, px\n  FROM scoped\n  WHERE px IS NOT NULL\n  ORDER BY dia, account_type, currency, synced_at DESC\n), daily_account AS (\n  SELECT\n    l.dia,\n    l.account_type,\n    sum(f.balance * f.px) AS start_usdt,\n    sum(l.balance * l.px) AS end_usdt,\n    min(f.synced_at) AS first_seen,\n    max(l.synced_at) AS last_seen\n  FROM last_rows l\n  JOIN first_rows f USING (dia, account_type, currency)\n  GROUP BY l.dia, l.account_type\n), daily_total AS (\n  SELECT\n    dia,\n    sum(start_usdt) AS start_usdt,\n    sum(end_usdt) AS end_usdt,\n    min(first_seen) AS first_seen,\n    max(last_seen) AS last_seen\n  FROM daily_account\n  GROUP BY dia\n), pnl AS (\n  SELECT\n    (to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo')::date AS dia,\n    sum(CASE WHEN side = 'sell' THEN COALESCE(pnl, 0) ELSE 0 END) AS realized_pnl_usdt,\n    count(*) FILTER (WHERE side = 'buy') AS buys,\n    count(*) FILTER (WHERE side = 'sell') AS sells\n  FROM btc.trades t\n  CROSS JOIN params p\n  WHERE to_timestamp(t.timestamp) >= (p.month_start::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND to_timestamp(t.timestamp) < ((p.month_start + INTERVAL '1 month')::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND t.dry_run = false\n    AND t.profile IN ('aggressive','conservative','shadow')\n    AND COALESCE(t.metadata->>'source','') NOT LIKE '%reconciliation%'\n  GROUP BY 1\n), last_slot AS (\n  SELECT\n    max(to_timestamp(timestamp)) AS closed_at,\n    count(*) AS closed_count\n  FROM btc.trades t\n  CROSS JOIN params p\n  WHERE to_timestamp(t.timestamp) >= (p.month_start::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND t.dry_run = false\n    AND t.side = 'sell'\n    AND t.profile IN ('aggressive','conservative','shadow')\n    AND COALESCE(t.metadata->>'source','') NOT LIKE '%reconciliation%'\n), daily_rows AS (\n  SELECT\n    'daily'::text AS kind,\n    2 AS sort_group,\n    to_char(dt.dia, 'YYYY-MM-DD') AS label,\n    dt.dia,\n    dt.last_seen,\n    NULL::numeric AS value_usdt,\n    NULL::text AS balances,\n    round(dt.start_usdt::numeric, 2) AS start_usdt,\n    round(dt.end_usdt::numeric, 2) AS end_usdt,\n    round((dt.end_usdt - dt.start_usdt)::numeric, 2) AS mtm_change_usdt,\n    round((CASE WHEN dt.start_usdt <> 0 THEN (dt.end_usdt / dt.start_usdt - 1) * 100 END)::numeric, 3) AS mtm_pct,\n    round(COALESCE(p.realized_pnl_usdt, 0)::numeric, 4) AS realized_pnl_usdt,\n    COALESCE(p.buys, 0) AS buys,\n    COALESCE(p.sells, 0) AS sells,\n    CASE\n      WHEN dt.dia = DATE '2026-07-03' THEN 'Subcontas entraram nos snapshots no meio do dia; MTM inclui redistribuicao entre contas.'\n      ELSE NULL\n    END AS note\n  FROM daily_total dt\n  LEFT JOIN pnl p USING (dia)\n), meta_row AS (\n  SELECT\n    'meta'::text AS kind,\n    -1 AS sort_group,\n    'meta'::text AS label,\n    NULL::date AS dia,\n    greatest((SELECT max(last_seen) FROM current_accounts), (SELECT closed_at FROM last_slot)) AS last_seen,\n    round((SELECT COALESCE(sum(realized_pnl_usdt), 0) FROM pnl)::numeric, 4) AS value_usdt,\n    'Ultimo slot encerrado: ' || COALESCE(to_char((SELECT closed_at FROM last_slot) AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD HH24:MI'), 'sem venda no mes')\n      || ' | Vendas no mes: ' || COALESCE((SELECT closed_count FROM last_slot), 0)::text AS balances,\n    NULL::numeric AS start_usdt,\n    NULL::numeric AS end_usdt,\n    NULL::numeric AS mtm_change_usdt,\n    NULL::numeric AS mtm_pct,\n    NULL::numeric AS realized_pnl_usdt,\n    NULL::bigint AS buys,\n    NULL::bigint AS sells,\n    NULL::text AS note\n)\nSELECT * FROM meta_row\nUNION ALL SELECT * FROM current_rows\nUNION ALL SELECT * FROM daily_rows\nORDER BY sort_group, dia NULLS FIRST, label",
+          "refId": "A"
+        }
+      ],
+      "title": "📊 Relatório mensal — saldos e rendimento por dia",
+      "type": "marcusolsson-dynamictext-panel"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
       "description": "Reconstruído a partir dos trades filtrados e snapshot live de preço. Não substitui os saldos live do exchange.",
       "fieldConfig": {
         "defaults": {
@@ -2547,7 +2607,7 @@
         "x": 0,
         "w": 24,
         "h": 12,
-        "y": 84
+        "y": 100
       },
       "id": 98,
       "options": {
@@ -2588,7 +2648,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 96,
+        "y": 112,
         "w": 24,
         "h": 1
       },
@@ -3222,7 +3282,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 97,
+        "y": 113,
         "w": 24,
         "h": 1
       },
@@ -3668,7 +3728,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 98,
+        "y": 114,
         "w": 24,
         "h": 1
       },
@@ -4396,7 +4456,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 99,
+        "y": 115,
         "w": 24,
         "h": 1
       },
@@ -5519,7 +5579,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 100,
+        "y": 116,
         "w": 24,
         "h": 1
       },
@@ -5978,7 +6038,7 @@
     }
   ],
   "preload": false,
-  "refresh": "1m",
+  "refresh": "10s",
   "schemaVersion": 42,
   "tags": [
     "trading",
@@ -6047,6 +6107,6 @@
   "timezone": "browser",
   "title": "🤖 Trading Agent Monitor",
   "uid": "btc-trading-monitor",
-  "version": 4,
+  "version": 5,
   "weekStart": ""
 }
