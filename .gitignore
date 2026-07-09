@@ -128,3 +128,6 @@ wget-log*
 philco10b_raspios/
 *.iso
 *.img
+
+# Grok: config local pode conter secrets MCP (hooks em .grok/hooks/ são versionados)
+.grok/config.toml
