@@ -81,6 +81,27 @@ Environment=WIKI_REFACTOR_REPO_ROOT=/home/homelab/myClaude
 
 ---
 
+## Diagnóstico complementar — timeout Wiki.js (09/07)
+
+Após o fix do `__file__`, `/wiki/raw` passou a falhar com:
+
+```
+503 — Erro de conexão com Wiki.js: timed out
+```
+
+**Causa:** Wiki.js estava ocupado renderizando página (job `Rendering page ID 659` ~30s nos logs). O `wiki_client` usava timeout de **15s**, insuficiente durante jobs pesados.
+
+**Evidências:**
+- `docker logs wikijs` — jobs de render + rebuild page tree às 12:05–12:06 UTC
+- GraphQL em `:3009` voltou a responder em ~4s após o job
+- `/wiki/raw` validado: `{"ok":true,"page_id":660}` (smoke test)
+
+**Mitigação aplicada:**
+- `wiki_client.py` — timeout GraphQL aumentado de 15s → **45s**
+- Recomendado no homelab: `WIKI_URL=http://127.0.0.1:3009/graphql` no systemd (evita round-trip pela interface externa)
+
+---
+
 ## Referências
 
 - `specialized_agents/wiki_refactor.py` — `_resolve_repo_root()`
