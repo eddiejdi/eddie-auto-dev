@@ -65,6 +65,21 @@ sys.modules.setdefault(
 
 import trading_agent
 from trading_agent import BitcoinTradingAgent
+from llm import LLMRouter
+
+
+def _router_agent(profile: str = "aggressive") -> BitcoinTradingAgent:
+    """Agent com um LLMRouter real injetado (sem endpoints extras).
+
+    _request_ollama_structured hoje só delega para self._llm.request_structured;
+    o roteamento primary/fallback/retry vive no LLMRouter (llm.py). Os testes
+    abaixo exercitam esse caminho stubando router._do_generate.
+    """
+    agent = _agent(profile)
+    router = LLMRouter()
+    router._endpoints = []  # sem terceiro-tier: só os pares explícitos são tentados
+    agent._llm = router
+    return agent
 
 
 def _agent(profile: str = "aggressive") -> BitcoinTradingAgent:
@@ -388,34 +403,18 @@ def test_trade_controls_targets_allow_cross_model_fallback_when_opted_in(monkeyp
 
 
 def test_request_ollama_structured_retries_with_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
-    agent = _agent("aggressive")
-    calls = []
+    agent = _router_agent("aggressive")
+    calls: list[tuple] = []
+    responses = iter([
+        "{bad json",
+        '{"entry_low":100.0,"entry_high":100.1,"ttl_seconds":45}',
+    ])
 
-    class FakeResponse:
-        def __init__(self, status_code: int, response: str) -> None:
-            self.status_code = status_code
-            self._response = response
+    def fake_do_generate(host, model, prompt, options, timeout, use_chat):
+        calls.append((host, model, timeout))
+        return next(responses)
 
-        def json(self) -> dict:
-            return {"response": self._response}
-
-    class FakeClient:
-        def __init__(self, timeout: float) -> None:
-            self.timeout = timeout
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb) -> bool:
-            return False
-
-        def post(self, url: str, json: dict) -> FakeResponse:
-            calls.append((url, json["model"], self.timeout))
-            if len(calls) == 1:
-                return FakeResponse(200, "{bad json")
-            return FakeResponse(200, '{"entry_low":100.0,"entry_high":100.1,"ttl_seconds":45}')
-
-    monkeypatch.setattr(trading_agent, "httpx", SimpleNamespace(Client=FakeClient))
+    monkeypatch.setattr(agent._llm, "_do_generate", fake_do_generate)
 
     parsed, raw, meta = agent._request_ollama_structured(
         label="trade window",
@@ -438,34 +437,18 @@ def test_request_ollama_structured_retries_with_fallback(monkeypatch: pytest.Mon
 
 
 def test_request_ollama_structured_retries_same_target_before_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
-    agent = _agent("aggressive")
-    calls = []
+    agent = _router_agent("aggressive")
+    calls: list[tuple] = []
+    responses = iter([
+        "{bad json",
+        '{"entry_low":100.0,"entry_high":100.1,"ttl_seconds":45}',
+    ])
 
-    class FakeResponse:
-        def __init__(self, status_code: int, response: str) -> None:
-            self.status_code = status_code
-            self._response = response
+    def fake_do_generate(host, model, prompt, options, timeout, use_chat):
+        calls.append((host, model, timeout))
+        return next(responses)
 
-        def json(self) -> dict:
-            return {"response": self._response}
-
-    class FakeClient:
-        def __init__(self, timeout: float) -> None:
-            self.timeout = timeout
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb) -> bool:
-            return False
-
-        def post(self, url: str, json: dict) -> FakeResponse:
-            calls.append((url, json["model"], self.timeout))
-            if len(calls) == 1:
-                return FakeResponse(200, "{bad json")
-            return FakeResponse(200, '{"entry_low":100.0,"entry_high":100.1,"ttl_seconds":45}')
-
-    monkeypatch.setattr(trading_agent, "httpx", SimpleNamespace(Client=FakeClient))
+    monkeypatch.setattr(agent._llm, "_do_generate", fake_do_generate)
 
     parsed, raw, meta = agent._request_ollama_structured(
         label="trade window",
@@ -481,45 +464,29 @@ def test_request_ollama_structured_retries_same_target_before_fallback(monkeypat
         retries_per_target=2,
     )
 
+    # Segunda tentativa AINDA no primary (retries_per_target=2) — não usou fallback.
     assert parsed["entry_high"] == pytest.approx(100.1)
     assert raw.startswith('{"entry_low"')
     assert meta["model"] == "gemma3:1b"
     assert meta["host"] == "http://gpu1:11435"
     assert meta["fallback_used"] is False
-    assert meta["target_attempt"] == 2
+    assert meta["attempt"] == 2
     assert len(calls) == 2
-    assert len(calls) == 2
+    assert calls[0][0] == calls[1][0] == "http://gpu1:11435"
 
 
 def test_request_ollama_structured_repairs_primary_payload_without_fallback(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    agent = _agent("aggressive")
-    calls = []
+    agent = _router_agent("aggressive")
+    calls: list[tuple] = []
 
-    class FakeResponse:
-        def __init__(self, status_code: int, response: str) -> None:
-            self.status_code = status_code
-            self._response = response
+    def fake_do_generate(host, model, prompt, options, timeout, use_chat):
+        calls.append((host, model, timeout))
+        # Payload truncado: o parser (_extract_json_object) deve reparar sem fallback.
+        return '{"entry_low":100.0,"entry_high":100.1,"ttl_seconds":45,'
 
-        def json(self) -> dict:
-            return {"response": self._response}
-
-    class FakeClient:
-        def __init__(self, timeout: float) -> None:
-            self.timeout = timeout
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb) -> bool:
-            return False
-
-        def post(self, url: str, json: dict) -> FakeResponse:
-            calls.append((url, json["model"], self.timeout))
-            return FakeResponse(200, '{"entry_low":100.0,"entry_high":100.1,"ttl_seconds":45,')
-
-    monkeypatch.setattr(trading_agent, "httpx", SimpleNamespace(Client=FakeClient))
+    monkeypatch.setattr(agent._llm, "_do_generate", fake_do_generate)
 
     parsed, raw, meta = agent._request_ollama_structured(
         label="trade window",
@@ -543,38 +510,18 @@ def test_request_ollama_structured_repairs_primary_payload_without_fallback(
 
 
 def test_request_ollama_structured_503_falls_back_to_gpu1(monkeypatch: pytest.MonkeyPatch) -> None:
-    """503 em GPU0 deve fazer jitter + fallback para GPU1, sem propagar exceção."""
-    agent = _agent("aggressive")
-    calls = []
-    slept: list[float] = []
+    """Erro no primary (GPU0) deve cair para o fallback (GPU1), sem propagar exceção."""
+    agent = _router_agent("aggressive")
+    calls: list[tuple] = []
 
-    class FakeResponse:
-        def __init__(self, status_code: int, response: str = "") -> None:
-            self.status_code = status_code
-            self._response = response
+    def fake_do_generate(host, model, prompt, options, timeout, use_chat):
+        calls.append((host, model))
+        if "11434" in host:
+            # GPU0 sobrecarregado — o LLMRouter propaga a exceção e tenta o próximo alvo.
+            raise RuntimeError("HTTP 503 Service Unavailable")
+        return '{"entry_low":100.0,"entry_high":100.1,"ttl_seconds":45}'
 
-        def json(self) -> dict:
-            return {"response": self._response}
-
-    class FakeClient:
-        def __init__(self, timeout: float) -> None:
-            self.timeout = timeout
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb) -> bool:
-            return False
-
-        def post(self, url: str, json: dict) -> FakeResponse:
-            calls.append((url, json["model"]))
-            if "11434" in url:
-                # GPU0 sobrecarregado
-                return FakeResponse(503)
-            return FakeResponse(200, '{"entry_low":100.0,"entry_high":100.1,"ttl_seconds":45}')
-
-    monkeypatch.setattr(trading_agent, "httpx", SimpleNamespace(Client=FakeClient))
-    monkeypatch.setattr(trading_agent.time, "sleep", lambda s: slept.append(s))
+    monkeypatch.setattr(agent._llm, "_do_generate", fake_do_generate)
 
     parsed, raw, meta = agent._request_ollama_structured(
         label="trade window",
@@ -592,40 +539,19 @@ def test_request_ollama_structured_503_falls_back_to_gpu1(monkeypatch: pytest.Mo
     assert parsed["entry_high"] == pytest.approx(100.1)
     assert meta["host"] == "http://gpu1:11435"
     assert meta["fallback_used"] is True
-    # Jitter sleep de 2-5s deve ter sido chamado ao receber 503
-    assert len(slept) >= 1
-    assert any(2.0 <= s <= 5.0 for s in slept)
-    # Primeira chamada foi GPU0, segunda GPU1
+    # Primeira chamada foi GPU0 (falhou), segunda GPU1 (ok)
     assert "11434" in calls[0][0]
     assert "11435" in calls[1][0]
 
 
 def test_request_ollama_structured_503_both_gpus_raises(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Quando GPU0 e GPU1 retornam 503, deve levantar RuntimeError com histórico."""
-    agent = _agent("aggressive")
+    """Quando GPU0 e GPU1 falham com 503, deve levantar RuntimeError com histórico."""
+    agent = _router_agent("aggressive")
 
-    class FakeResponse:
-        def __init__(self) -> None:
-            self.status_code = 503
+    def fake_do_generate(host, model, prompt, options, timeout, use_chat):
+        raise RuntimeError("HTTP 503 Service Unavailable")
 
-        def json(self) -> dict:
-            return {}
-
-    class FakeClient:
-        def __init__(self, timeout: float) -> None:
-            pass
-
-        def __enter__(self):
-            return self
-
-        def __exit__(self, exc_type, exc, tb) -> bool:
-            return False
-
-        def post(self, url: str, json: dict) -> FakeResponse:
-            return FakeResponse()
-
-    monkeypatch.setattr(trading_agent, "httpx", SimpleNamespace(Client=FakeClient))
-    monkeypatch.setattr(trading_agent.time, "sleep", lambda s: None)
+    monkeypatch.setattr(agent._llm, "_do_generate", fake_do_generate)
 
     with pytest.raises(RuntimeError, match="503"):
         agent._request_ollama_structured(
@@ -640,3 +566,72 @@ def test_request_ollama_structured_503_both_gpus_raises(monkeypatch: pytest.Monk
             options={},
             parser=lambda payload: BitcoinTradingAgent._extract_json_object(payload),
         )
+
+
+# ── Gating do log de LLM pela config de runtime (painel) ──────────────────────
+
+_DEF_CFG = {
+    "enabled": True, "log_controls": True, "log_window": True, "log_plan": True,
+    "sample_rate": 1.0, "max_prompt_chars": 0,
+}
+
+
+class _FakeLogDB:
+    def __init__(self, cfg=None, raise_get=False):
+        self._cfg = cfg if cfg is not None else dict(_DEF_CFG)
+        self._raise_get = raise_get
+        self.calls = []
+
+    def get_llm_log_config(self):
+        if self._raise_get:
+            raise RuntimeError("db down")
+        return self._cfg
+
+    def record_llm_call(self, **kwargs):
+        self.calls.append(kwargs)
+
+
+def _logging_agent(cfg=None, raise_get=False):
+    agent = _agent("aggressive")
+    agent._current_profile = lambda: "aggressive"
+    agent.db = _FakeLogDB(cfg, raise_get)
+    return agent
+
+
+def test_llm_log_gating_disabled_skips_record():
+    agent = _logging_agent({**_DEF_CFG, "enabled": False})
+    agent._record_llm_call(call_type="controls", prompt="p")
+    assert agent.db.calls == []
+
+
+def test_llm_log_gating_per_type_toggle():
+    agent = _logging_agent({**_DEF_CFG, "log_controls": False})
+    agent._record_llm_call(call_type="controls", prompt="p")   # desligado
+    agent._record_llm_call(call_type="window", prompt="q")     # ligado
+    assert len(agent.db.calls) == 1
+    assert agent.db.calls[0]["call_type"] == "window"
+
+
+def test_llm_log_gating_sample_rate(monkeypatch):
+    monkeypatch.setattr(trading_agent.random, "random", lambda: 0.9)
+    agent = _logging_agent({**_DEF_CFG, "sample_rate": 0.5})
+    agent._record_llm_call(call_type="plan", prompt="p")  # 0.9 > 0.5 → pula
+    assert agent.db.calls == []
+
+    monkeypatch.setattr(trading_agent.random, "random", lambda: 0.1)
+    agent2 = _logging_agent({**_DEF_CFG, "sample_rate": 0.5})
+    agent2._record_llm_call(call_type="plan", prompt="p")  # 0.1 <= 0.5 → grava
+    assert len(agent2.db.calls) == 1
+
+
+def test_llm_log_gating_truncates_prompt():
+    agent = _logging_agent({**_DEF_CFG, "max_prompt_chars": 5})
+    agent._record_llm_call(call_type="plan", prompt="0123456789")
+    assert agent.db.calls[0]["prompt"] == "01234"
+
+
+def test_llm_log_gating_defaults_when_config_read_fails():
+    # get_llm_log_config lança → cai nos defaults (enabled) → grava mesmo assim.
+    agent = _logging_agent(raise_get=True)
+    agent._record_llm_call(call_type="controls", prompt="p")
+    assert len(agent.db.calls) == 1

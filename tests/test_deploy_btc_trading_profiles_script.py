@@ -40,3 +40,73 @@ def test_script_installs_canonical_btc_trading_sudoers_file() -> None:
     assert "sudo rm -f /etc/sudoers.d/trading-svc-ollama" in content
     assert 'systemd/btc-trading-ollama.sudoers' in content
     assert "/etc/sudoers.d/btc-trading-ollama" in content
+
+
+def test_script_restarts_all_crypto_exporters_using_shared_exporter_code() -> None:
+    content = _load_script()
+    for unit in (
+        "crypto-exporter@BTC_USDT_conservative.service",
+        "crypto-exporter@BTC_USDT_aggressive.service",
+        "crypto-exporter@BTC_USDT_shadow.service",
+        "crypto-exporter@ETH_USDT_conservative.service",
+        "crypto-exporter@ETH_USDT_aggressive.service",
+        "crypto-exporter@ETH_USDT_shadow.service",
+        "crypto-exporter@SOL_USDT_conservative.service",
+        "crypto-exporter@SOL_USDT_aggressive.service",
+        "crypto-exporter@SOL_USDT_shadow.service",
+    ):
+        assert unit in content
+
+
+def test_script_restarts_all_crypto_agents_that_share_runtime_code() -> None:
+    """Todos os perfis que rodam o trading_agent.py compartilhado devem ser
+    reiniciados no deploy — senão ficam com código antigo em memória (foi o que
+    deixou ETH sem log de llm_calls na Fase 1)."""
+    content = _load_script()
+    agent_block = content.split("AGENT_SERVICES=(", 1)[1].split(")", 1)[0]
+    for unit in (
+        "crypto-agent@BTC_USDT_conservative.service",
+        "crypto-agent@BTC_USDT_aggressive.service",
+        "crypto-agent@BTC_USDT_shadow.service",
+        "crypto-agent@ETH_USDT_conservative.service",
+        "crypto-agent@ETH_USDT_aggressive.service",
+        "crypto-agent@ETH_USDT_shadow.service",
+        "crypto-agent@SOL_USDT_conservative.service",
+        "crypto-agent@SOL_USDT_aggressive.service",
+        "crypto-agent@SOL_USDT_shadow.service",
+    ):
+        assert unit in agent_block, f"{unit} ausente de AGENT_SERVICES"
+    # Paridade agents ↔ exporters: mesmos 6 perfis nos dois arrays.
+    exporter_block = content.split("EXPORTER_SERVICES=(", 1)[1].split(")", 1)[0]
+    agent_profiles = {
+        line.split("@", 1)[1].split(".service")[0]
+        for line in agent_block.splitlines()
+        if "crypto-agent@" in line
+    }
+    exporter_profiles = {
+        line.split("@", 1)[1].split(".service")[0]
+        for line in exporter_block.splitlines()
+        if "crypto-exporter@" in line
+    }
+    assert agent_profiles == exporter_profiles, (
+        "AGENT_SERVICES e EXPORTER_SERVICES devem cobrir os mesmos perfis; "
+        f"diferença: {agent_profiles ^ exporter_profiles}"
+    )
+
+
+def test_script_verifies_deploy_completeness_after_restart() -> None:
+    """O deploy deve falhar se algum agent ativo ficar com código pré-sync."""
+    content = _load_script()
+    assert "verify_agents_running_current_code" in content
+    assert "code_reference_epoch" in content
+    # A verificação usa o mtime do runtime como marco e aborta em código antigo.
+    assert "ActiveEnterTimestamp" in content
+    assert "Deploy INCOMPLETO" in content
+    assert "exit 1" in content
+    # E é efetivamente invocada no fluxo do deploy (não só definida).
+    invocations = content.count("verify_agents_running_current_code")
+    assert invocations >= 2, "função definida mas não chamada no fluxo"
+    # Roda depois de reiniciar os agents.
+    assert content.rindex("verify_agents_running_current_code") > content.index(
+        'systemctl restart "${AGENT_SERVICES[@]}"'
+    )

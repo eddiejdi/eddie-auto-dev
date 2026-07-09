@@ -17,6 +17,8 @@ TOOLS_DIR="/apps/crypto-trader/tools"
 SYSTEMD_HELPERS_DIR="${RUNTIME_ROOT}/systemd"
 GRAFANA_PROVISIONING_DIR="${GRAFANA_PROVISIONING_DIR:-/home/homelab/monitoring/grafana/provisioning/dashboards}"
 GRAFANA_DASHBOARD_BACKUP_DIR="${GRAFANA_DASHBOARD_BACKUP_DIR:-/home/homelab/monitoring/grafana/provisioning/dashboard_backups}"
+PROMETHEUS_CONFIG="${PROMETHEUS_CONFIG:-/home/homelab/monitoring/prometheus.yml}"
+MYCLAUDE_SCRIPTS_DIR="${MYCLAUDE_SCRIPTS_DIR:-/home/homelab/myClaude/scripts}"
 
 CONSERVATIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_conservative_optimized.json"
 AGGRESSIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_aggressive_optimized.json"
@@ -29,14 +31,33 @@ BTC_DASHBOARD_DUPLICATE_PATHS=(
   "${GRAFANA_PROVISIONING_DIR}/btc_trading_dashboard_v3_prometheus.json"
 )
 
+# TODOS os agents que rodam o runtime compartilhado (trading_agent.py, training_db.py,
+# mixins, llm.py …). Como o código é sincronizado uma vez em ${TARGET_DIR} e usado por
+# todas as instâncias, cada perfil PRECISA ser reiniciado no deploy — senão fica com
+# código antigo em memória (foi o que deixou ETH sem log de llm_calls na Fase 1).
+# Mantenha em paridade com EXPORTER_SERVICES abaixo.
 AGENT_SERVICES=(
   "crypto-agent@BTC_USDT_conservative.service"
   "crypto-agent@BTC_USDT_aggressive.service"
+  "crypto-agent@BTC_USDT_shadow.service"
+  "crypto-agent@ETH_USDT_conservative.service"
+  "crypto-agent@ETH_USDT_aggressive.service"
+  "crypto-agent@ETH_USDT_shadow.service"
+  "crypto-agent@SOL_USDT_conservative.service"
+  "crypto-agent@SOL_USDT_aggressive.service"
+  "crypto-agent@SOL_USDT_shadow.service"
 )
 
 EXPORTER_SERVICES=(
   "crypto-exporter@BTC_USDT_conservative.service"
   "crypto-exporter@BTC_USDT_aggressive.service"
+  "crypto-exporter@BTC_USDT_shadow.service"
+  "crypto-exporter@ETH_USDT_conservative.service"
+  "crypto-exporter@ETH_USDT_aggressive.service"
+  "crypto-exporter@ETH_USDT_shadow.service"
+  "crypto-exporter@SOL_USDT_conservative.service"
+  "crypto-exporter@SOL_USDT_aggressive.service"
+  "crypto-exporter@SOL_USDT_shadow.service"
 )
 
 LEGACY_EXPORTER_SERVICES=(
@@ -216,6 +237,47 @@ sync_btc_grafana_dashboard() {
   cleanup_btc_dashboard_duplicates
 }
 
+sync_multi_coin_configs() {
+  local cfg=""
+  for cfg in "${REPO_ROOT}"/btc_trading_agent/config_{ETH,SOL}_USDT_*.json; do
+    [[ -f "${cfg}" ]] || continue
+    sync_runtime_file "${cfg}" "${TARGET_DIR}/$(basename "${cfg}")"
+    echo "  ✅ $(basename "${cfg}")"
+  done
+}
+
+sync_prometheus_config() {
+  local src="${REPO_ROOT}/monitoring/prometheus.yml"
+  require_file "${src}"
+  backup_if_present "${PROMETHEUS_CONFIG}"
+  sudo install -m 0644 "${src}" "${PROMETHEUS_CONFIG}"
+  if sudo docker ps --format '{{.Names}}' | grep -qx 'prometheus'; then
+    sudo docker exec prometheus promtool check config /etc/prometheus/prometheus.yml
+    sudo docker kill --signal=SIGHUP prometheus >/dev/null 2>&1 || true
+    echo "  ✅ Prometheus (docker) recarregado"
+  elif systemctl is-active --quiet prometheus 2>/dev/null; then
+    sudo systemctl reload prometheus 2>/dev/null || sudo kill -HUP "$(pgrep -xo prometheus)" 2>/dev/null || true
+    echo "  ✅ Prometheus (systemd) recarregado"
+  fi
+}
+
+sync_myClaude_trading_scripts() {
+  if [[ -d "${MYCLAUDE_SCRIPTS_DIR}" ]]; then
+    sudo install -d -m 0755 "${MYCLAUDE_SCRIPTS_DIR}"
+    sudo install -m 0644 "${REPO_ROOT}/scripts/trading_daily_report.py" \
+      "${MYCLAUDE_SCRIPTS_DIR}/trading_daily_report.py"
+    echo "  ✅ trading_daily_report.py → ${MYCLAUDE_SCRIPTS_DIR}"
+  fi
+}
+
+ensure_sol_trading_profiles() {
+  local activate="${REPO_ROOT}/scripts/activate_sol_trading_profiles.sh"
+  if [[ -x "${activate}" ]] && compgen -G "${REPO_ROOT}/btc_trading_agent/config_SOL_USDT_*.json" >/dev/null; then
+    echo "🔗 Ativando perfis SOL-USDT (envfiles + systemd)..."
+    sudo bash "${activate}"
+  fi
+}
+
 restart_grafana_if_present() {
   if sudo docker ps --format '{{.Names}}' | grep -qx 'grafana'; then
     sudo docker restart grafana >/dev/null
@@ -243,6 +305,9 @@ sync_trading_runtime() {
   sync_runtime_file \
     "${REPO_ROOT}/btc_trading_agent/trading_agent.py" \
     "${TARGET_DIR}/trading_agent.py"
+  sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/training_db.py" \
+    "${TARGET_DIR}/training_db.py"
   sync_runtime_file \
     "${REPO_ROOT}/btc_trading_agent/sell_target_mixin.py" \
     "${TARGET_DIR}/sell_target_mixin.py"
@@ -289,6 +354,12 @@ sync_trading_runtime() {
     "${REPO_ROOT}/scripts/ollama_finetune_batch.py" \
     "${SCRIPTS_DIR}/ollama_finetune_batch.py"
   sync_runtime_file \
+    "${REPO_ROOT}/scripts/trading_daily_report.py" \
+    "${SCRIPTS_DIR}/trading_daily_report.py"
+  sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/trading_conversation.py" \
+    "${TARGET_DIR}/trading_conversation.py"
+  sync_runtime_file \
     "${REPO_ROOT}/systemd/validate_btc_config.py" \
     "${SYSTEMD_HELPERS_DIR}/validate_btc_config.py"
   # Coordenador de GPUs (ferramenta homelab, pertence ao user homelab)
@@ -327,6 +398,66 @@ ensure_trading_venv() {
     -r "${EXPORTERS_DIR}/requirements.txt"
 }
 
+code_reference_epoch() {
+  # Maior mtime (epoch) entre os arquivos de runtime compartilhados recém-sincronizados.
+  # Serve de marco: qualquer agent ativo que tenha entrado em execução ANTES disto está
+  # rodando código velho.
+  local newest=0 f m
+  local runtime_files=(
+    trading_agent.py training_db.py sell_target_mixin.py risk_guardian_mixin.py
+    position_manager_mixin.py slot_exit_policy.py llm.py fast_model.py
+    kucoin_api.py profile_rules.py secrets_helper.py prometheus_exporter.py
+  )
+  for f in "${runtime_files[@]}"; do
+    m="$(stat -c %Y "${TARGET_DIR}/${f}" 2>/dev/null || echo 0)"
+    (( m > newest )) && newest="${m}"
+  done
+  echo "${newest}"
+}
+
+verify_agents_running_current_code() {
+  # HOOK de completude: garante que TODOS os crypto-agent ativos (descobertos no host,
+  # não só os listados) foram reiniciados APÓS o sync do runtime. Um agent ativo que
+  # ficou com código antigo = deploy incompleto → falha explícita.
+  local ref_epoch discovered failed=0 svc load state enter enter_epoch
+  ref_epoch="$(code_reference_epoch)"
+  if [[ -z "${ref_epoch}" || "${ref_epoch}" == "0" ]]; then
+    echo "⚠️  Não foi possível determinar o mtime do runtime em ${TARGET_DIR}; verificação de completude pulada" >&2
+    return 0
+  fi
+
+  discovered="$(systemctl list-units --type=service --all --no-legend 'crypto-agent@*' 2>/dev/null \
+    | awk '{print $1}' | grep -v '^crypto-agent@\.service$' || true)"
+
+  echo "🔎 Verificando completude do deploy — todos os crypto-agent ativos no código novo…"
+  for svc in ${discovered}; do
+    load="$(systemctl show "${svc}" -p LoadState --value 2>/dev/null || echo not-found)"
+    [[ "${load}" == "masked" || "${load}" == "not-found" ]] && continue
+    state="$(systemctl show "${svc}" -p ActiveState --value 2>/dev/null || echo unknown)"
+    if [[ "${state}" != "active" ]]; then
+      echo "  ⚠️  ${svc}: ${state} (inativo — fora da verificação de código)"
+      continue
+    fi
+    enter="$(systemctl show "${svc}" -p ActiveEnterTimestamp --value 2>/dev/null || echo '')"
+    enter_epoch="$(date -d "${enter}" +%s 2>/dev/null || echo 0)"
+    if (( enter_epoch < ref_epoch )); then
+      echo "  ❌ ${svc}: código DESATUALIZADO (ativo desde '${enter}', anterior ao sync do runtime)" >&2
+      failed=1
+    else
+      echo "  ✅ ${svc}: reiniciado após o sync"
+    fi
+  done
+
+  if (( failed )); then
+    echo "" >&2
+    echo "❌ Deploy INCOMPLETO: há crypto-agent ativos rodando código antigo." >&2
+    echo "   Causa provável: instância nova/perfil fora de AGENT_SERVICES neste script." >&2
+    echo "   Ação: adicione-a a AGENT_SERVICES (ou 'systemctl restart' manual) e rode de novo." >&2
+    exit 1
+  fi
+  echo "✅ Completude confirmada: todos os crypto-agent ativos no código recém-sincronizado."
+}
+
 echo "=== BTC trading profile deploy ==="
 echo "Repo: ${REPO_ROOT}"
 echo "Target: ${TARGET_DIR}"
@@ -338,7 +469,10 @@ require_secret_key "${SHARED_ENV}"
 DATABASE_URL_VALUE="$(resolve_database_url)"
 write_trading_database_env "${DATABASE_URL_VALUE}"
 sync_trading_runtime
+sync_multi_coin_configs
 sync_btc_grafana_dashboard
+sync_prometheus_config
+sync_myClaude_trading_scripts
 ensure_trading_venv
 install_managed_units
 
@@ -375,6 +509,7 @@ sudo install -o "${SERVICE_USER}" -g "${SERVICE_GROUP}" -m 0644 "${AGGRESSIVE_SR
 # Remove pycache to avoid permission conflicts with files created by the running service
 sudo rm -rf "${TARGET_DIR}/__pycache__"
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/trading_agent.py"
+sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/training_db.py"
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/sell_target_mixin.py"
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/risk_guardian_mixin.py"
 sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/position_manager_mixin.py"
@@ -433,5 +568,9 @@ for svc in "${EXPORTER_STATUS_SERVICES[@]}"; do
 done
 
 restart_grafana_if_present
+ensure_sol_trading_profiles
+
+# HOOK de completude: aborta se algum agent ativo ficou com código antigo.
+verify_agents_running_current_code
 
 echo "=== Deploy concluido ==="

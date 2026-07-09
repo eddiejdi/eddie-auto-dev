@@ -227,6 +227,58 @@ async def orchestrator_media_generate_image(payload: OrchestratorImageRequest) -
         raise HTTPException(status_code=500, detail=str(e))
 
 
+class OrchestratorTradingConverseRequest(BaseModel):
+    """Payload para conversa orquestrada com o Trading Analyst."""
+
+    question: str = Field(min_length=1, max_length=4000)
+    profile: str = Field(default="default", max_length=120)
+    symbols: list[str] | None = Field(default=None)
+    chat_id: str | None = Field(default=None, max_length=64)
+    user: str | None = Field(default=None, max_length=200)
+
+
+@orchestrator_router.post("/trading/converse")
+async def orchestrator_trading_converse(
+    payload: OrchestratorTradingConverseRequest,
+) -> dict[str, Any]:
+    """Responde uma pergunta de trading em linguagem natural via orquestrador.
+
+    Delega para o cérebro do Trading Analyst (contexto ao vivo de ``btc.*`` +
+    modelo ``trading-analyst``). É a integração usada pelo grupo "BTC Trade
+    Agent" do Telegram — a conversa passa SEMPRE pelo orquestrador.
+    """
+    _publish_orchestrator_event(f"trading converse: {payload.question[:140]}", "start")
+    try:
+        import asyncio as _asyncio
+
+        from btc_trading_agent.trading_conversation import answer_trading_question
+
+        metadata = {
+            "domain": "trading",
+            "via": "orchestrator-api",
+            "chat_id": payload.chat_id,
+            "user": payload.user,
+        }
+        answer = await _asyncio.to_thread(
+            answer_trading_question,
+            payload.question,
+            symbols=payload.symbols,
+            profile=payload.profile,
+            metadata=metadata,
+        )
+        _publish_orchestrator_event("trading converse concluído", "end")
+        return {
+            "orchestrator": "gpu0",
+            "service": "diretor",
+            "provider": "trading-analyst",
+            "answer": answer,
+        }
+    except Exception as e:
+        logger.error("Orchestrator trading converse error: %s", e)
+        _publish_orchestrator_event("falha na conversa de trading", "end")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 app.include_router(orchestrator_router, prefix="/orchestrator", tags=["orchestrator"])
 
 

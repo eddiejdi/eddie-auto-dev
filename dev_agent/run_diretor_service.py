@@ -51,6 +51,44 @@ def _should_list_huggingface_resources(content: str) -> bool:
     return any(keyword in lowered for keyword in keywords)
 
 
+_TRADING_KEYWORDS = (
+    "trading", "trade", "btc", "bitcoin", "eth", "ethereum", "cripto", "kucoin",
+    "pnl", "posição", "posicao", "posições", "posicoes", "mercado", "cotação",
+    "cotacao", "preço do", "preco do", "sinal", "candle", "rsi", "carteira",
+)
+
+
+def _should_delegate_to_trading(content: str, metadata: dict[str, object] | None = None) -> bool:
+    """Decide se a requisição deve ser respondida pelo Trading Analyst.
+
+    Prioriza o marcador explícito ``domain=trading`` no metadata (enviado pelo
+    grupo de trading no Telegram); como fallback, detecta por palavras-chave.
+    """
+    data = metadata or {}
+    if str(data.get("domain", "")).lower() == "trading":
+        return True
+    lowered = (content or "").lower()
+    return any(keyword in lowered for keyword in _TRADING_KEYWORDS)
+
+
+def _run_trading_conversation(content: str, metadata: dict[str, object] | None) -> str:
+    """Delega a pergunta ao cérebro do Trading Analyst (contexto ao vivo + Ollama)."""
+    from btc_trading_agent.trading_conversation import answer_trading_question
+
+    data = metadata or {}
+    profile = str(data.get("profile") or "default")
+    symbols_meta = data.get("symbols")
+    symbols = None
+    if isinstance(symbols_meta, (list, tuple)):
+        symbols = [str(s).upper() for s in symbols_meta if str(s).strip()]
+    elif isinstance(symbols_meta, str) and symbols_meta.strip():
+        symbols = [s.strip().upper() for s in symbols_meta.split(",") if s.strip()]
+
+    return answer_trading_question(
+        content, symbols=symbols, profile=profile, metadata=data
+    )
+
+
 def _run_huggingface_resources() -> str:
     """Consulta recursos disponíveis da integração Hugging Face."""
     from specialized_agents.huggingface_inference_agent import get_huggingface_client
@@ -97,7 +135,10 @@ def handle_message(msg) -> None:
     request_id = msg.metadata.get("request_id", msg.id)
 
     try:
-        if _should_delegate_to_huggingface(msg.content):
+        if _should_delegate_to_trading(msg.content, msg.metadata):
+            logger.info("[DiretorService] Delegando requisição ao Trading Analyst")
+            response_content = _run_trading_conversation(msg.content, msg.metadata)
+        elif _should_delegate_to_huggingface(msg.content):
             if _should_list_huggingface_resources(msg.content):
                 logger.info("[DiretorService] Delegando listagem de recursos ao agente Hugging Face")
                 response_content = _run_huggingface_resources()

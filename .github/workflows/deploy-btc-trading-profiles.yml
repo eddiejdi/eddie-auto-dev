@@ -9,6 +9,7 @@ on:
       - 'btc_trading_agent/profile_rules.py'
       - 'btc_trading_agent/slot_exit_policy.py'
       - 'btc_trading_agent/trading_agent.py'
+      - 'btc_trading_agent/trading_conversation.py'
       - 'btc_trading_agent/sell_target_mixin.py'
       - 'btc_trading_agent/risk_guardian_mixin.py'
       - 'btc_trading_agent/position_manager_mixin.py'
@@ -17,8 +18,13 @@ on:
       - 'btc_trading_agent/fast_model.py'
       - 'btc_trading_agent/prometheus_exporter.py'
       - 'btc_trading_agent/config_BTC_USDT_*.json'
+      - 'btc_trading_agent/config_ETH_USDT_*.json'
+      - 'btc_trading_agent/config_SOL_USDT_*.json'
       - 'patches/config_BTC_USDT_*_optimized.json'
+      - 'monitoring/prometheus.yml'
       - 'scripts/deploy_btc_trading_profiles.sh'
+      - 'scripts/activate_sol_trading_profiles.sh'
+      - 'scripts/trading_daily_report.py'
       - 'scripts/kucoin_postgres_sync.py'
       - 'scripts/candle_collector.py'
       - 'scripts/ollama_finetune_batch.py'
@@ -50,8 +56,10 @@ jobs:
           cp btc_trading_agent/config_BTC_USDT_conservative.json patches/config_BTC_USDT_conservative_optimized.json
           cp btc_trading_agent/config_BTC_USDT_aggressive.json patches/config_BTC_USDT_aggressive_optimized.json
 
-      - name: Ensure deploy script is executable
-        run: chmod +x scripts/deploy_btc_trading_profiles.sh
+      - name: Ensure deploy scripts are executable
+        run: |
+          chmod +x scripts/deploy_btc_trading_profiles.sh
+          chmod +x scripts/activate_sol_trading_profiles.sh
 
       - name: Validate slot-based BTC trading flow
         run: |
@@ -67,5 +75,55 @@ jobs:
             tests/test_grafana_dashboard_queries.py \
             tests/test_deploy_btc_trading_profiles_script.py
 
-      - name: Deploy optimized BTC profiles
+      - name: Deploy trading profiles (BTC + ETH + SOL)
         run: scripts/deploy_btc_trading_profiles.sh
+
+      - name: Verify SOL services and Prometheus scrape targets
+        run: |
+          set -euo pipefail
+          for svc in \
+            crypto-agent@SOL_USDT_conservative.service \
+            crypto-agent@SOL_USDT_aggressive.service \
+            crypto-agent@SOL_USDT_shadow.service \
+            crypto-exporter@SOL_USDT_conservative.service \
+            crypto-exporter@SOL_USDT_aggressive.service \
+            crypto-exporter@SOL_USDT_shadow.service
+          do
+            systemctl is-active --quiet "${svc}" || { echo "❌ ${svc} inativo"; exit 1; }
+            echo "✅ ${svc}"
+          done
+
+          SOL_JOBS=(
+            crypto-exporter-sol_usdt_shadow
+            crypto-exporter-sol_usdt_conservative
+            crypto-exporter-sol_usdt_aggressive
+          )
+          for attempt in 1 2 3 4 5; do
+            mapfile -t STATUSES < <(
+              curl -sf "http://127.0.0.1:9090/api/v1/targets" | python3 -c "
+          import json, sys
+          jobs = sys.argv[1:]
+          data = json.load(sys.stdin)
+          by_job = {t['labels'].get('job'): t.get('health', 'unknown')
+                    for t in data['data']['activeTargets']}
+          for job in jobs:
+              print(f\"{job}:{by_job.get(job, 'MISSING')}\")
+          " "${SOL_JOBS[@]}"
+            )
+            failed=0
+            for line in "${STATUSES[@]}"; do
+              echo "prometheus ${line}"
+              health="${line##*:}"
+              if [[ "${health}" != "up" ]]; then
+                failed=1
+              fi
+            done
+            if [[ "${failed}" -eq 0 ]]; then
+              echo "✅ Todos os scrape targets SOL estão up"
+              exit 0
+            fi
+            echo "⏳ Aguardando exporters SOL (tentativa ${attempt}/5)..."
+            sleep 10
+          done
+          echo "❌ Scrape targets SOL não ficaram up após 5 tentativas"
+          exit 1

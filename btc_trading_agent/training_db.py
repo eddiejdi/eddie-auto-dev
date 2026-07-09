@@ -319,6 +319,52 @@ class TrainingDatabase:
                 )
             """)
 
+            # Log bruto das chamadas ao LLM (prompt + resposta) para servir de
+            # dataset de fine-tuning. As tabelas ai_trade_controls/ai_trade_windows/
+            # ai_plans guardam a saída já parseada, mas NÃO o prompt/CONTEXT exato
+            # enviado ao Ollama nem o texto livre do plano — que é o que o SFT precisa.
+            cur.execute(f"""
+                CREATE TABLE IF NOT EXISTS {SCHEMA}.llm_calls (
+                    id SERIAL PRIMARY KEY,
+                    timestamp DOUBLE PRECISION NOT NULL,
+                    call_type TEXT NOT NULL,
+                    symbol TEXT NOT NULL,
+                    profile TEXT NOT NULL DEFAULT 'default',
+                    trigger TEXT,
+                    model TEXT,
+                    host TEXT,
+                    prompt TEXT NOT NULL,
+                    response_text TEXT,
+                    response_json JSONB,
+                    latency_ms DOUBLE PRECISION,
+                    metadata JSONB,
+                    servidor TEXT NOT NULL DEFAULT 'homelab',
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+
+            # Config de runtime do log de LLM, controlada pelo painel (ligar/desligar
+            # e parametrizar). Linha única (id=1). Os agentes leem com cache curto.
+            cur.execute(f"""
+                CREATE TABLE IF NOT EXISTS {SCHEMA}.llm_log_config (
+                    id INTEGER PRIMARY KEY DEFAULT 1,
+                    enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                    log_controls BOOLEAN NOT NULL DEFAULT TRUE,
+                    log_window BOOLEAN NOT NULL DEFAULT TRUE,
+                    log_plan BOOLEAN NOT NULL DEFAULT TRUE,
+                    sample_rate DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+                    max_prompt_chars INTEGER NOT NULL DEFAULT 0,
+                    prune_days INTEGER NOT NULL DEFAULT 90,
+                    updated_at TIMESTAMPTZ DEFAULT NOW(),
+                    updated_by TEXT,
+                    CONSTRAINT llm_log_config_singleton CHECK (id = 1)
+                )
+            """)
+            cur.execute(f"""
+                INSERT INTO {SCHEMA}.llm_log_config (id) VALUES (1)
+                ON CONFLICT (id) DO NOTHING
+            """)
+
             # Compatibilidade: releases recentes passaram a usar colunas/tabelas
             # com "profile"; manter isso aqui evita depender de migration manual.
             cur.execute(PROFILE_MIGRATION_SQL)
@@ -340,6 +386,8 @@ class TrainingDatabase:
                 f"CREATE INDEX IF NOT EXISTS idx_btc_profile_allocations_symbol_ts ON {SCHEMA}.profile_allocations(symbol, timestamp DESC)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_ai_trade_controls_symbol_profile_ts ON {SCHEMA}.ai_trade_controls(symbol, profile, timestamp DESC)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_ai_trade_windows_symbol_profile_ts ON {SCHEMA}.ai_trade_windows(symbol, profile, timestamp DESC)",
+                f"CREATE INDEX IF NOT EXISTS idx_btc_llm_calls_type_symbol_profile_ts ON {SCHEMA}.llm_calls(call_type, symbol, profile, timestamp DESC)",
+                f"CREATE INDEX IF NOT EXISTS idx_btc_llm_calls_timestamp ON {SCHEMA}.llm_calls(timestamp)",
             ]
             for idx in indices:
                 cur.execute(idx)
@@ -667,6 +715,182 @@ class TrainingDatabase:
                 )
             """, (symbol, profile, symbol, profile))
             return row_id
+
+    # ====================== LLM CALLS (fine-tuning dataset) ======================
+    def record_llm_call(
+        self,
+        *,
+        call_type: str,
+        symbol: str,
+        profile: str,
+        prompt: str,
+        response_text: Optional[str] = None,
+        response_json: Optional[Dict[str, Any]] = None,
+        model: Optional[str] = None,
+        host: Optional[str] = None,
+        latency_ms: Optional[float] = None,
+        trigger: Optional[str] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        servidor: Optional[str] = None,
+    ) -> int:
+        """Registra o prompt+resposta bruta de uma chamada ao LLM.
+
+        Serve de matéria-prima para o dataset de fine-tuning (call_type é um de
+        'controls' | 'window' | 'plan'). Não faz poda no caminho quente — use
+        prune_llm_calls() num timer de manutenção.
+        """
+        import socket as _socket
+        _servidor = servidor or _socket.gethostname()
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(f"""
+                INSERT INTO {SCHEMA}.llm_calls (
+                    timestamp, call_type, symbol, profile, trigger, model, host,
+                    prompt, response_text, response_json, latency_ms, metadata, servidor
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (
+                time.time(), call_type, symbol, profile, trigger, model, host,
+                prompt, response_text,
+                json.dumps(response_json, cls=_NumpyEncoder) if response_json else None,
+                _safe_float(latency_ms),
+                json.dumps(metadata, cls=_NumpyEncoder) if metadata else None,
+                _servidor,
+            ))
+            return cur.fetchone()[0]
+
+    def get_llm_calls(
+        self,
+        call_type: str = None,
+        symbol: str = None,
+        profile: str = None,
+        since: float = None,
+        limit: int = 1000,
+    ) -> List[Dict]:
+        """Lê chamadas de LLM logadas (para o dataset builder e shadow eval)."""
+        with self._get_conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            query = f"SELECT * FROM {SCHEMA}.llm_calls WHERE 1=1"
+            params: List[Any] = []
+            if call_type:
+                query += " AND call_type = %s"
+                params.append(call_type)
+            if symbol:
+                query += " AND symbol = %s"
+                params.append(symbol)
+            if profile:
+                query += " AND profile = %s"
+                params.append(profile)
+            if since is not None:
+                query += " AND timestamp > %s"
+                params.append(since)
+            query += " ORDER BY timestamp ASC LIMIT %s"
+            params.append(limit)
+            cur.execute(query, params)
+            return [dict(row) for row in cur.fetchall()]
+
+    def prune_llm_calls(self, max_age_days: int = 90) -> int:
+        """Remove chamadas de LLM mais velhas que max_age_days. Retorna nº removido."""
+        cutoff = time.time() - (max_age_days * 86400)
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"DELETE FROM {SCHEMA}.llm_calls WHERE timestamp < %s",
+                (cutoff,),
+            )
+            return cur.rowcount
+
+    def get_llm_call_stats(self) -> Dict[str, Any]:
+        """Contagens de btc.llm_calls por call_type (total e últimas 24h) para o painel."""
+        since_24h = time.time() - 86400
+        with self._get_conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(f"""
+                SELECT call_type,
+                       COUNT(*) AS total,
+                       COUNT(*) FILTER (WHERE timestamp > %s) AS last_24h
+                FROM {SCHEMA}.llm_calls
+                GROUP BY call_type
+            """, (since_24h,))
+            by_type = {r["call_type"]: {"total": int(r["total"]), "last_24h": int(r["last_24h"])}
+                       for r in cur.fetchall()}
+            cur.execute(f"SELECT COUNT(*) AS n, MAX(timestamp) AS last_ts FROM {SCHEMA}.llm_calls")
+            row = cur.fetchone() or {}
+        return {
+            "by_type": by_type,
+            "total": int(row.get("n") or 0),
+            "last_ts": float(row["last_ts"]) if row.get("last_ts") else None,
+        }
+
+    # Defaults usados quando a linha de config não existe ou a leitura falha.
+    LLM_LOG_CONFIG_DEFAULTS: Dict[str, Any] = {
+        "enabled": True,
+        "log_controls": True,
+        "log_window": True,
+        "log_plan": True,
+        "sample_rate": 1.0,
+        "max_prompt_chars": 0,
+        "prune_days": 90,
+    }
+    _LLM_LOG_CONFIG_FIELDS = (
+        "enabled", "log_controls", "log_window", "log_plan",
+        "sample_rate", "max_prompt_chars", "prune_days",
+    )
+
+    def get_llm_log_config(self) -> Dict[str, Any]:
+        """Lê a config de runtime do log de LLM (linha única id=1)."""
+        with self._get_conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                f"SELECT * FROM {SCHEMA}.llm_log_config WHERE id = 1"
+            )
+            row = cur.fetchone()
+            if not row:
+                return dict(self.LLM_LOG_CONFIG_DEFAULTS)
+            cfg = dict(self.LLM_LOG_CONFIG_DEFAULTS)
+            for k in self._LLM_LOG_CONFIG_FIELDS:
+                if row.get(k) is not None:
+                    cfg[k] = row[k]
+            cfg["updated_at"] = str(row.get("updated_at")) if row.get("updated_at") else None
+            cfg["updated_by"] = row.get("updated_by")
+            return cfg
+
+    def set_llm_log_config(self, updated_by: str = None, **fields: Any) -> Dict[str, Any]:
+        """Atualiza campos da config (parcial) e retorna o estado resultante.
+
+        Valida tipos/ranges: booleans; sample_rate em [0,1]; inteiros >= 0.
+        Só aceita as chaves conhecidas — o resto é ignorado.
+        """
+        updates: Dict[str, Any] = {}
+        for k in ("enabled", "log_controls", "log_window", "log_plan"):
+            if k in fields and fields[k] is not None:
+                updates[k] = bool(fields[k])
+        if fields.get("sample_rate") is not None:
+            sr = float(fields["sample_rate"])
+            updates["sample_rate"] = max(0.0, min(1.0, sr))
+        if fields.get("max_prompt_chars") is not None:
+            updates["max_prompt_chars"] = max(0, int(fields["max_prompt_chars"]))
+        if fields.get("prune_days") is not None:
+            updates["prune_days"] = max(1, int(fields["prune_days"]))
+
+        if not updates:
+            return self.get_llm_log_config()
+
+        set_clause = ", ".join(f"{k} = %s" for k in updates)
+        params = list(updates.values()) + [updated_by]
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(f"""
+                INSERT INTO {SCHEMA}.llm_log_config (id) VALUES (1)
+                ON CONFLICT (id) DO NOTHING
+            """)
+            cur.execute(
+                f"UPDATE {SCHEMA}.llm_log_config "
+                f"SET {set_clause}, updated_at = NOW(), updated_by = %s WHERE id = 1",
+                params,
+            )
+        return self.get_llm_log_config()
 
     # ====================== MARKET STATES ======================
     def record_market_state(self, symbol: str, price: float, **kwargs) -> int:
