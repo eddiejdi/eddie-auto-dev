@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Central secret helpers — Secrets Agent é a única fonte de verdade.
+"""Central secret helpers — Secrets Agent é a fonte primária de credenciais.
 
-Todo acesso a credenciais/tokens/senhas passa exclusivamente pelo Secrets Agent
-(porta 8088). Nenhum fallback para BW CLI, env vars ou arquivos locais.
+Telegram aceita fallback de variáveis de ambiente para serviços locais
+(/etc/default/eddie-common) quando o Secrets Agent não responde.
 """
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +41,12 @@ def get_telegram_token() -> str:
             val = client.get_local_secret("shared/telegram_bot_token", field=field)
             if val:
                 return val
-        raise RuntimeError("Telegram token not found in Secrets Agent (shared/telegram_bot_token)")
     finally:
         client.close()
+    env_token = (os.getenv("TELEGRAM_BOT_TOKEN") or os.getenv("TG_TOKEN") or "").strip()
+    if env_token:
+        return env_token
+    raise RuntimeError("Telegram token not found in Secrets Agent (shared/telegram_bot_token)")
 
 
 def get_telegram_chat_id() -> str:
@@ -53,10 +57,32 @@ def get_telegram_chat_id() -> str:
             val = client.get_local_secret("shared/telegram_chat_id", field=field)
             if val:
                 return val
+        env_chat = (os.getenv("TELEGRAM_CHAT_ID") or os.getenv("TG_CHAT_ID") or "").strip()
+        if env_chat:
+            return env_chat
         logger.warning("Telegram chat_id not found in Secrets Agent")
         return ""
     finally:
         client.close()
+
+
+def get_agenda_telegram_chat_id() -> str:
+    """Chat_id dedicado à agenda diária (opcional)."""
+    env_chat = (os.getenv("AGENDA_TELEGRAM_CHAT_ID") or "").strip()
+    if env_chat:
+        return env_chat
+    client = _get_client()
+    try:
+        for secret_name, field in (
+            ("shared/agenda_telegram_chat_id", "chat_id"),
+            ("shared/agenda_telegram_chat_id", "password"),
+        ):
+            val = client.get_local_secret(secret_name, field=field)
+            if val:
+                return val
+    finally:
+        client.close()
+    return get_telegram_chat_id()
 
 
 def get_trading_telegram_chat_id() -> str:

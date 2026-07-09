@@ -1,0 +1,31 @@
+{
+  "defaults": {
+    "mode": "auto",
+    "quality": "balanced",
+    "include_news": true,
+    "send_telegram": true,
+    "upload_youtube": true
+  },
+  "youtube": {
+    "enabled": true,
+    "channel_id": "UCEyYr2YE1HLDTKT4cnMefmw",
+    "channel_handle": "@AgendaDiáriaImportante",
+    "channel_url": "https://www.youtube.com/channel/UCEyYr2YE1HLDTKT4cnMefmw",
+    "privacy_status": "public",
+    "category_id": "25",
+    "default_tags": [
+      "agenda diária",
+      "Agenda Diária Importante",
+      "Flávio Bolsonaro",
+      "Senado Federal",
+      "política"
+    ],
+    "cover_image": "artifacts/daily_agenda/youtube/cover.jpg",
+    "credentials_file": "artifacts/daily_agenda/youtube/credentials.json",
+    "token_file": "artifacts/daily_agenda/youtube/token.pickle"
+  },
+  "telegram": {
+    "enabled": true,
+    "chat_id": ""
+  }
+}

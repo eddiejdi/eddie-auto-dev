@@ -1,0 +1,21 @@
+[Unit]
+Description=Agenda diaria Flavio Bolsonaro — coleta, locucao e Telegram
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=homelab
+WorkingDirectory=/home/homelab/myClaude
+EnvironmentFile=/etc/default/eddie-common
+Environment=PYTHONUNBUFFERED=1
+Environment=OLLAMA_HOST=http://192.168.15.2:11437
+Environment=OLLAMA_HOST_GPU1=http://192.168.15.2:11435
+Environment=AGENDA_YOUTUBE_CHANNEL_ID=UCEyYr2YE1HLDTKT4cnMefmw
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/tools/run_daily_agenda_broadcast.py --mode auto --date today --quality balanced --llm-auto-route --upload-youtube
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

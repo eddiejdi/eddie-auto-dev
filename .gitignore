@@ -39,6 +39,13 @@ token*.json
 .eddie_dashboard_config.json
 tuya_credentials.json
 google_home_credentials.json
+artifacts/daily_agenda/youtube/credentials.json
+artifacts/daily_agenda/youtube/token.pickle
+artifacts/daily_agenda/youtube/oauth_pending.json
+artifacts/daily_agenda/panel_job.json
+artifacts/daily_agenda/*/locution.wav
+artifacts/daily_agenda/*/locution.mp4
+artifacts/daily_agenda/*/publish_meta.json
 tinytuya.json
 tuya_devices.json
 tmp_selenium_device_access/

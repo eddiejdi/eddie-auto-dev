@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agenda Diária — Painel de Controle</title>
+  <style>
+    :root {
+      --bg: #10151f; --card: #18212f; --ink: #edf2f8; --muted: #93a1bd;
+      --line: #2a3548; --accent: #3b82f6; --ok: #34d399; --warn: #f59e0b;
+      --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink);
+           font:15px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 24px 16px 64px; }
+    h1 { font-size: 22px; margin: 4px 0 2px; }
+    .sub { color: var(--muted); font-size: 13px; margin-bottom: 20px; }
+    .grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width: 820px) { .grid { grid-template-columns:1fr; } }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px;
+            padding:18px; margin-bottom:16px; }
+    .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.06em;
+               color:var(--muted); margin:0 0 14px; }
+    .row { display:flex; align-items:center; justify-content:space-between; gap:12px;
+           padding:10px 0; border-bottom:1px dashed var(--line); }
+    .row:last-child { border-bottom:0; }
+    .label { font-weight:600; }
+    .hint { color:var(--muted); font-size:12px; }
+    input, select, textarea {
+      width:100%; background:var(--bg); color:var(--ink); border:1px solid var(--line);
+      border-radius:8px; padding:8px 10px; font:inherit;
+    }
+    textarea { min-height: 140px; resize: vertical; }
+    .switch { position:relative; width:48px; height:28px; flex:0 0 auto; }
+    .switch input { opacity:0; width:0; height:0; }
+    .slider { position:absolute; inset:0; background:#6b7280; border-radius:999px; cursor:pointer; }
+    .slider::before { content:""; position:absolute; width:22px; height:22px; left:3px; top:3px;
+                      background:#fff; border-radius:50%; transition:.15s; }
+    .switch input:checked + .slider { background:var(--accent); }
+    .switch input:checked + .slider::before { transform:translateX(20px); }
+    button { background:var(--accent); color:#fff; border:0; border-radius:10px;
+             padding:10px 16px; font:600 15px/1 inherit; cursor:pointer; }
+    button.ghost { background:transparent; color:var(--muted); border:1px solid var(--line); }
+    button.warn { background:#b45309; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    .actions { display:flex; flex-wrap:wrap; gap:10px; align-items:center; }
+    .msg { font-size:13px; min-height:18px; }
+    .msg.ok { color:var(--ok); } .msg.err { color:var(--danger); }
+    .badge { display:inline-block; padding:3px 8px; border-radius:999px; font-size:12px;
+             background:#243044; color:var(--muted); }
+    .badge.ok { color:var(--ok); } .badge.err { color:var(--danger); }
+    .edition { border:1px solid var(--line); border-radius:10px; padding:12px; margin-bottom:10px; }
+    .edition.active { border-color: var(--accent); }
+    .edition h3 { margin:0 0 6px; font-size:15px; }
+    .edition .meta { color:var(--muted); font-size:12px; margin-bottom:8px; }
+    audio { width:100%; margin-top:8px; }
+    pre.joblog { background:var(--bg); border:1px solid var(--line); border-radius:8px;
+                 padding:10px; max-height:180px; overflow:auto; font-size:12px; white-space:pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Agenda Diária — Flávio Bolsonaro</h1>
+    <div class="sub">Painel de controle da coleta, locução, Telegram e publicação no <b>canal YouTube</b>.</div>
+
+    <div class="grid">
+      <div class="card">
+        <h2>Canal YouTube</h2>
+        <div id="ytStatus" class="hint">Carregando…</div>
+        <div class="hint" style="margin-top:8px">
+          Canal: <a href="https://www.youtube.com/channel/UCEyYr2YE1HLDTKT4cnMefmw" target="_blank" rel="noopener">@AgendaDiáriaImportante</a>
+        </div>
+        <div class="row" style="margin-top:12px">
+          <div><div class="label">Publicar no YouTube</div><div class="hint">Após gerar o áudio</div></div>
+          <label class="switch"><input type="checkbox" id="youtube_enabled" /><span class="slider"></span></label>
+        </div>
+        <div class="row">
+          <div class="label">Channel ID</div>
+        </div>
+        <input id="youtube_channel_id" placeholder="UCxxxxxxxx (opcional se a conta tiver um canal)" />
+        <div class="row">
+          <div class="label">Privacidade</div>
+        </div>
+        <select id="youtube_privacy">
+          <option value="public">Público</option>
+          <option value="unlisted">Não listado</option>
+          <option value="private">Privado</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <h2>Execução</h2>
+        <div class="row"><div class="label">Data</div></div>
+        <input id="run_date" type="date" />
+        <div class="row"><div class="label">Modo</div></div>
+        <select id="run_mode">
+          <option value="auto">auto</option>
+          <option value="live">live</option>
+          <option value="snapshot">snapshot</option>
+        </select>
+        <div class="row"><div class="label">Qualidade TTS</div></div>
+        <select id="run_quality">
+          <option value="fast">fast (CPU)</option>
+          <option value="balanced">balanced (Piper GPU)</option>
+          <option value="best">best (Kokoro)</option>
+        </select>
+        <div class="row">
+          <div><div class="label">Dry-run</div><div class="hint">Gera artefatos sem Telegram</div></div>
+          <label class="switch"><input type="checkbox" id="run_dry_run" /><span class="slider"></span></label>
+        </div>
+        <div class="row">
+          <div><div class="label">Telegram pessoal</div><div class="hint">Notificação adicional</div></div>
+          <label class="switch"><input type="checkbox" id="send_telegram" checked /><span class="slider"></span></label>
+        </div>
+        <div class="actions" style="margin-top:12px">
+          <button id="runBtn">Gerar boletim</button>
+          <button class="ghost" id="reloadBtn">Recarregar</button>
+        </div>
+        <div class="msg" id="msg"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Job atual</h2>
+      <div id="jobStatus" class="hint">Nenhum job em execução.</div>
+      <pre class="joblog" id="jobLog" hidden></pre>
+    </div>
+
+    <div class="card">
+      <h2>Edições</h2>
+      <div id="editions"></div>
+    </div>
+
+    <div class="card">
+      <h2>Prévia da edição</h2>
+      <div id="previewMeta" class="hint">Selecione uma edição.</div>
+      <textarea id="previewText" readonly placeholder="Texto da locução"></textarea>
+      <audio id="previewAudio" controls hidden></audio>
+      <div class="actions" style="margin-top:10px">
+        <button class="warn" id="uploadYtBtn" disabled>Publicar no YouTube</button>
+        <a id="youtubeLink" href="#" target="_blank" rel="noopener" hidden>Abrir no YouTube</a>
+      </div>
+    </div>
+  </div>
+  <script src="/daily_agenda_panel.js"></script>
+</body>
+</html>

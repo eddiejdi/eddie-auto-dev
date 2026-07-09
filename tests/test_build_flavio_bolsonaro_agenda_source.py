@@ -79,6 +79,45 @@ PL_3283_HTML = """
 </body></html>
 """
 
+CONGRESS_AGENDA_HTML = """
+<html><body>
+<div>
+10h00
+<a href="https://legis.senado.leg.br/comissoes/reuniao?reuniao=14826">51ª Reunião Extraordinária</a>
+CDH
+Anexo II, Ala Senador Nilo Coelho, Plenário nº 2
+Audiência Pública Interativa
+Agendada
+</div>
+<div>
+14h00
+<a href="https://www25.senado.leg.br/web/atividade/sessao-plenaria/-/pauta/569262">Sessão Deliberativa Ordinária</a>
+SF
+Plenário do Senado Federal
+Agendada
+</div>
+</body></html>
+"""
+
+GOOGLE_NEWS_RSS = """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <item>
+      <title>Flávio Bolsonaro discursa em audiência nos EUA sobre tarifaço</title>
+      <link>https://news.example/flavio-eua</link>
+      <pubDate>Thu, 09 Jul 2026 03:00:18 GMT</pubDate>
+      <source>BBC</source>
+    </item>
+    <item>
+      <title>Outro assunto sem relação</title>
+      <link>https://news.example/outro</link>
+      <pubDate>Thu, 09 Jul 2026 03:00:18 GMT</pubDate>
+      <source>Portal X</source>
+    </item>
+  </channel>
+</rss>
+"""
+
 
 def test_build_source_text_contextualiza_autoria_e_relatoria() -> None:
     entries = agenda_source.AGENDA_BY_DATE["2026-06-17"]
@@ -88,12 +127,34 @@ def test_build_source_text_contextualiza_autoria_e_relatoria() -> None:
         date_label="esta quarta-feira, 17 de junho de 2026",
     )
 
-    assert "Flávio Bolsonaro tem dois compromissos públicos" in result
+    assert "Flávio Bolsonaro tem 2 compromissos públicos previstos" in result
     assert "Comissão de Desenvolvimento Regional e Turismo" in result
     assert "Comissão de Direitos Humanos e Legislação Participativa" in result
     assert "Entre as matérias de sua autoria em pauta" in result
     assert "Há também matéria sob sua relatoria" in result
     assert "Esperidião Amin" in result
+
+
+def test_build_source_text_inclui_contexto_de_imprensa() -> None:
+    collected = agenda_source.CollectedAgenda(
+        entries=(),
+        news=(
+            agenda_source.NewsSnippet(
+                title="Flávio Bolsonaro discursa em audiência nos EUA",
+                outlet="BBC",
+                url="https://news.example/flavio-eua",
+            ),
+        ),
+    )
+
+    result = agenda_source.build_source_text(
+        collected,
+        date_label="esta quinta-feira, 9 de julho de 2026",
+    )
+
+    assert "cobertura da imprensa" in result
+    assert "audiência nos EUA" in result
+    assert "BBC" in result
 
 
 def test_iter_sources_retorna_urls_unicas() -> None:
@@ -107,13 +168,17 @@ def test_iter_sources_retorna_urls_unicas() -> None:
 
 
 def test_find_meeting_link_and_extract_committee_entry() -> None:
-    meeting_url = agenda_source.find_meeting_link(CDH_HTML, date_token="17/06")
+    meeting_url = agenda_source.find_meeting_link(
+        CDH_HTML,
+        date_token="17/06",
+        base_url=agenda_source.ACTIVE_COMMITTEES["CDH"]["url"],
+    )
     entry = agenda_source.extract_committee_entry(
         CDR_HTML,
         date_token="17/06",
         committee_name="Comissão de Desenvolvimento Regional e Turismo",
         committee_sigla="CDR",
-        source_url=agenda_source.CDR_URL,
+        source_url=agenda_source.ACTIVE_COMMITTEES["CDR"]["url"],
     )
 
     assert meeting_url == "https://legis.senado.leg.br/atividade/comissoes/comissao/834/reuniao/14728"
@@ -121,51 +186,107 @@ def test_find_meeting_link_and_extract_committee_entry() -> None:
     assert "RP-8" in entry.summary
 
 
+def test_parse_congress_agenda_extrai_cdh_e_plenario() -> None:
+    entries = agenda_source.parse_congress_agenda(
+        CONGRESS_AGENDA_HTML,
+        date_str="2026-07-09",
+        committee_siglas=set(agenda_source.ACTIVE_COMMITTEES),
+    )
+
+    siglas = {entry.committee_sigla for entry in entries}
+    assert "CDH" in siglas
+    assert "PLEN" in siglas
+    assert any(entry.time_label == "10h" for entry in entries)
+
+
+def test_parse_google_news_rss_filtra_por_senador() -> None:
+    snippets = agenda_source.parse_google_news_rss(
+        GOOGLE_NEWS_RSS,
+        date_str="2026-07-09",
+    )
+
+    assert len(snippets) == 1
+    assert "Flávio Bolsonaro" in snippets[0].title
+    assert snippets[0].outlet == "BBC"
+
+
+def test_merge_agenda_entries_remove_duplicatas() -> None:
+    first = agenda_source.AgendaEntry(
+        time_label="10h",
+        committee_name="CDH",
+        committee_sigla="CDH",
+        summary="Resumo curto",
+        source_url="https://example/a",
+    )
+    second = agenda_source.AgendaEntry(
+        time_label="10h",
+        committee_name="CDH",
+        committee_sigla="CDH",
+        summary="Resumo mais detalhado sobre a audiência pública do dia.",
+        source_url="https://example/b",
+    )
+
+    merged = agenda_source.merge_agenda_entries([first, second])
+
+    assert len(merged) == 1
+    assert "detalhado" in merged[0].summary
+
+
 def test_load_live_entries_parseia_agenda_e_materias(monkeypatch) -> None:
     html_by_url = {
-        agenda_source.CDR_URL: CDR_HTML,
-        agenda_source.CDH_URL: CDH_HTML,
+        agenda_source.ACTIVE_COMMITTEES["CDR"]["url"]: CDR_HTML,
+        agenda_source.ACTIVE_COMMITTEES["CDH"]["url"]: CDH_HTML,
         "https://legis.senado.leg.br/atividade/comissoes/comissao/834/reuniao/14728": CDH_MEETING_HTML,
         "https://www25.senado.leg.br/web/atividade/materias/-/materia/170486": PL_4598_HTML,
         "https://www25.senado.leg.br/web/atividade/materias/-/materia/169904": PL_3980_HTML,
         "https://www25.senado.leg.br/web/atividade/materias/-/materia/169474": PL_3283_HTML,
+        agenda_source.CONGRESS_AGENDA_URL.format(date="2026-06-17"): "<html></html>",
     }
 
-    def fake_fetch_html(url: str, *, timeout: int, trust_env: bool) -> str:
-        del timeout, trust_env
-        return html_by_url[url]
+    def fake_fetch_html(url: str, *, timeout: int, trust_env: bool, retries: int = 0) -> str:
+        del timeout, trust_env, retries
+        if url in html_by_url:
+            return html_by_url[url]
+        raise requests.Timeout("timeout")
 
     monkeypatch.setattr(agenda_source, "fetch_html", fake_fetch_html)
+    monkeypatch.setattr(agenda_source, "fetch_text", fake_fetch_html)
+    monkeypatch.setattr(agenda_source, "collect_news_snippets", lambda *args, **kwargs: [])
 
-    entries = agenda_source.load_live_entries(
+    collected = agenda_source.collect_live_agenda(
         "2026-06-17",
         timeout=10,
         trust_env=False,
+        retries=0,
+        include_news=False,
     )
 
-    assert len(entries) == 2
-    assert entries[0].time_label == "9h30"
-    assert entries[1].time_label == "11h00"
-    assert len(entries[1].materials) == 3
-    roles = {item.code: item.role for item in entries[1].materials}
+    assert len(collected.entries) >= 2
+    cdh_entry = next(entry for entry in collected.entries if entry.committee_sigla == "CDH")
+    assert cdh_entry.time_label in {"11h", "11h00"}
+    assert len(cdh_entry.materials) == 3
+    roles = {item.code: item.role for item in cdh_entry.materials}
     assert roles["PL 4598/2025"] == "autoria"
     assert roles["PL 3980/2025"] == "autoria"
     assert roles["PL 3283/2025"] == "relatoria"
 
 
 def test_load_entries_auto_cai_para_snapshot(monkeypatch) -> None:
-    def fake_fetch_html(url: str, *, timeout: int, trust_env: bool) -> str:
-        del url, timeout, trust_env
+    def fake_fetch_html(url: str, *, timeout: int, trust_env: bool, retries: int = 0) -> str:
+        del url, timeout, trust_env, retries
         raise requests.Timeout("timeout")
 
     monkeypatch.setattr(agenda_source, "fetch_html", fake_fetch_html)
+    monkeypatch.setattr(agenda_source, "fetch_text", fake_fetch_html)
 
-    entries = agenda_source.load_entries(
+    collected = agenda_source.load_entries(
         "2026-06-17",
         mode="auto",
         timeout=10,
         trust_env=False,
+        include_news=False,
     )
 
-    assert len(entries) == 2
-    assert entries[0].committee_sigla == "CDR"
+    assert len(collected.entries) == 2
+    assert collected.entries[0].committee_sigla == "CDR"
+    assert collected.sources_used == ("snapshot",)

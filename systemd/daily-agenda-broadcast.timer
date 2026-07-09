@@ -1,0 +1,10 @@
+[Unit]
+Description=Timer da agenda diaria (07:00 BRT, dias uteis)
+
+[Timer]
+OnCalendar=Mon..Fri *-*-* 07:00:00
+Persistent=true
+Unit=daily-agenda-broadcast.service
+
+[Install]
+WantedBy=timers.target
