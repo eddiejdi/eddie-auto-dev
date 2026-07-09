@@ -133,6 +133,36 @@ scrape_configs:
           profile: 'aggressive'
           servidor: 'homelab'
 
+  - job_name: 'crypto-exporter-sol_usdt_shadow'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9108']
+        labels:
+          coin: 'SOL-USDT'
+          instance: 'sol_usdt_shadow'
+          profile: 'shadow'
+          servidor: 'homelab'
+
+  - job_name: 'crypto-exporter-sol_usdt_conservative'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9104']
+        labels:
+          coin: 'SOL-USDT'
+          instance: 'sol_usdt_conservative'
+          profile: 'conservative'
+          servidor: 'homelab'
+
+  - job_name: 'crypto-exporter-sol_usdt_aggressive'
+    scrape_interval: 30s
+    static_configs:
+      - targets: ['172.17.0.1:9106']
+        labels:
+          coin: 'SOL-USDT'
+          instance: 'sol_usdt_aggressive'
+          profile: 'aggressive'
+          servidor: 'homelab'
+
   # ---------------------------------------------------------------------------
   # ollama-metrics — proxy Prometheus para os 3 endpoints Ollama do cluster GPU
   # Métricas: tokens, latência, modelos carregados, uso de VRAM por GPU

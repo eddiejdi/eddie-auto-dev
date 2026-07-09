@@ -17,6 +17,8 @@ TOOLS_DIR="/apps/crypto-trader/tools"
 SYSTEMD_HELPERS_DIR="${RUNTIME_ROOT}/systemd"
 GRAFANA_PROVISIONING_DIR="${GRAFANA_PROVISIONING_DIR:-/home/homelab/monitoring/grafana/provisioning/dashboards}"
 GRAFANA_DASHBOARD_BACKUP_DIR="${GRAFANA_DASHBOARD_BACKUP_DIR:-/home/homelab/monitoring/grafana/provisioning/dashboard_backups}"
+PROMETHEUS_CONFIG="${PROMETHEUS_CONFIG:-/home/homelab/monitoring/prometheus.yml}"
+MYCLAUDE_SCRIPTS_DIR="${MYCLAUDE_SCRIPTS_DIR:-/home/homelab/myClaude/scripts}"
 
 CONSERVATIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_conservative_optimized.json"
 AGGRESSIVE_SRC="${SOURCE_DIR}/config_BTC_USDT_aggressive_optimized.json"
@@ -41,6 +43,9 @@ AGENT_SERVICES=(
   "crypto-agent@ETH_USDT_conservative.service"
   "crypto-agent@ETH_USDT_aggressive.service"
   "crypto-agent@ETH_USDT_shadow.service"
+  "crypto-agent@SOL_USDT_conservative.service"
+  "crypto-agent@SOL_USDT_aggressive.service"
+  "crypto-agent@SOL_USDT_shadow.service"
 )
 
 EXPORTER_SERVICES=(
@@ -50,6 +55,9 @@ EXPORTER_SERVICES=(
   "crypto-exporter@ETH_USDT_conservative.service"
   "crypto-exporter@ETH_USDT_aggressive.service"
   "crypto-exporter@ETH_USDT_shadow.service"
+  "crypto-exporter@SOL_USDT_conservative.service"
+  "crypto-exporter@SOL_USDT_aggressive.service"
+  "crypto-exporter@SOL_USDT_shadow.service"
 )
 
 LEGACY_EXPORTER_SERVICES=(
@@ -229,6 +237,47 @@ sync_btc_grafana_dashboard() {
   cleanup_btc_dashboard_duplicates
 }
 
+sync_multi_coin_configs() {
+  local cfg=""
+  for cfg in "${REPO_ROOT}"/btc_trading_agent/config_{ETH,SOL}_USDT_*.json; do
+    [[ -f "${cfg}" ]] || continue
+    sync_runtime_file "${cfg}" "${TARGET_DIR}/$(basename "${cfg}")"
+    echo "  ✅ $(basename "${cfg}")"
+  done
+}
+
+sync_prometheus_config() {
+  local src="${REPO_ROOT}/monitoring/prometheus.yml"
+  require_file "${src}"
+  backup_if_present "${PROMETHEUS_CONFIG}"
+  sudo install -m 0644 "${src}" "${PROMETHEUS_CONFIG}"
+  if sudo docker ps --format '{{.Names}}' | grep -qx 'prometheus'; then
+    sudo docker exec prometheus promtool check config /etc/prometheus/prometheus.yml
+    sudo docker kill --signal=SIGHUP prometheus >/dev/null 2>&1 || true
+    echo "  ✅ Prometheus (docker) recarregado"
+  elif systemctl is-active --quiet prometheus 2>/dev/null; then
+    sudo systemctl reload prometheus 2>/dev/null || sudo kill -HUP "$(pgrep -xo prometheus)" 2>/dev/null || true
+    echo "  ✅ Prometheus (systemd) recarregado"
+  fi
+}
+
+sync_myClaude_trading_scripts() {
+  if [[ -d "${MYCLAUDE_SCRIPTS_DIR}" ]]; then
+    sudo install -d -m 0755 "${MYCLAUDE_SCRIPTS_DIR}"
+    sudo install -m 0644 "${REPO_ROOT}/scripts/trading_daily_report.py" \
+      "${MYCLAUDE_SCRIPTS_DIR}/trading_daily_report.py"
+    echo "  ✅ trading_daily_report.py → ${MYCLAUDE_SCRIPTS_DIR}"
+  fi
+}
+
+ensure_sol_trading_profiles() {
+  local activate="${REPO_ROOT}/scripts/activate_sol_trading_profiles.sh"
+  if [[ -x "${activate}" ]] && compgen -G "${REPO_ROOT}/btc_trading_agent/config_SOL_USDT_*.json" >/dev/null; then
+    echo "🔗 Ativando perfis SOL-USDT (envfiles + systemd)..."
+    sudo bash "${activate}"
+  fi
+}
+
 restart_grafana_if_present() {
   if sudo docker ps --format '{{.Names}}' | grep -qx 'grafana'; then
     sudo docker restart grafana >/dev/null
@@ -304,6 +353,12 @@ sync_trading_runtime() {
   sync_runtime_file \
     "${REPO_ROOT}/scripts/ollama_finetune_batch.py" \
     "${SCRIPTS_DIR}/ollama_finetune_batch.py"
+  sync_runtime_file \
+    "${REPO_ROOT}/scripts/trading_daily_report.py" \
+    "${SCRIPTS_DIR}/trading_daily_report.py"
+  sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/trading_conversation.py" \
+    "${TARGET_DIR}/trading_conversation.py"
   sync_runtime_file \
     "${REPO_ROOT}/systemd/validate_btc_config.py" \
     "${SYSTEMD_HELPERS_DIR}/validate_btc_config.py"
@@ -414,7 +469,10 @@ require_secret_key "${SHARED_ENV}"
 DATABASE_URL_VALUE="$(resolve_database_url)"
 write_trading_database_env "${DATABASE_URL_VALUE}"
 sync_trading_runtime
+sync_multi_coin_configs
 sync_btc_grafana_dashboard
+sync_prometheus_config
+sync_myClaude_trading_scripts
 ensure_trading_venv
 install_managed_units
 
@@ -510,6 +568,7 @@ for svc in "${EXPORTER_STATUS_SERVICES[@]}"; do
 done
 
 restart_grafana_if_present
+ensure_sol_trading_profiles
 
 # HOOK de completude: aborta se algum agent ativo ficou com código antigo.
 verify_agents_running_current_code

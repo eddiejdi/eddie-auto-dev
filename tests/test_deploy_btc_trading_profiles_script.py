@@ -51,6 +51,9 @@ def test_script_restarts_all_crypto_exporters_using_shared_exporter_code() -> No
         "crypto-exporter@ETH_USDT_conservative.service",
         "crypto-exporter@ETH_USDT_aggressive.service",
         "crypto-exporter@ETH_USDT_shadow.service",
+        "crypto-exporter@SOL_USDT_conservative.service",
+        "crypto-exporter@SOL_USDT_aggressive.service",
+        "crypto-exporter@SOL_USDT_shadow.service",
     ):
         assert unit in content
 
@@ -68,6 +71,9 @@ def test_script_restarts_all_crypto_agents_that_share_runtime_code() -> None:
         "crypto-agent@ETH_USDT_conservative.service",
         "crypto-agent@ETH_USDT_aggressive.service",
         "crypto-agent@ETH_USDT_shadow.service",
+        "crypto-agent@SOL_USDT_conservative.service",
+        "crypto-agent@SOL_USDT_aggressive.service",
+        "crypto-agent@SOL_USDT_shadow.service",
     ):
         assert unit in agent_block, f"{unit} ausente de AGENT_SERVICES"
     # Paridade agents ↔ exporters: mesmos 6 perfis nos dois arrays.

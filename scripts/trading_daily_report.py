@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Relatório diário de trading — Ollama MCP Orchestration.
+"""Relatório diário de trading — multi-símbolo (BTC + ETH + SOL) com análise Ollama.
 
-Coleta dados do PostgreSQL btc_trading, orquestra análise via Ollama (trading-analyst GPU0)
-com MCP tools ativas, salva resultado em btc.daily_reports e envia no Telegram.
+Coleta dados do PostgreSQL btc_trading para cada símbolo operado, monta um
+relatório determinístico e consistente para o Telegram e usa o modelo
+trading-analyst (Ollama GPU0) apenas para uma análise curta de rodapé.
+O resultado é salvo em btc.daily_reports e enviado no Telegram.
 
 Uso:
     python3 scripts/trading_daily_report.py             # Executa e envia
@@ -35,12 +37,29 @@ logging.basicConfig(
 
 OPERATIONAL_PROFILES = ("conservative", "aggressive", "shadow")
 
+# Símbolos reportados. A ordem define a ordem das seções no relatório.
+SYMBOLS = ("BTC-USDT", "ETH-USDT", "SOL-USDT")
+
+# Perfis que possuem serviço systemd próprio (shadow é virtual, não tem serviço).
+SERVICE_PROFILES = ("aggressive", "conservative")
+
+# Ícone por ativo para o cabeçalho de cada seção.
+ASSET_ICONS = {"BTC": "₿", "ETH": "Ξ", "SOL": "◎"}
+
 # ── Configuração ─────────────────────────────────────────────────────────────
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading",
-)
+# DATABASE_URL é injetada pelo systemd via EnvironmentFile=/etc/default/eddie-common
+# (fonte canônica). O fallback é montado a partir de env — nunca com segredo
+# embutido no código-fonte.
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    _db_host = os.getenv("BTC_TRADING_DB_HOST", "192.168.15.2")
+    _db_port = os.getenv("BTC_TRADING_DB_PORT", "5433")
+    _db_user = os.getenv("BTC_TRADING_DB_USER", "postgres")
+    _db_pass = os.getenv("BTC_TRADING_DB_PASSWORD", "")
+    _db_name = os.getenv("BTC_TRADING_DB_NAME", "btc_trading")
+    _auth = f"{_db_user}:{_db_pass}@" if _db_pass else f"{_db_user}@"
+    DATABASE_URL = f"postgresql://{_auth}{_db_host}:{_db_port}/{_db_name}"
 
 
 # ── PostgreSQL ────────────────────────────────────────────────────────────────
@@ -52,109 +71,147 @@ def _get_conn() -> psycopg2.extensions.connection:
     return conn
 
 
+def _collect_symbol(cur: psycopg2.extensions.cursor, symbol: str) -> dict:
+    """Coleta preço, trades 24h, histórico e posições abertas de um símbolo."""
+    # Preço atual
+    cur.execute(
+        """
+        SELECT ROUND(price::numeric, 2) AS price
+        FROM btc.market_states
+        WHERE symbol = %s
+        ORDER BY timestamp DESC
+        LIMIT 1
+        """,
+        (symbol,),
+    )
+    row = cur.fetchone()
+    current_price = float(row["price"]) if row else 0.0
+
+    # Trades últimas 24h — resumo por perfil
+    cur.execute(
+        """
+        SELECT
+            profile,
+            COUNT(CASE WHEN side='buy' THEN 1 END)  AS buys,
+            COUNT(CASE WHEN side='sell' THEN 1 END) AS sells,
+            COUNT(CASE WHEN side='sell' AND pnl > 0 THEN 1 END) AS wins,
+            COUNT(CASE WHEN side='sell' AND pnl < 0 THEN 1 END) AS losses,
+            ROUND(SUM(CASE WHEN side='sell' THEN COALESCE(pnl,0) ELSE 0 END)::numeric, 4) AS pnl_24h
+        FROM btc.trades
+        WHERE dry_run = false
+          AND symbol = %s
+          AND profile IN ('conservative', 'aggressive', 'shadow')
+          AND to_timestamp(timestamp) >= NOW() - INTERVAL '24 hours'
+        GROUP BY profile
+        ORDER BY profile
+        """,
+        (symbol,),
+    )
+    trades_24h = [dict(r) for r in cur.fetchall()]
+
+    # PnL acumulado histórico
+    cur.execute(
+        """
+        SELECT
+            profile,
+            COUNT(CASE WHEN side='sell' THEN 1 END) AS total_sells,
+            COUNT(CASE WHEN side='sell' AND pnl > 0 THEN 1 END) AS total_wins,
+            ROUND(SUM(CASE WHEN side='sell' THEN COALESCE(pnl,0) ELSE 0 END)::numeric, 4) AS pnl_total
+        FROM btc.trades
+        WHERE dry_run = false AND symbol = %s
+          AND profile IN ('conservative', 'aggressive', 'shadow')
+        GROUP BY profile
+        ORDER BY profile
+        """,
+        (symbol,),
+    )
+    history = [dict(r) for r in cur.fetchall()]
+
+    # Posições abertas por perfil, reconstruídas a partir do último SELL de cada
+    # perfil. Isso evita reportar BUY antigo como posição aberta depois de a
+    # estratégia já ter zerado o perfil.
+    cur.execute(
+        """
+        WITH profiles AS (
+            SELECT DISTINCT profile
+            FROM btc.trades
+            WHERE symbol = %s
+              AND dry_run = false
+              AND profile IN ('conservative', 'aggressive', 'shadow')
+              AND profile IS NOT NULL
+        ),
+        latest_sell AS (
+            SELECT profile, MAX(timestamp) AS last_sell_ts
+            FROM btc.trades
+            WHERE dry_run = false
+              AND symbol = %s
+              AND profile IN ('conservative', 'aggressive', 'shadow')
+              AND side = 'sell'
+            GROUP BY profile
+        ),
+        open_buys AS (
+            SELECT t.*
+            FROM btc.trades t
+            LEFT JOIN latest_sell s ON s.profile = t.profile
+            WHERE t.dry_run = false
+              AND t.symbol = %s
+              AND t.profile IN ('conservative', 'aggressive', 'shadow')
+              AND t.side = 'buy'
+              AND COALESCE(t.metadata->>'source', '') != 'external_deposit'
+              AND t.timestamp > COALESCE(s.last_sell_ts, 0)
+        )
+        SELECT
+            p.profile,
+            COALESCE(COUNT(o.*), 0) AS n_entries,
+            COALESCE(ROUND(SUM(o.size)::numeric, 8), 0) AS total_qty,
+            COALESCE(
+                ROUND((SUM(COALESCE(NULLIF(o.funds, 0), o.size * o.price)) / NULLIF(SUM(o.size), 0))::numeric, 2),
+                0
+            ) AS avg_entry
+        FROM profiles p
+        LEFT JOIN open_buys o ON o.profile = p.profile
+        GROUP BY p.profile
+        HAVING COALESCE(SUM(o.size), 0) > 0
+        ORDER BY p.profile
+        """,
+        (symbol, symbol, symbol),
+    )
+    open_pos = [dict(r) for r in cur.fetchall()]
+
+    # Agregados 24h do símbolo
+    realized_24h = sum(float(t["pnl_24h"]) for t in trades_24h)
+    n_trades_24h = sum(int(t["buys"]) + int(t["sells"]) for t in trades_24h)
+    unrealized = 0.0
+    for p in open_pos:
+        avg = float(p["avg_entry"])
+        qty = float(p["total_qty"])
+        unrealized += (current_price - avg) * qty
+
+    return {
+        "symbol": symbol,
+        "current_price": current_price,
+        "trades_24h": trades_24h,
+        "history": history,
+        "open_positions": open_pos,
+        "realized_24h": round(realized_24h, 4),
+        "unrealized": round(unrealized, 4),
+        "n_trades_24h": n_trades_24h,
+    }
+
+
 def collect_context_data() -> dict:
-    """Coleta dados de contexto do banco para alimentar o prompt do LLM.
+    """Coleta dados de contexto do banco para todos os símbolos operados.
 
     Returns:
-        Dicionário com métricas pré-coletadas para o prompt inicial.
+        Dicionário com métricas por símbolo, balanço de contas e agregados.
     """
     conn = _get_conn()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            # Preço atual
-            cur.execute("""
-                SELECT ROUND(price::numeric, 2) AS price
-                FROM btc.market_states
-                WHERE symbol = 'BTC-USDT'
-                ORDER BY timestamp DESC
-                LIMIT 1
-            """)
-            row = cur.fetchone()
-            current_price = float(row["price"]) if row else 0.0
+            symbols = {sym: _collect_symbol(cur, sym) for sym in SYMBOLS}
 
-            # Trades últimas 24h — resumo por perfil
-            cur.execute("""
-                SELECT
-                    profile,
-                    COUNT(CASE WHEN side='buy' THEN 1 END)  AS buys,
-                    COUNT(CASE WHEN side='sell' THEN 1 END) AS sells,
-                    COUNT(CASE WHEN side='sell' AND pnl > 0 THEN 1 END) AS wins,
-                    COUNT(CASE WHEN side='sell' AND pnl < 0 THEN 1 END) AS losses,
-                    ROUND(SUM(CASE WHEN side='sell' THEN COALESCE(pnl,0) ELSE 0 END)::numeric, 4) AS pnl_24h
-                FROM btc.trades
-                WHERE dry_run = false
-                  AND symbol = 'BTC-USDT'
-                  AND profile IN ('conservative', 'aggressive', 'shadow')
-                  AND to_timestamp(timestamp) >= NOW() - INTERVAL '24 hours'
-                GROUP BY profile
-                ORDER BY profile
-            """)
-            trades_24h = [dict(r) for r in cur.fetchall()]
-
-            # PnL acumulado histórico
-            cur.execute("""
-                SELECT
-                    profile,
-                    COUNT(CASE WHEN side='sell' THEN 1 END) AS total_sells,
-                    COUNT(CASE WHEN side='sell' AND pnl > 0 THEN 1 END) AS total_wins,
-                    ROUND(SUM(CASE WHEN side='sell' THEN COALESCE(pnl,0) ELSE 0 END)::numeric, 4) AS pnl_total
-                FROM btc.trades
-                WHERE dry_run = false AND symbol = 'BTC-USDT'
-                  AND profile IN ('conservative', 'aggressive', 'shadow')
-                GROUP BY profile
-                ORDER BY profile
-            """)
-            history = [dict(r) for r in cur.fetchall()]
-
-            # Posições abertas por perfil, reconstruídas a partir do último SELL
-            # de cada perfil. Isso evita reportar BUY antigo como posição aberta
-            # depois de a estratégia já ter zerado o perfil.
-            cur.execute("""
-                WITH profiles AS (
-                    SELECT DISTINCT profile
-                    FROM btc.trades
-                    WHERE symbol = 'BTC-USDT'
-                      AND dry_run = false
-                      AND profile IN ('conservative', 'aggressive', 'shadow')
-                      AND profile IS NOT NULL
-                ),
-                latest_sell AS (
-                    SELECT profile, MAX(timestamp) AS last_sell_ts
-                    FROM btc.trades
-                    WHERE dry_run = false
-                      AND symbol = 'BTC-USDT'
-                      AND profile IN ('conservative', 'aggressive', 'shadow')
-                      AND side = 'sell'
-                    GROUP BY profile
-                ),
-                open_buys AS (
-                    SELECT t.*
-                    FROM btc.trades t
-                    LEFT JOIN latest_sell s ON s.profile = t.profile
-                    WHERE t.dry_run = false
-                      AND t.symbol = 'BTC-USDT'
-                      AND t.profile IN ('conservative', 'aggressive', 'shadow')
-                      AND t.side = 'buy'
-                      AND COALESCE(t.metadata->>'source', '') != 'external_deposit'
-                      AND t.timestamp > COALESCE(s.last_sell_ts, 0)
-                )
-                SELECT
-                    p.profile,
-                    COALESCE(COUNT(o.*), 0) AS n_entries,
-                    COALESCE(ROUND(SUM(o.size)::numeric, 8), 0) AS total_btc,
-                    COALESCE(
-                        ROUND((SUM(COALESCE(NULLIF(o.funds, 0), o.size * o.price)) / NULLIF(SUM(o.size), 0))::numeric, 2),
-                        0
-                    ) AS avg_entry
-                FROM profiles p
-                LEFT JOIN open_buys o ON o.profile = p.profile
-                GROUP BY p.profile
-                HAVING COALESCE(SUM(o.size), 0) > 0
-                ORDER BY p.profile
-            """)
-            open_pos = [dict(r) for r in cur.fetchall()]
-
-            # Balanço de contas KuCoin (main/trade) do último snapshot
+            # Balanço de contas KuCoin (main/trade) do último snapshot — global,
+            # não é por símbolo.
             cur.execute("""
                 WITH latest AS (
                     SELECT MAX(synced_at) AS s FROM btc.exchange_balance_snapshots
@@ -166,20 +223,18 @@ def collect_context_data() -> dict:
             snapshot_rows = [dict(r) for r in cur.fetchall()]
             balance = _build_balance_summary(snapshot_rows)
 
-            # Total de trades hoje
-            total_24h = sum(r["buys"] + r["sells"] for r in trades_24h)
-            total_pnl_24h = sum(float(r["pnl_24h"]) for r in trades_24h)
+        total_trades_24h = sum(s["n_trades_24h"] for s in symbols.values())
+        total_pnl_24h = sum(s["realized_24h"] for s in symbols.values())
+        total_unrealized = sum(s["unrealized"] for s in symbols.values())
 
-            return {
-                "balance": balance,
-                "current_price": current_price,
-                "trades_24h": trades_24h,
-                "history": history,
-                "open_positions": open_pos,
-                "total_trades_24h": total_24h,
-                "total_pnl_24h": round(total_pnl_24h, 4),
-                "report_date": date.today().isoformat(),
-            }
+        return {
+            "balance": balance,
+            "symbols": symbols,
+            "total_trades_24h": total_trades_24h,
+            "total_pnl_24h": round(total_pnl_24h, 4),
+            "total_unrealized": round(total_unrealized, 4),
+            "report_date": date.today().isoformat(),
+        }
     finally:
         conn.close()
 
@@ -227,24 +282,22 @@ def _build_balance_summary(rows: list[dict]) -> dict:
 
 
 def format_balance_block(balance: dict) -> str:
-    """Formata o balanço de contas em texto para prompt e fallback."""
+    """Formata o balanço de contas em texto para o relatório e o prompt."""
     if not balance or not balance.get("per_account"):
-        return "  Snapshot de saldos indisponível\n"
+        return "  Snapshot de saldos indisponível"
     lines = []
     per_brl = balance.get("per_account_brl") or {}
     for account, usdt in balance["per_account"].items():
         brl = per_brl.get(account)
         brl_txt = f" (≈ R$ {brl:,.2f})" if brl is not None else ""
-        lines.append(f"  - Conta {account}: ${usdt:,.2f} USDT{brl_txt}")
+        lines.append(f"  • {account}: ${usdt:,.2f} USDT{brl_txt}")
     for currency, v in balance.get("per_currency", {}).items():
-        lines.append(f"  - {currency}: {v['qty']:g} (≈ ${v['usdt']:,.2f} USDT)")
-    total_line = f"  - TOTAL: ${balance['total_usdt']:,.2f} USDT"
+        lines.append(f"  • {currency}: {v['qty']:g} (≈ ${v['usdt']:,.2f} USDT)")
+    total_line = f"  • TOTAL: ${balance['total_usdt']:,.2f} USDT"
     if balance.get("total_brl"):
         total_line += f" (≈ R$ {balance['total_brl']:,.2f})"
     lines.append(total_line)
-    if balance.get("synced_at"):
-        lines.append(f"  - Snapshot: {balance['synced_at']}")
-    return "\n".join(lines) + "\n"
+    return "\n".join(lines)
 
 
 def save_report(
@@ -254,15 +307,7 @@ def save_report(
     metadata: dict,
     model_used: str,
 ) -> None:
-    """Salva relatório em btc.daily_reports (upsert por data).
-
-    Args:
-        report_text: Texto do relatório gerado pelo LLM.
-        pnl_24h: PnL realizado nas últimas 24h (soma de todos os perfis).
-        profiles: Lista de perfis analisados.
-        metadata: Metadados adicionais (preço, n_trades, etc.).
-        model_used: Nome do modelo Ollama utilizado.
-    """
+    """Salva relatório em btc.daily_reports (upsert por data)."""
     conn = _get_conn()
     try:
         with conn.cursor() as cur:
@@ -294,11 +339,7 @@ def save_report(
 # ── Telegram ──────────────────────────────────────────────────────────────────
 
 async def send_telegram_report(text: str) -> None:
-    """Envia relatório via Telegram.
-
-    Args:
-        text: Texto do relatório (suporta Markdown do Telegram).
-    """
+    """Envia relatório via Telegram."""
     try:
         from telegram import Bot
 
@@ -342,42 +383,20 @@ async def send_telegram_report(text: str) -> None:
 # ── Coleta de dados adicionais via SSH ───────────────────────────────────────
 
 def collect_live_data() -> dict:
-    """Coleta saldo KuCoin e status dos agents via SSH.
-
-    Returns:
-        Dicionário com kucoin_balance e agent_status.
-    """
+    """Coleta status dos agents systemd de todos os símbolos via SSH."""
     import subprocess
 
     HOMELAB = "homelab@192.168.15.2"
-    AGENT_PATH = "/apps/crypto-trader/trading/btc_trading_agent"
 
-    # Saldo KuCoin
-    kucoin_balance = "INDISPONÍVEL"
-    try:
-        py_cmd = (
-            f"cd {AGENT_PATH} && "
-            "python3 -c \""
-            "import sys, os; sys.path.insert(0, os.getcwd()); "
-            "from dotenv import load_dotenv; load_dotenv(); "
-            "import kucoin_api as api; "
-            "b = api.get_balances('trade'); "
-            "relevant = [x for x in b if x['currency'] in ['USDT','BTC','BRL']]; "
-            "[print(f\\\"{x['currency']}: {x['available']}\\\") for x in relevant]"
-            "\""
-        )
-        r = subprocess.run(
-            ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=10", HOMELAB, py_cmd],
-            capture_output=True, text=True, timeout=15,
-        )
-        if r.returncode == 0:
-            kucoin_balance = r.stdout.strip()
-    except Exception as exc:
-        logger.warning("Falha ao coletar saldo KuCoin: %s", exc)
+    # Serviços derivados de SYMBOLS × SERVICE_PROFILES (ex.: BTC_USDT_aggressive).
+    services = [
+        f"{sym.replace('-', '_')}_{prof}"
+        for sym in SYMBOLS
+        for prof in SERVICE_PROFILES
+    ]
 
-    # Status dos agents
     agents_status = {}
-    for svc in ["BTC_USDT_aggressive", "BTC_USDT_conservative", "USDT_BRL_aggressive", "USDT_BRL_conservative"]:
+    for svc in services:
         try:
             r = subprocess.run(
                 ["ssh", "-o", "BatchMode=yes", HOMELAB,
@@ -388,187 +407,175 @@ def collect_live_data() -> dict:
         except Exception:
             agents_status[svc] = "⚠️ ERRO"
 
-    return {
-        "kucoin_balance": kucoin_balance,
-        "agents_status": agents_status,
-    }
+    return {"agents_status": agents_status}
 
 
-# ── Geração via Ollama ────────────────────────────────────────────────────────
+# ── Análise via Ollama (rodapé curto) ─────────────────────────────────────────
 
-SYSTEM_PROMPT = """Você é o Trading Analyst do sistema Eddie Auto-Dev.
-Sua tarefa é analisar dados de trading e gerar um relatório diário formatado para o Telegram.
+ANALYSIS_SYSTEM_PROMPT = """Você é o Trading Analyst do sistema Eddie Auto-Dev.
+Com base nos dados fornecidos, escreva uma análise CURTA do dia de trading.
 
 Regras:
-- Relatório em PT-BR, estruturado com emojis
-- Se PnL for positivo: destaque como vitória; se negativo: mencione cautela
-- Analise tendências: se avg_entry > preço_atual, posições estão no negativo (underwater)
-- Identifique alertas críticos: agentes parados, perda > -5%, posições muito abertas
-- Estado de posição deve ser SEMPRE por perfil; não diga "sem posição aberta" global se algum perfil tiver BTC aberto
-- Inclua sempre a seção 💰 Balanço de Contas com os saldos main/trade/total fornecidos (USDT e R$)
-- Seja objetivo e baseado somente nos dados fornecidos
+- Máximo 4 linhas, em PT-BR, sem tabelas nem listas longas
+- Leia o cenário: tendência do PnL, posições underwater, agentes parados
+- Se houver posições no negativo, explique que o guardrail de "só vender no lucro"
+  segura a venda até o preço voltar acima da entrada — isso é esperado, não é falha
+- Termine com um alerta acionável somente se houver algo relevante
 - NUNCA invente dados ou métricas que não foram fornecidas"""
 
 
-def generate_report(context: dict, live_data: dict, model: str) -> str:
-    """Gera relatório usando Ollama com todos os dados já coletados.
-
-    Args:
-        context: Dados do PostgreSQL (trades 24h, posições, histórico).
-        live_data: Dados live (saldo KuCoin, status agents).
-        model: Nome do modelo Ollama a usar.
-
-    Returns:
-        Texto do relatório gerado.
-    """
-    today = context["report_date"]
-    price = context["current_price"]
-
-    # Formatar trades 24h
-    trades_str = ""
-    for t in context["trades_24h"]:
-        trades_str += (
-            f"  - {t['profile']}: {t['buys']} buys, {t['sells']} sells | "
-            f"wins={t['wins']}, losses={t['losses']} | PnL={float(t['pnl_24h']):+.4f}\n"
+def _analysis_digest(context: dict, live_data: dict) -> str:
+    """Monta um resumo compacto dos dados para o prompt de análise."""
+    parts = [f"Data: {context['report_date']}"]
+    for symbol in SYMBOLS:
+        s = context["symbols"].get(symbol)
+        if not s:
+            continue
+        parts.append(
+            f"\n{symbol}: preço ${s['current_price']:,.2f} | "
+            f"PnL realizado 24h ${s['realized_24h']:+.4f} | "
+            f"PnL não realizado ${s['unrealized']:+.4f} | "
+            f"{s['n_trades_24h']} trades"
         )
-    if not trades_str:
-        trades_str = "  Nenhum trade nas últimas 24h\n"
-
-    # Formatar histórico
-    history_str = ""
-    for h in context["history"]:
-        total = h["total_sells"]
-        wins = h["total_wins"]
-        rate = round(100.0 * wins / total, 1) if total > 0 else 0
-        history_str += (
-            f"  - {h['profile']}: {total} sells | {wins} wins ({rate}%) | "
-            f"PnL total={float(h['pnl_total']):+.4f}\n"
-        )
-
-    # Formatar posições abertas
-    pos_str = ""
-    for p in context["open_positions"]:
-        avg = float(p["avg_entry"])
-        unrealized = round((price - avg) * float(p["total_btc"]), 4)
-        pct = round((price / avg - 1) * 100, 2) if avg > 0 else 0
-        pos_str += (
-            f"  - {p['profile']}: {p['n_entries']} entradas | "
-            f"avg=${avg:,.2f} | BTC={float(p['total_btc']):.6f} | "
-            f"PnL não realizado: ${unrealized:+.4f} ({pct:+.2f}%)\n"
-        )
-    if not pos_str:
-        pos_str = "  Nenhuma posição aberta nos perfis analisados\n"
-
-    # Formatar saldo KuCoin
-    kucoin_str = live_data.get("kucoin_balance", "INDISPONÍVEL")
-    balance_str = format_balance_block(context.get("balance") or {})
-
-    # Formatar status agents
-    agents_str = "\n".join(
-        f"  - {k}: {v}" for k, v in live_data.get("agents_status", {}).items()
-    )
-
-    user_msg = f"""Gere o relatório diário de trading para {today}.
-
-## DADOS COLETADOS
-
-### Preço BTC-USDT Atual
-${price:,.2f}
-
-### Trades Últimas 24h (apenas reais, dry_run=false)
-{trades_str}
-PnL total 24h: ${context['total_pnl_24h']:+.4f}
-Total execuções: {context['total_trades_24h']}
-
-### Posições Abertas por Perfil (reconstruídas após o último SELL do perfil)
-{pos_str}
-
-### Performance Histórica Acumulada
-{history_str}
-
-### Balanço de Contas KuCoin (main/trade/total — último snapshot)
-{balance_str}
-### Saldo KuCoin Live (conta trade)
-{kucoin_str}
-
-### Status dos Agentes
-{agents_str}
-
----
-Com base nesses dados, gere o relatório completo formatado com emojis para Telegram em PT-BR."""
-
-    # num_predict maior: modelos reasoning gastam o orçamento em <think> e
-    # truncavam o relatório no meio da frase com o default de 2048.
-    with OllamaMCPBridge(model=model, num_predict=4096) as bridge:
-        # Enviar sem tools — apenas formatação/análise dos dados já coletados
-        report = bridge.run_with_tools(
-            system=SYSTEM_PROMPT,
-            user_msg=user_msg,
-            tools=[],  # Sem MCP tools — dados já foram coletados
-        )
-
-    # Remover blocos <think> de modelos reasoning antes do envio
-    import re as _re
-    report = _re.sub(r"<think>.*?</think>", "", report or "", flags=_re.DOTALL)
-    report = report.strip()
-
-    # Garantir a seção de balanço mesmo se o modelo truncar/omitir
-    if report and "balanço" not in report.lower():
-        report += (
-            "\n\n💰 Balanço de Contas (main/trade/total):\n"
-            + format_balance_block(context.get("balance") or {}).rstrip()
-        )
-    if report:
-        return report
-
-    logger.warning("Ollama retornou relatório vazio; usando fallback determinístico")
-    return build_deterministic_report(context, live_data)
-
-
-def build_deterministic_report(context: dict, live_data: dict) -> str:
-    """Gera relatório local quando o LLM retorna vazio ou falha."""
-    today = context["report_date"]
-    price = context["current_price"]
-    lines = [
-        f"📊 Trading Report BTC-USDT — {today}",
-        "",
-        f"Preço atual: ${price:,.2f}",
-        f"PnL realizado 24h: ${context['total_pnl_24h']:+.4f}",
-        f"Execuções 24h: {context['total_trades_24h']}",
-        "",
-        "Trades 24h por perfil:",
-    ]
-    if context["trades_24h"]:
-        for t in context["trades_24h"]:
-            lines.append(
-                f"- {t['profile']}: {t['buys']} buys, {t['sells']} sells, "
-                f"{t['wins']}W/{t['losses']}L, PnL ${float(t['pnl_24h']):+.4f}"
-            )
-    else:
-        lines.append("- Nenhum trade nas últimas 24h")
-
-    lines.extend(["", "Posições abertas por perfil:"])
-    if context["open_positions"]:
-        for p in context["open_positions"]:
+        for p in s["open_positions"]:
             avg = float(p["avg_entry"])
-            btc = float(p["total_btc"])
-            unrealized = round((price - avg) * btc, 4)
-            pct = round((price / avg - 1) * 100, 2) if avg > 0 else 0
-            lines.append(
-                f"- {p['profile']}: {p['n_entries']} entradas, {btc:.8f} BTC, "
-                f"avg ${avg:,.2f}, PnL não realizado ${unrealized:+.4f} ({pct:+.2f}%)"
+            pct = round((s["current_price"] / avg - 1) * 100, 2) if avg > 0 else 0
+            parts.append(
+                f"  - {p['profile']}: {p['n_entries']} lotes, avg ${avg:,.2f}, {pct:+.2f}%"
             )
+    stopped = [k for k, v in live_data.get("agents_status", {}).items() if "ACTIVE" not in v]
+    if stopped:
+        parts.append("\nAgentes parados: " + ", ".join(stopped))
     else:
-        lines.append("- Nenhuma posição aberta nos perfis analisados")
+        parts.append("\nTodos os agentes ativos.")
+    return "\n".join(parts)
 
-    lines.extend(["", "💰 Balanço de contas (main/trade/total):"])
-    lines.append(format_balance_block(context.get("balance") or {}).rstrip())
-    lines.extend(["", "Saldo KuCoin live (conta trade):", str(live_data.get("kucoin_balance", "INDISPONÍVEL"))])
-    agents = live_data.get("agents_status", {})
-    if agents:
-        lines.extend(["", "Status dos agentes:"])
-        lines.extend(f"- {name}: {status}" for name, status in agents.items())
-    return "\n".join(lines)
+
+def generate_analysis(context: dict, live_data: dict, model: str) -> str:
+    """Gera a análise textual curta via Ollama. Retorna '' em caso de falha."""
+    user_msg = (
+        "Dados do dia de trading:\n\n"
+        + _analysis_digest(context, live_data)
+        + "\n\nEscreva a análise curta (máx 4 linhas)."
+    )
+    # O coordinator (11437) não serve /api/generate; a análise usa o Ollama
+    # direto (GPU0/11434). Independente do OLLAMA_HOST do serviço.
+    host = os.getenv(
+        "OLLAMA_GENERATE_HOST",
+        "http://192.168.15.2:11434",
+    )
+    try:
+        with OllamaMCPBridge(model=model, host=host, num_predict=1024) as bridge:
+            analysis = bridge.run_with_tools(
+                system=ANALYSIS_SYSTEM_PROMPT,
+                user_msg=user_msg,
+                tools=[],
+            )
+    except Exception:
+        logger.exception("Falha ao gerar análise via Ollama")
+        return ""
+
+    import re as _re
+    analysis = _re.sub(r"<think>.*?</think>", "", analysis or "", flags=_re.DOTALL)
+    return analysis.strip()
+
+
+# ── Montagem do relatório ─────────────────────────────────────────────────────
+
+def _fmt_price(symbol: str, value: float) -> str:
+    """Formata preço com casas decimais adequadas ao ativo (BTC/ETH: 2 casas)."""
+    return f"${value:,.2f}"
+
+
+def build_report(context: dict, live_data: dict, analysis: str = "") -> str:
+    """Monta o relatório determinístico multi-símbolo para o Telegram."""
+    today = context["report_date"]
+    lines = [f"📊 *Relatório Diário de Trading* — {today}", ""]
+
+    for symbol in SYMBOLS:
+        s = context["symbols"].get(symbol)
+        if not s:
+            continue
+        asset = symbol.split("-")[0]
+        icon = ASSET_ICONS.get(asset, "•")
+        price = s["current_price"]
+
+        buys = sum(int(t["buys"]) for t in s["trades_24h"])
+        sells = sum(int(t["sells"]) for t in s["trades_24h"])
+        wins = sum(int(t["wins"]) for t in s["trades_24h"])
+        losses = sum(int(t["losses"]) for t in s["trades_24h"])
+
+        lines.append("━━━━━━━━━━━━━━━━")
+        lines.append(f"{icon} *{symbol}* · {_fmt_price(symbol, price)}")
+        lines.append(
+            f"📈 PnL 24h: ${s['realized_24h']:+.4f}  ·  "
+            f"{buys + sells} trades ({buys}⬆ {sells}⬇ · {wins}🟢/{losses}🔴)"
+        )
+
+        if s["open_positions"]:
+            lines.append(f"📦 Posições abertas · não realizado ${s['unrealized']:+.4f}")
+            for p in s["open_positions"]:
+                avg = float(p["avg_entry"])
+                qty = float(p["total_qty"])
+                unreal = round((price - avg) * qty, 4)
+                pct = round((price / avg - 1) * 100, 2) if avg > 0 else 0
+                mark = "🟢" if unreal >= 0 else "🔴"
+                lines.append(
+                    f"  • {p['profile']}: {p['n_entries']} lotes · "
+                    f"avg {_fmt_price(symbol, avg)} · {mark} ${unreal:+.4f} ({pct:+.2f}%)"
+                )
+        else:
+            lines.append("📦 Sem posições abertas")
+        lines.append("")
+
+    # Consolidado
+    lines.append("━━━━━━━━━━━━━━━━")
+    total_pnl = context["total_pnl_24h"]
+    trophy = "🏆" if total_pnl > 0 else ("⚠️" if total_pnl < 0 else "➖")
+    lines.append(f"{trophy} *Consolidado 24h*")
+    lines.append(
+        f"  • PnL realizado: ${total_pnl:+.4f}  ·  "
+        f"não realizado: ${context['total_unrealized']:+.4f}"
+    )
+    lines.append(f"  • Execuções: {context['total_trades_24h']}")
+    lines.append("")
+
+    # Alertas
+    lines.append("🚨 *Alertas*")
+    alerts = []
+    stopped = [k for k, v in live_data.get("agents_status", {}).items() if "ACTIVE" not in v]
+    if stopped:
+        pretty = ", ".join(sv.replace("_", " ") for sv in stopped)
+        alerts.append(f"  • ❌ Agente(s) parado(s): {pretty}")
+    for symbol in SYMBOLS:
+        s = context["symbols"].get(symbol) or {}
+        price = s.get("current_price", 0.0)
+        for p in s.get("open_positions", []):
+            avg = float(p["avg_entry"])
+            pct = (price / avg - 1) * 100 if avg > 0 else 0
+            if pct <= -5:
+                alerts.append(
+                    f"  • 🔻 {symbol} {p['profile']} em {pct:+.2f}% (> -5%)"
+                )
+    if alerts:
+        lines.extend(alerts)
+    else:
+        lines.append("  • ✅ Nenhum agente parado · nenhuma perda > -5%")
+    lines.append("")
+
+    # Balanço
+    lines.append("💰 *Balanço de Contas*")
+    lines.append(format_balance_block(context.get("balance") or {}))
+    if context.get("balance", {}).get("synced_at"):
+        lines.append(f"  _snapshot: {context['balance']['synced_at']}_")
+    lines.append("")
+
+    # Análise (opcional, gerada pelo LLM)
+    if analysis:
+        lines.append("📝 *Análise*")
+        lines.append(analysis)
+
+    return "\n".join(lines).rstrip()
 
 
 # ── Entrypoint ────────────────────────────────────────────────────────────────
@@ -586,6 +593,11 @@ def main() -> None:
         default=os.getenv("OLLAMA_TRADING_MODEL", "trading-analyst:latest"),
         help="Modelo Ollama a usar (default: trading-analyst:latest)",
     )
+    parser.add_argument(
+        "--no-analysis",
+        action="store_true",
+        help="Não gerar a análise textual via Ollama (apenas o relatório determinístico)",
+    )
     args = parser.parse_args()
 
     logger.info("Iniciando relatório diário de trading (dry_run=%s, model=%s)", args.dry_run, args.model)
@@ -594,42 +606,36 @@ def main() -> None:
     try:
         context = collect_context_data()
         logger.info(
-            "Contexto coletado: preço=$%s, trades_24h=%d, pnl_24h=$%s",
-            context["current_price"],
+            "Contexto coletado: símbolos=%s, trades_24h=%d, pnl_24h=$%s",
+            ",".join(context["symbols"].keys()),
             context["total_trades_24h"],
             context["total_pnl_24h"],
         )
     except Exception:
         logger.exception("Falha ao coletar contexto — usando contexto vazio")
         context = {
-            "current_price": 0.0,
-            "trades_24h": [],
-            "history": [],
-            "open_positions": [],
+            "balance": {},
+            "symbols": {},
             "total_trades_24h": 0,
             "total_pnl_24h": 0.0,
+            "total_unrealized": 0.0,
             "report_date": date.today().isoformat(),
         }
 
-    # 2. Coletar dados live (saldo KuCoin, status agents)
+    # 2. Coletar dados live (status agents)
     try:
         live_data = collect_live_data()
     except Exception:
         logger.warning("Falha ao coletar dados live — usando valores padrão")
-        live_data = {"kucoin_balance": "INDISPONÍVEL", "agents_status": {}}
+        live_data = {"agents_status": {}}
 
-    # 3. Gerar relatório via Ollama + MCP
-    try:
-        report_text = generate_report(context, live_data, model=args.model)
-    except Exception:
-        logger.exception("Falha ao gerar relatório via Ollama")
-        report_text = (
-            f"⚠️ *TRADING REPORT — {context['report_date']}*\n\n"
-            f"❌ Falha na geração automática via Ollama MCP.\n"
-            f"Preço BTC: ${context['current_price']:,.2f} | "
-            f"Trades 24h: {context['total_trades_24h']} | "
-            f"PnL: ${context['total_pnl_24h']:+.4f}"
-        )
+    # 3. Gerar análise curta via Ollama (opcional)
+    analysis = ""
+    if not args.no_analysis:
+        analysis = generate_analysis(context, live_data, model=args.model)
+
+    # 4. Montar relatório determinístico
+    report_text = build_report(context, live_data, analysis)
 
     # Exibir sempre
     print("\n" + "=" * 60)
@@ -640,17 +646,27 @@ def main() -> None:
         logger.info("--dry-run: relatório não salvo nem enviado")
         return
 
-    # 3. Salvar no banco
+    # 5. Salvar no banco
     profiles = sorted({
         r["profile"]
-        for rows in (context["trades_24h"], context["open_positions"])
+        for s in context["symbols"].values()
+        for rows in (s["trades_24h"], s["open_positions"])
         for r in rows
         if r.get("profile")
     })
     metadata = {
-        "current_price": context["current_price"],
+        "symbols": {
+            sym: {
+                "current_price": s["current_price"],
+                "realized_24h": s["realized_24h"],
+                "unrealized": s["unrealized"],
+                "n_trades_24h": s["n_trades_24h"],
+                "open_positions": s["open_positions"],
+            }
+            for sym, s in context["symbols"].items()
+        },
         "total_trades_24h": context["total_trades_24h"],
-        "open_positions": context["open_positions"],
+        "total_unrealized": context["total_unrealized"],
         "balance": context.get("balance"),
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -660,12 +676,12 @@ def main() -> None:
             pnl_24h=context["total_pnl_24h"],
             profiles=profiles or ["conservative", "aggressive"],
             metadata=metadata,
-            model_used=args.model,
+            model_used=(args.model if analysis else "deterministic"),
         )
     except Exception:
         logger.exception("Falha ao salvar relatório no banco")
 
-    # 4. Enviar Telegram
+    # 6. Enviar Telegram
     asyncio.run(send_telegram_report(report_text))
 
 

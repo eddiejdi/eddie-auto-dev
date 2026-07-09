@@ -25,10 +25,12 @@ from typing import Any, Optional
 
 logger = logging.getLogger("btc_trading_agent.conversation")
 
-# Símbolos da frota multi-símbolo (BTC + ETH em subcontas). Configurável.
+# Símbolos da frota multi-símbolo (BTC/ETH em subcontas; SOL na TRADE master). Configurável.
 SYMBOLS = [
     s.strip().upper()
-    for s in os.getenv("TRADING_CONVERSATION_SYMBOLS", "BTC-USDT,ETH-USDT").split(",")
+    for s in os.getenv(
+        "TRADING_CONVERSATION_SYMBOLS", "BTC-USDT,ETH-USDT,SOL-USDT"
+    ).split(",")
     if s.strip()
 ]
 
@@ -37,7 +39,8 @@ DEFAULT_PROFILE = os.getenv("TRADING_CONVERSATION_PROFILE", "default")
 SYSTEM_PROMPT = (
     "Você é o Trading Analyst do sistema Eddie Auto-Dev, respondendo no grupo "
     "\"BTC Trade Agent\" do Telegram. Você acompanha a frota de agentes de "
-    "trading (BTC e ETH em subcontas KuCoin) e conversa em português do Brasil, "
+    "trading (BTC e ETH em subcontas KuCoin; SOL na conta TRADE master) e conversa "
+    "em português do Brasil, "
     "de forma direta e técnica, como um analista quantitativo.\n\n"
     "Regras:\n"
     "- Use SOMENTE os dados ao vivo fornecidos no CONTEXTO. Nunca invente "
@@ -128,7 +131,16 @@ def _collect_symbol(symbol: str, profile: str) -> dict[str, Any]:
     )
     positions = _btc_query(
         """
-        SELECT profile, COUNT(*) AS n_entries, AVG(price) AS avg_entry
+        SELECT
+            profile,
+            COUNT(*) AS n_entries,
+            COALESCE(SUM(size), 0) AS total_size,
+            COALESCE(SUM(size * price), 0) AS invested_usdt,
+            CASE
+                WHEN COALESCE(SUM(size), 0) > 0
+                THEN SUM(size * price) / SUM(size)
+                ELSE NULL
+            END AS avg_entry
         FROM btc.trades
         WHERE symbol = %s AND side = 'buy' AND status != 'closed' AND dry_run = FALSE
         GROUP BY profile
@@ -236,10 +248,14 @@ def format_context_digest(context: dict[str, Any]) -> str:
 
         for p in s.get("positions") or []:
             avg = _f(p.get("avg_entry"))
+            total_size = _f(p.get("total_size"))
+            invested = _f(p.get("invested_usdt"))
             pct = round((price / avg - 1) * 100, 2) if avg > 0 and price > 0 else 0.0
             parts.append(
-                f"  posição {p.get('profile')}: {int(_f(p.get('n_entries')))} lotes,"
-                f" avg ${avg:,.2f} ({pct:+.2f}%)"
+                f"  posição {p.get('profile')}: {int(_f(p.get('n_entries')))} entradas,"
+                f" {total_size:.8f} {symbol.split('-')[0]},"
+                f" custo ${invested:,.2f},"
+                f" médio ponderado ${avg:,.2f} ({pct:+.2f}%)"
             )
 
         window = s.get("ai_window") or {}

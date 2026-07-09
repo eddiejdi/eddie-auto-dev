@@ -9,6 +9,7 @@ on:
       - 'btc_trading_agent/profile_rules.py'
       - 'btc_trading_agent/slot_exit_policy.py'
       - 'btc_trading_agent/trading_agent.py'
+      - 'btc_trading_agent/trading_conversation.py'
       - 'btc_trading_agent/sell_target_mixin.py'
       - 'btc_trading_agent/risk_guardian_mixin.py'
       - 'btc_trading_agent/position_manager_mixin.py'
@@ -17,8 +18,13 @@ on:
       - 'btc_trading_agent/fast_model.py'
       - 'btc_trading_agent/prometheus_exporter.py'
       - 'btc_trading_agent/config_BTC_USDT_*.json'
+      - 'btc_trading_agent/config_ETH_USDT_*.json'
+      - 'btc_trading_agent/config_SOL_USDT_*.json'
       - 'patches/config_BTC_USDT_*_optimized.json'
+      - 'monitoring/prometheus.yml'
       - 'scripts/deploy_btc_trading_profiles.sh'
+      - 'scripts/activate_sol_trading_profiles.sh'
+      - 'scripts/trading_daily_report.py'
       - 'scripts/kucoin_postgres_sync.py'
       - 'scripts/candle_collector.py'
       - 'scripts/ollama_finetune_batch.py'
@@ -50,8 +56,10 @@ jobs:
           cp btc_trading_agent/config_BTC_USDT_conservative.json patches/config_BTC_USDT_conservative_optimized.json
           cp btc_trading_agent/config_BTC_USDT_aggressive.json patches/config_BTC_USDT_aggressive_optimized.json
 
-      - name: Ensure deploy script is executable
-        run: chmod +x scripts/deploy_btc_trading_profiles.sh
+      - name: Ensure deploy scripts are executable
+        run: |
+          chmod +x scripts/deploy_btc_trading_profiles.sh
+          chmod +x scripts/activate_sol_trading_profiles.sh
 
       - name: Validate slot-based BTC trading flow
         run: |
@@ -67,5 +75,17 @@ jobs:
             tests/test_grafana_dashboard_queries.py \
             tests/test_deploy_btc_trading_profiles_script.py
 
-      - name: Deploy optimized BTC profiles
+      - name: Deploy trading profiles (BTC + ETH + SOL)
         run: scripts/deploy_btc_trading_profiles.sh
+
+      - name: Verify SOL scrape targets in Prometheus
+        run: |
+          sleep 5
+          for job in crypto-exporter-sol_usdt_shadow crypto-exporter-sol_usdt_conservative crypto-exporter-sol_usdt_aggressive; do
+            curl -sf "http://127.0.0.1:9090/api/v1/targets" \
+              | python3 -c "import json,sys; d=json.load(sys.stdin); jobs=[t for t in d['data']['activeTargets'] if t['labels'].get('job')=='${job}']; print('${job}:', jobs[0]['health'] if jobs else 'MISSING')"
+          done
+          systemctl is-active \
+            crypto-agent@SOL_USDT_conservative.service \
+            crypto-agent@SOL_USDT_aggressive.service \
+            crypto-agent@SOL_USDT_shadow.service
