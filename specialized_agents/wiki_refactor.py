@@ -68,6 +68,33 @@ def _normalize_title(value: str) -> str:
     return " ".join(value.lower().split())
 
 
+def _resolve_repo_root(explicit: Path | None = None) -> Path:
+    """Resolve o root do repositório de forma segura.
+
+    Em alguns loaders (ex.: import dinâmico no homelab) ``__file__`` pode não
+    existir no módulo — nesse caso usa env vars ou caminhos conhecidos do deploy.
+    """
+    if explicit is not None:
+        return explicit.resolve()
+
+    module_file = globals().get("__file__")
+    if module_file:
+        return Path(module_file).resolve().parents[1]
+
+    for raw in (
+        os.getenv("WIKI_REFACTOR_REPO_ROOT"),
+        os.getenv("EDDIE_REPO_ROOT"),
+        "/home/homelab/myClaude",
+        "/home/homelab/eddie-auto-dev",
+    ):
+        if raw:
+            candidate = Path(raw)
+            if candidate.exists():
+                return candidate.resolve()
+
+    return Path.cwd().resolve()
+
+
 def _path_aliases(path: str) -> set[str]:
     parts = [part for part in path.strip("/").split("/") if part]
     if not parts:
@@ -133,7 +160,7 @@ class WikiRefactorResponse(BaseModel):
 class WikiRefactorSkill:
     def __init__(self, wiki_client: WikiJsClient, repo_root: Path | None = None) -> None:
         self.client = wiki_client
-        self.repo_root = repo_root or Path(__file__).resolve().parents[1]
+        self.repo_root = _resolve_repo_root(repo_root)
         self._page_detail_cache: dict[tuple[str, str], dict[str, Any] | None] = {}
         self.gpu0_url = LLM_CONFIG.get("base_url", "http://192.168.15.2:11434")
         self.gpu1_url = LLM_GPU1_CONFIG.get("base_url", "http://192.168.15.2:11435")
