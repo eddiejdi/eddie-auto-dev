@@ -5,6 +5,8 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from btc_trading_agent import trading_conversation as tc
@@ -100,6 +102,40 @@ def test_answer_trading_question_fallback_quando_modelo_falha(monkeypatch) -> No
 
     out = tc.answer_trading_question("e agora?")
     assert "indisponível" in out
+
+
+def test_collect_open_positions_usa_reconstruct(monkeypatch) -> None:
+    trades_by_profile = {
+        "conservative": [
+            {
+                "id": 1,
+                "side": "buy",
+                "size": 0.128,
+                "price": 77.66,
+                "timestamp": 1000.0,
+                "metadata": {},
+            }
+        ],
+    }
+
+    def fake_query(sql, params=()):
+        sql_l = sql.lower()
+        if "distinct profile" in sql_l:
+            return [{"profile": "conservative"}]
+        if "having" in sql_l and "group by profile" in sql_l:
+            return [{"profile": "conservative"}]
+        if "order by timestamp desc" in sql_l:
+            profile = params[1] if len(params) > 1 else "conservative"
+            return trades_by_profile.get(profile, [])
+        return []
+
+    monkeypatch.setattr(tc, "_btc_query", fake_query)
+    positions = tc._collect_open_positions("SOL-USDT")
+
+    assert len(positions) == 1
+    assert positions[0]["profile"] == "conservative"
+    assert positions[0]["total_size"] == pytest.approx(0.128)
+    assert positions[0]["avg_entry"] == pytest.approx(77.66)
 
 
 def test_answer_trading_question_resiliente_a_falha_de_contexto(monkeypatch) -> None:

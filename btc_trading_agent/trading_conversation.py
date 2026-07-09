@@ -103,6 +103,91 @@ def _btc_query(sql: str, params: tuple = ()) -> list[dict[str, Any]]:
 
 # ─────────────────────────────  Coleta de contexto  ──────────────────────────
 
+def _has_shared_profile_ambiguity(symbol: str) -> bool:
+    """Detecta múltiplos profiles LIVE com posição líquida no mesmo símbolo."""
+    rows = _btc_query(
+        """
+        SELECT profile
+        FROM btc.trades
+        WHERE symbol = %s AND dry_run = FALSE
+        GROUP BY profile
+        HAVING
+            ABS(
+                COALESCE(
+                    SUM(
+                        CASE
+                            WHEN side = 'buy'
+                                 AND COALESCE(metadata->>'source', '') != 'external_deposit'
+                            THEN size
+                            WHEN side IN ('sell', 'sell_reconciled')
+                            THEN -size
+                            ELSE 0
+                        END
+                    ),
+                    0
+                )
+            ) > 0.000001
+            AND profile NOT IN ('default', 'exchange_sync')
+        """,
+        (symbol,),
+    )
+    return len(rows) > 1
+
+
+def _collect_open_positions(symbol: str) -> list[dict[str, Any]]:
+    """Posições abertas por profile — mesma lógica do Grafana/exporter."""
+    from btc_trading_agent.position_reconstruction import (
+        reconstruct_open_buys,
+        summarize_open_buys,
+    )
+
+    profiles = _btc_query(
+        """
+        SELECT DISTINCT profile
+        FROM btc.trades
+        WHERE symbol = %s AND dry_run = FALSE
+          AND profile NOT IN ('default', 'exchange_sync')
+        """,
+        (symbol,),
+    )
+    shared_ambiguous = _has_shared_profile_ambiguity(symbol)
+    positions: list[dict[str, Any]] = []
+    for prow in profiles:
+        profile_name = str(prow.get("profile") or "")
+        if not profile_name:
+            continue
+        trades = _btc_query(
+            """
+            SELECT id, side, size, price, timestamp, metadata
+            FROM btc.trades
+            WHERE symbol = %s AND profile = %s AND dry_run = FALSE
+            ORDER BY timestamp DESC
+            LIMIT 200
+            """,
+            (symbol, profile_name),
+        )
+        open_buys = reconstruct_open_buys(
+            trades,
+            shared_profile_ambiguous=shared_ambiguous and profile_name != "default",
+            exclude_external_deposits=True,
+        )
+        if not open_buys:
+            continue
+        total_size, avg_entry = summarize_open_buys(open_buys)
+        if total_size <= 0:
+            continue
+        positions.append(
+            {
+                "profile": profile_name,
+                "n_entries": len(open_buys),
+                "total_size": total_size,
+                "invested_usdt": total_size * avg_entry,
+                "avg_entry": avg_entry,
+            }
+        )
+    return positions
+
+
 def _collect_symbol(symbol: str, profile: str) -> dict[str, Any]:
     """Snapshot compacto de um símbolo: preço, PnL 24h, posições abertas."""
     # market_states.timestamp é epoch (double precision) e a tabela não tem
@@ -129,25 +214,7 @@ def _collect_symbol(symbol: str, profile: str) -> dict[str, Any]:
         """,
         (symbol,),
     )
-    positions = _btc_query(
-        """
-        SELECT
-            profile,
-            COUNT(*) AS n_entries,
-            COALESCE(SUM(size), 0) AS total_size,
-            COALESCE(SUM(size * price), 0) AS invested_usdt,
-            CASE
-                WHEN COALESCE(SUM(size), 0) > 0
-                THEN SUM(size * price) / SUM(size)
-                ELSE NULL
-            END AS avg_entry
-        FROM btc.trades
-        WHERE symbol = %s AND side = 'buy' AND status != 'closed' AND dry_run = FALSE
-        GROUP BY profile
-        ORDER BY profile
-        """,
-        (symbol,),
-    )
+    positions = _collect_open_positions(symbol)
     window = _btc_query(
         """
         SELECT regime, entry_low, entry_high, target_sell, min_confidence,

@@ -42,7 +42,7 @@ from market_rag import MarketRAG
 from sell_target_mixin import SellTargetMixin
 from risk_guardian_mixin import RiskGuardianMixin
 from position_manager_mixin import PositionManagerMixin
-from position_reconstruction import reconstruct_open_buys
+from position_reconstruction import reconstruct_open_buys, summarize_open_buys
 from profile_rules import validate_profile_for_symbol
 from llm import LLMRouter
 
@@ -2629,15 +2629,55 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             volatility = indicators.volatility()
 
             profile = self._current_profile()
+            base_currency = self.symbol.split("-")[0]
+
+            # Fonte canônica = DB (Grafana/exporter). O state em memória pode ficar
+            # defasado quando fills chegam via kucoin_sync após o boot do agente.
+            db_open = self._resolve_db_open_position()
+            if db_open["position"] > 0 and self.state.position <= 0:
+                logger.info(
+                    "🔄 Stale in-memory position — syncing from DB: %.8f %s @ $%.2f (profile=%s)",
+                    float(db_open["position"]),
+                    base_currency,
+                    float(db_open["entry_price"]),
+                    profile,
+                )
+                try:
+                    self._restore_position()
+                except Exception as sync_err:
+                    logger.warning(
+                        "⚠️ Position sync before AI plan failed: %s", sync_err
+                    )
+
+            plan_position = (
+                float(db_open["position"])
+                if db_open["position"] > 0
+                else self.state.position
+            )
+            plan_entry = (
+                float(db_open["entry_price"])
+                if db_open["position"] > 0
+                else self.state.entry_price
+            )
+            plan_target_sell = (
+                float(db_open["target_sell_price"])
+                if db_open["target_sell_price"] > 0
+                else self.state.target_sell_price
+            )
+            plan_open_count = (
+                int(db_open["open_count"])
+                if db_open["position"] > 0
+                else self.state.position_count
+            )
+
             position_info = f"profile={profile}: sem posição aberta"
-            if self.state.position > 0:
-                pnl_pct = ((market_state.price - self.state.entry_price)
-                           / self.state.entry_price * 100)
-                usdt_val = self.state.position * market_state.price
+            if plan_position > 0 and plan_entry > 0:
+                pnl_pct = ((market_state.price - plan_entry) / plan_entry * 100)
+                usdt_val = plan_position * market_state.price
                 position_info = (
                     f"profile={profile}: posição aberta "
-                    f"{self.state.position:.8f} BTC ({self.state.position_count} entradas), "
-                    f"preço médio ${self.state.entry_price:,.2f}, "
+                    f"{plan_position:.8f} {base_currency} ({plan_open_count} entradas), "
+                    f"preço médio ${plan_entry:,.2f}, "
                     f"valor ~${usdt_val:.2f}, PnL {pnl_pct:+.2f}%"
                 )
 
@@ -2736,39 +2776,39 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             min_tp_pct = auto_tp_cfg.get("min_pct", 0.015)
             if tp_pct < min_tp_pct:
                 tp_pct = min_tp_pct
-            tp_target = self.state.entry_price * (1 + tp_pct) if self.state.entry_price > 0 else 0
-            sl_price = self.state.entry_price * (1 - sl_pct) if self.state.entry_price > 0 else 0
+            tp_target = plan_entry * (1 + tp_pct) if plan_entry > 0 else 0
+            sl_price = plan_entry * (1 - sl_pct) if plan_entry > 0 else 0
             trailing_activation = trailing_cfg.get("activation_pct", 0.015)
             trailing_trail = trailing_cfg.get("trail_pct", 0.008)
             trailing_activation_price = (
-                self.state.entry_price * (1 + trailing_activation)
-                if self.state.entry_price > 0 else 0
+                plan_entry * (1 + trailing_activation)
+                if plan_entry > 0 else 0
             )
             # Preço mínimo para desbloquear SELL
-            if self.state.position > 0 and self.state.entry_price > 0:
-                _pos = self.state.position
+            if plan_position > 0 and plan_entry > 0:
+                _pos = plan_position
                 _fee = TRADING_FEE_PCT
                 sell_unlock_price = (
-                    (min_sell_pnl + self.state.entry_price * _pos * (1 + _fee))
+                    (min_sell_pnl + plan_entry * _pos * (1 + _fee))
                     / (_pos * (1 - _fee))
                 )
                 current_net_pnl = (
-                    (market_state.price - self.state.entry_price) * _pos
-                    - (self.state.entry_price * _pos * _fee)
+                    (market_state.price - plan_entry) * _pos
+                    - (plan_entry * _pos * _fee)
                     - (market_state.price * _pos * _fee)
                 )
             else:
                 sell_unlock_price = 0
                 current_net_pnl = 0
 
-            has_open_position = self.state.position > 0 and self.state.entry_price > 0
+            has_open_position = plan_position > 0 and plan_entry > 0
             target_sell_display = (
-                f"${self.state.target_sell_price:,.2f}"
-                if has_open_position and self.state.target_sell_price > 0
+                f"${plan_target_sell:,.2f}"
+                if has_open_position and plan_target_sell > 0
                 else "N/A (sem posição aberta)"
             )
             sell_unlock_display = (
-                f"${sell_unlock_price:,.2f} (entry ${self.state.entry_price:,.2f} + fees + min_pnl)"
+                f"${sell_unlock_price:,.2f} (entry ${plan_entry:,.2f} + fees + min_pnl)"
                 if has_open_position
                 else "N/A (sem posição aberta)"
             )
@@ -2923,8 +2963,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             # Prompt compacto para modelos instruct pequenos (GPU1)
             # Usa vocabulário explícito de trading para passar no _sanitize_ai_plan
             _pos_str = (
-                f"Posição aberta do profile {profile}: {self.state.position:.6f} {self._news_coin}, "
-                f"entry=${self.state.entry_price:,.2f}, "
+                f"Posição aberta do profile {profile}: {plan_position:.6f} {self._news_coin}, "
+                f"entry=${plan_entry:,.2f}, "
                 f"PnL={current_net_pnl:+.4f} USDT"
                 if has_open_position else f"Profile {profile}: sem posição aberta"
             )
@@ -3138,10 +3178,10 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 f"• PnL líquido mínimo p/ vender: ${min_sell_pnl:.3f}",
                 f"• Preço mín. p/ desbloquear SELL: {sell_unlock_display}",
             ]
-            if self.state.position > 0:
+            if has_open_position:
                 sell_summary_lines.append(
-                    f"• Entry médio: ${self.state.entry_price:,.2f} | "
-                    f"Posição: {self.state.position:.8f} BTC"
+                    f"• Entry médio: ${plan_entry:,.2f} | "
+                    f"Posição: {plan_position:.8f} {base_currency}"
                 )
             sell_summary_lines.append(
                 f"• Auto Take-Profit: "
@@ -3198,9 +3238,9 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     "rsi": round(rsi, 1),
                     "momentum": round(momentum, 3),
                     "volatility": round(volatility, 4),
-                    "position_btc": round(self.state.position, 8),
-                    "position_count": self.state.position_count,
-                    "entry_price": round(self.state.entry_price, 2),
+                    "position_btc": round(plan_position, 8),
+                    "position_count": plan_open_count,
+                    "entry_price": round(plan_entry, 2),
                     "usdt_balance": round(usdt_bal, 2),
                     "regime_confidence": round(rag_stats["regime_confidence"], 3),
                     "buy_target": round(rag_adj.ai_buy_target_price, 2),
@@ -3355,6 +3395,66 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 cursor.close()
         except Exception as e:
             logger.warning(f"⚠️ AI plans cleanup failed: {e}")
+
+    def _resolve_db_open_position(self) -> dict[str, float | int]:
+        """Resolve posição aberta a partir do DB (mesma lógica do Grafana/exporter)."""
+        profile = self._current_profile()
+        trades = self.db.get_recent_trades(
+            symbol=self.symbol,
+            limit=200,
+            include_dry=self.state.dry_run,
+            profile=profile,
+        )
+        empty = {
+            "position": 0.0,
+            "entry_price": 0.0,
+            "open_count": 0,
+            "target_sell_price": 0.0,
+        }
+        if not trades:
+            return empty
+
+        shared_profile_ambiguous = False
+        if not self.state.dry_run:
+            try:
+                active_profiles = self._get_active_symbol_profiles(
+                    exclude_external_deposits=True,
+                )
+            except Exception:
+                active_profiles = {}
+            shared_profile_ambiguous = profile != "default" and (
+                len(active_profiles) > 1 or self._has_shared_live_symbol_profiles()
+            )
+
+        open_buys = reconstruct_open_buys(
+            trades,
+            shared_profile_ambiguous=shared_profile_ambiguous,
+            exclude_external_deposits=True,
+        )
+        if not open_buys:
+            return empty
+
+        total_size, avg_entry = summarize_open_buys(open_buys)
+        target_sell = 0.0
+        for buy in open_buys:
+            meta = buy.get("metadata") or {}
+            if not isinstance(meta, dict):
+                try:
+                    import json as _json
+                    meta = _json.loads(meta)
+                except Exception:
+                    meta = {}
+            candidate = float(meta.get("target_sell_price") or 0)
+            if candidate > 0:
+                target_sell = candidate
+                break
+
+        return {
+            "position": total_size,
+            "entry_price": avg_entry,
+            "open_count": len(open_buys),
+            "target_sell_price": target_sell,
+        }
 
     def _restore_position(self):
         """Restaura posição aberta (multi-posição) do banco de dados.
