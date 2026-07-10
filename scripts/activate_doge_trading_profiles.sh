@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ativa perfis DOGE-USDT (dry_run) na conta TRADE master (kucoin/homelab).
+# Ativa perfis DOGE-USDT live na conta TRADE master (kucoin/homelab).
 # Executar NO HOMELAB com sudo, após sync dos configs do repositório.
 set -euo pipefail
 
@@ -15,7 +15,7 @@ declare -a PROFILES=(
   "DOGE_USDT_aggressive:9114:8524"
 )
 
-echo "=== Ativação DOGE-USDT (master TRADE, dry_run) ==="
+echo "=== Ativação DOGE-USDT (master TRADE, live) ==="
 
 mkdir -p "${ENVDIR}"
 for entry in "${PROFILES[@]}"; do
@@ -57,4 +57,4 @@ for entry in "${PROFILES[@]}"; do
   systemctl is-active "crypto-agent@${inst}.service" "crypto-exporter@${inst}.service" || true
 done
 
-echo "=== DOGE-USDT ativo (dry_run). Capital alvo ~\$150 USDT na TRADE master (\$50 × 3 perfis). ==="
+echo "=== DOGE-USDT ativo (live). Capital alvo ~\$150 USDT na TRADE master (\$50 × 3 perfis). ==="

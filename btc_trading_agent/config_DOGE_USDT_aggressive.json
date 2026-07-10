@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "dry_run": true,
+  "dry_run": false,
   "symbol": "DOGE-USDT",
   "poll_interval": 5,
   "min_trade_interval": 600,
@@ -49,7 +49,7 @@
     "rsi_overbought": 40,
     "min_spread_bps": 3
   },
-  "live_mode": false,
+  "live_mode": true,
   "auto_stop_loss": {
     "enabled": false,
     "pct": 0.05
@@ -73,11 +73,11 @@
   "guardrails_min_sell_pnl_pct": 0.003,
   "guardrails_positive_only_sells": true,
   "rebuy_lock_enabled": false,
-  "_doge_dry_run_notes": {
+  "_doge_live_notes": {
     "origem": "clonado de config_SOL_USDT_aggressive.json em 2026-07-10",
     "conta": "master TRADE (kucoin/homelab) — mesma conta do SOL",
     "capital_alvo": "$50 por perfil",
-    "modo": "dry_run (simulação, sem ordens reais)",
+    "autorizacao": "usuario: live direto (2026-07-10)",
     "politica_saida": "guardrails positive-only"
   }
 }
