@@ -16,15 +16,17 @@ Voce e um agente especializado em analise de trading, estrategia e dados operaci
 - TODAS as queries filtram por `AND symbol=%s`
 - `dry_run` e `bool` (True/False), nunca int
 
-### 1.2 Multi-Coin (6 moedas ativas)
-| Moeda | Exporter Port | WebUI Port |
-|-------|---------------|------------|
-| BTC | 9092 | 8511 |
-| ETH | 9098 | 8512 |
-| XRP | 9094 | 8513 |
-| SOL | 9095 | 8514 |
-| DOGE | 9096 | 8515 |
-| ADA | 9097 | 8516 |
+### 1.2 Multi-Coin (6 moedas na frota; BTC/ETH/SOL/DOGE com perfis triplos)
+| Moeda | Perfis live | Portas métricas (shadow/cons/aggr) | Conta KuCoin |
+|-------|-------------|-----------------------------------|--------------|
+| BTC | shadow, conservative, aggressive | 9099 / (legacy) | subcontas |
+| ETH | shadow, conservative, aggressive | 9096 / 9097 / 9098 | subcontas |
+| SOL | shadow, conservative, aggressive | 9108 / 9104 / 9106 | TRADE master |
+| DOGE | shadow, conservative, aggressive | 9112 / 9113 / 9114 | TRADE master |
+| XRP | — | 9094 (legado) | — |
+| ADA | — | 9097 (legado) | — |
+
+Docs: `docs/SOL_USDT_INSTALLATION.md`, `docs/DOGE_USDT_INSTALLATION.md`
 
 ### 1.3 Multi-Posicao (desde 2026-03-03)
 - Acumula ate `max_positions` (default 3) entradas BUY antes de vender

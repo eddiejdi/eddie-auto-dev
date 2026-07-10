@@ -20,10 +20,15 @@
 | [NEXTCLOUD_ACCESS_PANEL.md](NEXTCLOUD_ACCESS_PANEL.md) | Painel de criação de acesso ao Nextcloud via Authentik |
 | [NAS_IDLE_POWER_SAVING_2026-07-05.md](NAS_IDLE_POWER_SAVING_2026-07-05.md) | Runbook dos ajustes de economia de energia em idle do NAS |
 | [SOL_USDT_INSTALLATION.md](SOL_USDT_INSTALLATION.md) | Instalação e operação do trading agent SOL-USDT (3 perfis live) |
+| [DOGE_USDT_INSTALLATION.md](DOGE_USDT_INSTALLATION.md) | Instalação e operação do trading agent DOGE-USDT (3 perfis live, TRADE master) |
 | [WIKI_AGENT_REFACTOR_FIX_2026-07-09.md](WIKI_AGENT_REFACTOR_FIX_2026-07-09.md) | Fix do NameError `__file__` no wiki agent (`/wiki/raw`) |
 | [LESSONS_LEARNED_2026-02-02.md](LESSONS_LEARNED_2026-02-02.md) | Lições aprendidas (monitoramento e deploy) |
 
 ## Atualizações Recentes
+
+### 10 de julho de 2026
+- ✅ Instalação DOGE-USDT documentada em `DOGE_USDT_INSTALLATION.md` (dry run → live, portas 9112–9114, TRADE master compartilhada com SOL)
+- ✅ Checklist replicável para novas moedas no trading agent
 
 ### 09 de julho de 2026
 - ✅ Hooks do Claude Code importados para Grok (`.grok/hooks/`, `hooks.json`, `scripts/install_grok_hooks.sh`)
