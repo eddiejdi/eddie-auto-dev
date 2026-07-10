@@ -1,6 +1,6 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-10T12:42:29.769612+00:00`
+- Generated at: `2026-07-10T12:50:58.507216+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
 - Repo services discovered: `170`
@@ -16,6 +16,21 @@
 - `operations`: 95
 - `storage`: 32
 - `trading`: 9
+
+## Trading profile instances (`12`)
+
+- `BTC_USDT_aggressive` → `BTC-USDT` / `aggressive` (live, metrics `:9095`) — `master TRADE (kucoin/homelab)`
+- `BTC_USDT_conservative` → `BTC-USDT` / `conservative` (live, metrics `:9094`) — `master TRADE (kucoin/homelab)`
+- `BTC_USDT_shadow` → `BTC-USDT` / `shadow` (live, metrics `:9099`) — `subconta (BTCAgressive)`
+- `DOGE_USDT_aggressive` → `DOGE-USDT` / `aggressive` (live, metrics `:9114`) — `master TRADE (kucoin/homelab) — mesma conta do SOL`
+- `DOGE_USDT_conservative` → `DOGE-USDT` / `conservative` (live, metrics `:9113`) — `master TRADE (kucoin/homelab) — mesma conta do SOL`
+- `DOGE_USDT_shadow` → `DOGE-USDT` / `shadow` (live, metrics `:9112`) — `master TRADE (kucoin/homelab) — mesma conta do SOL`
+- `ETH_USDT_aggressive` → `ETH-USDT` / `aggressive` (live, metrics `:9098`) — `subconta sub:ETHAgressive via KUCOIN_SECRET_NAMES`
+- `ETH_USDT_conservative` → `ETH-USDT` / `conservative` (live, metrics `:9097`) — `subconta sub:ETHConservative ($50) via KUCOIN_SECRET_NAMES`
+- `ETH_USDT_shadow` → `ETH-USDT` / `shadow` (live, metrics `:9096`) — `subconta (BTCAgressive)`
+- `SOL_USDT_aggressive` → `SOL-USDT` / `aggressive` (live, metrics `:9106`) — `master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas`
+- `SOL_USDT_conservative` → `SOL-USDT` / `conservative` (live, metrics `:9104`) — `master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas`
+- `SOL_USDT_shadow` → `SOL-USDT` / `shadow` (live, metrics `:9108`) — `master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas`
 
 ## NetBox seed candidates
 
@@ -69,6 +84,7 @@
 ### `eddie-telegram-bot.service`
 - Descrição: Chatbot Telegram do homelab Eddie com suporte a comandos de trading, AI, mídia e administração.
 - Depende de: `eddie-postgres, ollama.service, specialized-agents-api.service`
+- source: `deploy/cmdb/bootstrap/cmdb-agent-overrides.json`
 - runtime_path: `/home/homelab/myClaude/telegram_bot.py`
 - venv: `/home/homelab/myClaude/.venv`
 - env_file: `/etc/default/eddie-common`
@@ -79,14 +95,17 @@
 ### `grafana`
 - Descrição: Grafana 12.4.0 via docker-compose.grafana.yml. Backend: PostgreSQL (eddie-postgres, db=grafana). Porta: 3002->3000. SSO via Authentik. URL: https://grafana.rpa4all.com
 - Depende de: `eddie-postgres, homelab_monitoring network`
+- source: `deploy/cmdb/bootstrap/cmdb-agent-overrides.json`
 - compose_file: `/home/homelab/docker-compose.grafana.yml`
 
 ### `mnt-raid1.mount`
 - Descrição: mergerfs union de /mnt/disk1 (sdb1) + /mnt/disk2 (sdc1) + /mnt/disk3 (sda1) em /mnt/raid1. Opção nonempty obrigatória — diretório contém nextcloud/ ao montar. Docker data-root: /mnt/disk1/docker. Ollama models: /mnt/raid1/ollama/models
+- source: `deploy/cmdb/bootstrap/cmdb-agent-overrides.json`
 - fix_applied: `2026-06-12: adicionado nonempty ao fstab; disk1/disk3 precisam estar montados antes`
 
 ### `eddie-apply-telegram-token.sh`
 - Descrição: Script de aplicação de token Telegram: grava /etc/eddie/telegram.env, cria drop-ins systemd e persiste em Authentik via secrets agent.
+- source: `deploy/cmdb/bootstrap/cmdb-agent-overrides.json`
 - type: `script`
 - path: `/usr/local/bin/eddie-apply-telegram-token.sh`
 - repo: `scripts/automation/eddie-apply-telegram-token.sh`
@@ -98,6 +117,7 @@
 
 ### `telegram_botfather_rotate_selenium.py`
 - Descrição: Script Selenium que rotaciona o token do bot Telegram via BotFather. Usa Chrome headless + Squid proxy + chromedriver146.
+- source: `deploy/cmdb/bootstrap/cmdb-agent-overrides.json`
 - type: `script`
 - path: `/home/homelab/telegram_botfather_rotate_selenium.py`
 - repo: `scripts/automation/telegram_botfather_rotate_selenium.py`
@@ -112,6 +132,7 @@
 
 ### `wikijs`
 - Descrição: Wiki.js v2 — documentação técnica do homelab. Docker: ghcr.io/requarks/wiki:2. DB: wikijs-db (postgres:15-alpine).
+- source: `deploy/cmdb/bootstrap/cmdb-agent-overrides.json`
 - type: `docker-compose`
 - container: `wikijs`
 - port_host: `3009`
@@ -132,4 +153,412 @@
 - status_reason: `Desativado em 2026-06-14 por decisão operacional: não funciona e interfere nos outros dispositivos IoT.`
 - disabled_at: `2026-06-14`
 - target_device: `homelab`
+
+### `crypto-agent@BTC_USDT_aggressive.service`
+- Descrição: Trading agent BTC-USDT perfil aggressive (live) — master TRADE (kucoin/homelab).
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `BTC-USDT`
+- profile: `aggressive`
+- config_file: `btc_trading_agent/config_BTC_USDT_aggressive.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9095`
+- api_port: `None`
+- kucoin_account: `master TRADE (kucoin/homelab)`
+- systemd_instance: `BTC_USDT_aggressive`
+- prometheus_job: `crypto-exporter-btc_usdt_aggressive`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-exporter@BTC_USDT_aggressive.service`
+- Descrição: Trading exporter BTC-USDT perfil aggressive (live) — master TRADE (kucoin/homelab).
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `BTC-USDT`
+- profile: `aggressive`
+- config_file: `btc_trading_agent/config_BTC_USDT_aggressive.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9095`
+- api_port: `None`
+- kucoin_account: `master TRADE (kucoin/homelab)`
+- systemd_instance: `BTC_USDT_aggressive`
+- prometheus_job: `crypto-exporter-btc_usdt_aggressive`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-agent@BTC_USDT_conservative.service`
+- Descrição: Trading agent BTC-USDT perfil conservative (live) — master TRADE (kucoin/homelab).
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `BTC-USDT`
+- profile: `conservative`
+- config_file: `btc_trading_agent/config_BTC_USDT_conservative.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9094`
+- api_port: `None`
+- kucoin_account: `master TRADE (kucoin/homelab)`
+- systemd_instance: `BTC_USDT_conservative`
+- prometheus_job: `crypto-exporter-btc_usdt_conservative`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-exporter@BTC_USDT_conservative.service`
+- Descrição: Trading exporter BTC-USDT perfil conservative (live) — master TRADE (kucoin/homelab).
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `BTC-USDT`
+- profile: `conservative`
+- config_file: `btc_trading_agent/config_BTC_USDT_conservative.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9094`
+- api_port: `None`
+- kucoin_account: `master TRADE (kucoin/homelab)`
+- systemd_instance: `BTC_USDT_conservative`
+- prometheus_job: `crypto-exporter-btc_usdt_conservative`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-agent@BTC_USDT_shadow.service`
+- Descrição: Trading agent BTC-USDT perfil shadow (live) — subconta (BTCAgressive).
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `BTC-USDT`
+- profile: `shadow`
+- config_file: `btc_trading_agent/config_BTC_USDT_shadow.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9099`
+- api_port: `8516`
+- kucoin_account: `subconta (BTCAgressive)`
+- systemd_instance: `BTC_USDT_shadow`
+- prometheus_job: `crypto-exporter-btc_usdt_shadow`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-exporter@BTC_USDT_shadow.service`
+- Descrição: Trading exporter BTC-USDT perfil shadow (live) — subconta (BTCAgressive).
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `BTC-USDT`
+- profile: `shadow`
+- config_file: `btc_trading_agent/config_BTC_USDT_shadow.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9099`
+- api_port: `8516`
+- kucoin_account: `subconta (BTCAgressive)`
+- systemd_instance: `BTC_USDT_shadow`
+- prometheus_job: `crypto-exporter-btc_usdt_shadow`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-agent@DOGE_USDT_aggressive.service`
+- Descrição: Trading agent DOGE-USDT perfil aggressive (live) — master TRADE (kucoin/homelab) — mesma conta do SOL.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `DOGE-USDT`
+- profile: `aggressive`
+- config_file: `btc_trading_agent/config_DOGE_USDT_aggressive.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9114`
+- api_port: `8524`
+- kucoin_account: `master TRADE (kucoin/homelab) — mesma conta do SOL`
+- systemd_instance: `DOGE_USDT_aggressive`
+- prometheus_job: `crypto-exporter-doge_usdt_aggressive`
+- activate_script: `scripts/activate_doge_trading_profiles.sh`
+- auto_generated: `True`
+
+### `crypto-exporter@DOGE_USDT_aggressive.service`
+- Descrição: Trading exporter DOGE-USDT perfil aggressive (live) — master TRADE (kucoin/homelab) — mesma conta do SOL.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `DOGE-USDT`
+- profile: `aggressive`
+- config_file: `btc_trading_agent/config_DOGE_USDT_aggressive.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9114`
+- api_port: `8524`
+- kucoin_account: `master TRADE (kucoin/homelab) — mesma conta do SOL`
+- systemd_instance: `DOGE_USDT_aggressive`
+- prometheus_job: `crypto-exporter-doge_usdt_aggressive`
+- activate_script: `scripts/activate_doge_trading_profiles.sh`
+- auto_generated: `True`
+
+### `crypto-agent@DOGE_USDT_conservative.service`
+- Descrição: Trading agent DOGE-USDT perfil conservative (live) — master TRADE (kucoin/homelab) — mesma conta do SOL.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `DOGE-USDT`
+- profile: `conservative`
+- config_file: `btc_trading_agent/config_DOGE_USDT_conservative.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9113`
+- api_port: `8523`
+- kucoin_account: `master TRADE (kucoin/homelab) — mesma conta do SOL`
+- systemd_instance: `DOGE_USDT_conservative`
+- prometheus_job: `crypto-exporter-doge_usdt_conservative`
+- activate_script: `scripts/activate_doge_trading_profiles.sh`
+- auto_generated: `True`
+
+### `crypto-exporter@DOGE_USDT_conservative.service`
+- Descrição: Trading exporter DOGE-USDT perfil conservative (live) — master TRADE (kucoin/homelab) — mesma conta do SOL.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `DOGE-USDT`
+- profile: `conservative`
+- config_file: `btc_trading_agent/config_DOGE_USDT_conservative.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9113`
+- api_port: `8523`
+- kucoin_account: `master TRADE (kucoin/homelab) — mesma conta do SOL`
+- systemd_instance: `DOGE_USDT_conservative`
+- prometheus_job: `crypto-exporter-doge_usdt_conservative`
+- activate_script: `scripts/activate_doge_trading_profiles.sh`
+- auto_generated: `True`
+
+### `crypto-agent@DOGE_USDT_shadow.service`
+- Descrição: Trading agent DOGE-USDT perfil shadow (live) — master TRADE (kucoin/homelab) — mesma conta do SOL.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `DOGE-USDT`
+- profile: `shadow`
+- config_file: `btc_trading_agent/config_DOGE_USDT_shadow.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9112`
+- api_port: `8522`
+- kucoin_account: `master TRADE (kucoin/homelab) — mesma conta do SOL`
+- systemd_instance: `DOGE_USDT_shadow`
+- prometheus_job: `crypto-exporter-doge_usdt_shadow`
+- activate_script: `scripts/activate_doge_trading_profiles.sh`
+- auto_generated: `True`
+
+### `crypto-exporter@DOGE_USDT_shadow.service`
+- Descrição: Trading exporter DOGE-USDT perfil shadow (live) — master TRADE (kucoin/homelab) — mesma conta do SOL.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `DOGE-USDT`
+- profile: `shadow`
+- config_file: `btc_trading_agent/config_DOGE_USDT_shadow.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9112`
+- api_port: `8522`
+- kucoin_account: `master TRADE (kucoin/homelab) — mesma conta do SOL`
+- systemd_instance: `DOGE_USDT_shadow`
+- prometheus_job: `crypto-exporter-doge_usdt_shadow`
+- activate_script: `scripts/activate_doge_trading_profiles.sh`
+- auto_generated: `True`
+
+### `crypto-agent@ETH_USDT_aggressive.service`
+- Descrição: Trading agent ETH-USDT perfil aggressive (live) — subconta sub:ETHAgressive via KUCOIN_SECRET_NAMES.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `ETH-USDT`
+- profile: `aggressive`
+- config_file: `btc_trading_agent/config_ETH_USDT_aggressive.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9098`
+- api_port: `None`
+- kucoin_account: `subconta sub:ETHAgressive via KUCOIN_SECRET_NAMES`
+- systemd_instance: `ETH_USDT_aggressive`
+- prometheus_job: `crypto-exporter-eth_usdt_aggressive`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-exporter@ETH_USDT_aggressive.service`
+- Descrição: Trading exporter ETH-USDT perfil aggressive (live) — subconta sub:ETHAgressive via KUCOIN_SECRET_NAMES.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `ETH-USDT`
+- profile: `aggressive`
+- config_file: `btc_trading_agent/config_ETH_USDT_aggressive.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9098`
+- api_port: `None`
+- kucoin_account: `subconta sub:ETHAgressive via KUCOIN_SECRET_NAMES`
+- systemd_instance: `ETH_USDT_aggressive`
+- prometheus_job: `crypto-exporter-eth_usdt_aggressive`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-agent@ETH_USDT_conservative.service`
+- Descrição: Trading agent ETH-USDT perfil conservative (live) — subconta sub:ETHConservative ($50) via KUCOIN_SECRET_NAMES.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `ETH-USDT`
+- profile: `conservative`
+- config_file: `btc_trading_agent/config_ETH_USDT_conservative.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9097`
+- api_port: `None`
+- kucoin_account: `subconta sub:ETHConservative ($50) via KUCOIN_SECRET_NAMES`
+- systemd_instance: `ETH_USDT_conservative`
+- prometheus_job: `crypto-exporter-eth_usdt_conservative`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-exporter@ETH_USDT_conservative.service`
+- Descrição: Trading exporter ETH-USDT perfil conservative (live) — subconta sub:ETHConservative ($50) via KUCOIN_SECRET_NAMES.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `ETH-USDT`
+- profile: `conservative`
+- config_file: `btc_trading_agent/config_ETH_USDT_conservative.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9097`
+- api_port: `None`
+- kucoin_account: `subconta sub:ETHConservative ($50) via KUCOIN_SECRET_NAMES`
+- systemd_instance: `ETH_USDT_conservative`
+- prometheus_job: `crypto-exporter-eth_usdt_conservative`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-agent@ETH_USDT_shadow.service`
+- Descrição: Trading agent ETH-USDT perfil shadow (live) — subconta (BTCAgressive).
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `ETH-USDT`
+- profile: `shadow`
+- config_file: `btc_trading_agent/config_ETH_USDT_shadow.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9096`
+- api_port: `None`
+- kucoin_account: `subconta (BTCAgressive)`
+- systemd_instance: `ETH_USDT_shadow`
+- prometheus_job: `crypto-exporter-eth_usdt_shadow`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-exporter@ETH_USDT_shadow.service`
+- Descrição: Trading exporter ETH-USDT perfil shadow (live) — subconta (BTCAgressive).
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `ETH-USDT`
+- profile: `shadow`
+- config_file: `btc_trading_agent/config_ETH_USDT_shadow.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9096`
+- api_port: `None`
+- kucoin_account: `subconta (BTCAgressive)`
+- systemd_instance: `ETH_USDT_shadow`
+- prometheus_job: `crypto-exporter-eth_usdt_shadow`
+- activate_script: `None`
+- auto_generated: `True`
+
+### `crypto-agent@SOL_USDT_aggressive.service`
+- Descrição: Trading agent SOL-USDT perfil aggressive (live) — master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `SOL-USDT`
+- profile: `aggressive`
+- config_file: `btc_trading_agent/config_SOL_USDT_aggressive.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9106`
+- api_port: `8517`
+- kucoin_account: `master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas`
+- systemd_instance: `SOL_USDT_aggressive`
+- prometheus_job: `crypto-exporter-sol_usdt_aggressive`
+- activate_script: `scripts/activate_sol_trading_profiles.sh`
+- auto_generated: `True`
+
+### `crypto-exporter@SOL_USDT_aggressive.service`
+- Descrição: Trading exporter SOL-USDT perfil aggressive (live) — master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `SOL-USDT`
+- profile: `aggressive`
+- config_file: `btc_trading_agent/config_SOL_USDT_aggressive.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9106`
+- api_port: `8517`
+- kucoin_account: `master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas`
+- systemd_instance: `SOL_USDT_aggressive`
+- prometheus_job: `crypto-exporter-sol_usdt_aggressive`
+- activate_script: `scripts/activate_sol_trading_profiles.sh`
+- auto_generated: `True`
+
+### `crypto-agent@SOL_USDT_conservative.service`
+- Descrição: Trading agent SOL-USDT perfil conservative (live) — master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `SOL-USDT`
+- profile: `conservative`
+- config_file: `btc_trading_agent/config_SOL_USDT_conservative.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9104`
+- api_port: `8516`
+- kucoin_account: `master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas`
+- systemd_instance: `SOL_USDT_conservative`
+- prometheus_job: `crypto-exporter-sol_usdt_conservative`
+- activate_script: `scripts/activate_sol_trading_profiles.sh`
+- auto_generated: `True`
+
+### `crypto-exporter@SOL_USDT_conservative.service`
+- Descrição: Trading exporter SOL-USDT perfil conservative (live) — master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `SOL-USDT`
+- profile: `conservative`
+- config_file: `btc_trading_agent/config_SOL_USDT_conservative.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9104`
+- api_port: `8516`
+- kucoin_account: `master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas`
+- systemd_instance: `SOL_USDT_conservative`
+- prometheus_job: `crypto-exporter-sol_usdt_conservative`
+- activate_script: `scripts/activate_sol_trading_profiles.sh`
+- auto_generated: `True`
+
+### `crypto-agent@SOL_USDT_shadow.service`
+- Descrição: Trading agent SOL-USDT perfil shadow (live) — master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `SOL-USDT`
+- profile: `shadow`
+- config_file: `btc_trading_agent/config_SOL_USDT_shadow.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9108`
+- api_port: `8518`
+- kucoin_account: `master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas`
+- systemd_instance: `SOL_USDT_shadow`
+- prometheus_job: `crypto-exporter-sol_usdt_shadow`
+- activate_script: `scripts/activate_sol_trading_profiles.sh`
+- auto_generated: `True`
+
+### `crypto-exporter@SOL_USDT_shadow.service`
+- Descrição: Trading exporter SOL-USDT perfil shadow (live) — master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas.
+- source: `scripts/cmdb/generate_cmdb_baseline.py`
+- domain: `trading`
+- symbol: `SOL-USDT`
+- profile: `shadow`
+- config_file: `btc_trading_agent/config_SOL_USDT_shadow.json`
+- dry_run: `False`
+- live_mode: `True`
+- metrics_port: `9108`
+- api_port: `8518`
+- kucoin_account: `master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas`
+- systemd_instance: `SOL_USDT_shadow`
+- prometheus_job: `crypto-exporter-sol_usdt_shadow`
+- activate_script: `scripts/activate_sol_trading_profiles.sh`
+- auto_generated: `True`
 

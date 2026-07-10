@@ -157,7 +157,7 @@ fi
 # Rejeita commit com marcadores de alto sinal de trabalho incompleto nas linhas staged.
 # Cobre qualquer ferramenta (Copilot, Codex, Claude Code, edição manual) — todas commitam.
 # Escape: ALLOW_INCOMPLETE=1, `# stub-ok` na linha, ou git commit --no-verify.
-echo "  [8/8] Checking for incomplete tasks (stubs / NotImplementedError)..."
+echo "  [8/9] Checking for incomplete tasks (stubs / NotImplementedError)..."
 if [ -z "$ALLOW_INCOMPLETE" ]; then
     if [ -f "tools/hooks/incomplete_markers.py" ]; then
         # Código 2 = incompletude → bloqueia. Qualquer outro código != 0 é erro
@@ -172,6 +172,25 @@ if [ -z "$ALLOW_INCOMPLETE" ]; then
     fi
 else
     echo "     (ALLOW_INCOMPLETE set — pulando checagem de incompletude)"
+fi
+
+# ─── Check 9: CMDB baseline + trading overrides (mesmo commit, sem post-commit orphan) ──
+echo "  [9/9] Regenerating CMDB baseline and trading overrides..."
+if [ -z "${SKIP_CMDB_HOOK:-}" ] && [ -f "scripts/cmdb/generate_cmdb_baseline.py" ]; then
+    PY_CMDB="$(dirname "$0")/../.venv/bin/python"
+    [ -x "$PY_CMDB" ] || PY_CMDB="python3"
+    if ! "$PY_CMDB" scripts/cmdb/generate_cmdb_baseline.py --check-staged; then
+        echo "❌ BLOCKED: CMDB baseline desatualizado em relação aos configs trading staged"
+        exit 1
+    fi
+    git add \
+        deploy/cmdb/bootstrap/generated/cmdb-baseline.json \
+        deploy/cmdb/bootstrap/generated/cmdb-baseline.md \
+        deploy/cmdb/bootstrap/cmdb-agent-overrides.json \
+        2>/dev/null || true
+    echo "  ✅ CMDB baseline/overrides staged neste commit"
+elif [ -n "${SKIP_CMDB_HOOK:-}" ]; then
+    echo "     (SKIP_CMDB_HOOK set — pulando regeneração CMDB)"
 fi
 
 echo ""

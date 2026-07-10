@@ -1,53 +1,34 @@
 #!/bin/bash
-# Post-commit hook — (1) Regenerar CMDB baseline; (2) Sincronizar .md com Wiki RPA4All
+# Post-commit hook — (1) Indexar commit na memória; (2) Sincronizar .md com Wiki RPA4All
+#
+# CMDB baseline foi movido para pre-commit (.githooks/pre-commit check 9)
+# para evitar commits órfãos chore(cmdb) separados do trabalho real.
 
-# ─── CMDB auto-update ─────────────────────────────────────────────────────────
-# Pula se o commit atual já é o auto-commit de CMDB (evita loop infinito)
-LAST_MSG=$(git log -1 --format="%s")
-if echo "$LAST_MSG" | grep -q "\[skip-cmdb\]"; then
-    : # loop prevention — não regenera
-else
-    CMDB_SCRIPT="scripts/cmdb/generate_cmdb_baseline.py"
-    if [ -f "$CMDB_SCRIPT" ]; then
-        PY_CMDB="$(dirname "$0")/../.venv/bin/python"
-        [ -x "$PY_CMDB" ] || PY_CMDB="python3"
-        "$PY_CMDB" "$CMDB_SCRIPT" >/dev/null 2>&1 && {
-            # Verifica se os arquivos gerados mudaram
-            CMDB_CHANGED=$(git diff --name-only \
-                deploy/cmdb/bootstrap/generated/cmdb-baseline.json \
-                deploy/cmdb/bootstrap/generated/cmdb-baseline.md \
-                2>/dev/null || true)
-            if [ -n "$CMDB_CHANGED" ]; then
-                git add \
-                    deploy/cmdb/bootstrap/generated/cmdb-baseline.json \
-                    deploy/cmdb/bootstrap/generated/cmdb-baseline.md \
-                    2>/dev/null
-                git commit --no-verify -m "chore(cmdb): regenerar baseline [skip-cmdb]" \
-                    >/dev/null 2>&1 && \
-                    echo "📋 [cmdb] Baseline regenerado automaticamente."
-            fi
-        } || echo "⚠️  [cmdb] Falha ao regenerar baseline (não bloqueante)."
-    fi
+set -euo pipefail
+
+# ─── Memory ingestor (git → Chroma) ───────────────────────────────────────────
+INGESTOR="tools/memory_ingestors/git_ingestor.py"
+if [ -f "$INGESTOR" ]; then
+    PY_MEM="$(dirname "$0")/../.venv/bin/python"
+    [ -x "$PY_MEM" ] || PY_MEM="python3"
+    "$PY_MEM" "$INGESTOR" >/dev/null 2>&1 || true
 fi
 
 # ─── Wiki sync ────────────────────────────────────────────────────────────────
-# Lista de prefixos de .md que NÃO devem ir para a wiki (arquivos internos/temporários)
 SKIP_PATTERNS=(
-  "^wiki_"            # arquivos wiki_*.md gerados pelo próprio agente (evita loop)
-  "CONVERSAS_"        # logs de conversas
+  "^wiki_"
+  "CONVERSAS_"
   "COMPARISON"
-  "^\.github/"        # docs internos de copilot customization
-  "^docs/confluence"  # docs de confluence interno
+  "^\.github/"
+  "^docs/confluence"
 )
 
-# Obtém .md adicionados ou modificados no commit mais recente
 MD_FILES=$(git diff-tree --no-commit-id -r --name-only --diff-filter=AM HEAD | grep "\.md$" || true)
 
 if [ -z "$MD_FILES" ]; then
     exit 0
 fi
 
-# Filtra os arquivos que devem ser pulados
 TO_SEND=""
 for f in $MD_FILES; do
     skip=0
@@ -60,7 +41,7 @@ for f in $MD_FILES; do
     [ $skip -eq 0 ] && TO_SEND="$TO_SEND $f"
 done
 
-TO_SEND=$(echo "$TO_SEND" | xargs)  # trim
+TO_SEND=$(echo "$TO_SEND" | xargs)
 if [ -z "$TO_SEND" ]; then
     exit 0
 fi
@@ -68,15 +49,11 @@ fi
 echo ""
 echo "📚 [wiki-agent] Enviando .md para wiki_rpa4all (sem publish direto)..."
 for f in $TO_SEND; do
-        echo "   → $f"
+    echo "   → $f"
 done
 
-# Envia em background para não travar o terminal.
-# Política: proibido publicar diretamente na wiki sem o agent wiki_rpa4all.
 PY_BIN="$(dirname "$0")/../.venv/bin/python"
-if [ ! -x "$PY_BIN" ]; then
-    PY_BIN="python3"
-fi
+[ -x "$PY_BIN" ] || PY_BIN="python3"
 
 for f in $TO_SEND; do
     MSG="Publicar/atualizar em locale pt o arquivo ${f}. Validar URL em /pt antes de concluir a publicação."
