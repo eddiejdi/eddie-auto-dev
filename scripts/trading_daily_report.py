@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Relatório diário de trading — multi-símbolo (BTC + ETH + SOL) com análise Ollama.
+"""Relatório diário de trading — multi-símbolo (BTC + ETH + SOL + DOGE) com análise Ollama.
 
 Coleta dados do PostgreSQL btc_trading para cada símbolo operado, monta um
 relatório determinístico e consistente para o Telegram e usa o modelo
@@ -38,13 +38,13 @@ logging.basicConfig(
 OPERATIONAL_PROFILES = ("conservative", "aggressive", "shadow")
 
 # Símbolos reportados. A ordem define a ordem das seções no relatório.
-SYMBOLS = ("BTC-USDT", "ETH-USDT", "SOL-USDT")
+SYMBOLS = ("BTC-USDT", "ETH-USDT", "SOL-USDT", "DOGE-USDT")
 
 # Perfis que possuem serviço systemd próprio (shadow é virtual, não tem serviço).
 SERVICE_PROFILES = ("aggressive", "conservative")
 
 # Ícone por ativo para o cabeçalho de cada seção.
-ASSET_ICONS = {"BTC": "₿", "ETH": "Ξ", "SOL": "◎"}
+ASSET_ICONS = {"BTC": "₿", "ETH": "Ξ", "SOL": "◎", "DOGE": "Ð"}
 
 # ── Configuração ─────────────────────────────────────────────────────────────
 

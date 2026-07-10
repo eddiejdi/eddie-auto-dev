@@ -20,10 +20,12 @@ on:
       - 'btc_trading_agent/config_BTC_USDT_*.json'
       - 'btc_trading_agent/config_ETH_USDT_*.json'
       - 'btc_trading_agent/config_SOL_USDT_*.json'
+      - 'btc_trading_agent/config_DOGE_USDT_*.json'
       - 'patches/config_BTC_USDT_*_optimized.json'
       - 'monitoring/prometheus.yml'
       - 'scripts/deploy_btc_trading_profiles.sh'
       - 'scripts/activate_sol_trading_profiles.sh'
+      - 'scripts/activate_doge_trading_profiles.sh'
       - 'scripts/trading_daily_report.py'
       - 'scripts/kucoin_postgres_sync.py'
       - 'scripts/candle_collector.py'
@@ -60,6 +62,7 @@ jobs:
         run: |
           chmod +x scripts/deploy_btc_trading_profiles.sh
           chmod +x scripts/activate_sol_trading_profiles.sh
+          chmod +x scripts/activate_doge_trading_profiles.sh
 
       - name: Validate slot-based BTC trading flow
         run: |
@@ -75,10 +78,10 @@ jobs:
             tests/test_grafana_dashboard_queries.py \
             tests/test_deploy_btc_trading_profiles_script.py
 
-      - name: Deploy trading profiles (BTC + ETH + SOL)
+      - name: Deploy trading profiles (BTC + ETH + SOL + DOGE)
         run: scripts/deploy_btc_trading_profiles.sh
 
-      - name: Verify SOL services and Prometheus scrape targets
+      - name: Verify SOL and DOGE services and Prometheus scrape targets
         run: |
           set -euo pipefail
           for svc in \
@@ -87,7 +90,13 @@ jobs:
             crypto-agent@SOL_USDT_shadow.service \
             crypto-exporter@SOL_USDT_conservative.service \
             crypto-exporter@SOL_USDT_aggressive.service \
-            crypto-exporter@SOL_USDT_shadow.service
+            crypto-exporter@SOL_USDT_shadow.service \
+            crypto-agent@DOGE_USDT_conservative.service \
+            crypto-agent@DOGE_USDT_aggressive.service \
+            crypto-agent@DOGE_USDT_shadow.service \
+            crypto-exporter@DOGE_USDT_conservative.service \
+            crypto-exporter@DOGE_USDT_aggressive.service \
+            crypto-exporter@DOGE_USDT_shadow.service
           do
             systemctl is-active --quiet "${svc}" || { echo "❌ ${svc} inativo"; exit 1; }
             echo "✅ ${svc}"
@@ -97,6 +106,9 @@ jobs:
             crypto-exporter-sol_usdt_shadow
             crypto-exporter-sol_usdt_conservative
             crypto-exporter-sol_usdt_aggressive
+            crypto-exporter-doge_usdt_shadow
+            crypto-exporter-doge_usdt_conservative
+            crypto-exporter-doge_usdt_aggressive
           )
           for attempt in 1 2 3 4 5; do
             mapfile -t STATUSES < <(
@@ -119,11 +131,11 @@ jobs:
               fi
             done
             if [[ "${failed}" -eq 0 ]]; then
-              echo "✅ Todos os scrape targets SOL estão up"
+              echo "✅ Todos os scrape targets SOL e DOGE estão up"
               exit 0
             fi
-            echo "⏳ Aguardando exporters SOL (tentativa ${attempt}/5)..."
+            echo "⏳ Aguardando exporters SOL/DOGE (tentativa ${attempt}/5)..."
             sleep 10
           done
-          echo "❌ Scrape targets SOL não ficaram up após 5 tentativas"
+          echo "❌ Scrape targets SOL/DOGE não ficaram up após 5 tentativas"
           exit 1

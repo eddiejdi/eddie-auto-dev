@@ -1,0 +1,83 @@
+{
+  "enabled": true,
+  "dry_run": true,
+  "symbol": "DOGE-USDT",
+  "profile": "shadow",
+  "poll_interval": 5,
+  "min_trade_interval": 600,
+  "min_confidence": 0.55,
+  "min_trade_amount": 10,
+  "max_position_pct": 1.0,
+  "max_positions": 4,
+  "stop_loss_pct": 0.02,
+  "take_profit_pct": 0.03,
+  "max_daily_trades": 8,
+  "max_daily_loss": 5,
+  "min_sell_pnl": 0.001,
+  "max_hold_minutes": 0,
+  "trading_hours": {
+    "enabled": false,
+    "start": "00:00",
+    "end": "23:59"
+  },
+  "notifications": {
+    "enabled": false,
+    "on_trade": false,
+    "on_signal": false,
+    "on_error": false
+  },
+  "risk_management": {
+    "enabled": true,
+    "max_drawdown_pct": 0.08,
+    "position_sizing": "fixed",
+    "kelly_fraction": 0.25,
+    "volatility_filter": true,
+    "min_volatility": 0.001,
+    "max_volatility": 0.15
+  },
+  "trailing_stop": {
+    "enabled": true,
+    "activation_pct": 0.01,
+    "trail_pct": 0.005
+  },
+  "strategy": {
+    "mode": "swing",
+    "use_trend_filter": false,
+    "use_volume_filter": true,
+    "rsi_oversold": 35,
+    "rsi_overbought": 65,
+    "min_spread_bps": 3
+  },
+  "live_mode": false,
+  "auto_stop_loss": {
+    "enabled": false,
+    "pct": 0.05
+  },
+  "auto_take_profit": {
+    "enabled": true,
+    "pct": 0.03,
+    "min_pct": 0.025
+  },
+  "min_net_profit": {
+    "usd": 0.1,
+    "pct": 0.001
+  },
+  "circuit_breaker": {
+    "enabled": true,
+    "min_win_rate_24h": 0.35,
+    "max_daily_loss_usd": 5
+  },
+  "kucoin_require_dedicated_credentials": false,
+  "guardrails_active": true,
+  "guardrails_min_sell_pnl_pct": 0.01,
+  "guardrails_positive_only_sells": true,
+  "use_macd": true,
+  "use_ma_cross": true,
+  "_doge_dry_run_notes": {
+    "origem": "clonado de config_SOL_USDT_shadow.json em 2026-07-10",
+    "conta": "master TRADE (kucoin/homelab) — mesma conta do SOL",
+    "capital_alvo": "$50 por perfil",
+    "modo": "dry_run (simulação, sem ordens reais)",
+    "politica_saida": "guardrails positive-only"
+  }
+}
