@@ -310,7 +310,7 @@ def build_gpu1_expansion_prompt(text: str) -> str:
         "- nao invente fatos\n"
         "- mantenha foco na agenda e atuacao de Flavio Bolsonaro no Senado Federal\n"
         "- destaque compromissos, propostas e posicionamentos de forma construtiva\n"
-        "- quando citar imprensa ou YouTube aliado (Kim Pain, Didi Newa, Auriverde, Claudio Dantas), enfatize o que reforca a pauta conservadora e o trabalho do senador\n"
+        "- quando citar imprensa ou YouTube aliado (Kim Pain, Didi Newa, Auriverde, Claudio Dantas, Ancapsu, canal Flavio Bolsonaro), enfatize o que reforca a pauta conservadora e o trabalho do senador\n"
         "- evite tom de ataque, ironia ou derrota; nao amplifique narrativas hostis\n"
         "- mantenha data, horarios e nomes oficiais das comissoes\n"
         "- se houver materia de autoria do senador, explique em linguagem comum o que ela propoe\n"

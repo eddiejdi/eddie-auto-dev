@@ -11,7 +11,7 @@ Fontes (oficiais e nao oficiais):
 - Paginas de comissoes do Senado (legis.senado.leg.br)
 - Pauta do plenario do Senado
 - Google Noticias RSS (contexto da imprensa)
-- YouTube de aliados (Kim Pain, Didi Newa, Auriverde, Claudio Dantas)
+- YouTube de aliados (Kim Pain, Didi Newa, Auriverde, Claudio Dantas, Ancapsu, Flávio Bolsonaro)
 """
 from __future__ import annotations
 
