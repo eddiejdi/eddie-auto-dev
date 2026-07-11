@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-09T02:55:55.676576+00:00",
-  "repo_root": "/workspace/eddie-auto-dev",
+  "generated_at": "2026-07-11T18:11:05.793304+00:00",
+  "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/6e454367-dabd-48bd-88ea-c0c3df4c24cc/scratchpad/hotfix-worktree",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
