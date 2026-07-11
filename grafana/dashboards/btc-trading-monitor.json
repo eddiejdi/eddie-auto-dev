@@ -2031,8 +2031,8 @@
           },
           {
             "matcher": {
-              "id": "byName",
-              "options": "BTC (em USDT)"
+              "id": "byRegexp",
+              "options": ".*\\(em USDT\\)$"
             },
             "properties": [
               {
@@ -2101,7 +2101,7 @@
           },
           "editorMode": "code",
           "format": "time_series",
-          "rawSql": "WITH snap AS (\n  SELECT synced_at, account_type, currency,\n         balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END) AS usdt\n  FROM btc.exchange_balance_snapshots\n  WHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n    AND synced_at IN (\n      -- ignora snapshots parciais (ex.: sync pós-venda rodado com credencial\n      -- de subconta enxerga só 1 conta e derrubava o total do gráfico)\n      SELECT synced_at FROM btc.exchange_balance_snapshots\n      GROUP BY synced_at\n      HAVING COUNT(DISTINCT account_type) >= 3\n          OR MIN(synced_at) < TIMESTAMPTZ '2026-07-03 21:00:00+00'\n    )\n)\nSELECT synced_at AS time, 'Conta ' || account_type AS metric, SUM(usdt) AS value FROM snap GROUP BY 1, 2\nUNION ALL\nSELECT synced_at, 'Total', SUM(usdt) FROM snap GROUP BY 1\nUNION ALL\nSELECT synced_at, SPLIT_PART('$coin', '-', 1) || ' (em USDT)', SUM(usdt) FROM snap WHERE currency = SPLIT_PART('$coin', '-', 1) GROUP BY 1\nUNION ALL\nSELECT synced_at, 'USDT', SUM(usdt) FROM snap WHERE currency = 'USDT' GROUP BY 1\nORDER BY 1",
+          "rawSql": "WITH snap AS (\n  SELECT synced_at, account_type, currency,\n         balance * COALESCE(price_usdt, CASE WHEN currency = 'USDT' THEN 1 ELSE 0 END) AS usdt\n  FROM btc.exchange_balance_snapshots\n  WHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n    AND synced_at IN (\n      -- ignora snapshots parciais (ex.: sync pós-venda rodado com credencial\n      -- de subconta enxerga só 1 conta e derrubava o total do gráfico)\n      SELECT synced_at FROM btc.exchange_balance_snapshots\n      GROUP BY synced_at\n      HAVING COUNT(DISTINCT account_type) >= 3\n          OR MIN(synced_at) < TIMESTAMPTZ '2026-07-03 21:00:00+00'\n    )\n)\nSELECT synced_at AS time, 'Conta ' || account_type AS metric, SUM(usdt) AS value FROM snap GROUP BY 1, 2\nUNION ALL\nSELECT synced_at, 'Total', SUM(usdt) FROM snap GROUP BY 1\nUNION ALL\nSELECT synced_at, currency || ' (em USDT)', SUM(usdt) FROM snap WHERE currency <> 'USDT' GROUP BY 1, currency HAVING SUM(usdt) > 0.01\nUNION ALL\nSELECT synced_at, 'USDT', SUM(usdt) FROM snap WHERE currency = 'USDT' GROUP BY 1\nORDER BY 1",
           "refId": "A",
           "sql": {
             "columns": [],
@@ -2572,12 +2572,160 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH params AS (\n  SELECT\n    date_trunc('month', now() AT TIME ZONE 'America/Sao_Paulo')::date AS month_start,\n    (now() AT TIME ZONE 'America/Sao_Paulo')::date AS today\n), scoped AS (\n  SELECT\n    e.*,\n    (e.synced_at AT TIME ZONE 'America/Sao_Paulo')::date AS dia,\n    COALESCE(e.price_usdt, CASE WHEN e.currency = 'USDT' THEN 1.0 END) AS px\n  FROM btc.exchange_balance_snapshots e\n  CROSS JOIN params p\n  WHERE e.synced_at >= (p.month_start::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND e.synced_at < ((p.month_start + INTERVAL '1 month')::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND e.account_type IN ('trade','sub:BTCAgressive','sub:BTCConservative','sub:ETHAgressive','sub:ETHConservative')\n    AND e.currency IN ('USDT','BTC','ETH')\n), latest_balances AS (\n  SELECT DISTINCT ON (account_type, currency)\n    account_type, currency, synced_at, balance, available, holds, px\n  FROM scoped\n  WHERE px IS NOT NULL\n  ORDER BY account_type, currency, synced_at DESC\n), current_accounts AS (\n  SELECT\n    account_type,\n    max(synced_at) AS last_seen,\n    round(sum(balance * px)::numeric, 2) AS value_usdt,\n    string_agg(currency || ' ' || round(balance::numeric, 8)::text, ', ' ORDER BY currency) AS balances\n  FROM latest_balances\n  GROUP BY account_type\n), current_rows AS (\n  SELECT\n    'account'::text AS kind,\n    CASE WHEN account_type = 'TOTAL' THEN 0 ELSE 1 END AS sort_group,\n    account_type AS label,\n    NULL::date AS dia,\n    max(last_seen) AS last_seen,\n    value_usdt,\n    balances,\n    NULL::numeric AS start_usdt,\n    NULL::numeric AS end_usdt,\n    NULL::numeric AS mtm_change_usdt,\n    NULL::numeric AS mtm_pct,\n    NULL::numeric AS realized_pnl_usdt,\n    NULL::bigint AS buys,\n    NULL::bigint AS sells,\n    NULL::text AS note\n  FROM (\n    SELECT 'TOTAL'::text AS account_type, max(last_seen) AS last_seen, round(sum(value_usdt)::numeric, 2) AS value_usdt,\n           string_agg(account_type || ' $' || value_usdt::text, '; ' ORDER BY account_type) AS balances\n    FROM current_accounts\n    UNION ALL\n    SELECT account_type, last_seen, value_usdt, balances\n    FROM current_accounts\n  ) x\n  GROUP BY account_type, value_usdt, balances\n), first_rows AS (\n  SELECT DISTINCT ON (dia, account_type, currency)\n    dia, account_type, currency, synced_at, balance, px\n  FROM scoped\n  WHERE px IS NOT NULL\n  ORDER BY dia, account_type, currency, synced_at ASC\n), last_rows AS (\n  SELECT DISTINCT ON (dia, account_type, currency)\n    dia, account_type, currency, synced_at, balance, px\n  FROM scoped\n  WHERE px IS NOT NULL\n  ORDER BY dia, account_type, currency, synced_at DESC\n), daily_account AS (\n  SELECT\n    l.dia,\n    l.account_type,\n    sum(f.balance * f.px) AS start_usdt,\n    sum(l.balance * l.px) AS end_usdt,\n    min(f.synced_at) AS first_seen,\n    max(l.synced_at) AS last_seen\n  FROM last_rows l\n  JOIN first_rows f USING (dia, account_type, currency)\n  GROUP BY l.dia, l.account_type\n), daily_total AS (\n  SELECT\n    dia,\n    sum(start_usdt) AS start_usdt,\n    sum(end_usdt) AS end_usdt,\n    min(first_seen) AS first_seen,\n    max(last_seen) AS last_seen\n  FROM daily_account\n  GROUP BY dia\n), pnl AS (\n  SELECT\n    (to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo')::date AS dia,\n    sum(CASE WHEN side = 'sell' THEN COALESCE(pnl, 0) ELSE 0 END) AS realized_pnl_usdt,\n    count(*) FILTER (WHERE side = 'buy') AS buys,\n    count(*) FILTER (WHERE side = 'sell') AS sells\n  FROM btc.trades t\n  CROSS JOIN params p\n  WHERE to_timestamp(t.timestamp) >= (p.month_start::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND to_timestamp(t.timestamp) < ((p.month_start + INTERVAL '1 month')::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND t.dry_run = false\n    AND t.profile IN ('aggressive','conservative','shadow')\n    AND COALESCE(t.metadata->>'source','') NOT LIKE '%reconciliation%'\n  GROUP BY 1\n), last_slot AS (\n  SELECT\n    max(to_timestamp(timestamp)) AS closed_at,\n    count(*) AS closed_count\n  FROM btc.trades t\n  CROSS JOIN params p\n  WHERE to_timestamp(t.timestamp) >= (p.month_start::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND t.dry_run = false\n    AND t.side = 'sell'\n    AND t.profile IN ('aggressive','conservative','shadow')\n    AND COALESCE(t.metadata->>'source','') NOT LIKE '%reconciliation%'\n), daily_rows AS (\n  SELECT\n    'daily'::text AS kind,\n    2 AS sort_group,\n    to_char(dt.dia, 'YYYY-MM-DD') AS label,\n    dt.dia,\n    dt.last_seen,\n    NULL::numeric AS value_usdt,\n    NULL::text AS balances,\n    round(dt.start_usdt::numeric, 2) AS start_usdt,\n    round(dt.end_usdt::numeric, 2) AS end_usdt,\n    round((dt.end_usdt - dt.start_usdt)::numeric, 2) AS mtm_change_usdt,\n    round((CASE WHEN dt.start_usdt <> 0 THEN (dt.end_usdt / dt.start_usdt - 1) * 100 END)::numeric, 3) AS mtm_pct,\n    round(COALESCE(p.realized_pnl_usdt, 0)::numeric, 4) AS realized_pnl_usdt,\n    COALESCE(p.buys, 0) AS buys,\n    COALESCE(p.sells, 0) AS sells,\n    CASE\n      WHEN dt.dia = DATE '2026-07-03' THEN 'Subcontas entraram nos snapshots no meio do dia; MTM inclui redistribuicao entre contas.'\n      ELSE NULL\n    END AS note\n  FROM daily_total dt\n  LEFT JOIN pnl p USING (dia)\n), meta_row AS (\n  SELECT\n    'meta'::text AS kind,\n    -1 AS sort_group,\n    'meta'::text AS label,\n    NULL::date AS dia,\n    greatest((SELECT max(last_seen) FROM current_accounts), (SELECT closed_at FROM last_slot)) AS last_seen,\n    round((SELECT COALESCE(sum(realized_pnl_usdt), 0) FROM pnl)::numeric, 4) AS value_usdt,\n    'Ultimo slot encerrado: ' || COALESCE(to_char((SELECT closed_at FROM last_slot) AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD HH24:MI'), 'sem venda no mes')\n      || ' | Vendas no mes: ' || COALESCE((SELECT closed_count FROM last_slot), 0)::text AS balances,\n    NULL::numeric AS start_usdt,\n    NULL::numeric AS end_usdt,\n    NULL::numeric AS mtm_change_usdt,\n    NULL::numeric AS mtm_pct,\n    NULL::numeric AS realized_pnl_usdt,\n    NULL::bigint AS buys,\n    NULL::bigint AS sells,\n    NULL::text AS note\n)\nSELECT * FROM meta_row\nUNION ALL SELECT * FROM current_rows\nUNION ALL SELECT * FROM daily_rows\nORDER BY sort_group, dia NULLS FIRST, label",
+          "rawSql": "WITH params AS (\n  SELECT\n    date_trunc('month', now() AT TIME ZONE 'America/Sao_Paulo')::date AS month_start,\n    (now() AT TIME ZONE 'America/Sao_Paulo')::date AS today\n), scoped AS (\n  SELECT\n    e.*,\n    (e.synced_at AT TIME ZONE 'America/Sao_Paulo')::date AS dia,\n    COALESCE(e.price_usdt, CASE WHEN e.currency = 'USDT' THEN 1.0 END) AS px\n  FROM btc.exchange_balance_snapshots e\n  CROSS JOIN params p\n  WHERE e.synced_at >= (p.month_start::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND e.synced_at < ((p.month_start + INTERVAL '1 month')::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND e.account_type IN ('trade','sub:BTCAgressive','sub:BTCConservative','sub:ETHAgressive','sub:ETHConservative')\n    AND e.currency IN ('USDT','BTC','ETH','SOL','DOGE','BRL')\n), latest_balances AS (\n  SELECT DISTINCT ON (account_type, currency)\n    account_type, currency, synced_at, balance, available, holds, px\n  FROM scoped\n  WHERE px IS NOT NULL\n  ORDER BY account_type, currency, synced_at DESC\n), current_accounts AS (\n  SELECT\n    account_type,\n    max(synced_at) AS last_seen,\n    round(sum(balance * px)::numeric, 2) AS value_usdt,\n    string_agg(currency || ' ' || round(balance::numeric, 8)::text, ', ' ORDER BY currency) AS balances\n  FROM latest_balances\n  GROUP BY account_type\n), current_rows AS (\n  SELECT\n    'account'::text AS kind,\n    CASE WHEN account_type = 'TOTAL' THEN 0 ELSE 1 END AS sort_group,\n    account_type AS label,\n    NULL::date AS dia,\n    max(last_seen) AS last_seen,\n    value_usdt,\n    balances,\n    NULL::numeric AS start_usdt,\n    NULL::numeric AS end_usdt,\n    NULL::numeric AS mtm_change_usdt,\n    NULL::numeric AS mtm_pct,\n    NULL::numeric AS realized_pnl_usdt,\n    NULL::bigint AS buys,\n    NULL::bigint AS sells,\n    NULL::text AS note\n  FROM (\n    SELECT 'TOTAL'::text AS account_type, max(last_seen) AS last_seen, round(sum(value_usdt)::numeric, 2) AS value_usdt,\n           string_agg(account_type || ' $' || value_usdt::text, '; ' ORDER BY account_type) AS balances\n    FROM current_accounts\n    UNION ALL\n    SELECT account_type, last_seen, value_usdt, balances\n    FROM current_accounts\n  ) x\n  GROUP BY account_type, value_usdt, balances\n), first_rows AS (\n  SELECT DISTINCT ON (dia, account_type, currency)\n    dia, account_type, currency, synced_at, balance, px\n  FROM scoped\n  WHERE px IS NOT NULL\n  ORDER BY dia, account_type, currency, synced_at ASC\n), last_rows AS (\n  SELECT DISTINCT ON (dia, account_type, currency)\n    dia, account_type, currency, synced_at, balance, px\n  FROM scoped\n  WHERE px IS NOT NULL\n  ORDER BY dia, account_type, currency, synced_at DESC\n), daily_account AS (\n  SELECT\n    l.dia,\n    l.account_type,\n    sum(f.balance * f.px) AS start_usdt,\n    sum(l.balance * l.px) AS end_usdt,\n    min(f.synced_at) AS first_seen,\n    max(l.synced_at) AS last_seen\n  FROM last_rows l\n  JOIN first_rows f USING (dia, account_type, currency)\n  GROUP BY l.dia, l.account_type\n), daily_total AS (\n  SELECT\n    dia,\n    sum(start_usdt) AS start_usdt,\n    sum(end_usdt) AS end_usdt,\n    min(first_seen) AS first_seen,\n    max(last_seen) AS last_seen\n  FROM daily_account\n  GROUP BY dia\n), pnl AS (\n  SELECT\n    (to_timestamp(timestamp) AT TIME ZONE 'America/Sao_Paulo')::date AS dia,\n    sum(CASE WHEN side = 'sell' THEN COALESCE(pnl, 0) ELSE 0 END) AS realized_pnl_usdt,\n    count(*) FILTER (WHERE side = 'buy') AS buys,\n    count(*) FILTER (WHERE side = 'sell') AS sells\n  FROM btc.trades t\n  CROSS JOIN params p\n  WHERE to_timestamp(t.timestamp) >= (p.month_start::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND to_timestamp(t.timestamp) < ((p.month_start + INTERVAL '1 month')::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND t.dry_run = false\n    AND t.profile IN ('aggressive','conservative','shadow')\n    AND COALESCE(t.metadata->>'source','') NOT LIKE '%reconciliation%'\n  GROUP BY 1\n), last_slot AS (\n  SELECT\n    max(to_timestamp(timestamp)) AS closed_at,\n    count(*) AS closed_count\n  FROM btc.trades t\n  CROSS JOIN params p\n  WHERE to_timestamp(t.timestamp) >= (p.month_start::timestamp AT TIME ZONE 'America/Sao_Paulo')\n    AND t.dry_run = false\n    AND t.side = 'sell'\n    AND t.profile IN ('aggressive','conservative','shadow')\n    AND COALESCE(t.metadata->>'source','') NOT LIKE '%reconciliation%'\n), daily_rows AS (\n  SELECT\n    'daily'::text AS kind,\n    2 AS sort_group,\n    to_char(dt.dia, 'YYYY-MM-DD') AS label,\n    dt.dia,\n    dt.last_seen,\n    NULL::numeric AS value_usdt,\n    NULL::text AS balances,\n    round(dt.start_usdt::numeric, 2) AS start_usdt,\n    round(dt.end_usdt::numeric, 2) AS end_usdt,\n    round((dt.end_usdt - dt.start_usdt)::numeric, 2) AS mtm_change_usdt,\n    round((CASE WHEN dt.start_usdt <> 0 THEN (dt.end_usdt / dt.start_usdt - 1) * 100 END)::numeric, 3) AS mtm_pct,\n    round(COALESCE(p.realized_pnl_usdt, 0)::numeric, 4) AS realized_pnl_usdt,\n    COALESCE(p.buys, 0) AS buys,\n    COALESCE(p.sells, 0) AS sells,\n    CASE\n      WHEN dt.dia = DATE '2026-07-03' THEN 'Subcontas entraram nos snapshots no meio do dia; MTM inclui redistribuicao entre contas.'\n      ELSE NULL\n    END AS note\n  FROM daily_total dt\n  LEFT JOIN pnl p USING (dia)\n), meta_row AS (\n  SELECT\n    'meta'::text AS kind,\n    -1 AS sort_group,\n    'meta'::text AS label,\n    NULL::date AS dia,\n    greatest((SELECT max(last_seen) FROM current_accounts), (SELECT closed_at FROM last_slot)) AS last_seen,\n    round((SELECT COALESCE(sum(realized_pnl_usdt), 0) FROM pnl)::numeric, 4) AS value_usdt,\n    'Ultimo slot encerrado: ' || COALESCE(to_char((SELECT closed_at FROM last_slot) AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD HH24:MI'), 'sem venda no mes')\n      || ' | Vendas no mes: ' || COALESCE((SELECT closed_count FROM last_slot), 0)::text AS balances,\n    NULL::numeric AS start_usdt,\n    NULL::numeric AS end_usdt,\n    NULL::numeric AS mtm_change_usdt,\n    NULL::numeric AS mtm_pct,\n    NULL::numeric AS realized_pnl_usdt,\n    NULL::bigint AS buys,\n    NULL::bigint AS sells,\n    NULL::text AS note\n)\nSELECT * FROM meta_row\nUNION ALL SELECT * FROM current_rows\nUNION ALL SELECT * FROM daily_rows\nORDER BY sort_group, dia NULLS FIRST, label",
           "refId": "A"
         }
       ],
       "title": "📊 Relatório mensal — saldos e rendimento por dia",
       "type": "marcusolsson-dynamictext-panel"
+    },
+    {
+      "id": 204,
+      "title": "💱 Mercado Pago — rendimentos multi-moedas",
+      "type": "row",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 100
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 205,
+      "title": "🐷 Cofrinho MP — mês",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 0,
+        "y": 101
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 2,
+          "color": {
+            "fixedColor": "#73BF69",
+            "mode": "fixed"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "expr": "banking_cofrinho_yield_current_month_brl{provider=\"mercadopago\"}",
+          "legendFormat": "Cofrinho mês",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 206,
+      "title": "🐷 Cofrinho MP — 30 dias",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 8,
+        "y": 101
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 2,
+          "color": {
+            "fixedColor": "#5794F2",
+            "mode": "fixed"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "expr": "banking_cofrinho_yield_last_30_days_brl{provider=\"mercadopago\"}",
+          "legendFormat": "Cofrinho 30d",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 207,
+      "title": "💵 MUSD earn — mês",
+      "type": "stat",
+      "gridPos": {
+        "h": 4,
+        "w": 8,
+        "x": 16,
+        "y": 101
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "currencyBRL",
+          "decimals": 2,
+          "color": {
+            "fixedColor": "#FF9830",
+            "mode": "fixed"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "area",
+        "textMode": "value_and_name"
+      },
+      "targets": [
+        {
+          "expr": "banking_musd_earn_current_month_brl{provider=\"mercadopago\"}",
+          "legendFormat": "MUSD mês",
+          "refId": "A"
+        }
+      ]
     },
     {
       "datasource": {
@@ -2607,7 +2755,7 @@
         "x": 0,
         "w": 24,
         "h": 12,
-        "y": 100
+        "y": 105
       },
       "id": 98,
       "options": {
