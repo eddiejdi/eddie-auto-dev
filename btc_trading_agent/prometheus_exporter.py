@@ -455,11 +455,16 @@ class MetricsCollector:
                 metrics[f'{prefix}last_trade_size'] = result[3]
                 metrics[f'{prefix}last_trade_pnl'] = result[4] if result[4] else 0
 
-        # ── Decisões por tipo (global — COM filtro symbol) ──
+        # ── Decisões por tipo (janela 30d — COM filtro symbol) ──
         # This table can be heavily bloated after churn; do not let this
-        # secondary metric block the whole Prometheus scrape.
+        # secondary metric block the whole Prometheus scrape. A janela de 30
+        # dias permite usar o índice (symbol, profile, timestamp) em vez de
+        # varrer a tabela inteira a cada scrape.
         try:
-            cursor.execute("SELECT action, COUNT(*) FROM decisions WHERE symbol=%s AND profile=%s GROUP BY action", (self.symbol, self.profile))
+            cursor.execute(
+                "SELECT action, COUNT(*) FROM decisions"
+                " WHERE symbol=%s AND profile=%s AND timestamp > %s GROUP BY action",
+                (self.symbol, self.profile, now - 30 * 86400))
             for row in cursor.fetchall():
                 metrics[f'decisions_{row[0].lower()}'] = row[1]
         except Exception as e:
