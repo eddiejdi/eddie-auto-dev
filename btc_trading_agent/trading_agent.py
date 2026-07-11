@@ -176,6 +176,7 @@ TRADING_FEE_PCT = 0.001  # 0.1% por trade (KuCoin)
 MAX_DAILY_TRADES = _config.get("max_daily_trades", 50)  # from config
 MAX_DAILY_LOSS = _config.get("max_daily_loss", 150)  # from config (USD)
 MAX_POSITIONS = _config.get("max_positions", 15)  # max BUY entries acumuladas
+MAIN_TRANSFER_CHECK_CYCLES = max(1, int(_config.get("main_transfer_check_cycles", 3)))
 PROFILE = _config.get("profile", "default")  # conservative|aggressive|default
 DCA_VALLEY_BOUNCE_PCT = _config.get("dca_valley_bounce_pct", 0.004)  # 0.4% bounce mínimo do fundo para liberar DCA
 
@@ -577,18 +578,34 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         caps = self._get_runtime_risk_caps()
         ai_controlled = rag_adj.similar_count >= 3
 
+        # Limite de posições dinâmico: IA (ai_max_entries) é a referência operacional.
+        # O config fixa apenas um teto de segurança; a IA pode orientar abaixo ou acima
+        # quando o perfil estiver conservador (ex.: max_positions=1 no JSON).
+        ai_max_entries = max(
+            1,
+            int(getattr(rag_adj, "ai_max_entries", 0) or caps["max_positions"]),
+        )
+        config_ceiling = max(1, int(caps["max_positions"]))
+        absolute_ceiling = max(config_ceiling, min(MAX_POSITIONS, ai_max_entries))
+        ollama_mode = str(getattr(rag_adj, "ollama_mode", "shadow") or "shadow")
+        ollama_cap = max(0, int(getattr(rag_adj, "applied_max_positions", 0) or 0))
+
         if ai_controlled:
             min_confidence = float(getattr(rag_adj, "applied_min_confidence", rag_adj.ai_min_confidence))
             min_trade_interval = int(getattr(rag_adj, "applied_min_trade_interval", rag_adj.ai_min_trade_interval))
-            max_positions_cap = int(getattr(rag_adj, "applied_max_positions", caps["max_positions"]) or caps["max_positions"])
-            effective_max_positions = min(max_positions_cap, int(rag_adj.ai_max_entries or max_positions_cap))
             max_position_pct = float(getattr(rag_adj, "applied_max_position_pct", caps["max_position_pct"]) or caps["max_position_pct"])
+            if ollama_mode == "apply" and ollama_cap > 0:
+                max_positions_cap = max(1, min(absolute_ceiling, ollama_cap))
+                effective_max_positions = max(1, min(ai_max_entries, max_positions_cap))
+            else:
+                max_positions_cap = max(1, min(absolute_ceiling, ai_max_entries))
+                effective_max_positions = max_positions_cap
         else:
             min_confidence = caps["min_confidence"]
             min_trade_interval = caps["min_trade_interval"]
-            max_positions_cap = caps["max_positions"]
-            effective_max_positions = caps["max_positions"]
             max_position_pct = caps["max_position_pct"]
+            max_positions_cap = max(1, min(absolute_ceiling, ai_max_entries))
+            effective_max_positions = max_positions_cap
 
         return TradeControls(
             min_confidence=max(0.0, min_confidence),
@@ -1288,14 +1305,18 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         elapsed = time.time() - start_time
         logger.info(f"⏱️ Bootstrap completed in {elapsed:.1f}s")
 
-    def _auto_transfer_and_sync(self):
+    def _auto_transfer_and_sync(self) -> bool:
         """Transfere automaticamente saldos da conta main para trade.
 
         Depósitos na KuCoin caem na conta 'main'. O agente opera na conta
         'trade'. Esta função detecta e transfere saldos pendentes.
+
+        Returns:
+            True se ao menos uma transferência foi concluída com sucesso.
         """
         base_currency = self.symbol.split("-")[0]  # BTC
         quote_currency = self.symbol.split("-")[1]  # USDT
+        transferred_any = False
 
         for currency in [base_currency, quote_currency]:
             try:
@@ -1324,6 +1345,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     to_account="trade",
                 )
                 if result.get("success"):
+                    transferred_any = True
                     logger.info(
                         f"💸 Auto-transferred {main_bal:.8f} {currency} "
                         f"main → trade"
@@ -1335,6 +1357,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     )
             except Exception as e:
                 logger.warning(f"⚠️ Auto-transfer {currency} error: {e}")
+
+        return transferred_any
 
     def _detect_external_deposits(self):
         """Detecta depósitos externos comparando saldo exchange vs posição DB.
@@ -5590,6 +5614,18 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             try:
                 cycle += 1
                 start_time = time.time()
+
+                # Depósitos fiat/crypto caem na MAIN — sincronizar para TRADE no loop
+                if not self.state.dry_run and cycle % MAIN_TRANSFER_CHECK_CYCLES == 0:
+                    try:
+                        if self._auto_transfer_and_sync():
+                            logger.info(
+                                "💸 Depósito detectado na MAIN — saldo transferido "
+                                "para TRADE e liberado para negociação"
+                            )
+                            self._detect_external_deposits()
+                    except Exception as e:
+                        logger.debug(f"Main→trade sync error: {e}")
                 
                 # Coletar estado do mercado
                 market_state = self._get_market_state()
