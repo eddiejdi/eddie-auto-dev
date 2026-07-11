@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-07-11T14:30:45.104187+00:00",
+  "generated_at": "2026-07-11T14:38:50.037192+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 168,
-    "critical_services": 66,
+    "repo_services": 172,
+    "critical_services": 67,
     "domains": {
       "identity": 4,
-      "monitoring": 14,
+      "monitoring": 15,
       "network": 16,
-      "operations": 93,
+      "operations": 96,
       "storage": 32,
       "trading": 9
     }
@@ -179,6 +179,14 @@
       "domain": "monitoring",
       "kind": "systemd",
       "source": "systemd/tape-component-quality-exporter.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "trading-selfheal-exporter.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/trading-selfheal-exporter.service",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -895,6 +903,14 @@
       "candidate_system": "GLPI review"
     },
     {
+      "name": "ollama-warmup-gpu1.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/ollama-warmup-gpu1.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
       "name": "ollama-warmup.service",
       "domain": "operations",
       "kind": "systemd",
@@ -915,6 +931,22 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/pandaplus-telegram-bridge.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "pcie-aer-mask.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/pcie-aer-mask.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "pcie-aspm-fix.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/pcie-aspm-fix.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -1514,6 +1546,13 @@
         "name": "tape-component-quality-exporter.service",
         "domain": "monitoring",
         "source": "systemd/tape-component-quality-exporter.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "trading-selfheal-exporter.service",
+        "domain": "monitoring",
+        "source": "systemd/trading-selfheal-exporter.service",
         "kind": "systemd",
         "critical": true
       },
