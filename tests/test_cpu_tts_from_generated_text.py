@@ -84,3 +84,43 @@ def test_build_gpu1_expansion_prompt_exige_contexto_de_autoria_e_relatoria() -> 
     assert "/no_think" in prompt
     assert "se houver materia de autoria do senador" in prompt
     assert "se houver materia sob relatoria" in prompt
+
+
+def test_generate_with_llm_chain_tenta_segundo_endpoint(monkeypatch) -> None:
+    class _FakeOllamaClient:
+        attempts: list[tuple[str, str]] = []
+
+        def __init__(self, host: str, model: str, keep_alive: str | None = None) -> None:
+            self.host = host
+            self.model = model
+
+        def generate_validated(self, prompt: str, **kwargs) -> str:
+            del prompt, kwargs
+            _FakeOllamaClient.attempts.append((self.host, self.model))
+            if self.host.endswith(":11434"):
+                raise RuntimeError("gpu0 offline")
+            return "Texto final de teste, com contexto suficiente e tres frases. Segunda frase aqui. Terceira frase aqui."
+
+        def close(self) -> None:
+            return None
+
+    _FakeOllamaClient.attempts = []
+    monkeypatch.setattr(tts_tool, "OllamaClient", _FakeOllamaClient)
+
+    text, endpoint = tts_tool.generate_with_llm_chain(
+        prompt="prompt teste",
+        endpoints=(
+            {"name": "gpu0", "host": "http://gpu0:11434", "model": "mistral:7b", "fallback_models": ""},
+            {"name": "gpu1", "host": "http://gpu1:11435", "model": "gemma3:1b", "fallback_models": ""},
+        ),
+        validator=lambda candidate: (bool(candidate.strip()), "vazio"),
+        num_predict=128,
+        num_ctx=1024,
+        max_rounds=1,
+        retry_wait_seconds=0,
+    )
+
+    assert "Texto final de teste" in text
+    assert endpoint == "gpu1:gemma3:1b"
+    assert _FakeOllamaClient.attempts[0] == ("http://gpu0:11434", "mistral:7b")
+    assert _FakeOllamaClient.attempts[1] == ("http://gpu1:11435", "gemma3:1b")

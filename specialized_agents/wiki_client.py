@@ -30,7 +30,7 @@ class WikiJsClient:
             },
         )
         try:
-            with urllib.request.urlopen(req, timeout=15) as resp:
+            with urllib.request.urlopen(req, timeout=45) as resp:
                 return json.loads(resp.read())
         except urllib.error.HTTPError as exc:
             raise HTTPException(

@@ -18,9 +18,22 @@
 | [SETUP.md](SETUP.md) | Guia de instalação |
 | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) | Solução de problemas |
 | [NEXTCLOUD_ACCESS_PANEL.md](NEXTCLOUD_ACCESS_PANEL.md) | Painel de criação de acesso ao Nextcloud via Authentik |
+| [NAS_IDLE_POWER_SAVING_2026-07-05.md](NAS_IDLE_POWER_SAVING_2026-07-05.md) | Runbook dos ajustes de economia de energia em idle do NAS |
+| [SOL_USDT_INSTALLATION.md](SOL_USDT_INSTALLATION.md) | Instalação e operação do trading agent SOL-USDT (3 perfis live) |
+| [WIKI_AGENT_REFACTOR_FIX_2026-07-09.md](WIKI_AGENT_REFACTOR_FIX_2026-07-09.md) | Fix do NameError `__file__` no wiki agent (`/wiki/raw`) |
 | [LESSONS_LEARNED_2026-02-02.md](LESSONS_LEARNED_2026-02-02.md) | Lições aprendidas (monitoramento e deploy) |
 
 ## Atualizações Recentes
+
+### 09 de julho de 2026
+- ✅ Hooks do Claude Code importados para Grok (`.grok/hooks/`, `hooks.json`, `scripts/install_grok_hooks.sh`)
+- ✅ Instalação SOL-USDT documentada em `SOL_USDT_INSTALLATION.md`
+- ✅ Wiki agent: fix `__file__` em `wiki_refactor.py` — `/wiki/raw` restaurado no homelab
+
+### 05 de julho de 2026
+- ✅ Economia de energia em idle do NAS documentada em `NAS_IDLE_POWER_SAVING_2026-07-05.md`
+- ✅ Registrados ajustes de Ollama/GPU, HDD standby conservador, timer LTFS e comandos de reversão
+- ✅ Validação operacional preservou TrueNAS, SMB e NFS ativos
 
 ### 29 de abril de 2026
 - ✅ Remediação completa do cliente Pi-hole/DNS local documentada em `PIHOLE_CLIENT_DNS_REMEDIATION_2026-04-29.md`
