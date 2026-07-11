@@ -737,7 +737,14 @@ def get_secret(request: Request, item_id: str, field: str = "password"):
     if fields:
         ACCESS_SUCCESS.inc()
         audit_log(ip, "fetch", item_id, "ok")
-        return {"id": item_id, "fields": fields, "source": "authentik"}
+        response = {"id": item_id, "fields": fields, "source": "authentik"}
+        if field in fields:
+            # Clientes legados leem apenas "value" — sem isso, uma falha
+            # transiente no passo 1 (busca por field exato) faz o passo 2
+            # responder 200 OK com "value" ausente, e o caller silenciosamente
+            # trata como secret vazio em vez de erro.
+            response["value"] = fields[field]
+        return response
 
     # 3. Fallback: LocalVault
     local_val = local_vault.get(item_id, field)
