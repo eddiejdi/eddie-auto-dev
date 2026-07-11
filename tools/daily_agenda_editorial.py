@@ -30,6 +30,22 @@ DEFAULT_ALLY_YOUTUBE: tuple[dict[str, Any], ...] = (
         "channel_id": "",
         "handle": "@ClaudioDantas",
     },
+    {
+        "name": "Ancapsu",
+        "search_terms": ("Ancapsu", "Ancap Su"),
+        "channel_id": "",
+        "handle": "@ancapsu",
+    },
+    {
+        "name": "Flávio Bolsonaro",
+        "search_terms": (
+            "Flávio Bolsonaro",
+            "Senador Flávio Bolsonaro",
+            "Flavio Bolsonaro oficial",
+        ),
+        "channel_id": "",
+        "handle": "@flaviobolsonaro",
+    },
 )
 
 DEFAULT_EDITORIAL: dict[str, Any] = {

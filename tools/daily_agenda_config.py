@@ -88,6 +88,22 @@ DEFAULT_CONFIG: dict[str, Any] = {
             "handle": "@ClaudioDantas",
             "channel_id": "",
         },
+        {
+            "name": "Ancapsu",
+            "search_terms": ["Ancapsu", "Ancap Su"],
+            "handle": "@ancapsu",
+            "channel_id": "",
+        },
+        {
+            "name": "Flávio Bolsonaro",
+            "search_terms": [
+                "Flávio Bolsonaro",
+                "Senador Flávio Bolsonaro",
+                "Flavio Bolsonaro oficial",
+            ],
+            "handle": "@flaviobolsonaro",
+            "channel_id": "",
+        },
     ],
 }
 

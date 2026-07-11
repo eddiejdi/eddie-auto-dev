@@ -22,6 +22,8 @@ def test_build_ally_youtube_queries_inclui_criadores() -> None:
     assert "didi newa" in blob
     assert "auriverde" in blob
     assert "claudio dantas" in blob
+    assert "ancapsu" in blob
+    assert "flávio bolsonaro" in blob or "flavio bolsonaro" in blob
 
 
 def test_rank_and_filter_news_prioriza_aliado_e_remove_hostil() -> None:
