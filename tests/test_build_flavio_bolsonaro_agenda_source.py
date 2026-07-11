@@ -152,9 +152,35 @@ def test_build_source_text_inclui_contexto_de_imprensa() -> None:
         date_label="esta quinta-feira, 9 de julho de 2026",
     )
 
-    assert "cobertura da imprensa" in result
+    assert "imprensa" in result
     assert "audiência nos EUA" in result
     assert "BBC" in result
+
+
+def test_render_news_paragraph_separa_youtube_aliado() -> None:
+    _, allies = __import__(
+        "daily_agenda_editorial",
+        fromlist=["load_editorial_config"],
+    ).load_editorial_config()
+    news = (
+        agenda_source.NewsSnippet(
+            title="Kim Pain destaca defesa de Flávio Bolsonaro no Senado",
+            outlet="Kim Pain (YouTube)",
+            url="https://www.youtube.com/watch?v=ally1",
+        ),
+        agenda_source.NewsSnippet(
+            title="Flávio Bolsonaro discursa em audiência nos EUA",
+            outlet="G1",
+            url="https://news.example/flavio-eua",
+        ),
+    )
+
+    paragraph = agenda_source.render_news_paragraph(news)
+
+    assert paragraph is not None
+    assert "aliados verdadeiros no YouTube" in paragraph
+    assert "Kim Pain" in paragraph
+    assert "imprensa" in paragraph
 
 
 def test_iter_sources_retorna_urls_unicas() -> None:
@@ -197,6 +223,106 @@ def test_parse_congress_agenda_extrai_cdh_e_plenario() -> None:
     assert "CDH" in siglas
     assert "PLEN" in siglas
     assert any(entry.time_label == "10h" for entry in entries)
+
+
+def test_deduplicate_news_snippets_agrupa_titulos_iguais_e_similares() -> None:
+    snippets = [
+        agenda_source.NewsSnippet(
+            title="Flávio Bolsonaro discursa em audiência nos EUA sobre tarifaço",
+            outlet="BBC",
+            url="https://news.example/flavio-eua-bbc",
+        ),
+        agenda_source.NewsSnippet(
+            title="Flávio Bolsonaro discursa em audiência nos EUA sobre tarifaço",
+            outlet="O Globo",
+            url="https://news.example/flavio-eua-globo",
+        ),
+        agenda_source.NewsSnippet(
+            title="Senador Flávio Bolsonaro fala sobre tarifas em audiência nos EUA",
+            outlet="Folha de S.Paulo",
+            url="https://news.example/flavio-eua-folha",
+        ),
+        agenda_source.NewsSnippet(
+            title="Flávio Bolsonaro articula apoio a projeto de lei no Senado",
+            outlet="Estadão",
+            url="https://news.example/projeto",
+        ),
+    ]
+
+    deduped = agenda_source.deduplicate_news_snippets(snippets)
+
+    assert len(deduped) == 2
+    grouped = next(item for item in deduped if "audiência nos EUA" in item.title)
+    assert agenda_source.collect_news_outlets(grouped) == ("BBC", "O Globo", "Folha de S.Paulo")
+    assert (
+        agenda_source.format_news_outlets(grouped)
+        == "BBC, O Globo e Folha de S.Paulo"
+    )
+
+
+def test_build_source_text_menciona_todos_os_veiculos_da_mesma_materia() -> None:
+    collected = agenda_source.CollectedAgenda(
+        entries=(),
+        news=(
+            agenda_source.NewsSnippet(
+                title="Flávio Bolsonaro discursa em audiência nos EUA sobre tarifaço",
+                outlet="BBC",
+                url="https://news.example/flavio-eua-bbc",
+                outlets=("BBC", "O Globo", "Folha de S.Paulo"),
+            ),
+        ),
+    )
+
+    result = agenda_source.build_source_text(
+        collected,
+        date_label="esta quinta-feira, 9 de julho de 2026",
+    )
+
+    assert "BBC, O Globo e Folha de S.Paulo" in result
+
+
+def test_news_search_queries_focadas_no_senado() -> None:
+    shallow = agenda_source._news_search_queries(deep=False)
+    deep = agenda_source._news_search_queries(deep=True)
+
+    assert len(deep) > len(shallow)
+    assert all("senado" in query.lower() for query in shallow + deep)
+    assert not any("política" in query or "RJ when" in query for query in deep)
+    assert any("14d" in query for query in deep)
+    assert all("7d" in query for query in shallow)
+
+
+def test_is_relevant_senate_agenda_news_filtra_agenda_estadual() -> None:
+    assert agenda_source.is_relevant_senate_agenda_news(
+        "Agenda de Flávio Bolsonaro no Recife terá encontro com pastores"
+    ) is False
+    assert agenda_source.is_relevant_senate_agenda_news(
+        "Flávio Bolsonaro lança pré-candidatura de Alcides ao Senado no Ceará"
+    ) is False
+    assert agenda_source.is_relevant_senate_agenda_news(
+        "Flávio Bolsonaro discursa no plenário do Senado sobre tarifaço"
+    ) is True
+    assert agenda_source.is_relevant_senate_agenda_news(
+        "Flávio Bolsonaro deixou de votar em 43% das sessões nominais do Senado em 2026"
+    ) is True
+
+
+def test_deduplicate_news_snippets_agrupa_por_tema() -> None:
+    snippets = [
+        agenda_source.NewsSnippet(
+            title="Flávio Bolsonaro vai aos EUA tentar reverter tarifaço de Trump",
+            outlet="JOTA",
+            url="https://news.example/eua-1",
+        ),
+        agenda_source.NewsSnippet(
+            title="Flávio Bolsonaro amplia agenda nos EUA para barrar tarifa de 25%",
+            outlet="G1",
+            url="https://news.example/eua-2",
+        ),
+    ]
+    deduped = agenda_source.deduplicate_news_snippets(snippets)
+    assert len(deduped) == 1
+    assert agenda_source.collect_news_outlets(deduped[0]) == ("JOTA", "G1")
 
 
 def test_parse_google_news_rss_filtra_por_senador() -> None:
@@ -290,3 +416,37 @@ def test_load_entries_auto_cai_para_snapshot(monkeypatch) -> None:
     assert len(collected.entries) == 2
     assert collected.entries[0].committee_sigla == "CDR"
     assert collected.sources_used == ("snapshot",)
+
+
+def test_load_entries_auto_aceita_somente_imprensa(monkeypatch) -> None:
+    """Fim de semana/recesso: 0 compromissos formais, mas há cobertura na imprensa."""
+    news_only = agenda_source.CollectedAgenda(
+        entries=(),
+        news=(
+            agenda_source.NewsSnippet(
+                title="Flávio Bolsonaro comenta tarifas em audiência nos EUA",
+                outlet="G1",
+                url="https://example.com/noticia",
+            ),
+        ),
+        sources_used=("google_noticias",),
+        sources_failed=("congresso_nacional", "comissoes_senado"),
+    )
+
+    monkeypatch.setattr(
+        agenda_source,
+        "load_live_entries",
+        lambda *args, **kwargs: news_only,
+    )
+
+    collected = agenda_source.load_entries(
+        "2026-07-11",
+        mode="auto",
+        timeout=10,
+        trust_env=False,
+        include_news=True,
+    )
+
+    assert collected.entries == ()
+    assert len(collected.news) == 1
+    assert collected.sources_used == ("google_noticias",)

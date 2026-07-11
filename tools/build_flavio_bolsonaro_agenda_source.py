@@ -11,6 +11,7 @@ Fontes (oficiais e nao oficiais):
 - Paginas de comissoes do Senado (legis.senado.leg.br)
 - Pauta do plenario do Senado
 - Google Noticias RSS (contexto da imprensa)
+- YouTube de aliados (Kim Pain, Didi Newa, Auriverde, Claudio Dantas)
 """
 from __future__ import annotations
 
@@ -19,11 +20,29 @@ import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
 from datetime import datetime
+from difflib import SequenceMatcher
 from pathlib import Path
 from urllib.parse import urljoin
 
 import requests
 from bs4 import BeautifulSoup
+
+try:
+    from daily_agenda_editorial import (
+        build_ally_youtube_queries,
+        is_ally_youtube_item,
+        load_editorial_config,
+        mentions_bolsonaro_family,
+        rank_and_filter_news,
+    )
+except ModuleNotFoundError:  # import via pacote tools.*
+    from tools.daily_agenda_editorial import (
+        build_ally_youtube_queries,
+        is_ally_youtube_item,
+        load_editorial_config,
+        mentions_bolsonaro_family,
+        rank_and_filter_news,
+    )
 
 
 DEFAULT_DATE = "2026-06-17"
@@ -39,6 +58,79 @@ CONGRESS_AGENDA_URL = (
 GOOGLE_NEWS_RSS_URL = (
     "https://news.google.com/rss/search?q={query}&hl=pt-BR&gl=BR&ceid=BR:pt-419"
 )
+DEEP_SEARCH_NEWS_MAX_ITEMS = 8
+DEEP_SEARCH_NEWS_MAX_AGE_DAYS = 14
+DEEP_SEARCH_NEWS_PER_FEED = 8
+DEEP_SEARCH_PLENARY_MAX_URLS = 6
+DEEP_SEARCH_NEWS_RENDER_LIMIT = 3
+STANDARD_SEARCH_NEWS_MAX_ITEMS = 5
+STANDARD_SEARCH_NEWS_MAX_AGE_DAYS = 7
+
+SENATE_AGENDA_KEYWORDS = (
+    "senado",
+    "plenário",
+    "plenario",
+    "comissão",
+    "comissao",
+    "sessão",
+    "sessao",
+    "pauta",
+    "relatoria",
+    "relator",
+    "projeto",
+    "audiência",
+    "audiencia",
+    "votação",
+    "votacao",
+    "matéria",
+    "materia",
+    "deliberação",
+    "deliberacao",
+    "reunião",
+    "reuniao",
+    "discurso",
+    "tribuna",
+    "ccj",
+    "cdh",
+    "cdr",
+    "cpmi",
+    "eua",
+    "tarifa",
+    "tarifaço",
+    "tarifaco",
+)
+
+OFF_TOPIC_STATE_MARKERS = (
+    "recife",
+    "fortaleza",
+    "paraíba",
+    "paraiba",
+    "pernambuco",
+    "ceará",
+    "ceara",
+    "pastor",
+    "pastores",
+    "pré-candidatura",
+    "precandidatura",
+    "eleitorado feminino",
+    "opinião:",
+    "opiniao:",
+)
+OFF_TOPIC_PARTY_MARKERS = (
+    "campanha presidencial",
+    "campanha de flavio",
+    "campanha de flávio",
+    "briga com michelle",
+    "briga com a michelle",
+    "atrair mulheres",
+    "brasil por elas",
+    "live defendendo",
+    "alvo da pf",
+    "indicou mãe",
+    "indicou mae",
+    "apoio do republicanos",
+)
+MAX_OUTLETS_MENTION = 4
 
 # Comissoes ativas do senador (atualizado via perfil; fallback local).
 ACTIVE_COMMITTEES: dict[str, dict[str, str]] = {
@@ -113,6 +205,7 @@ class NewsSnippet:
     url: str
     published: str = ""
     summary: str = ""
+    outlets: tuple[str, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)
@@ -656,7 +749,255 @@ def parse_plenary_pauta_for_senator(html: str, *, pauta_url: str) -> AgendaEntry
     )
 
 
-def parse_google_news_rss(xml_text: str, *, date_str: str) -> list[NewsSnippet]:
+def is_relevant_senate_agenda_news(title: str) -> bool:
+    """Mantém cobertura ligada ao mandato de Flávio Bolsonaro no Senado Federal."""
+    lowered = normalize_whitespace(title).lower()
+    if "flávio" not in lowered and "flavio" not in lowered:
+        return False
+    if "bolsonaro" not in lowered:
+        return False
+
+    state_cities = (
+        "recife",
+        "fortaleza",
+        "paraíba",
+        "paraiba",
+        "pernambuco",
+        "ceará",
+        "ceara",
+    )
+    if re.search(
+        rf"\bagenda (de|no|em|nos?) ({'|'.join(state_cities)})\b",
+        lowered,
+    ):
+        return False
+    if re.search(r"\bparticipa de agenda em\b", lowered):
+        return False
+    if re.search(r"\b(alems|alesp|almg|assembleia legislativa)\b", lowered):
+        return False
+    if any(marker in lowered for marker in OFF_TOPIC_PARTY_MARKERS):
+        if not any(
+            token in lowered
+            for token in ("plenário", "plenario", "comissão", "comissao", "sessões nominais")
+        ):
+            return False
+    if re.search(r"\b(pré-candidatura|precandidatura|pastor|pastores)\b", lowered):
+        if any(city in lowered for city in state_cities):
+            return False
+        if re.search(r"\bpré-candidatura\b.*\bao senado\b", lowered):
+            return False
+    if any(marker in lowered for marker in OFF_TOPIC_STATE_MARKERS):
+        if not any(
+            token in lowered
+            for token in (
+                "plenário",
+                "plenario",
+                "comissão",
+                "comissao",
+                "sessões nominais",
+                "sessoes nominais",
+                "audiência nos eua",
+                "audiencia nos eua",
+            )
+        ):
+            return False
+
+    federal_signals = (
+        r"\bplen[aá]rio\b",
+        r"\bcomiss[aã]o\b",
+        r"\bsess[aã]o\b",
+        r"\bsess[oõ]es nominais\b",
+        r"\bvota[cç][aã]o\b",
+        r"\bvotar\b",
+        r"\brelatoria\b",
+        r"\brelator\b",
+        r"\bdiscurso\b",
+        r"\baudi[eê]ncia nos eua\b",
+        r"\beua\b",
+        r"\btarifa(c[ç]o)?\b",
+        r"\btribuna\b",
+        r"\bdelibera[cç][aã]o\b",
+        r"\bpauta\b",
+    )
+    if any(re.search(pattern, lowered) for pattern in federal_signals):
+        return True
+    if "senado" in lowered and any(
+        token in lowered for token in ("votar", "votação", "votacao", "sessões", "sessoes", "nominais")
+    ):
+        return True
+    return False
+
+
+def _news_topic_fingerprint(title: str) -> str:
+    lowered = _normalize_for_news_dedup(title)
+    topic_rules: tuple[tuple[str, tuple[str, ...]], ...] = (
+        ("eua_tarifas", ("eua", "tarifa", "tarifaco", "trump", "america")),
+        ("votacao_senado", ("votar", "votacao", "sessoes", "nominais", "presenca", "faltas")),
+        ("recife_pe", ("recife", "pernambuco", "adiamento")),
+        ("comissao", ("comissao", "cdh", "cdr", "ccj", "audiencia")),
+        ("plenario", ("plenario", "sessao", "pauta")),
+        ("relatoria", ("relatoria", "relator", "projeto")),
+    )
+    matched: list[str] = []
+    tokens = set(lowered.split())
+    for label, markers in topic_rules:
+        if tokens.intersection(markers) or any(marker in lowered for marker in markers):
+            matched.append(label)
+    if matched:
+        return "|".join(sorted(matched))
+    words = [word for word in lowered.split() if len(word) > 4][:5]
+    return " ".join(words)
+
+
+def _normalize_for_news_dedup(title: str) -> str:
+    text = title.lower()
+    text = re.sub(r"[^\w\s]", " ", text)
+    for token in (
+        "flavio",
+        "bolsonaro",
+        "senador",
+        "senadora",
+        "sen",
+        "pl",
+        "rj",
+        "diz",
+        "disse",
+        "afirma",
+        "afirmou",
+    ):
+        text = re.sub(rf"\b{re.escape(token)}\b", " ", text)
+    return normalize_whitespace(text)
+
+
+def news_title_similarity(left: str, right: str) -> float:
+    normalized_left = _normalize_for_news_dedup(left)
+    normalized_right = _normalize_for_news_dedup(right)
+    if not normalized_left or not normalized_right:
+        return 0.0
+    if normalized_left == normalized_right:
+        return 1.0
+    tokens_left = set(normalized_left.split())
+    tokens_right = set(normalized_right.split())
+    if not tokens_left or not tokens_right:
+        return 0.0
+    jaccard = len(tokens_left & tokens_right) / len(tokens_left | tokens_right)
+    sequence_ratio = SequenceMatcher(None, normalized_left, normalized_right).ratio()
+    return max(jaccard, sequence_ratio)
+
+
+def _news_items_cover_same_story(
+    left: NewsSnippet,
+    right: NewsSnippet,
+    *,
+    similarity_threshold: float = 0.48,
+) -> bool:
+    if left.url and right.url and left.url == right.url:
+        return True
+    left_fp = _news_topic_fingerprint(left.title)
+    right_fp = _news_topic_fingerprint(right.title)
+    if left_fp and left_fp == right_fp and "|" in left_fp:
+        return True
+    if left_fp and left_fp == right_fp and len(left_fp.split()) <= 2:
+        return True
+    return news_title_similarity(left.title, right.title) >= similarity_threshold
+
+
+def collect_news_outlets(item: NewsSnippet) -> tuple[str, ...]:
+    ordered: list[str] = []
+    seen: set[str] = set()
+    candidates = item.outlets or (item.outlet,)
+    for outlet in candidates:
+        label = normalize_whitespace(outlet)
+        if not label:
+            continue
+        key = label.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(label)
+    if not ordered and item.outlet:
+        ordered.append(normalize_whitespace(item.outlet))
+    return tuple(ordered)
+
+
+def format_news_outlets(item: NewsSnippet, *, max_outlets: int = MAX_OUTLETS_MENTION) -> str:
+    outlets = collect_news_outlets(item)
+    if not outlets:
+        return "imprensa"
+    if len(outlets) > max_outlets:
+        visible = outlets[:max_outlets]
+        extra = len(outlets) - max_outlets
+        head = ", ".join(visible[:-1]) + f" e {visible[-1]}"
+        return f"{head} e outros {extra} veículos"
+    if len(outlets) == 1:
+        return outlets[0]
+    if len(outlets) == 2:
+        return f"{outlets[0]} e {outlets[1]}"
+    return ", ".join(outlets[:-1]) + f" e {outlets[-1]}"
+
+
+def deduplicate_news_snippets(
+    snippets: list[NewsSnippet],
+    *,
+    similarity_threshold: float = 0.55,
+) -> list[NewsSnippet]:
+    groups: list[list[NewsSnippet]] = []
+    for item in snippets:
+        matched_group: list[NewsSnippet] | None = None
+        for group in groups:
+            if _news_items_cover_same_story(
+                item,
+                group[0],
+                similarity_threshold=similarity_threshold,
+            ):
+                matched_group = group
+                break
+        if matched_group is None:
+            groups.append([item])
+        else:
+            matched_group.append(item)
+
+    deduped: list[NewsSnippet] = []
+    for group in groups:
+        primary = max(group, key=lambda snippet: (len(snippet.title), len(collect_news_outlets(snippet))))
+        outlets: list[str] = []
+        seen_outlets: set[str] = set()
+        urls: list[str] = []
+        published = ""
+        summary = ""
+        for snippet in group:
+            for outlet in collect_news_outlets(snippet):
+                key = outlet.casefold()
+                if key not in seen_outlets:
+                    seen_outlets.add(key)
+                    outlets.append(outlet)
+            if snippet.url and snippet.url not in urls:
+                urls.append(snippet.url)
+            if not published and snippet.published:
+                published = snippet.published
+            if not summary and snippet.summary:
+                summary = snippet.summary
+
+        deduped.append(
+            NewsSnippet(
+                title=primary.title,
+                outlet=outlets[0] if outlets else primary.outlet,
+                url=urls[0] if urls else primary.url,
+                published=published,
+                summary=summary,
+                outlets=tuple(outlets),
+            )
+        )
+    return deduped
+
+
+def parse_google_news_rss(
+    xml_text: str,
+    *,
+    date_str: str,
+    max_age_days: int = 14,
+    max_per_feed: int = 12,
+) -> list[NewsSnippet]:
     root = ET.fromstring(xml_text)
     target_day = datetime.strptime(date_str, "%Y-%m-%d").date()
     snippets: list[NewsSnippet] = []
@@ -672,6 +1013,11 @@ def parse_google_news_rss(xml_text: str, *, date_str: str) -> list[NewsSnippet]:
             continue
         if "Bolsonaro" not in title and SENATOR_NAME not in title:
             continue
+        if not is_relevant_senate_agenda_news(title):
+            link_lower = link.lower()
+            is_youtube = "youtube.com" in link_lower or "youtu.be" in link_lower
+            if not (is_youtube and mentions_bolsonaro_family(title)):
+                continue
 
         published_day = None
         if pub_date:
@@ -681,7 +1027,7 @@ def parse_google_news_rss(xml_text: str, *, date_str: str) -> list[NewsSnippet]:
                 ).date()
             except ValueError:
                 published_day = None
-        if published_day and abs((published_day - target_day).days) > 7:
+        if published_day and abs((published_day - target_day).days) > max_age_days:
             continue
 
         snippets.append(
@@ -692,7 +1038,7 @@ def parse_google_news_rss(xml_text: str, *, date_str: str) -> list[NewsSnippet]:
                 published=pub_date,
             )
         )
-    return snippets[:6]
+    return snippets[:max_per_feed]
 
 
 def collect_committee_page_entries(
@@ -815,33 +1161,106 @@ def collect_plenary_entries(
     return found
 
 
+def _news_search_queries(*, deep: bool) -> list[str]:
+    """Consultas focadas no mandato de Flávio Bolsonaro no Senado Federal."""
+    window = "14d" if deep else "7d"
+    queries = [
+        f'"{SENATOR_NAME}" senado agenda when:{window}',
+        f'"{SENATOR_NAME}" comissão senado when:{window}',
+        f'"{SENATOR_NAME}" plenário senado when:{window}',
+        f'"{SENATOR_NAME}" pauta senado when:{window}',
+        f'"{SENATOR_NAME}" audiência pública senado when:{window}',
+        f'"{SENATOR_NAME}" discurso senado when:{window}',
+        f'"{SENATOR_NAME}" relatoria senado when:{window}',
+        f'"{SENATOR_NAME}" projeto senado when:{window}',
+    ]
+    if not deep:
+        return queries
+
+    for sigla in ("CDR", "CDH", "CCJ"):
+        queries.append(f'"{SENATOR_NAME}" {sigla} senado when:{window}')
+    queries.extend(
+        [
+            f'"{SENATOR_NAME}" sessão senado when:{window}',
+            f'"{SENATOR_NAME}" votação senado when:{window}',
+            f'"{SENATOR_NAME}" matéria senado when:{window}',
+            f'"{SENATOR_NAME}" senado EUA tarifa when:{window}',
+        ]
+    )
+    return list(dict.fromkeys(queries))
+
+
+def collect_news_from_queries(
+    date_str: str,
+    queries: list[str],
+    *,
+    timeout: int,
+    trust_env: bool,
+    retries: int,
+    max_items: int,
+    max_age_days: int,
+    max_per_feed: int,
+) -> list[NewsSnippet]:
+    snippets: list[NewsSnippet] = []
+    seen_keys: set[str] = set()
+    for query in queries:
+        url = GOOGLE_NEWS_RSS_URL.format(query=requests.utils.quote(query))
+        try:
+            xml_text = fetch_text(url, timeout=timeout, trust_env=trust_env, retries=retries)
+            for item in parse_google_news_rss(
+                xml_text,
+                date_str=date_str,
+                max_age_days=max_age_days,
+                max_per_feed=max_per_feed,
+            ):
+                outlets = collect_news_outlets(item)
+                key = f"{item.title.casefold()}|{'|'.join(outlets)}|{item.url}"
+                if key in seen_keys:
+                    continue
+                seen_keys.add(key)
+                snippets.append(item)
+        except Exception:
+            continue
+    deduped = deduplicate_news_snippets(snippets)
+    editorial, allies = load_editorial_config()
+    return rank_and_filter_news(
+        deduped,
+        allies=allies,
+        editorial=editorial,
+        relevance_checker=is_relevant_senate_agenda_news,
+        max_items=max_items,
+    )
+
+
 def collect_news_snippets(
     date_str: str,
     *,
     timeout: int,
     trust_env: bool,
     retries: int,
+    max_items: int = STANDARD_SEARCH_NEWS_MAX_ITEMS,
+    deep: bool = True,
 ) -> list[NewsSnippet]:
-    queries = [
-        f'"{SENATOR_NAME}" senado agenda when:7d',
-        f'"{SENATOR_NAME}" comissão senado when:7d',
-        f'"{SENATOR_NAME}" plenário when:7d',
-    ]
-    snippets: list[NewsSnippet] = []
-    seen_titles: set[str] = set()
-    for query in queries:
-        url = GOOGLE_NEWS_RSS_URL.format(query=requests.utils.quote(query))
-        try:
-            xml_text = fetch_text(url, timeout=timeout, trust_env=trust_env, retries=retries)
-            for item in parse_google_news_rss(xml_text, date_str=date_str):
-                key = item.title.lower()
-                if key in seen_titles:
-                    continue
-                seen_titles.add(key)
-                snippets.append(item)
-        except Exception:
-            continue
-    return snippets[:5]
+    editorial, allies = load_editorial_config()
+    queries = list(_news_search_queries(deep=deep))
+    if editorial.get("prefer_ally_youtube", True):
+        queries.extend(
+            build_ally_youtube_queries(
+                allies,
+                deep=deep,
+                senator_name=SENATOR_NAME,
+            )
+        )
+    return collect_news_from_queries(
+        date_str,
+        list(dict.fromkeys(queries)),
+        timeout=timeout,
+        trust_env=trust_env,
+        retries=retries,
+        max_items=max_items,
+        max_age_days=DEEP_SEARCH_NEWS_MAX_AGE_DAYS if deep else STANDARD_SEARCH_NEWS_MAX_AGE_DAYS,
+        max_per_feed=DEEP_SEARCH_NEWS_PER_FEED if deep else 10,
+    )
 
 
 def merge_agenda_entries(entries: list[AgendaEntry]) -> tuple[AgendaEntry, ...]:
@@ -868,7 +1287,11 @@ def collect_live_agenda(
     trust_env: bool,
     retries: int,
     include_news: bool,
+    deep_search: bool = False,
 ) -> CollectedAgenda:
+    if deep_search:
+        timeout = min(90, max(timeout, 35) + 25)
+        retries = max(retries, 4)
     entries: list[AgendaEntry] = []
     news: list[NewsSnippet] = []
     used: list[str] = []
@@ -889,18 +1312,20 @@ def collect_live_agenda(
 
     covered_siglas = {entry.committee_sigla for entry in congress_entries}
     for index, entry in enumerate(entries):
-        if entry.entry_type != "committee" or entry.materials:
+        if entry.entry_type != "committee":
+            continue
+        if entry.materials and not deep_search:
             continue
         if "reuniao" not in entry.source_url:
             continue
-        if "Audiência Pública" in entry.summary:
+        if "Audiência Pública" in entry.summary and not deep_search:
             continue
         try:
             meeting_html = fetch_html(
                 entry.source_url,
-                timeout=min(10, timeout),
+                timeout=min(35 if deep_search else 10, timeout),
                 trust_env=trust_env,
-                retries=0,
+                retries=retries if deep_search else 0,
             )
             entries[index] = enrich_entry_with_materials(
                 entry,
@@ -914,14 +1339,14 @@ def collect_live_agenda(
         except Exception:
             continue
 
-    committee_timeout = min(12, timeout)
+    committee_timeout = min(40 if deep_search else 12, timeout)
     try:
         committee_entries = collect_committee_page_entries(
             date_str,
             timeout=committee_timeout,
             trust_env=trust_env,
-            retries=0,
-            skip_siglas=covered_siglas,
+            retries=retries if deep_search else 0,
+            skip_siglas=covered_siglas if not deep_search else set(),
         )
         if committee_entries:
             entries.extend(committee_entries)
@@ -935,10 +1360,10 @@ def collect_live_agenda(
         plenary_entries = collect_plenary_entries(
             date_str,
             entries,
-            timeout=min(15, timeout),
+            timeout=min(40 if deep_search else 15, timeout),
             trust_env=trust_env,
-            retries=0,
-            max_urls=1,
+            retries=retries if deep_search else 0,
+            max_urls=DEEP_SEARCH_PLENARY_MAX_URLS if deep_search else 1,
         )
         if plenary_entries:
             entries.extend(plenary_entries)
@@ -953,9 +1378,22 @@ def collect_live_agenda(
                 timeout=timeout,
                 trust_env=trust_env,
                 retries=retries,
+                max_items=DEEP_SEARCH_NEWS_MAX_ITEMS if deep_search else STANDARD_SEARCH_NEWS_MAX_ITEMS,
+                deep=deep_search,
             )
             if news:
                 used.append("google_noticias")
+                _, allies = load_editorial_config()
+                if any(
+                    is_ally_youtube_item(
+                        title=item.title,
+                        outlet=item.outlet,
+                        url=item.url,
+                        allies=allies,
+                    )
+                    for item in news
+                ):
+                    used.append("youtube_aliados")
             else:
                 failed.append("google_noticias")
         except Exception:
@@ -977,6 +1415,7 @@ def load_live_entries(
     trust_env: bool,
     retries: int = 0,
     include_news: bool = True,
+    deep_search: bool = False,
 ) -> CollectedAgenda:
     return collect_live_agenda(
         date_str,
@@ -984,6 +1423,7 @@ def load_live_entries(
         trust_env=trust_env,
         retries=retries,
         include_news=include_news,
+        deep_search=deep_search,
     )
 
 
@@ -995,6 +1435,7 @@ def load_entries(
     trust_env: bool,
     retries: int = 0,
     include_news: bool = True,
+    deep_search: bool = False,
 ) -> CollectedAgenda:
     if mode == "snapshot":
         entries = AGENDA_BY_DATE.get(date_str)
@@ -1009,9 +1450,11 @@ def load_entries(
             trust_env=trust_env,
             retries=retries,
             include_news=include_news,
+            deep_search=deep_search,
         )
-        if not collected.entries:
-            raise ValueError(f"Nenhum compromisso encontrado para {date_str}")
+        # Fins de semana / recesso: pode haver só imprensa, sem compromissos formais.
+        if not collected.entries and not collected.news:
+            raise ValueError(f"Nenhum compromisso ou notícia encontrado para {date_str}")
         return collected
 
     try:
@@ -1021,8 +1464,10 @@ def load_entries(
             trust_env=trust_env,
             retries=retries,
             include_news=include_news,
+            deep_search=deep_search,
         )
-        if collected.entries:
+        # Aceita agenda formal e/ou cobertura de imprensa (ex.: sábado sem sessão).
+        if collected.entries or collected.news:
             return collected
     except Exception:
         pass
@@ -1091,16 +1536,61 @@ def render_materials_paragraphs(entries: tuple[AgendaEntry, ...]) -> list[str]:
     return paragraphs
 
 
-def render_news_paragraph(news: tuple[NewsSnippet, ...]) -> str | None:
+def _render_news_clauses(items: tuple[NewsSnippet, ...]) -> str:
+    clauses = [
+        f"{lowercase_first(item.title)} ({format_news_outlets(item)})"
+        for item in items
+    ]
+    if len(clauses) == 1:
+        return clauses[0]
+    if len(clauses) == 2:
+        return f"{clauses[0]} e {clauses[1]}"
+    return ", ".join(clauses[:-1]) + f" e {clauses[-1]}"
+
+
+def render_news_paragraph(
+    news: tuple[NewsSnippet, ...],
+    *,
+    max_items: int = DEEP_SEARCH_NEWS_RENDER_LIMIT,
+) -> str | None:
     if not news:
         return None
-    lines = [
-        "Na cobertura da imprensa, há menções recentes que ajudam a contextualizar "
-        "a atuação do senador:"
-    ]
-    for item in news[:3]:
-        lines.append(f"- {item.title} ({item.outlet}).")
-    return " ".join(lines)
+    _, allies = load_editorial_config()
+    ally_items: list[NewsSnippet] = []
+    press_items: list[NewsSnippet] = []
+    for item in news:
+        if is_ally_youtube_item(
+            title=item.title,
+            outlet=item.outlet,
+            url=item.url,
+            allies=allies,
+        ):
+            ally_items.append(item)
+        else:
+            press_items.append(item)
+
+    paragraphs: list[str] = []
+    if ally_items:
+        body = _render_news_clauses(tuple(ally_items[:max_items]))
+        paragraphs.append(
+            "Na cobertura de aliados verdadeiros no YouTube, destacam-se "
+            f"{body}."
+        )
+    remaining = max(0, max_items - len(ally_items[:max_items]))
+    if press_items and remaining:
+        body = _render_news_clauses(tuple(press_items[:remaining]))
+        paragraphs.append(
+            "Na imprensa, sobre a atuação do senador e da família Bolsonaro, "
+            f"aparecem {body}."
+        )
+    if not paragraphs:
+        selected = news[:max_items]
+        body = _render_news_clauses(tuple(selected))
+        return (
+            "Na cobertura sobre a atuação do senador no Senado, "
+            f"aparecem {body}."
+        )
+    return " ".join(paragraphs)
 
 
 def build_source_text(

@@ -19,6 +19,18 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "include_news": True,
         "send_telegram": True,
         "upload_youtube": True,
+        "require_approval": True,
+        "deep_search": True,
+    },
+    "search": {
+        "deep_search": True,
+        "timeout": 45,
+        "retries": 4,
+    },
+    "approval": {
+        "enabled": True,
+        "timeout_minutes": 180,
+        "max_regenerations": 2,
     },
     "youtube": {
         "enabled": True,
@@ -45,6 +57,38 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "enabled": True,
         "chat_id": os.getenv("AGENDA_TELEGRAM_CHAT_ID", ""),
     },
+    "editorial": {
+        "stance": "pro_bolsonaro_allies",
+        "prefer_ally_youtube": True,
+        "exclude_hostile_headlines": True,
+        "include_bolsonaro_family_context": True,
+    },
+    "ally_youtube": [
+        {
+            "name": "Kim Pain",
+            "search_terms": ["Kim Pain", "Kim Pain TV"],
+            "handle": "@KimPain",
+            "channel_id": "",
+        },
+        {
+            "name": "Didi Newa",
+            "search_terms": ["Didi Newa", "Didi News"],
+            "handle": "@DidiNewa",
+            "channel_id": "",
+        },
+        {
+            "name": "Auriverde",
+            "search_terms": ["Auriverde"],
+            "handle": "@Auriverde",
+            "channel_id": "",
+        },
+        {
+            "name": "Claudio Dantas",
+            "search_terms": ["Claudio Dantas", "Cláudio Dantas"],
+            "handle": "@ClaudioDantas",
+            "channel_id": "",
+        },
+    ],
 }
 
 

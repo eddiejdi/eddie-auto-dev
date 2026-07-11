@@ -57,10 +57,19 @@ def test_build_telegram_summary_inclui_compromissos_e_fontes(monkeypatch) -> Non
     assert "10h" in summary
     assert "CDH" in summary
     assert "O Globo" in summary
-    assert "congresso_nacional" in summary
+    # underscores de free-text são escapados para o Markdown do Telegram
+    assert "congresso\\_nacional" in summary or "congresso_nacional" in summary
     assert "gpu0:mistral:7b" in summary
     assert "piper-gpu" in summary
     assert "Texto final para locucao." in summary
+
+
+def test_escape_telegram_md_protege_caracteres() -> None:
+    raw = "titulo_com_underscore e *negrito* e `code`"
+    escaped = broadcast._escape_telegram_md(raw)
+    assert "\\_" in escaped
+    assert "\\*" in escaped
+    assert "\\`" in escaped
 
 
 def test_run_broadcast_dry_run_gera_artefatos(tmp_path, monkeypatch) -> None:
@@ -111,6 +120,7 @@ def test_run_broadcast_dry_run_gera_artefatos(tmp_path, monkeypatch) -> None:
         retries=0,
         trust_env=False,
         include_news=False,
+        deep_search=False,
         media_plan=media_plan,
         max_rounds=1,
         retry_wait_seconds=0,

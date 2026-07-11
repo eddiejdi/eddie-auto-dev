@@ -19,6 +19,7 @@ if str(TOOLS_DIR) not in sys.path:
     sys.path.insert(0, str(TOOLS_DIR))
 
 from agenda_media_router import resolve_media_plan, tts_fallback_chain
+from daily_agenda_approval import send_preview_request, wait_for_decision
 from daily_agenda_config import load_config
 from specialized_agents.telegram_notify import send_telegram_audio, send_telegram_message
 from tools.secrets_loader import get_agenda_telegram_chat_id
@@ -72,6 +73,20 @@ def artifact_paths(date_str: str, artifacts_dir: Path) -> dict[str, Path]:
     }
 
 
+def _escape_telegram_md(text: str) -> str:
+    """Escapa caracteres que quebram parse_mode Markdown legado do Telegram."""
+    if not text:
+        return ""
+    # Ordem importa: barra primeiro.
+    return (
+        text.replace("\\", "\\\\")
+        .replace("`", "\\`")
+        .replace("*", "\\*")
+        .replace("_", "\\_")
+        .replace("[", "\\[")
+    )
+
+
 def build_telegram_summary(
     *,
     date_str: str,
@@ -96,24 +111,32 @@ def build_telegram_summary(
             label = entry.committee_sigla
             if entry.entry_type == "plenary":
                 label = "Plenário"
-            lines.append(f"• {entry.time_label} — {label}")
+            lines.append(
+                f"• {_escape_telegram_md(entry.time_label)} — {_escape_telegram_md(label)}"
+            )
     else:
         lines.append("_Sem compromissos formais confirmados nas fontes oficiais._")
 
     if collected.news:
-        lines.append(f"\n*Imprensa:* {len(collected.news)} menção(ões) recente(s)")
-        for item in collected.news[:2]:
-            lines.append(f"• {item.title} ({item.outlet})")
+        lines.append(f"\n*Imprensa:* {len(collected.news)} matéria(s) distinta(s)")
+        from build_flavio_bolsonaro_agenda_source import format_news_outlets
+
+        for item in collected.news[:5]:
+            title = _escape_telegram_md(item.title)
+            outlets = _escape_telegram_md(format_news_outlets(item))
+            lines.append(f"• {title} (publicado por {outlets})")
 
     if collected.sources_used:
-        lines.append(f"\n_Fontes: {', '.join(collected.sources_used)}_")
+        fontes = _escape_telegram_md(", ".join(collected.sources_used))
+        lines.append(f"\nFontes: {fontes}")
 
     if llm_endpoint or tts_backend:
-        lines.append(
-            f"\n_Midia: qualidade `{quality}` | LLM `{llm_endpoint or 'n/a'}` | TTS `{tts_backend or 'n/a'}`_"
-        )
+        q = _escape_telegram_md(quality)
+        llm = _escape_telegram_md(llm_endpoint or "n/a")
+        tts = _escape_telegram_md(tts_backend or "n/a")
+        lines.append(f"\nMidia: qualidade `{q}` | LLM `{llm}` | TTS `{tts}`")
 
-    body_preview = final_text.strip()
+    body_preview = _escape_telegram_md(final_text.strip())
     if len(body_preview) > 900:
         body_preview = body_preview[:897] + "..."
     lines.append(f"\n{body_preview}")
@@ -197,6 +220,7 @@ def run_broadcast(
     retries: int,
     trust_env: bool,
     include_news: bool,
+    deep_search: bool,
     media_plan,
     max_rounds: int,
     retry_wait_seconds: int,
@@ -206,6 +230,8 @@ def run_broadcast(
     skip_telegram: bool,
     skip_audio: bool,
     telegram_chat_id: str | None,
+    telegram_mode: str = "full",
+    approval_attempt: int = 1,
 ) -> BroadcastArtifacts:
     agenda_mod = _load_module(AGENDA_MODULE_PATH, "agenda_source_runtime")
     tts_mod = _load_module(TTS_MODULE_PATH, "tts_runtime")
@@ -217,6 +243,7 @@ def run_broadcast(
         trust_env=trust_env,
         retries=retries,
         include_news=include_news,
+        deep_search=deep_search,
     )
     source_text = agenda_mod.build_source_text(
         collected,
@@ -253,7 +280,7 @@ def run_broadcast(
         except Exception:
             logger.warning("Falha ao sintetizar audio; seguindo apenas com texto.", exc_info=True)
 
-    if not skip_telegram:
+    if not skip_telegram and telegram_chat_id:
         summary = build_telegram_summary(
             date_str=date_str,
             collected=collected,
@@ -264,14 +291,28 @@ def run_broadcast(
             tts_backend=tts_backend,
             quality=media_plan.quality,
         )
-        send_telegram_message(summary, chat_id=telegram_chat_id, parse_mode="Markdown")
-        if wav_path and wav_path.exists():
-            caption = f"Agenda diária — {datetime.strptime(date_str, '%Y-%m-%d').strftime('%d/%m/%Y')}"
-            send_telegram_audio(
-                str(wav_path),
-                chat_id=telegram_chat_id,
-                caption=caption,
-            )
+        if telegram_mode == "preview":
+            if wav_path and wav_path.exists():
+                send_preview_request(
+                    date_str=date_str,
+                    summary_text=summary,
+                    wav_path=wav_path,
+                    chat_id=telegram_chat_id,
+                    attempt=approval_attempt,
+                    deep_search=deep_search,
+                    entries_count=len(collected.entries),
+                    news_count=len(collected.news),
+                    quality=media_plan.quality,
+                )
+        else:
+            send_telegram_message(summary, chat_id=telegram_chat_id, parse_mode="Markdown")
+            if wav_path and wav_path.exists():
+                caption = f"Agenda diária — {datetime.strptime(date_str, '%Y-%m-%d').strftime('%d/%m/%Y')}"
+                send_telegram_audio(
+                    str(wav_path),
+                    chat_id=telegram_chat_id,
+                    caption=caption,
+                )
 
     return BroadcastArtifacts(
         date_str=date_str,
@@ -293,8 +334,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--date", default="today", help="Data YYYY-MM-DD, ou 'today'/'hoje'.")
     parser.add_argument("--mode", choices=("auto", "live", "snapshot"), default="auto")
     parser.add_argument("--artifacts-dir", type=Path, default=DEFAULT_ARTIFACTS_DIR)
-    parser.add_argument("--timeout", type=int, default=25)
-    parser.add_argument("--retries", type=int, default=1)
+    parser.add_argument("--timeout", type=int, default=45)
+    parser.add_argument("--retries", type=int, default=4)
     parser.add_argument("--trust-env", action="store_true")
     parser.add_argument("--no-news", action="store_true")
     parser.add_argument(
@@ -334,8 +375,168 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Publica no canal YouTube após gerar o áudio.",
     )
+    parser.add_argument(
+        "--require-approval",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Envia prévia no Telegram e aguarda aprovação antes de publicar.",
+    )
+    parser.add_argument(
+        "--approval-timeout-minutes",
+        type=int,
+        default=None,
+        help="Tempo máximo aguardando aprovação no Telegram.",
+    )
+    parser.add_argument(
+        "--max-regenerations",
+        type=int,
+        default=None,
+        help="Máximo de regenerações com busca profunda.",
+    )
+    parser.add_argument(
+        "--deep-search",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Coleta profunda (padrão: ligada). Use --no-deep-search para modo rápido.",
+    )
     parser.add_argument("--verbose", action="store_true")
     return parser.parse_args()
+
+
+def _publish_youtube(date_str: str, artifacts_dir: Path, panel_cfg: dict) -> str:
+    from youtube_agenda_publisher import publish_edition
+
+    yt_result = publish_edition(date_str, artifacts_dir=artifacts_dir, config=panel_cfg)
+    return yt_result.video_url
+
+
+def _run_with_optional_approval(
+    *,
+    args: argparse.Namespace,
+    panel_cfg: dict,
+    date_str: str,
+    media_plan,
+    telegram_chat_id: str | None,
+) -> tuple[BroadcastArtifacts, str, str]:
+    approval_cfg = panel_cfg.get("approval", {})
+    require_approval = (
+        args.require_approval
+        if args.require_approval is not None
+        else panel_cfg["defaults"].get("require_approval", False)
+    )
+    upload_youtube = (
+        args.upload_youtube
+        if args.upload_youtube is not None
+        else panel_cfg["defaults"].get("upload_youtube", False)
+    )
+    timeout_minutes = (
+        args.approval_timeout_minutes
+        if args.approval_timeout_minutes is not None
+        else int(approval_cfg.get("timeout_minutes", 180))
+    )
+    max_regenerations = (
+        args.max_regenerations
+        if args.max_regenerations is not None
+        else int(approval_cfg.get("max_regenerations", 2))
+    )
+
+    search_cfg = panel_cfg.get("search", {})
+    attempt = 1
+    deep_search = (
+        args.deep_search
+        if args.deep_search is not None
+        else bool(search_cfg.get("deep_search", True))
+    )
+    if args.timeout == 45 and search_cfg.get("timeout"):
+        args.timeout = int(search_cfg["timeout"])
+    if args.retries == 4 and search_cfg.get("retries"):
+        args.retries = int(search_cfg["retries"])
+    youtube_url = ""
+    approval_note = ""
+
+    while True:
+        result = run_broadcast(
+            date_str=date_str,
+            mode=args.mode,
+            artifacts_dir=args.artifacts_dir,
+            timeout=args.timeout,
+            retries=args.retries,
+            trust_env=args.trust_env,
+            include_news=not args.no_news,
+            deep_search=deep_search,
+            media_plan=media_plan,
+            max_rounds=args.llm_max_rounds,
+            retry_wait_seconds=args.llm_retry_wait_seconds,
+            no_expand=args.no_llm_expand,
+            no_rewrite=args.no_llm_rewrite,
+            no_normalize=args.no_normalize,
+            skip_telegram=args.dry_run,
+            skip_audio=args.skip_audio
+            or (getattr(media_plan.tts, "backend", "") == "none"),
+            telegram_chat_id=telegram_chat_id,
+            telegram_mode="preview" if require_approval and not args.dry_run else "full",
+            approval_attempt=attempt,
+        )
+
+        if args.dry_run or not require_approval:
+            if upload_youtube and not args.dry_run and result.wav_path:
+                try:
+                    youtube_url = _publish_youtube(date_str, args.artifacts_dir, panel_cfg)
+                except Exception:
+                    logger.warning("Falha ao publicar no YouTube.", exc_info=True)
+            return result, youtube_url, approval_note
+
+        if not telegram_chat_id:
+            raise RuntimeError("require_approval exige telegram_chat_id configurado.")
+
+        logger.info(
+            "Aguardando aprovação no Telegram (tentativa %s, timeout %s min)...",
+            attempt,
+            timeout_minutes,
+        )
+        decision = wait_for_decision(
+            date_str=date_str,
+            timeout_minutes=timeout_minutes,
+        )
+        if decision == "approved":
+            approval_note = "Aprovado no Telegram."
+            if upload_youtube and result.wav_path:
+                try:
+                    youtube_url = _publish_youtube(date_str, args.artifacts_dir, panel_cfg)
+                    send_telegram_message(
+                        f"✅ Agenda publicada no YouTube\n{youtube_url}",
+                        chat_id=telegram_chat_id,
+                    )
+                except Exception:
+                    logger.warning("Falha ao publicar no YouTube após aprovação.", exc_info=True)
+            else:
+                send_telegram_message(
+                    "✅ Agenda aprovada. Publicação YouTube desabilitada.",
+                    chat_id=telegram_chat_id,
+                )
+            return result, youtube_url, approval_note
+
+        if decision == "regenerate" and attempt <= max_regenerations:
+            attempt += 1
+            deep_search = True
+            args.timeout = min(90, max(args.timeout, 45) + 15)
+            args.retries = max(args.retries, 5)
+            approval_note = f"Regeneração {attempt - 1}/{max_regenerations} solicitada."
+            logger.info(
+                "Regenerando com busca profunda (tentativa %s, timeout=%ss, retries=%s)...",
+                attempt,
+                args.timeout,
+                args.retries,
+            )
+            continue
+
+        approval_note = f"Encerrado sem publicar ({decision})."
+        if telegram_chat_id:
+            send_telegram_message(
+                f"⏹️ Agenda {date_str} não publicada ({decision}).",
+                chat_id=telegram_chat_id,
+            )
+        return result, "", approval_note
 
 
 def main() -> int:
@@ -368,39 +569,13 @@ def main() -> int:
     if not telegram_chat_id:
         telegram_chat_id = get_agenda_telegram_chat_id() or None
 
-    result = run_broadcast(
+    result, youtube_url, approval_note = _run_with_optional_approval(
+        args=args,
+        panel_cfg=panel_cfg,
         date_str=date_str,
-        mode=args.mode,
-        artifacts_dir=args.artifacts_dir,
-        timeout=args.timeout,
-        retries=args.retries,
-        trust_env=args.trust_env,
-        include_news=not args.no_news,
         media_plan=media_plan,
-        max_rounds=args.llm_max_rounds,
-        retry_wait_seconds=args.llm_retry_wait_seconds,
-        no_expand=args.no_llm_expand,
-        no_rewrite=args.no_llm_rewrite,
-        no_normalize=args.no_normalize,
-        skip_telegram=args.dry_run,
-        skip_audio=args.skip_audio or backend_override == "none",
         telegram_chat_id=telegram_chat_id,
     )
-
-    upload_youtube = (
-        args.upload_youtube
-        if args.upload_youtube is not None
-        else panel_cfg["defaults"].get("upload_youtube", False)
-    )
-    youtube_url = ""
-    if upload_youtube and not args.dry_run and result.wav_path:
-        try:
-            from youtube_agenda_publisher import publish_edition
-
-            yt_result = publish_edition(date_str, artifacts_dir=args.artifacts_dir, config=panel_cfg)
-            youtube_url = yt_result.video_url
-        except Exception:
-            logger.warning("Falha ao publicar no YouTube.", exc_info=True)
 
     print(result.source_text)
     print("\n--- Locucao ---\n")
@@ -419,6 +594,8 @@ def main() -> int:
         print(f"Fontes sem resultado: {', '.join(result.sources_failed)}")
     if args.dry_run:
         print("\nDry-run: Telegram nao foi acionado.")
+    elif approval_note:
+        print(f"\n{approval_note}")
     else:
         print("\nAgenda diaria enviada no Telegram.")
     if youtube_url:

@@ -80,6 +80,13 @@ def _run_pipeline(payload: dict) -> None:
     send_telegram = bool(payload.get("send_telegram", cfg["defaults"]["send_telegram"]))
     upload_youtube = bool(payload.get("upload_youtube", cfg["defaults"]["upload_youtube"]))
     include_news = bool(payload.get("include_news", cfg["defaults"]["include_news"]))
+    require_approval = bool(
+        payload.get("require_approval", cfg["defaults"].get("require_approval", False))
+    )
+    search_cfg = cfg.get("search", {})
+    deep_search = bool(payload.get("deep_search", search_cfg.get("deep_search", True)))
+    timeout = int(payload.get("timeout", search_cfg.get("timeout", 45)))
+    retries = int(payload.get("retries", search_cfg.get("retries", 4)))
 
     cmd = [
         sys.executable,
@@ -90,7 +97,15 @@ def _run_pipeline(payload: dict) -> None:
         mode,
         "--quality",
         quality,
+        "--timeout",
+        str(timeout),
+        "--retries",
+        str(retries),
     ]
+    if deep_search:
+        cmd.append("--deep-search")
+    else:
+        cmd.append("--no-deep-search")
     if dry_run or not send_telegram:
         cmd.append("--dry-run")
     if not include_news:
@@ -98,6 +113,10 @@ def _run_pipeline(payload: dict) -> None:
     chat_id = (cfg.get("telegram", {}).get("chat_id") or "").strip()
     if chat_id and send_telegram and not dry_run:
         cmd.extend(["--telegram-chat-id", chat_id])
+    if require_approval and send_telegram and not dry_run:
+        cmd.append("--require-approval")
+    if upload_youtube and not dry_run:
+        cmd.append("--upload-youtube")
 
     _set_job(
         {
@@ -132,7 +151,7 @@ def _run_pipeline(payload: dict) -> None:
             return
 
         youtube_result = None
-        if upload_youtube and not dry_run:
+        if upload_youtube and not dry_run and not require_approval:
             _set_job(
                 {
                     "status": "running",
