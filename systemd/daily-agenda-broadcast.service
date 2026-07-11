@@ -12,7 +12,7 @@ Environment=PYTHONUNBUFFERED=1
 Environment=OLLAMA_HOST=http://192.168.15.2:11437
 Environment=OLLAMA_HOST_GPU1=http://192.168.15.2:11435
 Environment=AGENDA_YOUTUBE_CHANNEL_ID=UCEyYr2YE1HLDTKT4cnMefmw
-ExecStart=/usr/bin/python3 /home/homelab/myClaude/tools/run_daily_agenda_broadcast.py --mode auto --date today --quality balanced --llm-auto-route --upload-youtube
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/tools/run_daily_agenda_broadcast.py --mode auto --date today --quality balanced --llm-auto-route --require-approval --upload-youtube --deep-search --timeout 45 --retries 4
 
 StandardOutput=journal
 StandardError=journal

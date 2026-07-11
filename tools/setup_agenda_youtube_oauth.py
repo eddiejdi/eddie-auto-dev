@@ -20,7 +20,11 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
 from daily_agenda_config import load_config, resolve_repo_path  # noqa: E402
-from youtube_agenda_publisher import YOUTUBE_SCOPES, get_channel_info  # noqa: E402
+from youtube_agenda_publisher import (  # noqa: E402
+    YOUTUBE_SCOPES,
+    get_authenticated_channel_info,
+    verify_upload_channel,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -268,20 +272,33 @@ def main() -> int:
         print(f"Falha no OAuth: {exc}", file=sys.stderr)
         return 1
 
-    if not token_file.exists():
+    if not token_file.exists() or args.url_only:
         return 0
 
-    try:
-        info = get_channel_info(config=cfg)
-    except Exception as exc:
-        channel_id = (yt.get("channel_id") or "").strip()
-        print(f"Token salvo. get_channel_info indisponível ({exc}).")
+    channel_id = (yt.get("channel_id") or "").strip()
+    if args.upload_only_scope:
+        print(
+            "AVISO: --upload-only-scope impede validar o canal de destino. "
+            "Use escopos completos em produção.",
+            file=sys.stderr,
+        )
         if channel_id:
-            print(f"Canal configurado: {channel_id}")
+            print(f"Canal esperado: {yt.get('channel_handle', channel_id)}")
             print(f"https://www.youtube.com/channel/{channel_id}")
         return 0
 
-    print(f"Canal: {info.get('title')} ({info.get('id')})")
+    try:
+        info = verify_upload_channel(config=cfg)
+    except Exception as exc:
+        print(f"Token salvo, mas canal OAuth incorreto: {exc}", file=sys.stderr)
+        print(
+            "Apague o token e autorize de novo com a conta Google de "
+            "@AgendaDiáriaImportante (não use sua conta pessoal).",
+            file=sys.stderr,
+        )
+        return 1
+
+    print(f"Canal validado: {info.get('title')} ({info.get('id')})")
     print(info.get("url", ""))
     return 0
 

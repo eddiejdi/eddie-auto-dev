@@ -54,6 +54,9 @@ def test_publish_edition_writes_meta(tmp_path, monkeypatch) -> None:
     fake_build = MagicMock(return_value=fake_youtube)
     fake_media = MagicMock(return_value="media")
 
+    cfg = yt.load_config()
+    cfg["youtube"]["channel_id"] = ""
+
     with patch.object(yt, "_load_credentials", return_value=object()):
         with patch.dict(
             sys.modules,
@@ -62,7 +65,41 @@ def test_publish_edition_writes_meta(tmp_path, monkeypatch) -> None:
                 "googleapiclient.http": MagicMock(MediaFileUpload=fake_media),
             },
         ):
-            result = yt.publish_edition("2026-07-09", artifacts_dir=tmp_path, config=yt.load_config())
+            result = yt.publish_edition("2026-07-09", artifacts_dir=tmp_path, config=cfg)
     assert result.video_id == "abc123"
     meta = json.loads((day / "publish_meta.json").read_text(encoding="utf-8"))
     assert meta["youtube_video_id"] == "abc123"
+
+
+def test_verify_upload_channel_rejects_mismatch(monkeypatch) -> None:
+    monkeypatch.setattr(
+        yt,
+        "get_authenticated_channel_info",
+        lambda **kwargs: {
+            "id": "UCpersonal",
+            "title": "Canal Pessoal",
+            "url": "https://www.youtube.com/channel/UCpersonal",
+        },
+    )
+    cfg = yt.load_config()
+    with pytest.raises(RuntimeError, match="Conta OAuth autenticada não corresponde"):
+        yt.verify_upload_channel(config=cfg)
+
+
+def test_youtube_auth_status_flags_upload_only_scope(tmp_path, monkeypatch) -> None:
+    class FakeCreds:
+        scopes = ("https://www.googleapis.com/auth/youtube.upload",)
+        valid = True
+        expired = False
+
+    cfg = yt.load_config()
+    cfg["youtube"]["credentials_file"] = str(tmp_path / "credentials.json")
+    cfg["youtube"]["token_file"] = str(tmp_path / "token.pickle")
+    (tmp_path / "credentials.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "token.pickle").write_bytes(b"token")
+
+    monkeypatch.setattr(yt, "_load_credentials", lambda *args, **kwargs: FakeCreds())
+    status = yt.youtube_auth_status(cfg)
+    assert status["upload_only_scope"] is True
+    assert status["authenticated"] is False
+    assert "escopo só de upload" in status["error"]

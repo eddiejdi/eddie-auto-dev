@@ -38,12 +38,23 @@
 
   function renderYoutubeStatus(yt) {
     var parts = [];
-    if (yt.authenticated) {
+    if (yt.authenticated && !yt.channel_mismatch) {
       parts.push('<span class="badge ok">YouTube conectado</span> ');
-      parts.push(yt.channel_title || yt.channel_id || "Canal");
+      parts.push(yt.channel_title || yt.authenticated_channel_id || "Canal");
       if (yt.channel_url) {
         parts.push(' — <a href="' + yt.channel_url + '" target="_blank" rel="noopener">abrir canal</a>');
       }
+    } else if (yt.channel_mismatch) {
+      parts.push('<span class="badge err">Canal OAuth errado</span> ');
+      parts.push("Publicaria em <strong>" + (yt.channel_title || yt.authenticated_channel_id) + "</strong>");
+      parts.push(", mas o esperado é ");
+      parts.push(yt.configured_channel_handle || yt.configured_channel_id || "@AgendaDiáriaImportante");
+      parts.push(". Rode <code>python3 tools/setup_agenda_youtube_oauth.py --url-only</code> ");
+      parts.push("com a conta Google do canal correto.");
+    } else if (yt.upload_only_scope) {
+      parts.push('<span class="badge err">Escopo insuficiente</span> ');
+      parts.push("Token só permite upload, sem validar canal. ");
+      parts.push("Reautentique sem <code>--upload-only-scope</code>.");
     } else if (yt.token_present && yt.credentials_present) {
       parts.push('<span class="badge err">Token inválido</span> ' + (yt.error || ""));
     } else {

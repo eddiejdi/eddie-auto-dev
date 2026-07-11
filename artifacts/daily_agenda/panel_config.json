@@ -4,7 +4,19 @@
     "quality": "balanced",
     "include_news": true,
     "send_telegram": true,
-    "upload_youtube": true
+    "upload_youtube": true,
+    "require_approval": true,
+    "deep_search": true
+  },
+  "search": {
+    "deep_search": true,
+    "timeout": 45,
+    "retries": 4
+  },
+  "approval": {
+    "enabled": true,
+    "timeout_minutes": 180,
+    "max_regenerations": 2
   },
   "youtube": {
     "enabled": true,
@@ -27,5 +39,37 @@
   "telegram": {
     "enabled": true,
     "chat_id": ""
-  }
+  },
+  "editorial": {
+    "stance": "pro_bolsonaro_allies",
+    "prefer_ally_youtube": true,
+    "exclude_hostile_headlines": true,
+    "include_bolsonaro_family_context": true
+  },
+  "ally_youtube": [
+    {
+      "name": "Kim Pain",
+      "search_terms": ["Kim Pain", "Kim Pain TV"],
+      "handle": "@KimPain",
+      "channel_id": ""
+    },
+    {
+      "name": "Didi Newa",
+      "search_terms": ["Didi Newa", "Didi News"],
+      "handle": "@DidiNewa",
+      "channel_id": ""
+    },
+    {
+      "name": "Auriverde",
+      "search_terms": ["Auriverde"],
+      "handle": "@Auriverde",
+      "channel_id": ""
+    },
+    {
+      "name": "Claudio Dantas",
+      "search_terms": ["Claudio Dantas", "Cláudio Dantas"],
+      "handle": "@ClaudioDantas",
+      "channel_id": ""
+    }
+  ]
 }

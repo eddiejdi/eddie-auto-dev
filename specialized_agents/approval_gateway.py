@@ -60,6 +60,9 @@ _CHAT:     str = ""
 DB_POLL_SECS   = int(os.environ.get("DB_POLL_SECS",   "5"))
 TG_LONG_POLL   = int(os.environ.get("TG_LONG_POLL",   "30"))
 INTENT_EXP_MIN = int(os.environ.get("INTENT_EXP_MIN", "10"))
+TG_POLL_ENABLED = os.environ.get("APPROVAL_GATEWAY_TG_POLL", "1").lower() not in {
+    "0", "false", "no", "off",
+}
 
 RISK_EMOJI: dict[str, str] = {
     "none":     "⚪",
@@ -347,6 +350,23 @@ def _on_callback(cb: dict[str, Any]) -> None:
     usr    = cb.get("from", {}).get("username") or cb.get("from", {}).get("first_name", "user")
     mid    = cb.get("message", {}).get("message_id")
 
+    if data.startswith("dag:"):
+        try:
+            import sys
+            from pathlib import Path
+
+            repo = Path(__file__).resolve().parents[1]
+            tools_dir = str(repo / "tools")
+            if tools_dir not in sys.path:
+                sys.path.insert(0, tools_dir)
+            import daily_agenda_approval as dag_approval
+
+            if dag_approval.handle_telegram_callback(cb):
+                log.info("Callback agenda diária processado por @%s", usr)
+                return
+        except Exception as exc:
+            log.warning("Falha no callback da agenda diária: %s", exc)
+
     if ":" not in data:
         _ack_btn(cb_id, "Ação desconhecida.")
         return
@@ -496,7 +516,11 @@ async def _main() -> None:
         sys.exit(1)
 
     log.info("Gateway pronto.")
-    await asyncio.gather(_db_loop(), _tg_loop())
+    if TG_POLL_ENABLED:
+        await asyncio.gather(_db_loop(), _tg_loop())
+    else:
+        log.info("Polling Telegram desativado; callbacks devem ser roteados pelo bot principal.")
+        await _db_loop()
 
 
 if __name__ == "__main__":

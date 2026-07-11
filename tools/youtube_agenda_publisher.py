@@ -19,7 +19,10 @@ logger = logging.getLogger(__name__)
 YOUTUBE_SCOPES = (
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.readonly",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
 )
+READONLY_SCOPE = "https://www.googleapis.com/auth/youtube.readonly"
+MANAGE_SCOPE = "https://www.googleapis.com/auth/youtube.force-ssl"
 
 
 @dataclass(frozen=True)
@@ -67,50 +70,38 @@ def _load_credentials(credentials_file: Path, token_file: Path):
     )
 
 
-def youtube_auth_status(config: dict[str, Any] | None = None) -> dict[str, Any]:
-    cfg = config or load_config()
-    yt = cfg["youtube"]
-    credentials_file = resolve_repo_path(yt["credentials_file"])
-    token_file = resolve_repo_path(yt["token_file"])
-    status = {
-        "enabled": bool(yt.get("enabled")),
-        "channel_id": yt.get("channel_id", ""),
-        "credentials_present": credentials_file.exists(),
-        "token_present": token_file.exists(),
-        "authenticated": False,
-        "channel_title": "",
-        "channel_url": "",
-        "error": "",
-    }
-    if not status["credentials_present"] or not status["token_present"]:
-        return status
-    try:
-        info = get_channel_info(config=cfg)
-        status["authenticated"] = True
-        status["channel_title"] = info.get("title", "")
-        status["channel_url"] = info.get("url", "")
-    except Exception as exc:
-        status["error"] = str(exc)
-    return status
+def _has_readonly_scope(creds) -> bool:
+    scopes = getattr(creds, "scopes", None) or ()
+    return READONLY_SCOPE in scopes
 
 
-def get_channel_info(*, config: dict[str, Any] | None = None) -> dict[str, str]:
+def _build_youtube_client(creds):
+    from googleapiclient.discovery import build
+
+    return build("youtube", "v3", credentials=creds, cache_discovery=False)
+
+
+def get_authenticated_channel_info(*, config: dict[str, Any] | None = None) -> dict[str, str]:
+    """Canal que receberá uploads com o token OAuth atual (channels.list mine=true)."""
     cfg = config or load_config()
     yt = cfg["youtube"]
     credentials_file = resolve_repo_path(yt["credentials_file"])
     token_file = resolve_repo_path(yt["token_file"])
     creds = _load_credentials(credentials_file, token_file)
-    from googleapiclient.discovery import build
+    if not _has_readonly_scope(creds):
+        raise RuntimeError(
+            "Token OAuth sem escopo youtube.readonly. "
+            "Reautentique com: python3 tools/setup_agenda_youtube_oauth.py --url-only"
+        )
 
-    youtube = build("youtube", "v3", credentials=creds, cache_discovery=False)
-    channel_id = (yt.get("channel_id") or "").strip()
-    if channel_id:
-        response = youtube.channels().list(part="snippet", id=channel_id).execute()
-    else:
-        response = youtube.channels().list(part="snippet", mine=True).execute()
+    youtube = _build_youtube_client(creds)
+    response = youtube.channels().list(part="snippet", mine=True).execute()
     items = response.get("items", [])
     if not items:
-        raise RuntimeError("Nenhum canal YouTube encontrado para a conta autenticada.")
+        raise RuntimeError(
+            "Nenhum canal YouTube encontrado para a conta autenticada. "
+            "Autorize com a conta Google do canal @AgendaDiáriaImportante."
+        )
     snippet = items[0]["snippet"]
     resolved_id = items[0]["id"]
     return {
@@ -118,6 +109,102 @@ def get_channel_info(*, config: dict[str, Any] | None = None) -> dict[str, str]:
         "title": snippet.get("title", ""),
         "url": f"https://www.youtube.com/channel/{resolved_id}",
     }
+
+
+def get_channel_info(*, config: dict[str, Any] | None = None) -> dict[str, str]:
+    """Compat: retorna o canal autenticado (destino real do upload)."""
+    return get_authenticated_channel_info(config=config)
+
+
+def verify_upload_channel(*, config: dict[str, Any] | None = None) -> dict[str, str]:
+    cfg = config or load_config()
+    yt = cfg["youtube"]
+    expected_id = (yt.get("channel_id") or "").strip()
+    if not expected_id:
+        return get_authenticated_channel_info(config=cfg)
+
+    authenticated = get_authenticated_channel_info(config=cfg)
+    if authenticated["id"] != expected_id:
+        handle = yt.get("channel_handle", "@AgendaDiáriaImportante")
+        raise RuntimeError(
+            "Conta OAuth autenticada não corresponde ao canal configurado. "
+            f"Upload iria para '{authenticated['title']}' ({authenticated['url']}), "
+            f"mas o esperado é {handle} "
+            f"(https://www.youtube.com/channel/{expected_id}). "
+            "Reautentique com a conta Google do canal correto: "
+            "python3 tools/setup_agenda_youtube_oauth.py --url-only"
+        )
+    return authenticated
+
+
+def _verify_uploaded_video_channel(
+    youtube,
+    *,
+    video_id: str,
+    expected_channel_id: str,
+) -> None:
+    response = youtube.videos().list(part="snippet", id=video_id).execute()
+    items = response.get("items", [])
+    if not items:
+        return
+    actual_channel_id = items[0]["snippet"].get("channelId", "")
+    if actual_channel_id and actual_channel_id != expected_channel_id:
+        raise RuntimeError(
+            "Vídeo publicado no canal errado. "
+            f"Esperado: https://www.youtube.com/channel/{expected_channel_id}. "
+            f"Publicado em: https://www.youtube.com/channel/{actual_channel_id}. "
+            f"Remova manualmente https://www.youtube.com/watch?v={video_id} "
+            "e reautentique com a conta @AgendaDiáriaImportante."
+        )
+
+
+def youtube_auth_status(config: dict[str, Any] | None = None) -> dict[str, Any]:
+    cfg = config or load_config()
+    yt = cfg["youtube"]
+    credentials_file = resolve_repo_path(yt["credentials_file"])
+    token_file = resolve_repo_path(yt["token_file"])
+    configured_id = (yt.get("channel_id") or "").strip()
+    status = {
+        "enabled": bool(yt.get("enabled")),
+        "channel_id": configured_id,
+        "configured_channel_id": configured_id,
+        "configured_channel_handle": yt.get("channel_handle", ""),
+        "configured_channel_url": yt.get("channel_url", ""),
+        "credentials_present": credentials_file.exists(),
+        "token_present": token_file.exists(),
+        "authenticated": False,
+        "authenticated_channel_id": "",
+        "channel_title": "",
+        "channel_url": "",
+        "channel_mismatch": False,
+        "upload_only_scope": False,
+        "error": "",
+    }
+    if not status["credentials_present"] or not status["token_present"]:
+        return status
+    try:
+        creds = _load_credentials(credentials_file, token_file)
+        status["upload_only_scope"] = not _has_readonly_scope(creds)
+        if status["upload_only_scope"]:
+            status["error"] = (
+                "Token com escopo só de upload; não é possível validar o canal. "
+                "Reautentique sem --upload-only-scope."
+            )
+            return status
+        info = get_authenticated_channel_info(config=cfg)
+        status["authenticated"] = True
+        status["authenticated_channel_id"] = info.get("id", "")
+        status["channel_title"] = info.get("title", "")
+        status["channel_url"] = info.get("url", "")
+        if configured_id and status["authenticated_channel_id"] != configured_id:
+            status["channel_mismatch"] = True
+            status["error"] = (
+                f"Canal autenticado ({info.get('title')}) difere do configurado "
+                f"({yt.get('channel_handle', configured_id)})."
+            )
+    except Exception as exc:
+        status["error"] = str(exc)
+    return status
 
 
 def build_video_title(date_str: str) -> str:
@@ -243,10 +330,13 @@ def publish_edition(
     credentials_file = resolve_repo_path(yt["credentials_file"])
     token_file = resolve_repo_path(yt["token_file"])
     creds = _load_credentials(credentials_file, token_file)
-    from googleapiclient.discovery import build
     from googleapiclient.http import MediaFileUpload
 
-    youtube = build("youtube", "v3", credentials=creds, cache_discovery=False)
+    expected_channel_id = (yt.get("channel_id") or "").strip()
+    if expected_channel_id:
+        verify_upload_channel(config=cfg)
+
+    youtube = _build_youtube_client(creds)
     title = build_video_title(date_str)
     description = build_video_description(
         date_str,
@@ -271,6 +361,12 @@ def publish_edition(
     while response == {}:
         _status, response = request.next_chunk()
     video_id = response["id"]
+    if expected_channel_id:
+        _verify_uploaded_video_channel(
+            youtube,
+            video_id=video_id,
+            expected_channel_id=expected_channel_id,
+        )
     result = YouTubePublishResult(
         video_id=video_id,
         video_url=f"https://www.youtube.com/watch?v={video_id}",
@@ -290,3 +386,30 @@ def publish_edition(
     )
     logger.info("YouTube publicado: %s", result.video_url)
     return result
+
+
+def _has_manage_scope(creds) -> bool:
+    scopes = getattr(creds, "scopes", None) or ()
+    return MANAGE_SCOPE in scopes
+
+
+def delete_youtube_video(
+    video_id: str,
+    *,
+    config: dict[str, Any] | None = None,
+) -> str:
+    cfg = config or load_config()
+    yt = cfg["youtube"]
+    credentials_file = resolve_repo_path(yt["credentials_file"])
+    token_file = resolve_repo_path(yt["token_file"])
+    creds = _load_credentials(credentials_file, token_file)
+    if not _has_manage_scope(creds):
+        raise RuntimeError(
+            "Token OAuth sem escopo para apagar vídeos (youtube.force-ssl). "
+            "Reautentique com: python3 tools/setup_agenda_youtube_oauth.py --url-only"
+        )
+    youtube = _build_youtube_client(creds)
+    youtube.videos().delete(id=video_id).execute()
+    url = f"https://www.youtube.com/watch?v={video_id}"
+    logger.info("YouTube apagado: %s", url)
+    return url
