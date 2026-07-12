@@ -39,6 +39,11 @@ from kucoin_api import (
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
 from market_rag import MarketRAG
+from track_record_confidence import (
+    TrackRecordConfidence,
+    apply_confidence_adjustment,
+    merge_track_record_cfg,
+)
 from sell_target_mixin import SellTargetMixin
 from risk_guardian_mixin import RiskGuardianMixin
 from position_manager_mixin import PositionManagerMixin
@@ -306,6 +311,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         self.model.use_macd     = bool(self.config.get("use_macd", False))
         self.model.use_ma_cross = bool(self.config.get("use_ma_cross", False))
         self.db = TrainingDatabase()
+        self._track_record = TrackRecordConfidence(self.db)
+        self._last_track_record_snapshot = None
         
         # Market RAG — inteligência de mercado com busca de padrões
         rag_recalibrate = self.config.get("rag_recalibrate_interval", _config.get("rag_recalibrate_interval", 300))
@@ -837,6 +844,57 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
     def _compact_prompt_json(payload: Dict[str, Any]) -> str:
         """Serializa contexto compacto para reduzir tokens nos prompts estruturados."""
         return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str)
+
+    def _apply_track_record_confidence(self, signal: Signal) -> Signal:
+        """Ajusta confiança do sinal com base no histórico realizado do profile."""
+        if signal.action not in ("BUY", "SELL"):
+            return signal
+
+        raw_cfg = self._load_live_config().get("track_record_confidence", {})
+        cfg = merge_track_record_cfg(raw_cfg, profile=self._current_profile())
+        if not cfg.get("enabled", False):
+            return signal
+
+        try:
+            snapshot = self._track_record.get_snapshot(
+                symbol=self.symbol,
+                profile=self._current_profile(),
+                dry_run=bool(self.state.dry_run),
+                cfg=cfg,
+            )
+            self._last_track_record_snapshot = snapshot
+        except Exception as e:
+            logger.debug(f"Track record confidence fallback: {e}")
+            return signal
+
+        raw_confidence = float(signal.confidence)
+        signal.features = dict(signal.features or {})
+        signal.features["raw_confidence"] = round(raw_confidence, 4)
+        signal.features.update(snapshot.as_features())
+
+        mode = str(cfg.get("mode", "apply") or "apply").lower()
+        if mode == "shadow":
+            signal.features["track_record_mode"] = "shadow"
+            return signal
+
+        adjusted = apply_confidence_adjustment(raw_confidence, snapshot)
+        if abs(adjusted - raw_confidence) >= 0.001:
+            logger.debug(
+                "📈 Track record confidence %s: %.1f%% -> %.1f%% "
+                "(TRS=%.2f, WR=%.0f%%, sells=%d, streak +%d/-%d)",
+                signal.action,
+                raw_confidence * 100,
+                adjusted * 100,
+                snapshot.trs,
+                snapshot.win_rate * 100,
+                snapshot.sell_count,
+                snapshot.winning_streak,
+                snapshot.losing_streak,
+            )
+        signal.confidence = adjusted
+        signal.features["adjusted_confidence"] = round(adjusted, 4)
+        signal.features["track_record_mode"] = "apply"
+        return signal
 
     def _fetch_db_perf_context(self, profile: str = "default") -> Dict[str, Any]:
         """Retorna resumo compacto de performance 7d do DB para injeção em prompts LLM."""
@@ -5700,6 +5758,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 news_tag = self._get_cached_news_tag()
                 if news_tag:
                     signal.reason = f"{signal.reason}, {news_tag}" if signal.reason else news_tag
+
+                signal = self._apply_track_record_confidence(signal)
 
                 # Registrar decisão
                 decision_id = self.db.record_decision(

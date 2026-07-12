@@ -1,17 +1,17 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-11T16:09:43.063302+00:00`
+- Generated at: `2026-07-12T19:40:47.037239+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `172`
-- Critical services flagged for MVP: `67`
+- Repo services discovered: `174`
+- Critical services flagged for MVP: `69`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
 - `identity`: 4
-- `monitoring`: 15
+- `monitoring`: 17
 - `network`: 16
 - `operations`: 96
 - `storage`: 32
@@ -53,6 +53,8 @@
 - `grafana-selfheal.service` (monitoring, systemd) from `systemd/grafana-selfheal.service`
 - `job-monitor.service` (monitoring, systemd) from `systemd/job-monitor.service`
 - `monitoring-containers-bootstrap.service` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.service`
+- `monitoring-containers-bootstrap.timer` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.timer`
+- `prometheus-selfheal.service` (monitoring, systemd) from `systemd/prometheus-selfheal.service`
 - `rss-sentiment-exporter.service` (monitoring, systemd) from `systemd/rss-sentiment-exporter.service`
 - `storj-exporter.service` (monitoring, systemd) from `deploy/storj-exporter.service`
 - `tape-component-quality-exporter.service` (monitoring, systemd) from `systemd/tape-component-quality-exporter.service`
@@ -76,8 +78,6 @@
 - `disk-clean.service` (storage, systemd) from `systemd/disk-clean.service`
 - `disk-clean.timer` (storage, systemd) from `systemd/disk-clean.timer`
 - `disk-spindown.service` (storage, systemd) from `tools/homelab/disk-spindown.service`
-- `homelab-disk-backup.service` (storage, systemd) from `tools/backup/homelab-disk-backup.service`
-- `homelab-tape-log-drain-nextcloud.service` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.service`
 
 ## Serviços anotados manualmente
 

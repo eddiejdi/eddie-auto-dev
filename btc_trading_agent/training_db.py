@@ -512,6 +512,35 @@ class TrainingDatabase:
             cur.execute(query, params)
             return float(cur.fetchone()[0])
 
+    def get_profile_realized_sells(
+        self,
+        symbol: str,
+        profile: str,
+        since: float,
+        *,
+        dry_run: bool = False,
+        limit: int = 50,
+    ) -> List[Dict]:
+        """Retorna SELLs realizados com PnL para cálculo de track record."""
+        with self._get_conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                f"""
+                SELECT side, pnl, pnl_pct, timestamp
+                FROM {SCHEMA}.trades
+                WHERE symbol = %s
+                  AND profile = %s
+                  AND dry_run = %s
+                  AND side IN ('sell', 'sell_reconciled')
+                  AND pnl IS NOT NULL
+                  AND timestamp > %s
+                ORDER BY timestamp DESC
+                LIMIT %s
+                """,
+                (symbol, profile, dry_run, since, max(1, int(limit))),
+            )
+            return [dict(row) for row in cur.fetchall()]
+
     def get_recent_trades(self, symbol: str = None, limit: int = 100,
                           include_dry: bool = False, profile: str = None) -> List[Dict]:
         """Obtém trades recentes"""

@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-11T16:09:43.063302+00:00",
+  "generated_at": "2026-07-12T19:40:47.037239+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 172,
+    "repo_services": 174,
     "trading_instances": 12,
-    "critical_services": 67,
+    "critical_services": 69,
     "domains": {
       "identity": 4,
-      "monitoring": 15,
+      "monitoring": 17,
       "network": 16,
       "operations": 96,
       "storage": 32,
@@ -314,6 +314,22 @@
       "domain": "monitoring",
       "kind": "systemd",
       "source": "systemd/monitoring-containers-bootstrap.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "monitoring-containers-bootstrap.timer",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/monitoring-containers-bootstrap.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "prometheus-selfheal.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/prometheus-selfheal.service",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -1916,6 +1932,20 @@
         "name": "monitoring-containers-bootstrap.service",
         "domain": "monitoring",
         "source": "systemd/monitoring-containers-bootstrap.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "monitoring-containers-bootstrap.timer",
+        "domain": "monitoring",
+        "source": "systemd/monitoring-containers-bootstrap.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "prometheus-selfheal.service",
+        "domain": "monitoring",
+        "source": "systemd/prometheus-selfheal.service",
         "kind": "systemd",
         "critical": true
       },
