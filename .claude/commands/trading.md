@@ -57,7 +57,13 @@ Docs: `docs/SOL_USDT_INSTALLATION.md`, `docs/DOGE_USDT_INSTALLATION.md`
 | `config/` | Configuracoes por moeda |
 | `monitoring/` | Metricas e alertas |
 
-### 1.6 Grafana
+### 1.6 RSS Sentiment + KuCoin News
+- Exporter: `grafana/exporters/rss_sentiment_exporter.py` (porta 9122)
+- KuCoin sem RSS nativo — coletor: `grafana/exporters/kucoin_news_fetcher.py`
+- Fontes: flash sitemap + API CMS de anúncios
+- Doc: `docs/KUCOIN_NEWS_FEED.md`
+
+### 1.7 Grafana
 - UM arquivo JSON por dashboard — titulos duplicados bloqueiam
 - Expressoes Prometheus: `{job="$coin_job"}` — nunca hardcoded
 - Dashboard ativo: `btc_trading_dashboard_v3_prometheus.json`

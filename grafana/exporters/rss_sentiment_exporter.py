@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Prometheus exporter de sentimento de notícias crypto via RSS feeds.
 
-Coleta notícias dos principais portais crypto via RSS, classifica sentimento
+Coleta notícias dos principais portais crypto via RSS (e KuCoin via sitemap/API),
+classifica sentimento
 usando Ollama local (GPU0 — phi4-mini/trading-sentiment), persiste em PostgreSQL e
 expõe métricas Prometheus para integração com o ensemble do Trading Agent e Grafana.
 
@@ -124,6 +125,34 @@ RSS_FEEDS: List[Dict[str, str]] = [
     {"name": "unchainedcrypto","url": "https://unchainedcrypto.com/feed/"},    # análise aprofundada, entrevistas com insiders
     {"name": "blockchainrep",  "url": "https://blockchainreporter.net/feed/"}, # cobertura de mercado e análise on-chain
 ]
+
+# KuCoin não expõe RSS — coletado via sitemap flash + API CMS (kucoin_news_fetcher.py)
+KUCOIN_NEWS_ENABLED = os.environ.get("KUCOIN_NEWS_ENABLED", "1").lower() not in {
+    "0", "false", "no"
+}
+KUCOIN_NEWS_SOURCES: List[Dict[str, str]] = [
+    {
+        "name": "kucoin_flash",
+        "type": "sitemap",
+        "url": "https://www.kucoin.com/site-map_flash_en_1.xml",
+    },
+    {
+        "name": "kucoin_announcements",
+        "type": "cms_api",
+        "url": "https://www.kucoin.com/_api/cms/articles",
+    },
+]
+
+_EXPORTER_DIR = Path(__file__).resolve().parent
+if str(_EXPORTER_DIR) not in sys.path:
+    sys.path.insert(0, str(_EXPORTER_DIR))
+
+try:
+    from kucoin_news_fetcher import collect_kucoin_items
+
+    HAS_KUCOIN_NEWS = True
+except ImportError:
+    HAS_KUCOIN_NEWS = False
 
 # ── Coin Detection ─────────────────────────────────────────────────────
 
@@ -279,6 +308,39 @@ def _parse_date(entry: dict) -> datetime:
     return datetime.now(timezone.utc)
 
 
+def fetch_kucoin_articles() -> List[NewsArticle]:
+    """Busca notícias KuCoin (flash + anúncios) e converte para NewsArticle."""
+    if not HAS_KUCOIN_NEWS:
+        log.warning("kucoin_news_fetcher indisponível — pulando fontes KuCoin")
+        return []
+
+    articles: List[NewsArticle] = []
+    by_source: Dict[str, int] = {}
+
+    for item in collect_kucoin_items():
+        combined_text = f"{item.title} {item.description}"
+        coins = detect_coins(combined_text)
+        if not coins:
+            continue
+
+        articles.append(
+            NewsArticle(
+                title=item.title,
+                url=item.url,
+                source=item.source,
+                published=item.published,
+                description=item.description[:500],
+                coins=coins,
+            )
+        )
+        by_source[item.source] = by_source.get(item.source, 0) + 1
+
+    for source_name, count in by_source.items():
+        log.info("Feed %s: %d artigos relevantes", source_name, count)
+
+    return articles
+
+
 def fetch_all_feeds() -> List[NewsArticle]:
     """Busca todos os feeds RSS configurados e retorna artigos consolidados."""
     all_articles: List[NewsArticle] = []
@@ -286,6 +348,13 @@ def fetch_all_feeds() -> List[NewsArticle]:
         articles = fetch_rss_feed(feed_def["url"], feed_def["name"])
         all_articles.extend(articles)
         log.info("Feed %s: %d artigos relevantes", feed_def["name"], len(articles))
+
+    if KUCOIN_NEWS_ENABLED:
+        kucoin_articles = fetch_kucoin_articles()
+        all_articles.extend(kucoin_articles)
+        if not kucoin_articles:
+            log.info("Feed kucoin: 0 artigos relevantes")
+
     return all_articles
 
 

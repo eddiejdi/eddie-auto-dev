@@ -1117,6 +1117,13 @@ class TestConfiguracao:
         assert "cointelegraph" in feed_names
         assert "decrypt" in feed_names
 
+    def test_kucoin_sources_configuradas(self) -> None:
+        """Fontes KuCoin devem incluir flash e anúncios."""
+        assert hasattr(_mod, "KUCOIN_NEWS_SOURCES")
+        names = {s["name"] for s in _mod.KUCOIN_NEWS_SOURCES}
+        assert "kucoin_flash" in names
+        assert "kucoin_announcements" in names
+
     def test_sentiment_prompt_template_existe(self) -> None:
         """Template de prompt deve existir e conter placeholders obrigatórios."""
         assert hasattr(_mod, "SENTIMENT_PROMPT_TEMPLATE")
@@ -1133,6 +1140,41 @@ class TestConfiguracao:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# Testes: fetch_kucoin_articles
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestFetchKucoinArticles:
+    """Testes para fetch_kucoin_articles()."""
+
+    @patch.object(_mod, "collect_kucoin_items")
+    def test_converte_itens_relevantes(self, mock_collect: MagicMock) -> None:
+        from kucoin_news_fetcher import KuCoinNewsItem
+
+        mock_collect.return_value = [
+            KuCoinNewsItem(
+                title="Bitcoin mining difficulty drops 5%",
+                url="https://www.kucoin.com/news/flash/btc-difficulty",
+                source="kucoin_flash",
+                published=datetime.now(timezone.utc),
+                description="Bitcoin mining update",
+            ),
+            KuCoinNewsItem(
+                title="KuCoin office hours",
+                url="https://www.kucoin.com/announcement/office-hours",
+                source="kucoin_announcements",
+                published=datetime.now(timezone.utc),
+                description="General company update",
+            ),
+        ]
+
+        articles = _mod.fetch_kucoin_articles()
+        assert len(articles) == 1
+        assert articles[0].coins == ["BTC"]
+        assert articles[0].source == "kucoin_flash"
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # Testes: fetch_all_feeds
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -1140,9 +1182,10 @@ class TestConfiguracao:
 class TestFetchAllFeeds:
     """Testes para fetch_all_feeds()."""
 
+    @patch.object(_mod, "fetch_kucoin_articles")
     @patch.object(_mod, "fetch_rss_feed")
     def test_consolida_artigos_de_todos_feeds(
-        self, mock_fetch: MagicMock
+        self, mock_fetch: MagicMock, mock_kucoin: MagicMock
     ) -> None:
         """Deve consolidar artigos de todos os feeds configurados."""
         article = NewsArticle(
@@ -1153,17 +1196,50 @@ class TestFetchAllFeeds:
             coins=["BTC"],
         )
         mock_fetch.return_value = [article]
+        mock_kucoin.return_value = []
 
         all_articles = _mod.fetch_all_feeds()
         assert len(all_articles) == len(RSS_FEEDS)
         assert mock_fetch.call_count == len(RSS_FEEDS)
+        mock_kucoin.assert_called_once()
 
+    @patch.object(_mod, "fetch_kucoin_articles")
     @patch.object(_mod, "fetch_rss_feed")
-    def test_feeds_vazios_retorna_vazio(self, mock_fetch: MagicMock) -> None:
+    def test_inclui_artigos_kucoin(self, mock_fetch: MagicMock, mock_kucoin: MagicMock) -> None:
+        """Deve incluir artigos KuCoin quando habilitado."""
+        mock_fetch.return_value = []
+        kucoin_article = NewsArticle(
+            title="Bitcoin ETF inflows surge on KuCoin flash",
+            url="https://www.kucoin.com/news/flash/btc-etf",
+            source="kucoin_flash",
+            published=datetime.now(timezone.utc),
+            coins=["BTC"],
+        )
+        mock_kucoin.return_value = [kucoin_article]
+
+        all_articles = _mod.fetch_all_feeds()
+        assert len(all_articles) == 1
+        assert all_articles[0].source == "kucoin_flash"
+
+    @patch.object(_mod, "fetch_kucoin_articles")
+    @patch.object(_mod, "fetch_rss_feed")
+    def test_feeds_vazios_retorna_vazio(self, mock_fetch: MagicMock, mock_kucoin: MagicMock) -> None:
         """Feeds sem artigos devem retornar lista vazia."""
         mock_fetch.return_value = []
+        mock_kucoin.return_value = []
         all_articles = _mod.fetch_all_feeds()
         assert len(all_articles) == 0
+
+    @patch.object(_mod, "KUCOIN_NEWS_ENABLED", False)
+    @patch.object(_mod, "fetch_kucoin_articles")
+    @patch.object(_mod, "fetch_rss_feed")
+    def test_kucoin_desabilitado(
+        self, mock_fetch: MagicMock, mock_kucoin: MagicMock
+    ) -> None:
+        """Com KUCOIN_NEWS_ENABLED=0 não deve chamar fetch_kucoin_articles."""
+        mock_fetch.return_value = []
+        _mod.fetch_all_feeds()
+        mock_kucoin.assert_not_called()
 
 
 # ═══════════════════════════════════════════════════════════════════════
