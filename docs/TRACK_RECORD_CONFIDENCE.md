@@ -130,6 +130,18 @@ LIMIT 20;
 
 Fonte de SELLs: `training_db.get_profile_realized_sells()` em `btc.trades` (`side IN ('sell','sell_reconciled')`, `pnl IS NOT NULL`).
 
+### PnL líquido no sync KuCoin
+
+O campo `pnl` usado pelo TRC deve ser **líquido** (bruto − taxa compra − taxa venda). Fontes:
+
+| Origem | PnL |
+|--------|-----|
+| `kucoin_live` (agente) | Líquido na execução; `_reconcile_sell_fill` refina com fee real da venda |
+| `kucoin_sync` | Calculado em `scripts/kucoin_postgres_sync.py`: FIFO por profile + fees dos fills (`pnl_source=kucoin_sync_fifo_net`) |
+| Backfill | A cada sync, SELLs com `pnl IS NULL` são preenchidos (limite `KUCOIN_PNL_BACKFILL_LIMIT`, default 500) |
+
+SELLs sem `pnl` **não entram** no TRS. O sync fecha essa lacuna automaticamente.
+
 ### Prometheus — exporter por instância
 
 Métricas expostas por `prometheus_exporter.py`:

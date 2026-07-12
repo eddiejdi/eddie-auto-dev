@@ -7,17 +7,27 @@ import time
 from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
-import psycopg2
-import psycopg2.extras
+try:
+    import psycopg2
+    import psycopg2.extras
+except ModuleNotFoundError:  # pragma: no cover - test environment fallback
+    psycopg2 = None  # type: ignore[assignment]
+    REAL_DICT_CURSOR = None
+else:
+    REAL_DICT_CURSOR = psycopg2.extras.RealDictCursor
 import requests
 
 
 RUNTIME_DIR = Path(os.environ.get("BTC_AGENT_DIR", "/apps/crypto-trader/trading/btc_trading_agent"))
 if str(RUNTIME_DIR) not in sys.path:
     sys.path.insert(0, str(RUNTIME_DIR))
+REPO_AGENT_DIR = Path(__file__).resolve().parents[1] / "btc_trading_agent"
+if REPO_AGENT_DIR.exists() and str(REPO_AGENT_DIR) not in sys.path:
+    sys.path.insert(0, str(REPO_AGENT_DIR))
 
 import kucoin_api  # type: ignore
 from kucoin_api import get_balances, get_fills, get_price_fast  # type: ignore
+from position_reconstruction import reconstruct_open_buys, summarize_open_buys  # type: ignore
 from secrets_helper import get_database_url  # type: ignore
 
 
@@ -35,6 +45,9 @@ LEDGER_BACKFILL_MS = LEDGER_BACKFILL_DAYS * LEDGER_WINDOW_MS
 LEDGER_CURSOR_OVERLAP_MS = 5 * 60 * 1000
 LEDGER_REQUEST_SPACING_SEC = 0.35
 ACCOUNT_LEDGER_SYNC_KEY = "account_ledgers_v2"
+TRADING_FEE_PCT = 0.001
+SELL_SIDES = frozenset({"sell", "sell_reconciled"})
+BACKFILL_PNL_LIMIT = int(os.environ.get("KUCOIN_PNL_BACKFILL_LIMIT", "500"))
 
 
 def _db_url() -> str:
@@ -48,6 +61,8 @@ def _db_url() -> str:
 
 
 def _connect():
+    if psycopg2 is None:
+        raise RuntimeError("psycopg2 is required for database access")
     return psycopg2.connect(_db_url())
 
 
@@ -272,6 +287,268 @@ def _row_event_timestamp(row: Dict[str, Any]) -> float:
         return time.time()
 
 
+def _parse_metadata(value: Any) -> Dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    if not value:
+        return {}
+    try:
+        parsed = json.loads(value)
+    except Exception:
+        return {}
+    return parsed if isinstance(parsed, dict) else {}
+
+
+def _fill_notional_usdt(fill: Dict[str, Any]) -> float:
+    funds = _safe_float(fill.get("funds"))
+    if funds > 0:
+        return funds
+    return _safe_float(fill.get("price")) * _safe_float(fill.get("size"))
+
+
+def _fee_usdt_from_fill(fill: Dict[str, Any], notional_usdt: float) -> float:
+    fee = _safe_float(fill.get("fee"))
+    currency = str(fill.get("feeCurrency") or "USDT").upper()
+    if fee <= 0:
+        rate = _safe_float(fill.get("feeRate")) or TRADING_FEE_PCT
+        return notional_usdt * rate
+    if currency == "USDT":
+        return fee
+    rate = _safe_float(fill.get("feeRate")) or TRADING_FEE_PCT
+    return notional_usdt * rate
+
+
+def _sum_sell_fees_usdt(raw_fills: Iterable[Dict[str, Any]]) -> float:
+    total = 0.0
+    for fill in raw_fills:
+        total += _fee_usdt_from_fill(fill, _fill_notional_usdt(fill))
+    return total
+
+
+def _buy_fee_usdt(price: float, size: float, metadata: Dict[str, Any]) -> float:
+    fills = metadata.get("fills")
+    if isinstance(fills, list) and fills:
+        return sum(
+            _fee_usdt_from_fill(fill, _fill_notional_usdt(fill))
+            for fill in fills
+            if isinstance(fill, dict)
+        )
+    return price * size * TRADING_FEE_PCT
+
+
+def _consume_buy_queue(queue: list[Dict[str, Any]], amount: float) -> None:
+    remaining = amount
+    while remaining > 1e-12 and queue:
+        head = queue[0]
+        take = min(remaining, head["size"])
+        head["size"] -= take
+        remaining -= take
+        if head["size"] <= 1e-12:
+            queue.pop(0)
+
+
+def _fifo_cost_for_sell(
+    trades_before: Iterable[Dict[str, Any]],
+    sell_size: float,
+) -> Optional[tuple[float, float, float]]:
+    """Retorna (avg_entry, buy_fees_usdt, matched_size) via FIFO."""
+    if sell_size <= 0:
+        return None
+
+    queue: list[Dict[str, Any]] = []
+    for trade in trades_before:
+        side = str(trade.get("side") or "").lower()
+        metadata = _parse_metadata(trade.get("metadata"))
+        if side == "buy":
+            if str(metadata.get("source") or "") == "external_deposit":
+                continue
+            queue.append(
+                {
+                    "price": _safe_float(trade.get("price")),
+                    "size": _safe_float(trade.get("size")),
+                    "metadata": metadata,
+                }
+            )
+        elif side in SELL_SIDES:
+            _consume_buy_queue(queue, _safe_float(trade.get("size")))
+
+    need = sell_size
+    cost = 0.0
+    buy_fees = 0.0
+    matched = 0.0
+    while need > 1e-12 and queue:
+        head = queue[0]
+        take = min(need, head["size"])
+        cost += take * head["price"]
+        buy_fees += _buy_fee_usdt(head["price"], take, head["metadata"])
+        matched += take
+        head["size"] -= take
+        need -= take
+        if head["size"] <= 1e-12:
+            queue.pop(0)
+
+    if matched <= 1e-12:
+        return None
+    return cost / matched, buy_fees, matched
+
+
+def _compute_net_sell_pnl(
+    sell_price: float,
+    sell_size: float,
+    avg_entry: float,
+    sell_fee_usdt: float,
+    buy_fee_usdt: float,
+) -> tuple[float, float]:
+    gross_pnl = (sell_price - avg_entry) * sell_size
+    net_pnl = gross_pnl - sell_fee_usdt - buy_fee_usdt
+    net_sell_price = sell_price - (sell_fee_usdt / sell_size if sell_size > 0 else 0.0)
+    net_buy_price = avg_entry * (1 + TRADING_FEE_PCT)
+    pnl_pct = ((net_sell_price / net_buy_price) - 1) * 100 if net_buy_price > 0 else 0.0
+    return round(net_pnl, 6), round(pnl_pct, 4)
+
+
+def _load_trades_before_sell(
+    cur,
+    *,
+    symbol: str,
+    profile: str,
+    sell_ts: float,
+    sell_id: int,
+) -> list[Dict[str, Any]]:
+    cur.execute(
+        f"""
+        SELECT id, side, price, size, timestamp, metadata
+        FROM {SCHEMA}.trades
+        WHERE symbol = %s
+          AND profile = %s
+          AND dry_run = FALSE
+          AND side IN ('buy', 'sell', 'sell_reconciled')
+          AND (timestamp < %s OR (timestamp = %s AND id < %s))
+        ORDER BY timestamp ASC, id ASC
+        """,
+        (symbol, profile, sell_ts, sell_ts, sell_id),
+    )
+    return [dict(row) for row in cur.fetchall()]
+
+
+def _refresh_sell_pnl(cur, trade_id: int, *, force: bool = False) -> bool:
+    """Calcula e persiste PnL líquido (FIFO + fees) para um SELL sem pnl."""
+    cur.execute(
+        f"""
+        SELECT id, symbol, profile, side, price, size, timestamp, pnl, metadata
+        FROM {SCHEMA}.trades
+        WHERE id = %s
+        """,
+        (trade_id,),
+    )
+    trade = cur.fetchone()
+    if not trade:
+        return False
+
+    side = str(trade.get("side") or "").lower()
+    if side not in SELL_SIDES:
+        return False
+    if trade.get("pnl") is not None and not force:
+        return False
+
+    symbol = str(trade.get("symbol") or "BTC-USDT")
+    profile = str(trade.get("profile") or SYNC_PROFILE)
+    sell_price = _safe_float(trade.get("price"))
+    sell_size = _safe_float(trade.get("size"))
+    if sell_price <= 0 or sell_size <= 0:
+        return False
+
+    metadata = _parse_metadata(trade.get("metadata"))
+    raw_fills = metadata.get("fills")
+    if not isinstance(raw_fills, list):
+        raw_fills = []
+    sell_fee_usdt = _sum_sell_fees_usdt(
+        fill for fill in raw_fills if isinstance(fill, dict)
+    )
+    if sell_fee_usdt <= 0:
+        sell_fee_usdt = sell_price * sell_size * TRADING_FEE_PCT
+
+    trades_before = _load_trades_before_sell(
+        cur,
+        symbol=symbol,
+        profile=profile,
+        sell_ts=_safe_float(trade.get("timestamp")),
+        sell_id=int(trade["id"]),
+    )
+    fifo = _fifo_cost_for_sell(trades_before, sell_size)
+    if fifo is None:
+        return False
+
+    avg_entry, buy_fee_usdt, matched_size = fifo
+    if matched_size + 1e-9 < sell_size:
+        LOG.debug(
+            "PnL parcial trade_id=%s profile=%s matched=%.8f sell=%.8f",
+            trade_id,
+            profile,
+            matched_size,
+            sell_size,
+        )
+
+    pnl, pnl_pct = _compute_net_sell_pnl(
+        sell_price,
+        sell_size,
+        avg_entry,
+        sell_fee_usdt,
+        buy_fee_usdt,
+    )
+    merged_metadata = {
+        **metadata,
+        "pnl_source": "kucoin_sync_fifo_net",
+        "pnl_avg_entry": round(avg_entry, 8),
+        "pnl_sell_fee_usdt": round(sell_fee_usdt, 8),
+        "pnl_buy_fee_usdt": round(buy_fee_usdt, 8),
+        "pnl_matched_size": round(matched_size, 8),
+    }
+    cur.execute(
+        f"""
+        UPDATE {SCHEMA}.trades
+        SET pnl = %s,
+            pnl_pct = %s,
+            metadata = %s
+        WHERE id = %s
+        """,
+        (pnl, pnl_pct, json.dumps(merged_metadata), trade_id),
+    )
+    LOG.info(
+        "PnL líquido trade_id=%s profile=%s symbol=%s pnl=%.6f (%.4f%%)",
+        trade_id,
+        profile,
+        symbol,
+        pnl,
+        pnl_pct,
+    )
+    return True
+
+
+def _backfill_missing_sell_pnl(cur, *, limit: int = BACKFILL_PNL_LIMIT) -> int:
+    """Preenche pnl ausente em SELLs históricos usando FIFO + fees dos fills."""
+    cur.execute(
+        f"""
+        SELECT id
+        FROM {SCHEMA}.trades
+        WHERE side IN ('sell', 'sell_reconciled')
+          AND dry_run = FALSE
+          AND pnl IS NULL
+        ORDER BY timestamp DESC
+        LIMIT %s
+        """,
+        (max(1, int(limit)),),
+    )
+    trade_ids = [int(row["id"]) for row in cur.fetchall()]
+    updated = 0
+    for trade_id in trade_ids:
+        if _refresh_sell_pnl(cur, trade_id):
+            updated += 1
+    if updated:
+        LOG.info("Backfill PnL líquido: %s SELLs atualizados", updated)
+    return updated
+
+
 def _trades_has_profile(conn) -> bool:
     with conn.cursor() as cur:
         cur.execute(
@@ -378,7 +655,7 @@ def _cleanup_duplicate_orphans(conn) -> int:
     trocando o side para 'buy_reconciled'/'sell_reconciled' e adicionando
     metadata de auditoria. Executa apenas uma vez (verifica flag no sync_state).
     """
-    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+    with conn.cursor(cursor_factory=REAL_DICT_CURSOR) as cur:
         # Verificar se cleanup já executou
         cur.execute(
             f"SELECT metadata FROM {SCHEMA}.exchange_sync_state WHERE sync_key = %s",
@@ -486,26 +763,73 @@ def _reconcile_position_integrity(conn) -> Dict[str, Any]:
     """
     result: Dict[str, Any] = {"profiles": {}, "orphan_count": 0, "reconciled": 0}
 
-    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        # Posição por profile
+    with conn.cursor(cursor_factory=REAL_DICT_CURSOR) as cur:
+        cur.execute(f"""
+            SELECT profile
+            FROM {SCHEMA}.trades
+            WHERE symbol = 'BTC-USDT'
+              AND dry_run = FALSE
+              AND profile NOT IN ('default', 'exchange_sync')
+            GROUP BY profile
+            HAVING ABS(
+                COALESCE(SUM(
+                    CASE
+                        WHEN side='buy'
+                             AND COALESCE(metadata->>'source','') != 'external_deposit'
+                        THEN size
+                        WHEN side IN ('sell', 'sell_reconciled')
+                        THEN -size
+                        ELSE 0
+                    END
+                ), 0)
+            ) > %s
+        """, (_PROFILE_MIN_OPEN_POSITION,))
+        active_non_system_profiles = {str(row["profile"]) for row in cur.fetchall()}
+
+        # Posição live reconstruída por profile. Dry-run entries are useful for
+        # backtests and shadow analysis, but they must not affect exchange
+        # reconciliation; raw buy-sell history also overstates positions after
+        # slot-level reconciliations.
         cur.execute(f"""
             SELECT
                 profile,
-                (SUM(size) FILTER (WHERE side='buy')
-                 - COALESCE(SUM(size) FILTER (WHERE side='sell'), 0))::numeric(20,10) AS net_position,
                 COUNT(*) FILTER (WHERE side='buy') AS buys,
                 COUNT(*) FILTER (WHERE side='sell') AS sells,
                 COUNT(*) FILTER (WHERE (order_id IS NULL OR order_id = '') AND side IN ('buy', 'sell')) AS orphan_trades
             FROM {SCHEMA}.trades
             WHERE symbol = 'BTC-USDT'
+              AND dry_run = FALSE
             GROUP BY profile
         """)
         for row in cur.fetchall():
             profile = row["profile"]
-            net = float(row["net_position"] or 0)
+            profile_name = str(profile or "default")
+            cur.execute(
+                f"""
+                SELECT id, side, size, price, timestamp, metadata, dry_run
+                FROM {SCHEMA}.trades
+                WHERE symbol = 'BTC-USDT'
+                  AND dry_run = FALSE
+                  AND profile = %s
+                ORDER BY timestamp DESC
+                LIMIT 500
+                """,
+                (profile,),
+            )
+            shared_profile_ambiguous = profile_name not in {"default", "exchange_sync"} and (
+                len(active_non_system_profiles) > 1
+            )
+            open_buys = reconstruct_open_buys(
+                [dict(trade) for trade in cur.fetchall()],
+                shared_profile_ambiguous=shared_profile_ambiguous,
+                exclude_external_deposits=True,
+            )
+            net, avg_entry = summarize_open_buys(open_buys)
             orphans = int(row["orphan_trades"] or 0)
             result["profiles"][profile] = {
                 "net_position": net,
+                "avg_entry_price": avg_entry,
+                "open_entries": len(open_buys),
                 "buys": row["buys"],
                 "sells": row["sells"],
                 "orphan_trades": orphans,
@@ -519,17 +843,36 @@ def _reconcile_position_integrity(conn) -> Dict[str, Any]:
 
         # Buscar saldo real exchange para comparar
         try:
+            exchange_balances: Dict[str, float] = {}
             base_balance = 0.0
             for acc in get_balances(account_type="trade"):
                 if acc.get("currency") == "BTC":
-                    base_balance = _safe_float(acc.get("balance"))
+                    balance = _safe_float(acc.get("balance"))
+                    exchange_balances["trade"] = balance
+                    base_balance += balance
                     break
+            try:
+                sub_balances = kucoin_api.get_sub_account_balances()
+            except Exception as exc:
+                LOG.warning("Could not fetch sub-account BTC balances for integrity check: %s", exc)
+                sub_balances = []
+            if not isinstance(sub_balances, list):
+                sub_balances = []
+            for acc in sub_balances:
+                if acc.get("currency") != "BTC":
+                    continue
+                sub_name = acc.get("sub_name") or "unknown"
+                balance = _safe_float(acc.get("balance"))
+                key = f"sub:{sub_name}"
+                exchange_balances[key] = exchange_balances.get(key, 0.0) + balance
+                base_balance += balance
 
             total_db_position = sum(
                 p["net_position"] for p in result["profiles"].values()
             )
             diff = abs(total_db_position - base_balance)
             result["exchange_btc_balance"] = base_balance
+            result["exchange_btc_balances"] = exchange_balances
             result["db_total_position"] = total_db_position
             result["position_diff"] = diff
 
@@ -676,9 +1019,10 @@ def _sync_fills(conn) -> int:
     grouped = _aggregate_fills(fills)
     inserted = 0
     matched_orphans = 0
+    pnl_updated = 0
     has_profile = _trades_has_profile(conn)
 
-    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+    with conn.cursor(cursor_factory=REAL_DICT_CURSOR) as cur:
         for order_id, row in sorted(grouped.items(), key=lambda item: str(item[1]["created_at"])):
             event_ts = _row_event_timestamp(row)
             metadata = {
@@ -720,12 +1064,16 @@ def _sync_fills(conn) -> int:
                         existing["id"],
                     ),
                 )
+                if row.get("side") == "sell" and _refresh_sell_pnl(cur, int(existing["id"])):
+                    pnl_updated += 1
                 continue
 
             # 2. Tentar vincular a trade órfão do agent
             orphan_id = _match_orphan_to_fill(cur, order_id, row, event_ts)
             if orphan_id is not None:
                 matched_orphans += 1
+                if row.get("side") == "sell" and _refresh_sell_pnl(cur, int(orphan_id)):
+                    pnl_updated += 1
                 continue
 
             # 2b. Para fills SELL: detectar o profile com BUY aberto compatível
@@ -779,8 +1127,10 @@ def _sync_fills(conn) -> int:
                         json.dumps(metadata),
                     ),
                 )
-            trade_id = cur.fetchone()["id"]
+            trade_id = int(cur.fetchone()["id"])
             inserted += 1
+            if row.get("side") == "sell" and _refresh_sell_pnl(cur, trade_id):
+                pnl_updated += 1
             LOG.info(
                 "Synced fill order_id=%s trade_id=%s symbol=%s side=%s size=%.8f price=%.8f",
                 order_id,
@@ -790,6 +1140,8 @@ def _sync_fills(conn) -> int:
                 row["size"],
                 row["price"],
             )
+
+        pnl_updated += _backfill_missing_sell_pnl(cur)
 
         cur.execute(
             f"""
@@ -804,11 +1156,14 @@ def _sync_fills(conn) -> int:
                 "orders_seen": len(grouped),
                 "orders_inserted": inserted,
                 "orphans_matched": matched_orphans,
+                "pnl_updated": pnl_updated,
             })),
         )
     conn.commit()
     if matched_orphans:
         LOG.info("Matched %d orphan agent trades to KuCoin fills", matched_orphans)
+    if pnl_updated:
+        LOG.info("PnL líquido atualizado em %d SELLs", pnl_updated)
     return inserted
 
 
