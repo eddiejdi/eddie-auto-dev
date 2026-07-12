@@ -1105,8 +1105,422 @@
     {
       "collapsed": false,
       "gridPos": {
+        "h": 1,
+        "w": 24,
         "x": 0,
-        "y": 22,
+        "y": 22
+      },
+      "id": 210,
+      "panels": [],
+      "title": "📊 Track Record Confidence",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": -0.2
+              },
+              {
+                "color": "yellow",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 0.4
+              }
+            ]
+          },
+          "decimals": 2,
+          "min": -1,
+          "max": 1
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "type": "stat",
+      "id": 204,
+      "title": "TRS (Track Record Score)",
+      "description": "Track record confidence — histórico realizado de SELLs (72h, por profile).",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 23
+      },
+      "targets": [
+        {
+          "expr": "max by (profile) ((btc_trading_track_record_trs{coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_trs{exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "legendFormat": "{{profile}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": -0.03
+              },
+              {
+                "color": "text",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 0.04
+              }
+            ]
+          },
+          "decimals": 3
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "type": "stat",
+      "id": 205,
+      "title": "Confiança Boost (pp)",
+      "description": "Track record confidence — histórico realizado de SELLs (72h, por profile).",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 23
+      },
+      "targets": [
+        {
+          "expr": "max by (profile) ((btc_trading_track_record_boost{coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_boost{exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "legendFormat": "{{profile}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 0.4
+              },
+              {
+                "color": "yellow",
+                "value": 0.5
+              },
+              {
+                "color": "green",
+                "value": 0.6
+              }
+            ]
+          },
+          "unit": "percentunit",
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "type": "stat",
+      "id": 206,
+      "title": "WR Lookback 72h",
+      "description": "Track record confidence — histórico realizado de SELLs (72h, por profile).",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 23
+      },
+      "targets": [
+        {
+          "expr": "max by (profile) ((btc_trading_track_record_wr_lookback{coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_wr_lookback{exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "legendFormat": "{{profile}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 3
+              },
+              {
+                "color": "yellow",
+                "value": 5
+              },
+              {
+                "color": "green",
+                "value": 8
+              }
+            ]
+          },
+          "decimals": 0
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "percentChangeColorMode": "standard",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "type": "stat",
+      "id": 207,
+      "title": "SELLs no Lookback",
+      "description": "Track record confidence — histórico realizado de SELLs (72h, por profile).",
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 23
+      },
+      "targets": [
+        {
+          "expr": "max by (profile) ((btc_trading_track_record_sell_count{coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_sell_count{exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "legendFormat": "{{profile}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "description": "Evolução do TRS e do boost aplicado na confiança do sinal (BUY/SELL).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 12,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": "/boost/i"
+            },
+            "properties": [
+              {
+                "id": "custom.axisPlacement",
+                "value": "right"
+              },
+              {
+                "id": "decimals",
+                "value": 3
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 27
+      },
+      "id": 208,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "expr": "max by (profile) ((btc_trading_track_record_trs{coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_trs{exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "legendFormat": "TRS — {{profile}}",
+          "refId": "A"
+        },
+        {
+          "expr": "max by (profile) ((btc_trading_track_record_boost{coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_boost{exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "legendFormat": "boost — {{profile}}",
+          "refId": "B"
+        }
+      ],
+      "title": "📈 Track Record — TRS & Boost ao longo do tempo",
+      "type": "timeseries"
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "x": 0,
+        "y": 31,
         "w": 24,
         "h": 1
       },
@@ -1141,7 +1555,7 @@
         "x": 0,
         "w": 8,
         "h": 7,
-        "y": 23
+        "y": 32
       },
       "id": 41,
       "options": {
@@ -1257,7 +1671,7 @@
         "x": 8,
         "w": 8,
         "h": 7,
-        "y": 23
+        "y": 32
       },
       "id": 42,
       "options": {
@@ -1326,7 +1740,7 @@
         "x": 16,
         "w": 8,
         "h": 7,
-        "y": 23
+        "y": 32
       },
       "id": 43,
       "options": {
@@ -1524,7 +1938,7 @@
         "x": 0,
         "w": 16,
         "h": 10,
-        "y": 30
+        "y": 39
       },
       "id": 71,
       "options": {
@@ -1541,11 +1955,11 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT\n  TO_CHAR(to_timestamp(\"timestamp\") AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  COALESCE(profile, 'default') AS profile,\n  action,\n  confidence,\n  price,\n  reason,\n  executed\nFROM btc.decisions\nWHERE symbol = '$coin'\nAND profile ~* '^(${profile:pipe})$'\nAND (\n  ('${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}')\n)\nAND to_timestamp(\"timestamp\") BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY \"timestamp\" DESC\nLIMIT 50",
+          "rawSql": "SELECT\n  TO_CHAR(to_timestamp(\"timestamp\") AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  COALESCE(profile, 'default') AS profile,\n  action,\n  ROUND(confidence::numeric, 3) AS conf_adj,\n  ROUND(NULLIF(features->>'raw_confidence', '')::numeric, 3) AS conf_raw,\n  ROUND(NULLIF(features->>'track_record_boost', '')::numeric, 3) AS boost,\n  ROUND(NULLIF(features->>'track_record_trs', '')::numeric, 3) AS trs,\n  price,\n  LEFT(reason, 80) AS reason,\n  executed\nFROM btc.decisions\nWHERE symbol = '$coin'\nAND profile ~* '^(${profile:pipe})$'\nAND (\n  ('${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}')\n)\nAND to_timestamp(\"timestamp\") BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY \"timestamp\" DESC\nLIMIT 50",
           "refId": "A"
         }
       ],
-      "title": "📋 Decisões Recentes (Log Rolante)",
+      "title": "📋 Decisões Recentes (com Track Record)",
       "type": "table"
     },
     {
@@ -1695,7 +2109,7 @@
         "x": 16,
         "w": 8,
         "h": 10,
-        "y": 30
+        "y": 39
       },
       "id": 72,
       "options": {
@@ -1910,7 +2324,7 @@
         "x": 0,
         "w": 24,
         "h": 10,
-        "y": 40
+        "y": 49
       },
       "id": 99,
       "options": {
@@ -1949,7 +2363,7 @@
       "panels": [],
       "gridPos": {
         "x": 0,
-        "y": 50,
+        "y": 59,
         "w": 24,
         "h": 1
       }
@@ -2071,7 +2485,7 @@
         "x": 0,
         "w": 24,
         "h": 9,
-        "y": 51
+        "y": 60
       },
       "id": 106,
       "options": {
@@ -2172,7 +2586,7 @@
         "x": 0,
         "w": 9,
         "h": 6,
-        "y": 60
+        "y": 69
       },
       "id": 112,
       "options": {
@@ -2272,7 +2686,7 @@
         "x": 9,
         "w": 9,
         "h": 6,
-        "y": 60
+        "y": 69
       },
       "id": 113,
       "options": {
@@ -2354,7 +2768,7 @@
         "x": 18,
         "w": 3,
         "h": 6,
-        "y": 60
+        "y": 69
       },
       "id": 103,
       "options": {
@@ -2423,7 +2837,7 @@
         "x": 21,
         "w": 3,
         "h": 6,
-        "y": 60
+        "y": 69
       },
       "id": 104,
       "options": {
@@ -2482,7 +2896,7 @@
         "x": 0,
         "w": 24,
         "h": 18,
-        "y": 66
+        "y": 75
       },
       "id": 114,
       "options": {
@@ -2542,7 +2956,7 @@
         "h": 16,
         "w": 24,
         "x": 0,
-        "y": 84
+        "y": 93
       },
       "id": 203,
       "options": {
@@ -2580,154 +2994,6 @@
       "type": "marcusolsson-dynamictext-panel"
     },
     {
-      "id": 204,
-      "title": "💱 Mercado Pago — rendimentos multi-moedas",
-      "type": "row",
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 100
-      },
-      "collapsed": false,
-      "panels": []
-    },
-    {
-      "id": 205,
-      "title": "🐷 Cofrinho MP — mês",
-      "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 0,
-        "y": 101
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyBRL",
-          "decimals": 2,
-          "color": {
-            "fixedColor": "#73BF69",
-            "mode": "fixed"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name"
-      },
-      "targets": [
-        {
-          "expr": "banking_cofrinho_yield_current_month_brl{provider=\"mercadopago\"}",
-          "legendFormat": "Cofrinho mês",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 206,
-      "title": "🐷 Cofrinho MP — 30 dias",
-      "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 8,
-        "y": 101
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyBRL",
-          "decimals": 2,
-          "color": {
-            "fixedColor": "#5794F2",
-            "mode": "fixed"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name"
-      },
-      "targets": [
-        {
-          "expr": "banking_cofrinho_yield_last_30_days_brl{provider=\"mercadopago\"}",
-          "legendFormat": "Cofrinho 30d",
-          "refId": "A"
-        }
-      ]
-    },
-    {
-      "id": 207,
-      "title": "💵 MUSD earn — mês",
-      "type": "stat",
-      "gridPos": {
-        "h": 4,
-        "w": 8,
-        "x": 16,
-        "y": 101
-      },
-      "datasource": {
-        "type": "prometheus",
-        "uid": "${DS_PROMETHEUS}"
-      },
-      "fieldConfig": {
-        "defaults": {
-          "unit": "currencyBRL",
-          "decimals": 2,
-          "color": {
-            "fixedColor": "#FF9830",
-            "mode": "fixed"
-          }
-        },
-        "overrides": []
-      },
-      "options": {
-        "reduceOptions": {
-          "calcs": [
-            "lastNotNull"
-          ],
-          "fields": "",
-          "values": false
-        },
-        "colorMode": "value",
-        "graphMode": "area",
-        "textMode": "value_and_name"
-      },
-      "targets": [
-        {
-          "expr": "banking_musd_earn_current_month_brl{provider=\"mercadopago\"}",
-          "legendFormat": "MUSD mês",
-          "refId": "A"
-        }
-      ]
-    },
-    {
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
@@ -2755,7 +3021,7 @@
         "x": 0,
         "w": 24,
         "h": 12,
-        "y": 105
+        "y": 109
       },
       "id": 98,
       "options": {
@@ -2796,7 +3062,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 112,
+        "y": 121,
         "w": 24,
         "h": 1
       },
@@ -3430,7 +3696,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 113,
+        "y": 122,
         "w": 24,
         "h": 1
       },
@@ -3876,7 +4142,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 114,
+        "y": 123,
         "w": 24,
         "h": 1
       },
@@ -4604,7 +4870,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 115,
+        "y": 124,
         "w": 24,
         "h": 1
       },
@@ -5727,7 +5993,7 @@
       "collapsed": true,
       "gridPos": {
         "x": 0,
-        "y": 116,
+        "y": 125,
         "w": 24,
         "h": 1
       },
