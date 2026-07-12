@@ -34,10 +34,18 @@ Docs: `docs/SOL_USDT_INSTALLATION.md`, `docs/DOGE_USDT_INSTALLATION.md`
 - SELL liquida toda posicao contra preco medio
 - Metricas Prometheus: `btc_trading_open_position_count`, `btc_trading_avg_entry_price`
 
-### 1.4 Codigo-Fonte Relevante
+### 1.4 Track Record Confidence (TRC)
+- Ajusta `confidence` de BUY/SELL com base em SELLs realizados (lookback 72h, por profile)
+- Modulo: `btc_trading_agent/track_record_confidence.py`; integracao em `trading_agent._apply_track_record_confidence()`
+- Config: bloco `track_record_confidence` em cada `config_*_{profile}.json` (`enabled`, `mode`: `apply`|`shadow`)
+- Metricas: `btc_trading_track_record_{trs,boost,wr_lookback,sell_count}`; features em `btc.decisions.features`
+- Doc completa: `docs/TRACK_RECORD_CONFIDENCE.md`
+
+### 1.5 Codigo-Fonte Relevante
 | Path | Descricao |
 |------|-----------|
 | `btc_trading_agent/` | Core do agente de trading BTC |
+| `btc_trading_agent/track_record_confidence.py` | TRS e boost de confianca por historico de SELLs |
 | `clear_trading_agent/` | Agente de clearing/liquidacao |
 | `grafana_dashboards/` | Dashboards JSON (Grafana) |
 | `tools/export_trading_pnl_portfolio.py` | Export PnL e portfolio |
@@ -49,13 +57,13 @@ Docs: `docs/SOL_USDT_INSTALLATION.md`, `docs/DOGE_USDT_INSTALLATION.md`
 | `config/` | Configuracoes por moeda |
 | `monitoring/` | Metricas e alertas |
 
-### 1.5 Grafana
+### 1.6 Grafana
 - UM arquivo JSON por dashboard — titulos duplicados bloqueiam
 - Expressoes Prometheus: `{job="$coin_job"}` — nunca hardcoded
 - Dashboard ativo: `btc_trading_dashboard_v3_prometheus.json`
 - Container: `grafana` em `127.0.0.1:3002`
 
-### 1.6 Servicos Homelab
+### 1.7 Servicos Homelab
 - Host: `192.168.15.2` (user: `homelab`)
 - Prometheus: `127.0.0.1:9090`
 - Ollama GPU0: `:11434` (RTX 2060), GPU1: `:11435` (GTX 1050)
