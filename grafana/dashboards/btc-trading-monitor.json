@@ -1131,7 +1131,7 @@
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": -1
               },
               {
                 "color": "orange",
@@ -1183,9 +1183,11 @@
       },
       "targets": [
         {
-          "expr": "max by (profile) ((btc_trading_track_record_trs{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_trs{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "expr": "max by (profile) ((btc_trading_track_record_trs{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_trs{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
           "legendFormat": "{{profile}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -1205,7 +1207,7 @@
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "orange",
@@ -1255,9 +1257,11 @@
       },
       "targets": [
         {
-          "expr": "max by (profile) ((btc_trading_track_record_boost{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_boost{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "expr": "max by (profile) ((btc_trading_track_record_boost{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_boost{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
           "legendFormat": "{{profile}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -1277,7 +1281,7 @@
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "orange",
@@ -1328,9 +1332,11 @@
       },
       "targets": [
         {
-          "expr": "max by (profile) ((btc_trading_track_record_wr_lookback{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_wr_lookback{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "expr": "max by (profile) ((btc_trading_track_record_wr_lookback{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_wr_lookback{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
           "legendFormat": "{{profile}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -1350,7 +1356,7 @@
             "steps": [
               {
                 "color": "red",
-                "value": null
+                "value": 0
               },
               {
                 "color": "orange",
@@ -1400,9 +1406,11 @@
       },
       "targets": [
         {
-          "expr": "max by (profile) ((btc_trading_track_record_sell_count{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_sell_count{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "expr": "max by (profile) ((btc_trading_track_record_sell_count{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_sell_count{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
           "legendFormat": "{{profile}}",
-          "refId": "A"
+          "refId": "A",
+          "instant": true,
+          "range": false
         }
       ]
     },
@@ -1503,14 +1511,18 @@
       "pluginVersion": "12.4.0",
       "targets": [
         {
-          "expr": "max by (profile) ((btc_trading_track_record_trs{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_trs{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "expr": "max by (profile) ((btc_trading_track_record_trs{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_trs{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
           "legendFormat": "TRS — {{profile}}",
-          "refId": "A"
+          "refId": "A",
+          "range": true,
+          "instant": false
         },
         {
-          "expr": "max by (profile) ((btc_trading_track_record_boost{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"$profile\"}) or (btc_trading_track_record_boost{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"$profile\"}))",
+          "expr": "max by (profile) ((btc_trading_track_record_boost{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_boost{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
           "legendFormat": "boost — {{profile}}",
-          "refId": "B"
+          "refId": "B",
+          "range": true,
+          "instant": false
         }
       ],
       "title": "📈 Track Record — TRS & Boost ao longo do tempo",
