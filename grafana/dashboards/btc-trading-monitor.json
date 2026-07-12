@@ -1416,10 +1416,10 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
       },
-      "description": "Evolução do TRS e do boost aplicado na confiança do sinal (BUY/SELL).",
+      "description": "TRS e boost por decisão (PostgreSQL). Histórico disponível desde o deploy da feature; intervalos anteriores ficam vazios. Stats acima usam snapshot Prometheus em tempo real.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -1447,8 +1447,8 @@
             "scaleDistribution": {
               "type": "linear"
             },
-            "showPoints": "never",
-            "spanNulls": false,
+            "showPoints": "auto",
+            "spanNulls": true,
             "stacking": {
               "group": "A",
               "mode": "none"
@@ -1463,7 +1463,7 @@
             "steps": [
               {
                 "color": "green",
-                "value": null
+                "value": 0
               }
             ]
           }
@@ -1511,18 +1511,26 @@
       "pluginVersion": "12.4.0",
       "targets": [
         {
-          "expr": "max by (profile) ((btc_trading_track_record_trs{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_trs{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
-          "legendFormat": "TRS — {{profile}}",
-          "refId": "A",
-          "range": true,
-          "instant": false
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroupAlias(to_timestamp(\"timestamp\"), $__interval) AS \"time\",\n  profile || ' TRS' AS metric,\n  avg((features->>'track_record_trs')::double precision) AS value\nFROM btc.decisions\nWHERE symbol = '$coin'\n  AND profile ~* '^(${profile:pipe})$'\n  AND features ? 'track_record_trs'\n  AND NULLIF(features->>'track_record_trs', '') IS NOT NULL\n  AND (\n    '${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}'\n  )\n  AND $__timeFilter(to_timestamp(\"timestamp\"))\nGROUP BY 1, profile\nORDER BY 1",
+          "refId": "A"
         },
         {
-          "expr": "max by (profile) ((btc_trading_track_record_boost{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_boost{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
-          "legendFormat": "boost — {{profile}}",
-          "refId": "B",
-          "range": true,
-          "instant": false
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  $__timeGroupAlias(to_timestamp(\"timestamp\"), $__interval) AS \"time\",\n  profile || ' boost' AS metric,\n  avg((features->>'track_record_boost')::double precision) AS value\nFROM btc.decisions\nWHERE symbol = '$coin'\n  AND profile ~* '^(${profile:pipe})$'\n  AND features ? 'track_record_boost'\n  AND NULLIF(features->>'track_record_boost', '') IS NOT NULL\n  AND (\n    '${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}'\n  )\n  AND $__timeFilter(to_timestamp(\"timestamp\"))\nGROUP BY 1, profile\nORDER BY 1",
+          "refId": "B"
         }
       ],
       "title": "📈 Track Record — TRS & Boost ao longo do tempo",
