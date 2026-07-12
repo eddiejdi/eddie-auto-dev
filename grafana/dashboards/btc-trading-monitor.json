@@ -1186,8 +1186,8 @@
           "expr": "max by (profile) ((btc_trading_track_record_trs{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_trs{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
           "legendFormat": "{{profile}}",
           "refId": "A",
-          "instant": true,
-          "range": false
+          "instant": false,
+          "range": true
         }
       ]
     },
@@ -1260,8 +1260,8 @@
           "expr": "max by (profile) ((btc_trading_track_record_boost{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_boost{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
           "legendFormat": "{{profile}}",
           "refId": "A",
-          "instant": true,
-          "range": false
+          "instant": false,
+          "range": true
         }
       ]
     },
@@ -1335,8 +1335,8 @@
           "expr": "max by (profile) ((btc_trading_track_record_wr_lookback{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_wr_lookback{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
           "legendFormat": "{{profile}}",
           "refId": "A",
-          "instant": true,
-          "range": false
+          "instant": false,
+          "range": true
         }
       ]
     },
@@ -1409,8 +1409,8 @@
           "expr": "max by (profile) ((btc_trading_track_record_sell_count{servidor=~\"$servidor\", coin=\"$coin\", profile=~\"${profile:pipe}\"}) or (btc_trading_track_record_sell_count{servidor=~\"$servidor\", exported_coin=\"$coin\", exported_profile=~\"${profile:pipe}\"}))",
           "legendFormat": "{{profile}}",
           "refId": "A",
-          "instant": true,
-          "range": false
+          "instant": false,
+          "range": true
         }
       ]
     },
