@@ -1,10 +1,12 @@
 #!/bin/bash
-# Post-commit hook — (1) Indexar commit na memória; (2) Sincronizar .md com Wiki RPA4All
+# Post-commit hook — (1) Indexar commit na memória; (2) Publicar .md na Wiki RPA4All
 #
 # CMDB baseline foi movido para pre-commit (.githooks/pre-commit check 9)
 # para evitar commits órfãos chore(cmdb) separados do trabalho real.
 
 set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 # ─── Memory ingestor (git → Chroma) ───────────────────────────────────────────
 INGESTOR="tools/memory_ingestors/git_ingestor.py"
@@ -14,13 +16,14 @@ if [ -f "$INGESTOR" ]; then
     "$PY_MEM" "$INGESTOR" >/dev/null 2>&1 || true
 fi
 
-# ─── Wiki sync ────────────────────────────────────────────────────────────────
+# ─── Wiki sync (publicação automática) ────────────────────────────────────────
 SKIP_PATTERNS=(
   "^wiki_"
   "CONVERSAS_"
   "COMPARISON"
   "^\.github/"
   "^docs/confluence"
+  "^\.claude/"
 )
 
 MD_FILES=$(git diff-tree --no-commit-id -r --name-only --diff-filter=AM HEAD | grep "\.md$" || true)
@@ -47,21 +50,17 @@ if [ -z "$TO_SEND" ]; then
 fi
 
 echo ""
-echo "📚 [wiki-agent] Enviando .md para wiki_rpa4all (sem publish direto)..."
+echo "📚 [wiki-sync] Publicando .md na Wiki RPA4All (locale pt)..."
 for f in $TO_SEND; do
     echo "   → $f"
 done
 
 PY_BIN="$(dirname "$0")/../.venv/bin/python"
 [ -x "$PY_BIN" ] || PY_BIN="python3"
+WIKI_SYNC="$(dirname "$0")/../tools/hooks/wiki_sync.py"
 
 for f in $TO_SEND; do
-    MSG="Publicar/atualizar em locale pt o arquivo ${f}. Validar URL em /pt antes de concluir a publicação."
-    "$PY_BIN" "$(dirname "$0")/../tools/agent_ipc.py" publish \
-        --agent wiki_rpa4all \
-        --task-type wiki_update \
-        --priority low \
-        --message "$MSG" >/dev/null 2>&1 &
+    "$PY_BIN" "$WIKI_SYNC" "$f" >>"$REPO_ROOT/.git/wiki_sync.log" 2>&1 &
 done
 
 exit 0

@@ -29,6 +29,7 @@
 
 ### 12 de julho de 2026
 - ✅ Track Record Confidence (TRC) documentado em `TRACK_RECORD_CONFIDENCE.md` — TRS, boost assimétrico, painéis Grafana 204–208, deploy e troubleshooting
+- ✅ Publicação automática na Wiki RPA4All via `post-commit` → `tools/hooks/wiki_sync.py` (locale `pt`, log em `.git/wiki_sync.log`)
 
 ### 10 de julho de 2026
 - ✅ Instalação DOGE-USDT documentada em `DOGE_USDT_INSTALLATION.md` (dry run → live, portas 9112–9114, TRADE master compartilhada com SOL)

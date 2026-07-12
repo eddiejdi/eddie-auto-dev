@@ -258,6 +258,10 @@ Tratar como ordem de grandeza, não garantia — depende de regime de mercado e 
 4. **Histórico Prometheus curto:** métricas existem desde o deploy; histórico longo está no PostgreSQL (`btc.decisions`).
 5. **Cache 30s:** decisões muito próximas reutilizam o mesmo snapshot.
 
+## Wiki
+
+Publicação automática no commit: `docs/TRACK_RECORD_CONFIDENCE.md` → [wiki.rpa4all.com/pt/trading/track-record-confidence](https://wiki.rpa4all.com/pt/trading/track-record-confidence) via `tools/hooks/wiki_sync.py`.
+
 ## Rollback
 
 1. Em cada config: `"track_record_confidence": { "enabled": false }`.

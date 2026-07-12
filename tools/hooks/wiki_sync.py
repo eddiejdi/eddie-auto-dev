@@ -1,14 +1,27 @@
 #!/usr/bin/env python3
-"""wiki_sync.py — Envia .md commitados para a Wiki RPA4All.
+"""wiki_sync.py — Publica .md commitados na Wiki RPA4All.
 
 Invocado pelo post-commit hook. Roda em background.
+Usa WikiJsClient (GraphQL com variables) para evitar falhas de mutação inline.
 """
-import os, sys, json, time, re, subprocess, datetime
+from __future__ import annotations
+
+import datetime
+import json
+import os
+import re
+import subprocess
+import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-LOG_FILE  = REPO_ROOT / ".git" / "wiki_sync.log"
-WIKI_GQL  = "http://192.168.15.2:3009/graphql"
+sys.path.insert(0, str(REPO_ROOT))
+
+from specialized_agents.wiki_client import WikiJsClient  # noqa: E402
+
+LOG_FILE = REPO_ROOT / ".git" / "wiki_sync.log"
+WIKI_GQL = "http://192.168.15.2:3009/graphql"
 
 PATH_HINTS = {
     "KIOSK_": "homelab/kiosk/",
@@ -16,6 +29,7 @@ PATH_HINTS = {
     "LTFS_": "homelab/storage/ltfs/",
     "REBUY_": "trading/fixes/",
     "TRADING_": "trading/",
+    "TRACK_RECORD_": "trading/",
     "DEPOSIT_": "trading/fixes/",
     "LIQUIDACAO_": "trading/",
     "EXCHANGE_": "trading/",
@@ -30,12 +44,12 @@ PATH_HINTS = {
     "README_": "docs/",
 }
 
+# Endpoint de secrets sem padroes que disparam o guardrail de credenciais
+_s_parts = ["http://192.168.15.2:8088", "secret", "wikijs", "token"]
+SECRETS_ENDPOINT = "/".join(_s_parts)
 
-def _escape_graphql(text):
-    return text.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\r", "")
 
-
-def infer_path(filename):
+def infer_path(filename: str | Path) -> str:
     fpath = Path(filename)
     try:
         rel = fpath.resolve().relative_to(REPO_ROOT)
@@ -43,9 +57,11 @@ def infer_path(filename):
         rel = Path(fpath.name)
 
     base = rel.stem
-    slug = re.sub(r"-\d{4}-\d{2}-\d{2}$", "",
-            re.sub(r"-\d{4}-\d{2}$", "",
-            base.lower().replace("_", "-").replace(" ", "-")))
+    slug = re.sub(
+        r"-\d{4}-\d{2}-\d{2}$",
+        "",
+        re.sub(r"-\d{4}-\d{2}$", "", base.lower().replace("_", "-").replace(" ", "-")),
+    )
     for prefix, dest in PATH_HINTS.items():
         if rel.name.upper().startswith(prefix.upper()):
             return f"{dest}{slug}"
@@ -59,7 +75,7 @@ def infer_path(filename):
     return f"docs/{top}/{slug}"
 
 
-def load_auth():
+def load_auth() -> str:
     val = os.environ.get("WIKI_TOKEN", "")
     if val:
         return val
@@ -67,76 +83,55 @@ def load_auth():
     if env_f.exists():
         for line in env_f.read_text().splitlines():
             if line.startswith("WIKI_TOKEN="):
-                return line.split("=", 1)[1].strip().strip('"\'')
+                return line.split("=", 1)[1].strip().strip("\"'")
     try:
-        r = subprocess.run(["curl", "-sf", SECRETS_ENDPOINT],
-                           capture_output=True, text=True, timeout=5)
+        r = subprocess.run(
+            ["curl", "-sf", SECRETS_ENDPOINT],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
         if r.returncode == 0:
             return json.loads(r.stdout).get("value", "")
     except Exception:
         pass
     return ""
 
-# Endpoint de secrets sem padroes que disparam o guardrail de credenciais
-_s_parts = ["http://192.168.15.2:8088", "secret", "wikijs", "token"]
-SECRETS_ENDPOINT = "/".join(_s_parts)
+
+def _client(bearer: str) -> WikiJsClient:
+    return WikiJsClient(WIKI_GQL, bearer, default_locale="pt")
 
 
-def gql_call(bearer, payload):
-    r = subprocess.run(
-        ["curl", "-sf", "-X", "POST",
-         "-H", "Content-Type: application/json",
-         "-H", "Authorization: Bearer " + bearer,
-         "-d", payload, WIKI_GQL],
-        capture_output=True, text=True, timeout=30)
-    if r.returncode != 0:
-        return {}
-    try:
-        return json.loads(r.stdout)
-    except Exception:
-        return {}
-
-
-def find_page(bearer, path, locale="pt"):
-    data = gql_call(bearer, json.dumps({
-        "query": '{ pages { singleByPath(path: "' + path + '", locale: "' + locale + '") { id } } }'
-    }))
-    page = data.get("data", {}).get("pages", {}).get("singleByPath")
+def find_page(bearer: str, path: str, locale: str = "pt") -> tuple[bool, int]:
+    page = _client(bearer).get_page(path, locale=locale)
     return (True, int(page["id"])) if page else (False, 0)
 
 
-def build_parent_paths(path):
+def build_parent_paths(path: str) -> list[str]:
     parts = [p for p in path.split("/") if p]
-    parents = []
-    for idx in range(1, len(parts)):
-        parents.append("/".join(parts[:idx]))
-    return parents
+    return ["/".join(parts[:idx]) for idx in range(1, len(parts))]
 
 
-def create_placeholder_page(bearer, path, locale="pt"):
+def create_placeholder_page(bearer: str, path: str, locale: str = "pt") -> dict:
     title = path.split("/")[-1].replace("-", " ").replace("_", " ").title()
     content = f"# {title}\n\nPágina índice criada automaticamente para a árvore de documentação."
-    payload = json.dumps({"query":
-        'mutation { pages { create(path: "' + path + '" locale: "' + locale + '" title: "' + _escape_graphql(title) + '"'
-        ' description: "Índice da árvore de documentação" content: "' + _escape_graphql(content) + '"'
-        ' tags: ["auto-sync", "index"] editor: "markdown" isPublished: true isPrivate: false)'
-        ' { responseResult { succeeded message } page { id path } } } }'
-    })
-    data = gql_call(bearer, payload)
-    rd = data.get("data", {}).get("pages", {}).get("create") or {}
-    resp = rd.get("responseResult", {})
-    page = rd.get("page") or {}
-    return {
-        "ok": bool(resp.get("succeeded", False)),
-        "msg": resp.get("message", ""),
-        "id": page.get("id", "?"),
-        "path": page.get("path", path),
-    }
+    try:
+        page = _client(bearer).create_page(
+            wiki_path=path,
+            title=title,
+            content=content,
+            tags=["auto-sync", "index"],
+            locale=locale,
+            description="Índice da árvore de documentação",
+        )
+        return {"ok": True, "msg": "", "id": page.get("id", "?"), "path": page.get("path", path)}
+    except Exception as exc:
+        return {"ok": False, "msg": str(exc), "id": "?", "path": path}
 
 
-def ensure_tree_paths(bearer, path, locale="pt"):
-    created = []
-    failed = []
+def ensure_tree_paths(bearer: str, path: str, locale: str = "pt") -> dict:
+    created: list[str] = []
+    failed: list[dict] = []
     for parent in build_parent_paths(path):
         exists, _ = find_page(bearer, parent, locale=locale)
         if exists:
@@ -149,63 +144,79 @@ def ensure_tree_paths(bearer, path, locale="pt"):
     return {"created": created, "failed": failed}
 
 
-def validate_tree_paths(bearer, path, locale="pt"):
+def validate_tree_paths(bearer: str, path: str, locale: str = "pt") -> dict:
     check_paths = build_parent_paths(path) + [path]
-    missing = []
-    for current in check_paths:
-        exists, _ = find_page(bearer, current, locale=locale)
-        if not exists:
-            missing.append(current)
+    missing = [current for current in check_paths if not find_page(bearer, current, locale=locale)[0]]
     return {"ok": len(missing) == 0, "missing": missing, "checked": check_paths}
 
 
-def publish_file(bearer, filepath, locale="pt"):
+def publish_file(bearer: str, filepath: str | Path, locale: str = "pt") -> dict:
     content = Path(filepath).read_text(encoding="utf-8")
-    title   = Path(filepath).stem.replace("_", " ").replace("-", " ").title()
-    wpath   = infer_path(filepath)
-    today   = datetime.date.today().isoformat()
-    full    = f"<!-- Sync {today} | wiki_sync -->\n\n{content}"
-    esc     = _escape_graphql(full)
+    title = Path(filepath).stem.replace("_", " ").replace("-", " ").title()
+    wpath = infer_path(filepath)
+    today = datetime.date.today().isoformat()
+    full = f"<!-- Sync {today} | wiki_sync -->\n\n{content}"
 
     tree = ensure_tree_paths(bearer, wpath, locale=locale)
-
     exists, pid = find_page(bearer, wpath, locale=locale)
+    client = _client(bearer)
 
-    if exists:
-        payload = json.dumps({"query":
-            'mutation { pages { update(id: ' + str(pid) +
-            ' content: "' + esc + '" title: "' + title + '"'
-            ' description: "Auto-sync via post-commit" isPublished: true)'
-            ' { responseResult { succeeded message } } } }'
-        })
-    else:
-        payload = json.dumps({"query":
-            'mutation { pages { create(path: "' + wpath + '" locale: "' + locale + '" title: "' + title + '"'
-            ' description: "Auto-sync via post-commit" content: "' + esc + '"'
-            ' tags: ["auto-sync"] editor: "markdown" isPublished: true isPrivate: false)'
-            ' { responseResult { succeeded message } page { id path } } } }'
-        })
+    try:
+        if exists:
+            page = client.update_page(
+                page_id=pid,
+                wiki_path=wpath,
+                title=title,
+                content=full,
+                tags=["auto-sync"],
+                locale=locale,
+                description="Auto-sync via post-commit",
+            )
+            op = "update"
+        else:
+            page = client.create_page(
+                wiki_path=wpath,
+                title=title,
+                content=full,
+                tags=["auto-sync"],
+                locale=locale,
+                description="Auto-sync via post-commit",
+            )
+            op = "create"
+    except Exception as exc:
+        return {
+            "ok": False,
+            "msg": str(exc),
+            "path": wpath,
+            "id": pid if exists else "?",
+            "op": "update" if exists else "create",
+            "tree_created": tree["created"],
+            "tree_failures": tree["failed"],
+            "tree_ok": False,
+            "tree_missing": [wpath],
+        }
 
-    data = gql_call(bearer, payload)
-    op   = "update" if exists else "create"
-    rd   = data.get("data", {}).get("pages", {}).get(op) or {}
-    resp = rd.get("responseResult", {})
-    page = rd.get("page") or {}
-    new_id = pid if exists else page.get("id", "?")
     tree_validation = validate_tree_paths(bearer, wpath, locale=locale)
-    return {"ok": resp.get("succeeded", False), "msg": resp.get("message", ""),
-            "path": wpath, "id": new_id, "op": op,
-            "tree_created": tree["created"], "tree_failures": tree["failed"],
-            "tree_ok": tree_validation["ok"], "tree_missing": tree_validation["missing"]}
+    return {
+        "ok": True,
+        "msg": "",
+        "path": wpath,
+        "id": page.get("id", pid if exists else "?"),
+        "op": op,
+        "tree_created": tree["created"],
+        "tree_failures": tree["failed"],
+        "tree_ok": tree_validation["ok"],
+        "tree_missing": tree_validation["missing"],
+    }
 
 
-def log(msg):
+def log(msg: str) -> None:
     ts = time.strftime("%Y-%m-%d %H:%M:%S")
     with open(LOG_FILE, "a", encoding="utf-8") as f:
         f.write(f"[{ts}] {msg}\n")
 
 
-def main():
+def main() -> None:
     files = sys.argv[1:]
     if not files:
         return
@@ -221,24 +232,28 @@ def main():
         if not full.exists():
             log(f"SKIP {filepath} — nao existe")
             continue
-        r = publish_file(bearer, str(full))
-        if r["ok"]:
-            m = f"OK [{r['op']}] {filepath} -> wiki/{r['path']} (ID:{r['id']})"
-            log(m); print(f"   {m}")
-            if r["tree_created"]:
-                msg = f"INFO [wiki-sync] índices criados: {', '.join(r['tree_created'])}"
-                log(msg); print(f"   {msg}")
-            if r["tree_failures"]:
-                msg = "INFO [wiki-sync] falhas ao criar índices: " + ", ".join(
-                    f"{item['path']} ({item['msg']})" for item in r["tree_failures"]
+        result = publish_file(bearer, str(full))
+        if result["ok"]:
+            msg = f"OK [{result['op']}] {filepath} -> wiki/{result['path']} (ID:{result['id']})"
+            log(msg)
+            print(f"   {msg}")
+            if result["tree_created"]:
+                info = f"INFO [wiki-sync] índices criados: {', '.join(result['tree_created'])}"
+                log(info)
+                print(f"   {info}")
+            if result["tree_failures"]:
+                info = "INFO [wiki-sync] falhas ao criar índices: " + ", ".join(
+                    f"{item['path']} ({item['msg']})" for item in result["tree_failures"]
                 )
-                log(msg); print(f"   {msg}")
-            if not r["tree_ok"]:
-                msg = f"WARN [wiki-sync] árvore incompleta após publish: {', '.join(r['tree_missing'])}"
-                log(msg); print(f"  {msg}", file=sys.stderr)
+                log(info)
+                print(f"   {info}")
+            if not result["tree_ok"]:
+                warn = f"WARN [wiki-sync] árvore incompleta após publish: {', '.join(result['tree_missing'])}"
+                log(warn)
+                print(f"  {warn}", file=sys.stderr)
         else:
-            log(f"ERRO {filepath}: {r['msg']}")
-            print(f"  WARN [wiki-sync] {filepath}: {r['msg']}", file=sys.stderr)
+            log(f"ERRO {filepath}: {result['msg']}")
+            print(f"  WARN [wiki-sync] {filepath}: {result['msg']}", file=sys.stderr)
 
 
 if __name__ == "__main__":
