@@ -1518,8 +1518,11 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroupAlias(to_timestamp(\"timestamp\"), $__interval) AS \"time\",\n  profile || ' TRS' AS metric,\n  avg((features->>'track_record_trs')::double precision) AS value\nFROM btc.decisions\nWHERE symbol = '$coin'\n  AND profile ~* '^(${profile:pipe})$'\n  AND features ? 'track_record_trs'\n  AND NULLIF(features->>'track_record_trs', '') IS NOT NULL\n  AND (\n    '${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}'\n  )\n  AND $__timeFilter(to_timestamp(\"timestamp\"))\nGROUP BY 1, profile\nORDER BY 1",
-          "refId": "A"
+          "rawSql": "SELECT\n  to_timestamp($__unixEpochGroup(timestamp, $__interval)) AS \"time\",\n  profile || ' TRS' AS metric,\n  avg((features->>'track_record_trs')::double precision) AS value\nFROM btc.decisions\nWHERE symbol = '$coin'\n  AND profile IN (${profile:sqlstring})\n  AND features ? 'track_record_trs'\n  AND NULLIF(features->>'track_record_trs', '') IS NOT NULL\n  AND (\n    '${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}'\n  )\n  AND timestamp BETWEEN $__unixEpochFrom() AND $__unixEpochTo()\nGROUP BY 1, 2\nORDER BY 1",
+          "refId": "A",
+          "timeColumns": [
+            "time"
+          ]
         },
         {
           "datasource": {
@@ -1529,8 +1532,11 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroupAlias(to_timestamp(\"timestamp\"), $__interval) AS \"time\",\n  profile || ' boost' AS metric,\n  avg((features->>'track_record_boost')::double precision) AS value\nFROM btc.decisions\nWHERE symbol = '$coin'\n  AND profile ~* '^(${profile:pipe})$'\n  AND features ? 'track_record_boost'\n  AND NULLIF(features->>'track_record_boost', '') IS NOT NULL\n  AND (\n    '${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}'\n  )\n  AND $__timeFilter(to_timestamp(\"timestamp\"))\nGROUP BY 1, profile\nORDER BY 1",
-          "refId": "B"
+          "rawSql": "SELECT\n  to_timestamp($__unixEpochGroup(timestamp, $__interval)) AS \"time\",\n  profile || ' boost' AS metric,\n  avg((features->>'track_record_boost')::double precision) AS value\nFROM btc.decisions\nWHERE symbol = '$coin'\n  AND profile IN (${profile:sqlstring})\n  AND features ? 'track_record_boost'\n  AND NULLIF(features->>'track_record_boost', '') IS NOT NULL\n  AND (\n    '${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}'\n  )\n  AND timestamp BETWEEN $__unixEpochFrom() AND $__unixEpochTo()\nGROUP BY 1, 2\nORDER BY 1",
+          "refId": "B",
+          "timeColumns": [
+            "time"
+          ]
         }
       ],
       "title": "📈 Track Record — TRS & Boost ao longo do tempo",
