@@ -328,7 +328,7 @@ def _poll_telegram_updates(offset: int, *, timeout: int = 25) -> tuple[int, list
     try:
         with request.urlopen(req, timeout=timeout + 5) as response:
             raw = response.read().decode("utf-8")
-    except error.URLError:
+    except (error.URLError, TimeoutError):
         return offset, []
 
     payload = json.loads(raw)
