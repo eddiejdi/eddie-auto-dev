@@ -80,6 +80,8 @@ def test_script_restarts_all_crypto_agents_that_share_runtime_code() -> None:
         "crypto-agent@DOGE_USDT_conservative.service",
         "crypto-agent@DOGE_USDT_aggressive.service",
         "crypto-agent@DOGE_USDT_shadow.service",
+        "crypto-agent@USDT_BRL_conservative.service",
+        "crypto-agent@USDT_BRL_aggressive.service",
     ):
         assert unit in agent_block, f"{unit} ausente de AGENT_SERVICES"
     # Paridade agents ↔ exporters: mesmos 6 perfis nos dois arrays.
