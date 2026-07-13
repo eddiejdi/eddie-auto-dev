@@ -580,12 +580,12 @@ sleep 5
 
 for svc in "${AGENT_SERVICES[@]}"; do
   echo "--- ${svc} ---"
-  sudo systemctl --no-pager --full status "${svc}" | sed -n '1,12p'
+  sudo systemctl --no-pager --full status "${svc}" | sed -n '1,12p' || true
 done
 
 for svc in "${EXPORTER_STATUS_SERVICES[@]}"; do
   echo "--- ${svc} ---"
-  sudo systemctl --no-pager --full status "${svc}" | sed -n '1,12p'
+  sudo systemctl --no-pager --full status "${svc}" | sed -n '1,12p' || true
 done
 
 restart_grafana_if_present

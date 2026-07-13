@@ -111,7 +111,7 @@ jobs:
             crypto-exporter-doge_usdt_conservative
             crypto-exporter-doge_usdt_aggressive
           )
-          for attempt in 1 2 3 4 5; do
+          for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             mapfile -t STATUSES < <(
               curl -sf "http://127.0.0.1:9090/api/v1/targets" | python3 -c "
           import json, sys
@@ -135,8 +135,8 @@ jobs:
               echo "✅ Todos os scrape targets SOL e DOGE estão up"
               exit 0
             fi
-            echo "⏳ Aguardando exporters SOL/DOGE (tentativa ${attempt}/5)..."
+            echo "⏳ Aguardando exporters SOL/DOGE (tentativa ${attempt}/12)..."
             sleep 10
           done
-          echo "❌ Scrape targets SOL/DOGE não ficaram up após 5 tentativas"
+          echo "❌ Scrape targets SOL/DOGE não ficaram up após 12 tentativas"
           exit 1
