@@ -532,6 +532,19 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         """Desconto mínimo abaixo do preço médio para liberar reforço."""
         return 0.01
 
+    def _resolve_rebuy_lock(self, rag_adj, controls: "TradeControls") -> tuple[bool, float, str]:
+        """Resolve trava de recompra: IA (RAG) tem prioridade sobre config estático.
+
+        Returns:
+            (ativo, margem_pct, fonte) onde fonte é ``ai``, ``config`` ou ``off``.
+        """
+        if controls.ai_controlled and bool(getattr(rag_adj, "ai_rebuy_lock_enabled", False)):
+            margin_pct = float(getattr(rag_adj, "ai_rebuy_margin_pct", 0.0) or 0.0)
+            return True, max(0.0, min(margin_pct, 0.01)), "ai"
+        if self._load_live_config().get("rebuy_lock_enabled", True):
+            return True, 0.0, "config"
+        return False, 0.0, "off"
+
     def _resolve_dynamic_buy_batch_limit(self, remaining_exposure: float) -> Dict[str, float]:
         """Resolve o cap dinâmico por lote usando a pressão recente do profile."""
         pressure = 0.0
@@ -4443,26 +4456,35 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         elif signal.action == "SELL" and context["strong_bearish"]:
             min_confidence = max(0.45, min_confidence - 0.05)
 
-        # REBUY lock: controlado por config rebuy_lock_enabled (default true).
-        # Quando ativo, após qualquer venda de slot a próxima compra deve ser
-        # abaixo do preço de entrada do slot vendido.
-        if signal.action == "BUY" and self._load_live_config().get("rebuy_lock_enabled", True):
-            try:
-                last_sell = float(getattr(self.state, "last_sell_entry_price", 0.0) or 0.0)
-                if last_sell > 0:
-                    price = float(getattr(signal, "price", 0.0) or 0.0)
-                    if price >= last_sell:
-                        logger.info(
-                            f"🔒 REBUY blocked: preço ${price:,.2f} >= "
-                            f"entrada da última venda ${last_sell:,.2f} — aguardando desconto"
-                        )
-                        return self._block_trade(
-                            "buy_rebuy_lock_last_sell",
-                            price=price,
-                            last_sell_entry_price=last_sell,
-                        )
-            except Exception:
-                logger.debug("Erro ao aplicar rebuy lock; ignorando bloqueio")
+        # REBUY lock: IA (ai_rebuy_lock_enabled + ai_rebuy_margin_pct) ou config estático.
+        if signal.action == "BUY":
+            rebuy_active, rebuy_margin_pct, rebuy_source = self._resolve_rebuy_lock(rag_adj, controls)
+            if rebuy_active:
+                try:
+                    last_sell = float(getattr(self.state, "last_sell_entry_price", 0.0) or 0.0)
+                    if last_sell > 0:
+                        price = float(getattr(signal, "price", 0.0) or 0.0)
+                        max_buy_price = last_sell * (1.0 - rebuy_margin_pct)
+                        if price >= max_buy_price:
+                            margin_label = (
+                                f", alvo < ${max_buy_price:,.2f} (margem {rebuy_margin_pct * 100:.2f}%)"
+                                if rebuy_margin_pct > 0 else ""
+                            )
+                            source_label = "IA" if rebuy_source == "ai" else "config"
+                            logger.info(
+                                f"🔒 REBUY blocked [{source_label}]: preço ${price:,.2f} >= "
+                                f"entrada da última venda ${last_sell:,.2f}{margin_label} — aguardando desconto"
+                            )
+                            return self._block_trade(
+                                "buy_rebuy_lock_last_sell",
+                                price=price,
+                                last_sell_entry_price=last_sell,
+                                rebuy_max_price=max_buy_price,
+                                rebuy_margin_pct=rebuy_margin_pct,
+                                rebuy_source=rebuy_source,
+                            )
+                except Exception:
+                    logger.debug("Erro ao aplicar rebuy lock; ignorando bloqueio")
 
         if signal.action == "SELL":
             guardrail_sell = self._get_guardrail_sell_verdict(signal.price)
