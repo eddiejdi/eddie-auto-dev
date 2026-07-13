@@ -25,11 +25,11 @@ from typing import Any, Optional
 
 logger = logging.getLogger("btc_trading_agent.conversation")
 
-# Símbolos da frota multi-símbolo (BTC/ETH em subcontas; SOL na TRADE master). Configurável.
+# Símbolos da frota multi-símbolo (BTC/ETH em subcontas; SOL/DOGE na TRADE master). Configurável.
 SYMBOLS = [
     s.strip().upper()
     for s in os.getenv(
-        "TRADING_CONVERSATION_SYMBOLS", "BTC-USDT,ETH-USDT,SOL-USDT"
+        "TRADING_CONVERSATION_SYMBOLS", "BTC-USDT,ETH-USDT,SOL-USDT,DOGE-USDT"
     ).split(",")
     if s.strip()
 ]
@@ -39,7 +39,7 @@ DEFAULT_PROFILE = os.getenv("TRADING_CONVERSATION_PROFILE", "default")
 SYSTEM_PROMPT = (
     "Você é o Trading Analyst do sistema Eddie Auto-Dev, respondendo no grupo "
     "\"BTC Trade Agent\" do Telegram. Você acompanha a frota de agentes de "
-    "trading (BTC e ETH em subcontas KuCoin; SOL na conta TRADE master) e conversa "
+    "trading (BTC e ETH em subcontas KuCoin; SOL e DOGE na conta TRADE master) e conversa "
     "em português do Brasil, "
     "de forma direta e técnica, como um analista quantitativo.\n\n"
     "Regras:\n"

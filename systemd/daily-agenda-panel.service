@@ -1,0 +1,24 @@
+[Unit]
+Description=Painel de controle da agenda diaria (YouTube + Telegram)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/myClaude
+EnvironmentFile=-/etc/default/eddie-common
+Environment=PYTHONUNBUFFERED=1
+Environment=DAILY_AGENDA_PANEL_HOST=0.0.0.0
+Environment=DAILY_AGENDA_PANEL_PORT=8093
+Environment=AGENDA_YOUTUBE_CHANNEL_ID=UCEyYr2YE1HLDTKT4cnMefmw
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/scripts/daily_agenda_panel_server.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=daily-agenda-panel
+
+[Install]
+WantedBy=multi-user.target

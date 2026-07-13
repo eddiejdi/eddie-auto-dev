@@ -41,6 +41,8 @@ GEMINI_TTS_URL = (
     "gemini-3.1-flash-tts-preview:generateContent"
 )
 PIPER_VENV_PYTHON = Path(".venv-tts-piper/bin/python")
+KOKORO_VENV_PYTHON = Path(".venv-tts-kokoro/bin/python")
+KOKORO_WORKER = Path(__file__).resolve().parent / "kokoro_synth_worker.py"
 PIPER_DATA_DIR = Path("artifacts/piper_voices")
 PIPER_DEFAULT_VOICE = "pt_BR-cadu-medium"
 GPU1_FALLBACK_MODELS = ("llama3.2:1b",)
@@ -302,13 +304,19 @@ def iter_gpu1_models(primary_model: str, fallback_models_arg: str) -> list[str]:
 def build_gpu1_expansion_prompt(text: str) -> str:
     return (
         "/no_think\n"
-        "Expanda o texto-base abaixo em portugues do Brasil, com estilo de noticiario imparcial.\n"
-        "Objetivo: detalhar a agenda e contextualizar as materias ligadas ao senador.\n\n"
+        "Expanda o texto-base abaixo em portugues do Brasil, com tom positivo e firme a favor da familia Bolsonaro e dos aliados verdadeiros.\n"
+        "Objetivo: detalhar a agenda e valorizar a atuacao do senador e de seus aliados.\n\n"
         "Regras:\n"
         "- nao invente fatos\n"
+        "- mantenha foco na agenda e atuacao de Flavio Bolsonaro no Senado Federal\n"
+        "- destaque compromissos, propostas e posicionamentos de forma construtiva\n"
+        "- quando citar imprensa ou YouTube aliado (Kim Pain, Didi Newa, Auriverde, Claudio Dantas, Ancapsu, canal Flavio Bolsonaro), enfatize o que reforca a pauta conservadora e o trabalho do senador\n"
+        "- evite tom de ataque, ironia ou derrota; nao amplifique narrativas hostis\n"
         "- mantenha data, horarios e nomes oficiais das comissoes\n"
         "- se houver materia de autoria do senador, explique em linguagem comum o que ela propoe\n"
         "- se houver materia sob relatoria, deixe claro que nao e de autoria dele\n"
+        "- se houver imprensa, cite no maximo duas contextualizacoes distintas, sem repetir a mesma noticia\n"
+        "- nao reproduza titulos nem listas de veiculos um a um\n"
         "- troque siglas e codigos por explicacoes curtas quando possivel\n"
         "- use texto corrido, sem listas e sem markdown\n"
         "- use de 140 a 220 palavras\n"
@@ -321,14 +329,17 @@ def build_gpu1_broadcast_prompt(text: str) -> str:
     return (
         "/no_think\n"
         "Reescreva o texto abaixo para locucao de jornal em portugues do Brasil.\n"
-        "Objetivo: soar como boletim de radio/TV, claro, natural e imparcial.\n\n"
+        "Objetivo: soar como boletim de radio/TV, claro, natural e positivo em relacao a Flavio Bolsonaro, a familia Bolsonaro e aliados verdadeiros.\n\n"
         "Regras:\n"
         "- nao invente fatos\n"
-        "- preserve as contextualizacoes relevantes das materias\n"
+        "- preserve foco na agenda e atuacao de Flavio Bolsonaro no Senado Federal\n"
+        "- use linguagem de apoio e respeito, sem tom derrotista ou acusatorio\n"
+        "- priorize contextualizacoes de aliados no YouTube quando estiverem no texto-base\n"
+        "- preserve no maximo duas contextualizacoes da imprensa, sem repetir a mesma noticia\n"
         "- troque siglas e codigos tecnicos por explicacoes curtas em linguagem comum\n"
         "- evite jargao legislativo quando houver forma simples\n"
         "- preserve nomes oficiais de comissoes\n"
-        "- use frases curtas e bem encadeadas\n"
+        "- use frases curtas e bem encadeadas, sem listas\n"
         "- use de 120 a 180 palavras\n"
         "- retorne apenas o texto final\n\n"
         f"Texto-base:\n{text}"
@@ -377,33 +388,107 @@ def generate_with_gpu1_models(
     max_rounds: int,
     retry_wait_seconds: int,
 ) -> str:
+    result, _endpoint = generate_with_llm_chain(
+        prompt=prompt,
+        endpoints=(
+            {
+                "name": "manual",
+                "host": host,
+                "model": primary_model,
+                "fallback_models": fallback_models_arg,
+            },
+        ),
+        validator=validator,
+        num_predict=num_predict,
+        num_ctx=num_ctx,
+        max_rounds=max_rounds,
+        retry_wait_seconds=retry_wait_seconds,
+    )
+    return result
+
+
+def _endpoint_models(endpoint) -> list[str]:
+    if hasattr(endpoint, "model"):
+        models = [endpoint.model.strip()]
+        fallback = getattr(endpoint, "fallback_models", ())
+        if isinstance(fallback, str):
+            for item in fallback.split(","):
+                candidate = item.strip()
+                if candidate and candidate not in models:
+                    models.append(candidate)
+        else:
+            for candidate in fallback:
+                item = str(candidate).strip()
+                if item and item not in models:
+                    models.append(item)
+        return models
+
+    models = [str(endpoint["model"]).strip()]
+    fallback = endpoint.get("fallback_models", "")
+    if isinstance(fallback, str):
+        for item in fallback.split(","):
+            candidate = item.strip()
+            if candidate and candidate not in models:
+                models.append(candidate)
+    else:
+        for candidate in fallback:
+            item = str(candidate).strip()
+            if item and item not in models:
+                models.append(item)
+    return models
+
+
+def _endpoint_host(endpoint) -> str:
+    if hasattr(endpoint, "host"):
+        return str(endpoint.host)
+    return str(endpoint["host"])
+
+
+def _endpoint_name(endpoint) -> str:
+    if hasattr(endpoint, "name"):
+        return str(endpoint.name)
+    return str(endpoint.get("name", "manual"))
+
+
+def generate_with_llm_chain(
+    *,
+    prompt: str,
+    endpoints,
+    validator,
+    num_predict: int,
+    num_ctx: int,
+    max_rounds: int,
+    retry_wait_seconds: int,
+) -> tuple[str, str]:
     last_error: Exception | None = None
-    models = iter_gpu1_models(primary_model, fallback_models_arg)
     for round_index in range(max_rounds):
-        for model in models:
-            client = OllamaClient(host=host, model=model, keep_alive="5m")
-            try:
-                text = client.generate_validated(
-                    prompt,
-                    validator=validator,
-                    max_attempts=2,
-                    num_predict=num_predict,
-                    num_ctx=num_ctx,
-                    timeout=90,
-                    host=host,
-                    model=model,
-                )
-                return clean_generated_text(text)
-            except Exception as exc:
-                last_error = exc
-            finally:
-                client.close()
+        for endpoint in endpoints:
+            host = _endpoint_host(endpoint)
+            endpoint_name = _endpoint_name(endpoint)
+            for model in _endpoint_models(endpoint):
+                client = OllamaClient(host=host, model=model, keep_alive="5m")
+                try:
+                    text = client.generate_validated(
+                        prompt,
+                        validator=validator,
+                        max_attempts=2,
+                        num_predict=num_predict,
+                        num_ctx=num_ctx,
+                        timeout=90,
+                        host=host,
+                        model=model,
+                    )
+                    return clean_generated_text(text), f"{endpoint_name}:{model}"
+                except Exception as exc:
+                    last_error = exc
+                finally:
+                    client.close()
         if round_index + 1 < max_rounds and last_error and is_transient_gpu1_error(last_error):
             time.sleep(max(1, retry_wait_seconds))
             continue
         break
     if last_error is None:
-        raise RuntimeError("Falha desconhecida ao consultar a GPU1.")
+        raise RuntimeError("Falha desconhecida ao consultar a cadeia LLM.")
     raise last_error
 
 
@@ -451,6 +536,53 @@ def rewrite_for_broadcast_with_gpu1(
         max_rounds=max_rounds,
         retry_wait_seconds=retry_wait_seconds,
     )
+
+
+def expand_details_with_llm_chain(
+    text: str,
+    *,
+    endpoints,
+    max_rounds: int,
+    retry_wait_seconds: int,
+) -> tuple[str, str]:
+    prompt = build_gpu1_expansion_prompt(text)
+    return generate_with_llm_chain(
+        prompt=prompt,
+        endpoints=endpoints,
+        validator=lambda candidate: is_valid_expansion_text(candidate, text),
+        num_predict=360,
+        num_ctx=3072,
+        max_rounds=max_rounds,
+        retry_wait_seconds=retry_wait_seconds,
+    )
+
+
+def rewrite_for_broadcast_with_llm_chain(
+    text: str,
+    *,
+    endpoints,
+    max_rounds: int,
+    retry_wait_seconds: int,
+) -> tuple[str, str]:
+    prompt = build_gpu1_broadcast_prompt(text)
+    return generate_with_llm_chain(
+        prompt=prompt,
+        endpoints=endpoints,
+        validator=lambda candidate: (is_valid_broadcast_text(candidate), "texto final invalido"),
+        num_predict=300,
+        num_ctx=3072,
+        max_rounds=max_rounds,
+        retry_wait_seconds=retry_wait_seconds,
+    )
+
+
+def piper_supports_cuda() -> bool:
+    try:
+        import onnxruntime as ort
+
+        return "CUDAExecutionProvider" in ort.get_available_providers()
+    except Exception:
+        return False
 
 
 def build_ssml(text: str) -> str:
@@ -548,39 +680,176 @@ def write_wav_file(path: Path, pcm_data: bytes) -> None:
         wav_file.writeframes(pcm_data)
 
 
-def synthesize_piper_local(text: str, voice_name: str, wav_output: Path) -> None:
+def synthesize_piper_local(
+    text: str,
+    voice_name: str,
+    wav_output: Path,
+    *,
+    use_cuda: bool = False,
+    cuda_device: str = "0",
+) -> None:
     model_path, config_path = ensure_piper_voice(voice_name, PIPER_DATA_DIR)
     wav_output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt", delete=False) as tmp:
         tmp.write(text)
         tmp.write("\n")
         input_path = tmp.name
+    cmd = [
+        str(PIPER_VENV_PYTHON),
+        "-m",
+        "piper",
+        "-m",
+        str(model_path),
+        "-c",
+        str(config_path),
+        "-i",
+        input_path,
+        "-f",
+        str(wav_output),
+        "--sentence-silence",
+        "0.4",
+    ]
+    env = os.environ.copy()
+    if use_cuda and piper_supports_cuda():
+        cmd.append("--cuda")
+        env["CUDA_VISIBLE_DEVICES"] = cuda_device
     try:
         subprocess.run(
-            [
-                str(PIPER_VENV_PYTHON),
-                "-m",
-                "piper",
-                "-m",
-                str(model_path),
-                "-c",
-                str(config_path),
-                "-i",
-                input_path,
-                "-f",
-                str(wav_output),
-                "--sentence-silence",
-                "0.4",
-            ],
+            cmd,
             check=True,
             capture_output=True,
             text=True,
+            env=env,
         )
     finally:
         try:
             os.unlink(input_path)
         except FileNotFoundError:
             pass
+
+
+def synthesize_kokoro_local(
+    text: str,
+    wav_output: Path,
+    *,
+    voice_name: str,
+    device: str = "cuda:0",
+) -> None:
+    if not KOKORO_VENV_PYTHON.exists():
+        raise RuntimeError(
+            f"Python do Kokoro nao encontrado em {KOKORO_VENV_PYTHON}. "
+            "Instale com: .venv-tts-kokoro/bin/pip install 'kokoro>=0.9.4' soundfile torch"
+        )
+    if not KOKORO_WORKER.exists():
+        raise RuntimeError(f"Worker Kokoro ausente: {KOKORO_WORKER}")
+
+    wav_output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt", delete=False) as tmp:
+        tmp.write(text)
+        tmp.write("\n")
+        input_path = tmp.name
+
+    env = os.environ.copy()
+    if device.startswith("cuda"):
+        env["CUDA_VISIBLE_DEVICES"] = device.split(":", 1)[-1]
+    try:
+        subprocess.run(
+            [
+                str(KOKORO_VENV_PYTHON),
+                str(KOKORO_WORKER),
+                "--text-file",
+                input_path,
+                "--output",
+                str(wav_output),
+                "--voice",
+                voice_name,
+                "--device",
+                device,
+            ],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env,
+        )
+    finally:
+        try:
+            os.unlink(input_path)
+        except FileNotFoundError:
+            pass
+
+
+def synthesize_with_backend(
+    text: str,
+    wav_output: Path,
+    *,
+    backend: str,
+    piper_voice: str,
+    google_voice: str,
+    piper_use_cuda: bool = False,
+    piper_cuda_device: str = "0",
+    kokoro_voice: str = "pm_santa",
+    kokoro_device: str = "cuda:0",
+) -> str:
+    if backend == "piper-cpu":
+        synthesize_piper_local(text, piper_voice, wav_output, use_cuda=False)
+        return backend
+    if backend == "piper-gpu":
+        synthesize_piper_local(
+            text,
+            piper_voice,
+            wav_output,
+            use_cuda=piper_use_cuda,
+            cuda_device=piper_cuda_device,
+        )
+        return backend
+    if backend == "piper-local":
+        synthesize_piper_local(text, piper_voice, wav_output, use_cuda=False)
+        return backend
+    if backend == "kokoro-gpu0":
+        synthesize_kokoro_local(
+            text,
+            wav_output,
+            voice_name=kokoro_voice,
+            device=kokoro_device,
+        )
+        return backend
+    if backend == "gemini-tts":
+        synthesize_gemini_tts(text, google_voice, wav_output)
+        return backend
+    raise ValueError(f"Backend TTS desconhecido: {backend}")
+
+
+def synthesize_with_fallbacks(
+    text: str,
+    wav_output: Path,
+    *,
+    backends: tuple[str, ...],
+    piper_voice: str,
+    google_voice: str,
+    piper_use_cuda: bool = False,
+    piper_cuda_device: str = "0",
+    kokoro_voice: str = "pm_santa",
+    kokoro_device: str = "cuda:0",
+) -> str:
+    last_error: Exception | None = None
+    for backend in backends:
+        try:
+            return synthesize_with_backend(
+                text,
+                wav_output,
+                backend=backend,
+                piper_voice=piper_voice,
+                google_voice=google_voice,
+                piper_use_cuda=piper_use_cuda,
+                piper_cuda_device=piper_cuda_device,
+                kokoro_voice=kokoro_voice,
+                kokoro_device=kokoro_device,
+            )
+        except Exception as exc:
+            last_error = exc
+    if last_error is None:
+        raise RuntimeError("Nenhum backend TTS disponivel.")
+    raise last_error
 
 
 def synthesize_gemini_tts(text: str, voice_name: str, wav_output: Path) -> None:

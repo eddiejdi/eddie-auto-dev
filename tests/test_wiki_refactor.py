@@ -9,7 +9,33 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from specialized_agents.wiki_client import WikiJsClient
-from specialized_agents.wiki_refactor import WikiRefactorRequest, WikiRefactorSkill
+from specialized_agents.wiki_refactor import (
+    WikiRefactorRequest,
+    WikiRefactorSkill,
+    _resolve_repo_root,
+)
+
+
+def test_resolve_repo_root_without_module_file(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    import specialized_agents.wiki_refactor as wr
+
+    monkeypatch.delenv("EDDIE_REPO_ROOT", raising=False)
+    monkeypatch.setenv("WIKI_REFACTOR_REPO_ROOT", str(tmp_path))
+    monkeypatch.delattr(wr, "__file__", raising=False)
+    assert _resolve_repo_root() == tmp_path.resolve()
+
+
+def test_wiki_refactor_skill_defaults_repo_root_without_file(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    monkeypatch.setattr(
+        "specialized_agents.wiki_refactor._resolve_repo_root",
+        lambda explicit=None: tmp_path.resolve() if explicit is None else explicit.resolve(),
+    )
+    client = FakeWikiClient(pages=[], page_details={})
+    skill = WikiRefactorSkill(client)
+    assert skill.repo_root == tmp_path.resolve()
 
 
 class FakeWikiClient(WikiJsClient):

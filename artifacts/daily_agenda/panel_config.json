@@ -1,0 +1,91 @@
+{
+  "defaults": {
+    "mode": "auto",
+    "quality": "balanced",
+    "include_news": true,
+    "send_telegram": true,
+    "upload_youtube": true,
+    "require_approval": true,
+    "deep_search": true
+  },
+  "search": {
+    "deep_search": true,
+    "timeout": 45,
+    "retries": 4
+  },
+  "approval": {
+    "enabled": true,
+    "timeout_minutes": 180,
+    "max_regenerations": 2
+  },
+  "youtube": {
+    "enabled": true,
+    "channel_id": "UCEyYr2YE1HLDTKT4cnMefmw",
+    "channel_handle": "@AgendaDiáriaImportante",
+    "channel_url": "https://www.youtube.com/channel/UCEyYr2YE1HLDTKT4cnMefmw",
+    "privacy_status": "public",
+    "category_id": "25",
+    "default_tags": [
+      "agenda diária",
+      "Agenda Diária Importante",
+      "Flávio Bolsonaro",
+      "Senado Federal",
+      "política"
+    ],
+    "cover_image": "artifacts/daily_agenda/youtube/cover.jpg",
+    "credentials_file": "artifacts/daily_agenda/youtube/credentials.json",
+    "token_file": "artifacts/daily_agenda/youtube/token.pickle"
+  },
+  "telegram": {
+    "enabled": true,
+    "chat_id": ""
+  },
+  "editorial": {
+    "stance": "pro_bolsonaro_allies",
+    "prefer_ally_youtube": true,
+    "exclude_hostile_headlines": true,
+    "include_bolsonaro_family_context": true
+  },
+  "ally_youtube": [
+    {
+      "name": "Kim Pain",
+      "search_terms": ["Kim Pain", "Kim Pain TV"],
+      "handle": "@KimPain",
+      "channel_id": ""
+    },
+    {
+      "name": "Didi Newa",
+      "search_terms": ["Didi Newa", "Didi News"],
+      "handle": "@DidiNewa",
+      "channel_id": ""
+    },
+    {
+      "name": "Auriverde",
+      "search_terms": ["Auriverde"],
+      "handle": "@Auriverde",
+      "channel_id": ""
+    },
+    {
+      "name": "Claudio Dantas",
+      "search_terms": ["Claudio Dantas", "Cláudio Dantas"],
+      "handle": "@ClaudioDantas",
+      "channel_id": ""
+    },
+    {
+      "name": "Ancapsu",
+      "search_terms": ["Ancapsu", "Ancap Su"],
+      "handle": "@ancapsu",
+      "channel_id": ""
+    },
+    {
+      "name": "Flávio Bolsonaro",
+      "search_terms": [
+        "Flávio Bolsonaro",
+        "Senador Flávio Bolsonaro",
+        "Flavio Bolsonaro oficial"
+      ],
+      "handle": "@flaviobolsonaro",
+      "channel_id": ""
+    }
+  ]
+}

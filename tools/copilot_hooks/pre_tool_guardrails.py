@@ -267,6 +267,7 @@ WIKI_AGENT_ROUTE_PATTERNS: list[str] = [
     r"agent_ipc\.py\s+publish\b.*--agent\s+wiki_rpa4all\b",
     r"\b--agent\s+wiki_rpa4all\b",
     r"/wiki/(?:publish|raw|evolve)\b",
+    r"tools/hooks/wiki_sync\.py",
 ]
 
 # Comandos de infra que mencionam "wikijs" mas NÃO são publicação de conteúdo.

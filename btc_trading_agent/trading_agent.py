@@ -39,6 +39,11 @@ from kucoin_api import (
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
 from market_rag import MarketRAG
+from track_record_confidence import (
+    TrackRecordConfidence,
+    apply_confidence_adjustment,
+    merge_track_record_cfg,
+)
 from sell_target_mixin import SellTargetMixin
 from risk_guardian_mixin import RiskGuardianMixin
 from position_manager_mixin import PositionManagerMixin
@@ -176,6 +181,7 @@ TRADING_FEE_PCT = 0.001  # 0.1% por trade (KuCoin)
 MAX_DAILY_TRADES = _config.get("max_daily_trades", 50)  # from config
 MAX_DAILY_LOSS = _config.get("max_daily_loss", 150)  # from config (USD)
 MAX_POSITIONS = _config.get("max_positions", 15)  # max BUY entries acumuladas
+MAIN_TRANSFER_CHECK_CYCLES = max(1, int(_config.get("main_transfer_check_cycles", 3)))
 PROFILE = _config.get("profile", "default")  # conservative|aggressive|default
 DCA_VALLEY_BOUNCE_PCT = _config.get("dca_valley_bounce_pct", 0.004)  # 0.4% bounce mínimo do fundo para liberar DCA
 
@@ -305,6 +311,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         self.model.use_macd     = bool(self.config.get("use_macd", False))
         self.model.use_ma_cross = bool(self.config.get("use_ma_cross", False))
         self.db = TrainingDatabase()
+        self._track_record = TrackRecordConfidence(self.db)
+        self._last_track_record_snapshot = None
         
         # Market RAG — inteligência de mercado com busca de padrões
         rag_recalibrate = self.config.get("rag_recalibrate_interval", _config.get("rag_recalibrate_interval", 300))
@@ -524,6 +532,19 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         """Desconto mínimo abaixo do preço médio para liberar reforço."""
         return 0.01
 
+    def _resolve_rebuy_lock(self, rag_adj, controls: "TradeControls") -> tuple[bool, float, str]:
+        """Resolve trava de recompra: IA (RAG) tem prioridade sobre config estático.
+
+        Returns:
+            (ativo, margem_pct, fonte) onde fonte é ``ai``, ``config`` ou ``off``.
+        """
+        if controls.ai_controlled and bool(getattr(rag_adj, "ai_rebuy_lock_enabled", False)):
+            margin_pct = float(getattr(rag_adj, "ai_rebuy_margin_pct", 0.0) or 0.0)
+            return True, max(0.0, min(margin_pct, 0.01)), "ai"
+        if self._load_live_config().get("rebuy_lock_enabled", True):
+            return True, 0.0, "config"
+        return False, 0.0, "off"
+
     def _resolve_dynamic_buy_batch_limit(self, remaining_exposure: float) -> Dict[str, float]:
         """Resolve o cap dinâmico por lote usando a pressão recente do profile."""
         pressure = 0.0
@@ -577,18 +598,34 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         caps = self._get_runtime_risk_caps()
         ai_controlled = rag_adj.similar_count >= 3
 
+        # Limite de posições dinâmico: IA (ai_max_entries) é a referência operacional.
+        # O config fixa apenas um teto de segurança; a IA pode orientar abaixo ou acima
+        # quando o perfil estiver conservador (ex.: max_positions=1 no JSON).
+        ai_max_entries = max(
+            1,
+            int(getattr(rag_adj, "ai_max_entries", 0) or caps["max_positions"]),
+        )
+        config_ceiling = max(1, int(caps["max_positions"]))
+        absolute_ceiling = max(config_ceiling, min(MAX_POSITIONS, ai_max_entries))
+        ollama_mode = str(getattr(rag_adj, "ollama_mode", "shadow") or "shadow")
+        ollama_cap = max(0, int(getattr(rag_adj, "applied_max_positions", 0) or 0))
+
         if ai_controlled:
             min_confidence = float(getattr(rag_adj, "applied_min_confidence", rag_adj.ai_min_confidence))
             min_trade_interval = int(getattr(rag_adj, "applied_min_trade_interval", rag_adj.ai_min_trade_interval))
-            max_positions_cap = int(getattr(rag_adj, "applied_max_positions", caps["max_positions"]) or caps["max_positions"])
-            effective_max_positions = min(max_positions_cap, int(rag_adj.ai_max_entries or max_positions_cap))
             max_position_pct = float(getattr(rag_adj, "applied_max_position_pct", caps["max_position_pct"]) or caps["max_position_pct"])
+            if ollama_mode == "apply" and ollama_cap > 0:
+                max_positions_cap = max(1, min(absolute_ceiling, ollama_cap))
+                effective_max_positions = max(1, min(ai_max_entries, max_positions_cap))
+            else:
+                max_positions_cap = max(1, min(absolute_ceiling, ai_max_entries))
+                effective_max_positions = max_positions_cap
         else:
             min_confidence = caps["min_confidence"]
             min_trade_interval = caps["min_trade_interval"]
-            max_positions_cap = caps["max_positions"]
-            effective_max_positions = caps["max_positions"]
             max_position_pct = caps["max_position_pct"]
+            max_positions_cap = max(1, min(absolute_ceiling, ai_max_entries))
+            effective_max_positions = max_positions_cap
 
         return TradeControls(
             min_confidence=max(0.0, min_confidence),
@@ -820,6 +857,57 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
     def _compact_prompt_json(payload: Dict[str, Any]) -> str:
         """Serializa contexto compacto para reduzir tokens nos prompts estruturados."""
         return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str)
+
+    def _apply_track_record_confidence(self, signal: Signal) -> Signal:
+        """Ajusta confiança do sinal com base no histórico realizado do profile."""
+        if signal.action not in ("BUY", "SELL"):
+            return signal
+
+        raw_cfg = self._load_live_config().get("track_record_confidence", {})
+        cfg = merge_track_record_cfg(raw_cfg, profile=self._current_profile())
+        if not cfg.get("enabled", False):
+            return signal
+
+        try:
+            snapshot = self._track_record.get_snapshot(
+                symbol=self.symbol,
+                profile=self._current_profile(),
+                dry_run=bool(self.state.dry_run),
+                cfg=cfg,
+            )
+            self._last_track_record_snapshot = snapshot
+        except Exception as e:
+            logger.debug(f"Track record confidence fallback: {e}")
+            return signal
+
+        raw_confidence = float(signal.confidence)
+        signal.features = dict(signal.features or {})
+        signal.features["raw_confidence"] = round(raw_confidence, 4)
+        signal.features.update(snapshot.as_features())
+
+        mode = str(cfg.get("mode", "apply") or "apply").lower()
+        if mode == "shadow":
+            signal.features["track_record_mode"] = "shadow"
+            return signal
+
+        adjusted = apply_confidence_adjustment(raw_confidence, snapshot)
+        if abs(adjusted - raw_confidence) >= 0.001:
+            logger.debug(
+                "📈 Track record confidence %s: %.1f%% -> %.1f%% "
+                "(TRS=%.2f, WR=%.0f%%, sells=%d, streak +%d/-%d)",
+                signal.action,
+                raw_confidence * 100,
+                adjusted * 100,
+                snapshot.trs,
+                snapshot.win_rate * 100,
+                snapshot.sell_count,
+                snapshot.winning_streak,
+                snapshot.losing_streak,
+            )
+        signal.confidence = adjusted
+        signal.features["adjusted_confidence"] = round(adjusted, 4)
+        signal.features["track_record_mode"] = "apply"
+        return signal
 
     def _fetch_db_perf_context(self, profile: str = "default") -> Dict[str, Any]:
         """Retorna resumo compacto de performance 7d do DB para injeção em prompts LLM."""
@@ -1288,14 +1376,18 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         elapsed = time.time() - start_time
         logger.info(f"⏱️ Bootstrap completed in {elapsed:.1f}s")
 
-    def _auto_transfer_and_sync(self):
+    def _auto_transfer_and_sync(self) -> bool:
         """Transfere automaticamente saldos da conta main para trade.
 
         Depósitos na KuCoin caem na conta 'main'. O agente opera na conta
         'trade'. Esta função detecta e transfere saldos pendentes.
+
+        Returns:
+            True se ao menos uma transferência foi concluída com sucesso.
         """
         base_currency = self.symbol.split("-")[0]  # BTC
         quote_currency = self.symbol.split("-")[1]  # USDT
+        transferred_any = False
 
         for currency in [base_currency, quote_currency]:
             try:
@@ -1324,6 +1416,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     to_account="trade",
                 )
                 if result.get("success"):
+                    transferred_any = True
                     logger.info(
                         f"💸 Auto-transferred {main_bal:.8f} {currency} "
                         f"main → trade"
@@ -1335,6 +1428,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     )
             except Exception as e:
                 logger.warning(f"⚠️ Auto-transfer {currency} error: {e}")
+
+        return transferred_any
 
     def _detect_external_deposits(self):
         """Detecta depósitos externos comparando saldo exchange vs posição DB.
@@ -4361,26 +4456,35 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         elif signal.action == "SELL" and context["strong_bearish"]:
             min_confidence = max(0.45, min_confidence - 0.05)
 
-        # REBUY lock: controlado por config rebuy_lock_enabled (default true).
-        # Quando ativo, após qualquer venda de slot a próxima compra deve ser
-        # abaixo do preço de entrada do slot vendido.
-        if signal.action == "BUY" and self._load_live_config().get("rebuy_lock_enabled", True):
-            try:
-                last_sell = float(getattr(self.state, "last_sell_entry_price", 0.0) or 0.0)
-                if last_sell > 0:
-                    price = float(getattr(signal, "price", 0.0) or 0.0)
-                    if price >= last_sell:
-                        logger.info(
-                            f"🔒 REBUY blocked: preço ${price:,.2f} >= "
-                            f"entrada da última venda ${last_sell:,.2f} — aguardando desconto"
-                        )
-                        return self._block_trade(
-                            "buy_rebuy_lock_last_sell",
-                            price=price,
-                            last_sell_entry_price=last_sell,
-                        )
-            except Exception:
-                logger.debug("Erro ao aplicar rebuy lock; ignorando bloqueio")
+        # REBUY lock: IA (ai_rebuy_lock_enabled + ai_rebuy_margin_pct) ou config estático.
+        if signal.action == "BUY":
+            rebuy_active, rebuy_margin_pct, rebuy_source = self._resolve_rebuy_lock(rag_adj, controls)
+            if rebuy_active:
+                try:
+                    last_sell = float(getattr(self.state, "last_sell_entry_price", 0.0) or 0.0)
+                    if last_sell > 0:
+                        price = float(getattr(signal, "price", 0.0) or 0.0)
+                        max_buy_price = last_sell * (1.0 - rebuy_margin_pct)
+                        if price >= max_buy_price:
+                            margin_label = (
+                                f", alvo < ${max_buy_price:,.2f} (margem {rebuy_margin_pct * 100:.2f}%)"
+                                if rebuy_margin_pct > 0 else ""
+                            )
+                            source_label = "IA" if rebuy_source == "ai" else "config"
+                            logger.info(
+                                f"🔒 REBUY blocked [{source_label}]: preço ${price:,.2f} >= "
+                                f"entrada da última venda ${last_sell:,.2f}{margin_label} — aguardando desconto"
+                            )
+                            return self._block_trade(
+                                "buy_rebuy_lock_last_sell",
+                                price=price,
+                                last_sell_entry_price=last_sell,
+                                rebuy_max_price=max_buy_price,
+                                rebuy_margin_pct=rebuy_margin_pct,
+                                rebuy_source=rebuy_source,
+                            )
+                except Exception:
+                    logger.debug("Erro ao aplicar rebuy lock; ignorando bloqueio")
 
         if signal.action == "SELL":
             guardrail_sell = self._get_guardrail_sell_verdict(signal.price)
@@ -5590,6 +5694,18 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             try:
                 cycle += 1
                 start_time = time.time()
+
+                # Depósitos fiat/crypto caem na MAIN — sincronizar para TRADE no loop
+                if not self.state.dry_run and cycle % MAIN_TRANSFER_CHECK_CYCLES == 0:
+                    try:
+                        if self._auto_transfer_and_sync():
+                            logger.info(
+                                "💸 Depósito detectado na MAIN — saldo transferido "
+                                "para TRADE e liberado para negociação"
+                            )
+                            self._detect_external_deposits()
+                    except Exception as e:
+                        logger.debug(f"Main→trade sync error: {e}")
                 
                 # Coletar estado do mercado
                 market_state = self._get_market_state()
@@ -5664,6 +5780,8 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                 news_tag = self._get_cached_news_tag()
                 if news_tag:
                     signal.reason = f"{signal.reason}, {news_tag}" if signal.reason else news_tag
+
+                signal = self._apply_track_record_confidence(signal)
 
                 # Registrar decisão
                 decision_id = self.db.record_decision(

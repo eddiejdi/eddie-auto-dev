@@ -46,6 +46,11 @@ AGENT_SERVICES=(
   "crypto-agent@SOL_USDT_conservative.service"
   "crypto-agent@SOL_USDT_aggressive.service"
   "crypto-agent@SOL_USDT_shadow.service"
+  "crypto-agent@DOGE_USDT_conservative.service"
+  "crypto-agent@DOGE_USDT_aggressive.service"
+  "crypto-agent@DOGE_USDT_shadow.service"
+  "crypto-agent@USDT_BRL_conservative.service"
+  "crypto-agent@USDT_BRL_aggressive.service"
 )
 
 EXPORTER_SERVICES=(
@@ -58,6 +63,11 @@ EXPORTER_SERVICES=(
   "crypto-exporter@SOL_USDT_conservative.service"
   "crypto-exporter@SOL_USDT_aggressive.service"
   "crypto-exporter@SOL_USDT_shadow.service"
+  "crypto-exporter@DOGE_USDT_conservative.service"
+  "crypto-exporter@DOGE_USDT_aggressive.service"
+  "crypto-exporter@DOGE_USDT_shadow.service"
+  "crypto-exporter@USDT_BRL_conservative.service"
+  "crypto-exporter@USDT_BRL_aggressive.service"
 )
 
 LEGACY_EXPORTER_SERVICES=(
@@ -274,6 +284,14 @@ ensure_sol_trading_profiles() {
   local activate="${REPO_ROOT}/scripts/activate_sol_trading_profiles.sh"
   if [[ -x "${activate}" ]] && compgen -G "${REPO_ROOT}/btc_trading_agent/config_SOL_USDT_*.json" >/dev/null; then
     echo "🔗 Ativando perfis SOL-USDT (envfiles + systemd)..."
+    sudo bash "${activate}"
+  fi
+}
+
+ensure_doge_trading_profiles() {
+  local activate="${REPO_ROOT}/scripts/activate_doge_trading_profiles.sh"
+  if [[ -x "${activate}" ]] && compgen -G "${REPO_ROOT}/btc_trading_agent/config_DOGE_USDT_*.json" >/dev/null; then
+    echo "🔗 Ativando perfis DOGE-USDT (envfiles + systemd)..."
     sudo bash "${activate}"
   fi
 }
@@ -569,6 +587,7 @@ done
 
 restart_grafana_if_present
 ensure_sol_trading_profiles
+ensure_doge_trading_profiles
 
 # HOOK de completude: aborta se algum agent ativo ficou com código antigo.
 verify_agents_running_current_code

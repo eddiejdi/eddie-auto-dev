@@ -1,0 +1,95 @@
+{
+  "enabled": true,
+  "dry_run": false,
+  "symbol": "DOGE-USDT",
+  "poll_interval": 5,
+  "min_trade_interval": 600,
+  "min_confidence": 0.55,
+  "min_trade_amount": 10,
+  "max_position_pct": 1.0,
+  "dca_valley_bounce_pct": 0.003,
+  "stop_loss_pct": 0.05,
+  "take_profit_pct": 0.015,
+  "max_daily_trades": 20,
+  "max_daily_loss": 10,
+  "min_sell_pnl": 0.001,
+  "max_hold_minutes": 0,
+  "trading_hours": {
+    "enabled": false,
+    "start": "00:00",
+    "end": "23:59"
+  },
+  "notifications": {
+    "enabled": true,
+    "telegram_chat_id": "",
+    "whatsapp_chat_id": "5511981193899@c.us",
+    "on_trade": true,
+    "on_signal": false,
+    "on_error": true
+  },
+  "risk_management": {
+    "enabled": true,
+    "max_drawdown_pct": 0.08,
+    "position_sizing": "fixed",
+    "kelly_fraction": 0.25,
+    "volatility_filter": true,
+    "min_volatility": 0.001,
+    "max_volatility": 0.15
+  },
+  "trailing_stop": {
+    "enabled": true,
+    "activation_pct": 0.01,
+    "trail_pct": 0.005
+  },
+  "strategy": {
+    "mode": "swing",
+    "use_trend_filter": false,
+    "use_volume_filter": true,
+    "rsi_oversold": 25,
+    "rsi_overbought": 40,
+    "min_spread_bps": 3
+  },
+  "live_mode": true,
+  "auto_stop_loss": {
+    "enabled": false,
+    "pct": 0.05
+  },
+  "auto_take_profit": {
+    "enabled": true,
+    "pct": 0.015,
+    "min_pct": 0.013
+  },
+  "min_net_profit": {
+    "usd": 0.1,
+    "pct": 0.001
+  },
+  "circuit_breaker": {
+    "enabled": true,
+    "min_win_rate_24h": 0.25,
+    "max_daily_loss_usd": 15
+  },
+  "profile": "aggressive",
+  "guardrails_active": true,
+  "guardrails_min_sell_pnl_pct": 0.003,
+  "guardrails_positive_only_sells": true,
+  "rebuy_lock_enabled": false,
+  "_doge_live_notes": {
+    "origem": "clonado de config_SOL_USDT_aggressive.json em 2026-07-10",
+    "conta": "master TRADE (kucoin/homelab) — mesma conta do SOL",
+    "capital_alvo": "$50 por perfil",
+    "autorizacao": "usuario: live direto (2026-07-10)",
+    "politica_saida": "guardrails positive-only"
+  },
+  "track_record_confidence": {
+    "enabled": true,
+    "mode": "apply",
+    "lookback_hours": 72,
+    "min_sell_samples": 5,
+    "recent_sell_window": 20,
+    "max_boost": 0.1,
+    "max_penalty": 0.08,
+    "streak_cap": 4,
+    "cache_ttl_sec": 30,
+    "pnl_scale_usd": 5.0
+  }
+}

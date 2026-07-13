@@ -31,7 +31,16 @@ sys.modules.setdefault("market_rag", types.SimpleNamespace(MarketRAG=object))
 from trading_agent import BitcoinTradingAgent
 
 
-def _make_agent(position=0.0, entry_price=0.0, last_sell_entry_price=0.0):
+def _make_agent(
+    position=0.0,
+    entry_price=0.0,
+    last_sell_entry_price=0.0,
+    *,
+    ai_rebuy_lock_enabled=False,
+    ai_rebuy_margin_pct=0.0,
+    ai_controlled=False,
+    rebuy_lock_enabled=None,
+):
     agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
     agent.symbol = "BTC-USDT"
     agent.state = SimpleNamespace(
@@ -48,11 +57,16 @@ def _make_agent(position=0.0, entry_price=0.0, last_sell_entry_price=0.0):
         logical_position_slots=1 if position > 0 else 0,
         raw_entry_count=1 if position > 0 else 0,
     )
-    agent.market_rag = SimpleNamespace(get_current_adjustment=lambda: SimpleNamespace())
+    rag_adj = SimpleNamespace(
+        ai_rebuy_lock_enabled=ai_rebuy_lock_enabled,
+        ai_rebuy_margin_pct=ai_rebuy_margin_pct,
+    )
+    agent.market_rag = SimpleNamespace(get_current_adjustment=lambda: rag_adj)
     agent._clear_trade_block = lambda: None
     agent._resolve_trade_controls = lambda rag_adj=None: SimpleNamespace(
         min_confidence=0.5, min_trade_interval=0, max_position_pct=0.5,
-        max_positions_cap=4, effective_max_positions=4, ai_controlled=False, ollama_mode="shadow"
+        max_positions_cap=4, effective_max_positions=4,
+        ai_controlled=ai_controlled, ollama_mode="shadow",
     )
     agent._analyze_signal_context = lambda rag_adj, signal: dict(
         penalty_score=0.0, bonus_score=0.0, strong_bearish=False,
@@ -71,7 +85,10 @@ def _make_agent(position=0.0, entry_price=0.0, last_sell_entry_price=0.0):
     )
     agent.db = SimpleNamespace(
         count_trades_since=lambda **kw: 0, get_pnl_since=lambda **kw: 0.0)
-    agent._load_live_config = lambda: {}
+    cfg = {}
+    if rebuy_lock_enabled is not None:
+        cfg["rebuy_lock_enabled"] = rebuy_lock_enabled
+    agent._load_live_config = lambda: cfg
     agent._current_profile = lambda: "default"
     agent._sync_target_sell_with_ai = lambda reason_prefix="IA": None
     agent._get_rebuy_discount_pct = lambda: 0.003
@@ -159,3 +176,52 @@ def test_rebuy_allowed_even_with_open_position_when_below_last_sell():
     # rebuy_discount: entry=68000, trigger=67796, price=69500 > 67796 → blocked by buy_rebuy_discount
     assert result is False
     assert agent.state.last_trade_block_reason == "buy_rebuy_discount"
+
+
+# ── REBUY via IA (RAG) com config estático desligado ─────────────────────────
+
+def test_ai_rebuy_blocks_when_config_disabled_but_rag_enabled():
+    """rebuy_lock_enabled=false não impede trava quando IA ativa rebuy."""
+    agent = _make_agent(
+        position=0.0,
+        last_sell_entry_price=70000.0,
+        ai_rebuy_lock_enabled=True,
+        ai_rebuy_margin_pct=0.0,
+        ai_controlled=True,
+        rebuy_lock_enabled=False,
+    )
+    sig = SimpleNamespace(action="BUY", price=70000.0, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig) is False
+    assert agent.state.last_trade_block_reason == "buy_rebuy_lock_last_sell"
+
+
+def test_ai_rebuy_margin_requires_deeper_discount():
+    """Margem IA exige preço abaixo de last_sell * (1 - margin_pct)."""
+    agent = _make_agent(
+        position=0.0,
+        last_sell_entry_price=70000.0,
+        ai_rebuy_lock_enabled=True,
+        ai_rebuy_margin_pct=0.01,
+        ai_controlled=True,
+        rebuy_lock_enabled=False,
+    )
+    # 70000 * 0.99 = 69300 — abaixo disso permitido
+    sig_block = SimpleNamespace(action="BUY", price=69500.0, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig_block) is False
+    assert agent.state.last_trade_block_reason == "buy_rebuy_lock_last_sell"
+
+    sig_ok = SimpleNamespace(action="BUY", price=69200.0, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig_ok) is True
+
+
+def test_ai_rebuy_off_allows_reentry_when_config_disabled():
+    """Sem IA nem config, reentrada após venda é livre."""
+    agent = _make_agent(
+        position=0.0,
+        last_sell_entry_price=70000.0,
+        ai_rebuy_lock_enabled=False,
+        ai_controlled=True,
+        rebuy_lock_enabled=False,
+    )
+    sig = SimpleNamespace(action="BUY", price=71000.0, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig) is True

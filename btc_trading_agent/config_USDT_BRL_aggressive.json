@@ -68,5 +68,17 @@
     "min_win_rate_24h": 0.25,
     "max_daily_loss_usd": 15
   },
-  "profile": "aggressive"
+  "profile": "aggressive",
+  "track_record_confidence": {
+    "enabled": true,
+    "mode": "apply",
+    "lookback_hours": 72,
+    "min_sell_samples": 5,
+    "recent_sell_window": 20,
+    "max_boost": 0.1,
+    "max_penalty": 0.08,
+    "streak_cap": 4,
+    "cache_ttl_sec": 30,
+    "pnl_scale_usd": 5.0
+  }
 }

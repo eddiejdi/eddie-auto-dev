@@ -84,6 +84,20 @@ Opcionalmente, mantenha overrides versionados em:
 
 - `deploy/cmdb/bootstrap/cmdb-agent-overrides.json`
 
+### Atualizacao automatica (pre-commit)
+
+O hook `.githooks/pre-commit` (check 9) regenera o baseline **no mesmo commit**
+do trabalho real — evita commits orfaos `chore(cmdb): regenerar baseline [skip-cmdb]`.
+
+O gerador tambem sincroniza automaticamente perfis `crypto-agent@*_USDT_*` a partir de:
+
+- `btc_trading_agent/config_*_USDT_*.json`
+- `btc_trading_agent/*_USDT_*.env.example`
+- `scripts/activate_*_trading_profiles.sh`
+
+Entradas auto-geradas em `cmdb-agent-overrides.json` levam `"auto_generated": true`.
+Escape: `SKIP_CMDB_HOOK=1 git commit ...` ou `git commit --no-verify`.
+
 Use esse arquivo para fixar:
 
 - `primary_ip4` com CIDR real por host

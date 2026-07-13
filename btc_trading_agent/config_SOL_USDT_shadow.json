@@ -78,5 +78,17 @@
     "conta": "master TRADE (kucoin/homelab) — KuCoin não permite novas subcontas",
     "capital_alvo": "$50 por perfil (pool compartilhado na TRADE)",
     "autorizacao": "usuario: live direto sem fase dry (2026-07-08)"
+  },
+  "track_record_confidence": {
+    "enabled": true,
+    "mode": "apply",
+    "lookback_hours": 72,
+    "min_sell_samples": 5,
+    "recent_sell_window": 20,
+    "max_boost": 0.1,
+    "max_penalty": 0.08,
+    "streak_cap": 4,
+    "cache_ttl_sec": 30,
+    "pnl_scale_usd": 2.0
   }
 }

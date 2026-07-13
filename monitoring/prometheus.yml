@@ -31,6 +31,7 @@ scrape_configs:
 
   - job_name: 'crypto-exporter-btc_usdt_conservative'
     scrape_interval: 30s
+    scrape_timeout: 25s
     static_configs:
       - targets: ['172.17.0.1:9094']
         labels:
@@ -41,6 +42,7 @@ scrape_configs:
 
   - job_name: 'crypto-exporter-btc_usdt_aggressive'
     scrape_interval: 30s
+    scrape_timeout: 25s
     static_configs:
       - targets: ['172.17.0.1:9095']
         labels:
@@ -95,6 +97,7 @@ scrape_configs:
 
   - job_name: 'crypto-exporter-btc_usdt_shadow'
     scrape_interval: 30s
+    scrape_timeout: 25s
     static_configs:
       - targets: ['172.17.0.1:9099']
         labels:
@@ -105,6 +108,7 @@ scrape_configs:
 
   - job_name: 'crypto-exporter-eth_usdt_shadow'
     scrape_interval: 30s
+    scrape_timeout: 25s
     static_configs:
       - targets: ['172.17.0.1:9096']
         labels:
@@ -115,6 +119,7 @@ scrape_configs:
 
   - job_name: 'crypto-exporter-eth_usdt_conservative'
     scrape_interval: 30s
+    scrape_timeout: 25s
     static_configs:
       - targets: ['172.17.0.1:9097']
         labels:
@@ -125,6 +130,7 @@ scrape_configs:
 
   - job_name: 'crypto-exporter-eth_usdt_aggressive'
     scrape_interval: 30s
+    scrape_timeout: 25s
     static_configs:
       - targets: ['172.17.0.1:9098']
         labels:
@@ -135,6 +141,7 @@ scrape_configs:
 
   - job_name: 'crypto-exporter-sol_usdt_shadow'
     scrape_interval: 30s
+    scrape_timeout: 25s
     static_configs:
       - targets: ['172.17.0.1:9108']
         labels:
@@ -145,6 +152,7 @@ scrape_configs:
 
   - job_name: 'crypto-exporter-sol_usdt_conservative'
     scrape_interval: 30s
+    scrape_timeout: 25s
     static_configs:
       - targets: ['172.17.0.1:9104']
         labels:
@@ -155,11 +163,45 @@ scrape_configs:
 
   - job_name: 'crypto-exporter-sol_usdt_aggressive'
     scrape_interval: 30s
+    scrape_timeout: 25s
     static_configs:
       - targets: ['172.17.0.1:9106']
         labels:
           coin: 'SOL-USDT'
           instance: 'sol_usdt_aggressive'
+          profile: 'aggressive'
+          servidor: 'homelab'
+
+  - job_name: 'crypto-exporter-doge_usdt_shadow'
+    scrape_interval: 30s
+    scrape_timeout: 25s
+    static_configs:
+      - targets: ['172.17.0.1:9112']
+        labels:
+          coin: 'DOGE-USDT'
+          instance: 'doge_usdt_shadow'
+          profile: 'shadow'
+          servidor: 'homelab'
+
+  - job_name: 'crypto-exporter-doge_usdt_conservative'
+    scrape_interval: 30s
+    scrape_timeout: 25s
+    static_configs:
+      - targets: ['172.17.0.1:9113']
+        labels:
+          coin: 'DOGE-USDT'
+          instance: 'doge_usdt_conservative'
+          profile: 'conservative'
+          servidor: 'homelab'
+
+  - job_name: 'crypto-exporter-doge_usdt_aggressive'
+    scrape_interval: 30s
+    scrape_timeout: 25s
+    static_configs:
+      - targets: ['172.17.0.1:9114']
+        labels:
+          coin: 'DOGE-USDT'
+          instance: 'doge_usdt_aggressive'
           profile: 'aggressive'
           servidor: 'homelab'
 

@@ -273,15 +273,69 @@ class TestSafeFloat:
 
 
 # ---------------------------------------------------------------------------
+# Tests: PnL líquido (FIFO + fees)
+# ---------------------------------------------------------------------------
+
+class TestSellNetPnl:
+    """Testes para cálculo de PnL líquido no sync."""
+
+    def test_fifo_cost_for_simple_buy_then_sell(self):
+        trades = [
+            {"side": "buy", "price": 100.0, "size": 1.0, "metadata": {}},
+        ]
+        fifo = sync._fifo_cost_for_sell(trades, 1.0)
+        assert fifo is not None
+        avg_entry, buy_fees, matched = fifo
+        assert avg_entry == 100.0
+        assert matched == 1.0
+        assert buy_fees == pytest.approx(0.1, rel=1e-6)
+
+    def test_fifo_consumes_prior_sell_before_current(self):
+        trades = [
+            {"side": "buy", "price": 100.0, "size": 1.0, "metadata": {}},
+            {"side": "sell", "price": 110.0, "size": 0.4, "metadata": {}},
+            {"side": "buy", "price": 120.0, "size": 0.5, "metadata": {}},
+        ]
+        fifo = sync._fifo_cost_for_sell(trades, 0.5)
+        assert fifo is not None
+        avg_entry, _, matched = fifo
+        assert matched == 0.5
+        assert avg_entry == pytest.approx(100.0, rel=1e-6)
+
+    def test_compute_net_sell_pnl_subtracts_fees(self):
+        pnl, pnl_pct = sync._compute_net_sell_pnl(
+            sell_price=110.0,
+            sell_size=1.0,
+            avg_entry=100.0,
+            sell_fee_usdt=0.11,
+            buy_fee_usdt=0.10,
+        )
+        assert pnl == pytest.approx(9.79, rel=1e-6)
+        assert pnl_pct > 0
+
+    def test_sum_sell_fees_from_usdt_fill(self):
+        fills = [{
+            "fee": "0.05",
+            "feeCurrency": "USDT",
+            "price": "200",
+            "size": "1",
+            "funds": "200",
+        }]
+        assert sync._sum_sell_fees_usdt(fills) == pytest.approx(0.05, rel=1e-6)
+
+
+# ---------------------------------------------------------------------------
 # Tests: _sync_fills (integration-style com mocks)
 # ---------------------------------------------------------------------------
 
 class TestSyncFills:
     """Testes de integração para _sync_fills com DB mockado."""
 
+    @patch.object(sync, "_backfill_missing_sell_pnl", return_value=0)
+    @patch.object(sync, "_refresh_sell_pnl", return_value=False)
     @patch.object(sync, "get_fills")
     @patch.object(sync, "_trades_has_profile", return_value=True)
-    def test_inserts_new_fill(self, mock_hp, mock_gf):
+    def test_inserts_new_fill(self, mock_hp, mock_gf, _mock_pnl, _mock_backfill):
         """Fill novo (order_id não existe no BD) deve ser inserido."""
         ts = int(time.time() * 1000)
         mock_gf.return_value = [{
@@ -306,9 +360,11 @@ class TestSyncFills:
         result = sync._sync_fills(mock_conn)
         assert result == 1
 
+    @patch.object(sync, "_backfill_missing_sell_pnl", return_value=0)
+    @patch.object(sync, "_refresh_sell_pnl", return_value=False)
     @patch.object(sync, "get_fills")
     @patch.object(sync, "_trades_has_profile", return_value=True)
-    def test_updates_existing_fill(self, mock_hp, mock_gf):
+    def test_updates_existing_fill(self, mock_hp, mock_gf, _mock_pnl, _mock_backfill):
         """Fill com order_id existente deve atualizar, não inserir."""
         ts = int(time.time() * 1000)
         mock_gf.return_value = [{
@@ -333,10 +389,12 @@ class TestSyncFills:
         result = sync._sync_fills(mock_conn)
         assert result == 0  # no inserts, only updates
 
+    @patch.object(sync, "_backfill_missing_sell_pnl", return_value=0)
+    @patch.object(sync, "_refresh_sell_pnl", return_value=False)
     @patch.object(sync, "get_fills")
     @patch.object(sync, "_trades_has_profile", return_value=True)
     @patch.object(sync, "_match_orphan_to_fill", return_value=42)
-    def test_matches_orphan_instead_of_inserting(self, mock_match, mock_hp, mock_gf):
+    def test_matches_orphan_instead_of_inserting(self, mock_match, mock_hp, mock_gf, _mock_pnl, _mock_backfill):
         """Fill sem order_id no BD deve tentar match com orphan antes de inserir."""
         ts = int(time.time() * 1000)
         mock_gf.return_value = [{
@@ -420,10 +478,12 @@ class TestMatchOpenBuyProfile:
         assert result is None
         mock_cursor.execute.assert_not_called()
 
+    @patch.object(sync, "_backfill_missing_sell_pnl", return_value=0)
+    @patch.object(sync, "_refresh_sell_pnl", return_value=False)
     @patch.object(sync, "get_fills")
     @patch.object(sync, "_trades_has_profile", return_value=True)
     @patch.object(sync, "_match_orphan_to_fill", return_value=None)
-    def test_sync_fills_uses_matched_profile_for_sell(self, mock_orp, mock_hp, mock_gf):
+    def test_sync_fills_uses_matched_profile_for_sell(self, mock_orp, mock_hp, mock_gf, _mock_pnl, _mock_backfill):
         """_sync_fills deve inserir SELL no profile encontrado, nao em exchange_sync."""
         import time as _time
         ts = int(_time.time() * 1000)
@@ -475,16 +535,25 @@ class TestReconcileStuckProfileAlert:
     def test_detects_stuck_profile_when_exchange_zero(self, mock_gb):
         """Cenario 3: exchange zerada + conservative positivo → stuck_profiles listado."""
         mock_gb.return_value = [{"currency": "BTC", "balance": "0.0"}]
+        sync.kucoin_api.get_sub_account_balances.return_value = []
 
         mock_conn = MagicMock()
         mock_cur = MagicMock()
         mock_cur.__enter__ = MagicMock(return_value=mock_cur)
         mock_cur.__exit__ = MagicMock(return_value=False)
 
-        # fetchall: dados por profile
-        mock_cur.fetchall = MagicMock(return_value=[
-            {"profile": "conservative", "net_position": 0.00074257, "buys": 3, "sells": 0, "orphan_trades": 0},
-            {"profile": "exchange_sync", "net_position": 0.0, "buys": 1, "sells": 1, "orphan_trades": 0},
+        mock_cur.fetchall = MagicMock(side_effect=[
+            [{"profile": "conservative"}],
+            [
+                {"profile": "conservative", "buys": 3, "sells": 0, "orphan_trades": 0},
+                {"profile": "exchange_sync", "buys": 1, "sells": 1, "orphan_trades": 0},
+            ],
+            [
+                {"id": 1, "side": "buy", "size": 0.00074257, "price": 70000.0, "timestamp": time.time(), "metadata": {}, "dry_run": False},
+            ],
+            [
+                {"id": 2, "side": "sell", "size": 0.001, "price": 71000.0, "timestamp": time.time(), "metadata": {}, "dry_run": False},
+            ],
         ])
         mock_conn.cursor.return_value = mock_cur
 
@@ -496,16 +565,55 @@ class TestReconcileStuckProfileAlert:
     def test_no_stuck_when_exchange_has_balance(self, mock_gb):
         """Sem stuck quando exchange tem saldo real."""
         mock_gb.return_value = [{"currency": "BTC", "balance": "0.001"}]
+        sync.kucoin_api.get_sub_account_balances.return_value = []
 
         mock_conn = MagicMock()
         mock_cur = MagicMock()
         mock_cur.__enter__ = MagicMock(return_value=mock_cur)
         mock_cur.__exit__ = MagicMock(return_value=False)
-        mock_cur.fetchall = MagicMock(return_value=[
-            {"profile": "conservative", "net_position": 0.001, "buys": 3, "sells": 0, "orphan_trades": 0},
+        mock_cur.fetchall = MagicMock(side_effect=[
+            [{"profile": "conservative"}],
+            [{"profile": "conservative", "buys": 3, "sells": 0, "orphan_trades": 0}],
+            [
+                {"id": 1, "side": "buy", "size": 0.001, "price": 70000.0, "timestamp": time.time(), "metadata": {}, "dry_run": False},
+            ],
         ])
         mock_conn.cursor.return_value = mock_cur
 
         result = sync._reconcile_position_integrity(mock_conn)
         assert "stuck_profiles" not in result
 
+    @patch.object(sync, "get_balances")
+    def test_integrity_uses_live_trades_only_and_subaccount_btc(self, mock_gb):
+        """Integridade deve ignorar dry-run e comparar contra master + subcontas."""
+        mock_gb.return_value = [{"currency": "BTC", "balance": "0.005"}]
+        sync.kucoin_api.get_sub_account_balances.return_value = [
+            {"sub_name": "BTCAgressive", "currency": "BTC", "balance": "0.001"},
+            {"sub_name": "BTCConservative", "currency": "BTC", "balance": "0.002"},
+            {"sub_name": "ETHConservative", "currency": "ETH", "balance": "0.5"},
+        ]
+
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+        mock_cur.__exit__ = MagicMock(return_value=False)
+        mock_cur.fetchall = MagicMock(side_effect=[
+            [{"profile": "shadow"}],
+            [{"profile": "shadow", "buys": 10, "sells": 2, "orphan_trades": 0}],
+            [
+                {"id": 1, "side": "buy", "size": 0.008, "price": 70000.0, "timestamp": time.time(), "metadata": {}, "dry_run": False},
+            ],
+        ])
+        mock_conn.cursor.return_value = mock_cur
+
+        result = sync._reconcile_position_integrity(mock_conn)
+
+        executed_sql = "\n".join(str(call[0][0]) for call in mock_cur.execute.call_args_list)
+        assert "dry_run = FALSE" in executed_sql
+        assert result["exchange_btc_balance"] == pytest.approx(0.008)
+        assert result["exchange_btc_balances"] == {
+            "trade": 0.005,
+            "sub:BTCAgressive": 0.001,
+            "sub:BTCConservative": 0.002,
+        }
+        assert result["position_diff"] == pytest.approx(0.0)

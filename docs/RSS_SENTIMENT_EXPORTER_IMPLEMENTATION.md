@@ -40,6 +40,8 @@ update_prometheus_metrics() — exposição em :9122
 - Bitcoin Magazine (`/.rss/full/`)
 - CryptoNews (`/news/feed/`)
 - The Block (`/rss.xml`)
+- **KuCoin Flash** (sitemap XML — ver `docs/KUCOIN_NEWS_FEED.md`)
+- **KuCoin Announcements** (API CMS `/_api/cms/articles`)
 
 #### Moedas Rastreadas:
 `BTC`, `ETH`, `XRP`, `SOL`, `DOGE`, `ADA`, `GENERAL` (notícias genéricas)

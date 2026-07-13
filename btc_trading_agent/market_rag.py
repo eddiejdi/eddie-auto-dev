@@ -1256,6 +1256,13 @@ class RegimeAdjuster:
                 elif usdt_balance < 50:
                     size_pct = max(size_pct, 0.06)
                     reason_parts.append(f"saldo_moderado:${usdt_balance:.1f}")
+                elif usdt_balance >= 1000:
+                    # Capital amplo: IA permite mais entradas DCA graduais
+                    max_entries = max(max_entries, min(24, int(8 + usdt_balance / 250)))
+                    reason_parts.append(f"saldo_alto:${usdt_balance:.0f}")
+                elif usdt_balance >= 200:
+                    max_entries = max(max_entries, 10)
+                    reason_parts.append(f"saldo_amplo:${usdt_balance:.0f}")
 
             # --- 5. Ajuste por número de entradas já realizadas ---
             if position_count > 10:

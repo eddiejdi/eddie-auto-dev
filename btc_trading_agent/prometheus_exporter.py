@@ -455,11 +455,65 @@ class MetricsCollector:
                 metrics[f'{prefix}last_trade_size'] = result[3]
                 metrics[f'{prefix}last_trade_pnl'] = result[4] if result[4] else 0
 
-        # ── Decisões por tipo (global — COM filtro symbol) ──
-        # This table can be heavily bloated after churn; do not let this
-        # secondary metric block the whole Prometheus scrape.
+        # ── Track record confidence (lookback configurável) ──
         try:
-            cursor.execute("SELECT action, COUNT(*) FROM decisions WHERE symbol=%s AND profile=%s GROUP BY action", (self.symbol, self.profile))
+            from track_record_confidence import compute_snapshot_from_sells, merge_track_record_cfg
+
+            cfg = load_config()
+            tr_cfg = merge_track_record_cfg(
+                cfg.get("track_record_confidence", {}),
+                profile=self.profile,
+            )
+            lookback_hours = float(tr_cfg.get("lookback_hours", 72.0) or 72.0)
+            recent_sell_window = int(tr_cfg.get("recent_sell_window", 20) or 20)
+            dry_run = not bool(cfg.get("live_mode", False))
+            since = now - (lookback_hours * 3600.0)
+            cursor.execute(
+                """
+                SELECT side, pnl, pnl_pct, timestamp
+                FROM trades
+                WHERE symbol = %s
+                  AND profile = %s
+                  AND dry_run = %s
+                  AND side IN ('sell', 'sell_reconciled')
+                  AND pnl IS NOT NULL
+                  AND timestamp > %s
+                ORDER BY timestamp DESC
+                LIMIT %s
+                """,
+                (self.symbol, self.profile, dry_run, since, recent_sell_window),
+            )
+            sells = [
+                {
+                    "side": row[0],
+                    "pnl": row[1],
+                    "pnl_pct": row[2],
+                    "timestamp": row[3],
+                }
+                for row in cursor.fetchall()
+            ]
+            snap = compute_snapshot_from_sells(sells, tr_cfg)
+            metrics["track_record_trs"] = snap.trs
+            metrics["track_record_boost"] = snap.boost
+            metrics["track_record_wr_lookback"] = snap.win_rate
+            metrics["track_record_sell_count"] = snap.sell_count
+        except Exception as e:
+            print(f"⚠️ track record metrics skipped: {e}", file=sys.stderr)
+            metrics["track_record_trs"] = 0.0
+            metrics["track_record_boost"] = 0.0
+            metrics["track_record_wr_lookback"] = 0.0
+            metrics["track_record_sell_count"] = 0
+
+        # ── Decisões por tipo (janela 30d — COM filtro symbol) ──
+        # This table can be heavily bloated after churn; do not let this
+        # secondary metric block the whole Prometheus scrape. A janela de 30
+        # dias permite usar o índice (symbol, profile, timestamp) em vez de
+        # varrer a tabela inteira a cada scrape.
+        try:
+            cursor.execute(
+                "SELECT action, COUNT(*) FROM decisions"
+                " WHERE symbol=%s AND profile=%s AND timestamp > %s GROUP BY action",
+                (self.symbol, self.profile, now - 30 * 86400))
             for row in cursor.fetchall():
                 metrics[f'decisions_{row[0].lower()}'] = row[1]
         except Exception as e:
@@ -919,6 +973,19 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 ('btc_trading_open_position_logical_slots', 'open_position_logical_slots', 'Logical slot occupancy for the open position', 'gauge', '{v}'),
                 ('btc_trading_avg_entry_price', 'avg_entry_price', 'Weighted avg entry price of open position', 'gauge', '{v:.2f}'),
             ]
+
+            track_record_metrics = [
+                ('btc_trading_track_record_trs', 'track_record_trs', 'Track record score -1..+1', 'gauge', '{v:.4f}'),
+                ('btc_trading_track_record_boost', 'track_record_boost', 'Track record confidence boost applied', 'gauge', '{v:.4f}'),
+                ('btc_trading_track_record_wr_lookback', 'track_record_wr_lookback', 'Win rate over track-record lookback', 'gauge', '{v:.4f}'),
+                ('btc_trading_track_record_sell_count', 'track_record_sell_count', 'Realized sells in track-record lookback', 'gauge', '{v}'),
+            ]
+            for prom_name, key, help_text, ptype, fmt in track_record_metrics:
+                v = metrics.get(key, 0)
+                output.append(f"# HELP {prom_name} {help_text}")
+                output.append(f"# TYPE {prom_name} {ptype}")
+                output.append(f'{prom_name}{{{_cl}}} {fmt.format(v=v)}')
+            output.append("")
 
             for prom_name, key, help_text, ptype, fmt in stat_metrics:
                 v = metrics.get(f'{active}{key}', 0)

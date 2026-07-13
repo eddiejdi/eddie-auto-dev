@@ -77,5 +77,17 @@
     "origem": "clonado de config_BTC_USDT_aggressive.json em 2026-07-04",
     "conta": "subconta sub:ETHAgressive via KUCOIN_SECRET_NAMES",
     "autorizacao": "usuario: subir todos os perfis em MODO REAL (2026-07-04)"
+  },
+  "track_record_confidence": {
+    "enabled": true,
+    "mode": "apply",
+    "lookback_hours": 72,
+    "min_sell_samples": 5,
+    "recent_sell_window": 20,
+    "max_boost": 0.1,
+    "max_penalty": 0.08,
+    "streak_cap": 4,
+    "cache_ttl_sec": 30,
+    "pnl_scale_usd": 5.0
   }
 }
