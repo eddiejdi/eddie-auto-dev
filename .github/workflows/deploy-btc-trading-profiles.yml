@@ -99,7 +99,13 @@ jobs:
             crypto-exporter@DOGE_USDT_aggressive.service \
             crypto-exporter@DOGE_USDT_shadow.service
           do
-            systemctl is-active --quiet "${svc}" || { echo "❌ ${svc} inativo"; exit 1; }
+            ok=0
+            for wait in 1 2 3 4 5 6; do
+              if systemctl is-active --quiet "${svc}"; then ok=1; break; fi
+              echo "⏳ ${svc} ainda não ativo (tentativa ${wait}/6)..."
+              sleep 10
+            done
+            [ "${ok}" -eq 1 ] || { echo "❌ ${svc} inativo"; exit 1; }
             echo "✅ ${svc}"
           done
 
