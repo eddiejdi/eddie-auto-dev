@@ -465,11 +465,16 @@ class VectorStore:
                 except OSError:
                     pass
 
-    def load(self, path: Path = INDEX_FILE) -> bool:
+    def load(self, path: Path = INDEX_FILE, symbol: Optional[str] = None) -> bool:
         """Carrega índice do disco com validação de integridade.
 
         Se o arquivo estiver corrompido (0 bytes, pickle inválido),
         faz backup do corrompido e retorna False.
+
+        Args:
+            path: Arquivo de índice a carregar.
+            symbol: Se informado, descarta vetores de outros símbolos
+                (o índice legado era compartilhado entre todos os agentes).
 
         Returns:
             True se carregou com sucesso.
@@ -496,12 +501,40 @@ class VectorStore:
             self._metadata = data["metadata"]
             self.dim = data.get("dim", EMBEDDING_DIM)
             self._dirty = False
+            if symbol:
+                self._filter_by_symbol(symbol)
             logger.info(f"📂 VectorStore carregado: {self.size} vetores")
             return True
         except Exception as e:
             logger.warning(f"⚠️ Falha ao carregar VectorStore: {e}")
             self._quarantine_corrupted(path)
             return False
+
+    def _filter_by_symbol(self, symbol: str) -> None:
+        """Descarta vetores cujo metadata pertence a outro símbolo.
+
+        Mantém embeddings e metadata alinhados. Marca o store como dirty
+        quando remove algo, para que o próximo save persista o índice limpo.
+        """
+        keep = [
+            i for i, m in enumerate(self._metadata)
+            if isinstance(m, dict) and m.get("symbol", symbol) == symbol
+        ]
+        removed = len(self._metadata) - len(keep)
+        if removed <= 0:
+            return
+        if keep and self._embeddings.shape[0] == len(self._metadata):
+            self._embeddings = self._embeddings[keep]
+        else:
+            # Nada a manter ou store desalinhado: recomeça vazio
+            self._embeddings = np.empty((0, self.dim), dtype=np.float32)
+            keep = []
+        self._metadata = [self._metadata[i] for i in keep]
+        self._dirty = True
+        logger.info(
+            f"🧹 VectorStore filtrado por {symbol}: "
+            f"{removed} vetores de outros símbolos removidos"
+        )
 
     @staticmethod
     def _quarantine_corrupted(path: Path) -> None:
@@ -931,7 +964,7 @@ class RegimeAdjuster:
             n = min(200, store.size)
             for i in range(store.size - n, store.size):
                 meta = store._metadata[i]
-                if isinstance(meta, dict):
+                if isinstance(meta, dict) and meta.get('symbol', self.symbol) == self.symbol:
                     p = meta.get('price', 0)
                     if p > 0:
                         recent_prices.append(float(p))
@@ -1078,7 +1111,7 @@ class RegimeAdjuster:
                 n = min(100, store.size)
                 for i in range(store.size - n, store.size):
                     meta = store._metadata[i]
-                    if isinstance(meta, dict):
+                    if isinstance(meta, dict) and meta.get('symbol', self.symbol) == self.symbol:
                         v = meta.get('volatility', 0.01)
                         if v > 0:
                             recent_vols.append(float(v))
@@ -1132,7 +1165,7 @@ class RegimeAdjuster:
                 n = min(200, store.size)
                 for i in range(store.size - n, store.size):
                     meta = store._metadata[i]
-                    if isinstance(meta, dict):
+                    if isinstance(meta, dict) and meta.get('symbol', self.symbol) == self.symbol:
                         p = meta.get('price', 0)
                         if p > 0:
                             recent_prices.append(float(p))
@@ -1229,7 +1262,7 @@ class RegimeAdjuster:
                 n = min(100, store.size)
                 for i in range(store.size - n, store.size):
                     meta = store._metadata[i]
-                    if isinstance(meta, dict):
+                    if isinstance(meta, dict) and meta.get('symbol', self.symbol) == self.symbol:
                         v = meta.get('volatility', 0.01)
                         if v > 0:
                             recent_vols.append(float(v))
@@ -1326,6 +1359,10 @@ class MarketRAG:
         self.snapshot_interval = snapshot_interval
         suffix = "" if self.profile == "default" else f"_{self.profile}"
         self.adjustments_file = RAG_DIR / f"regime_adjustments{suffix}.json"
+        # Índice per-symbol: o index.pkl legado era compartilhado por todos os
+        # agentes (BTC/ETH/SOL/...), contaminando os cálculos de buy target
+        # com preços de outros símbolos.
+        self.index_file = RAG_DIR / f"index_{self.symbol}.pkl"
 
         self.store = VectorStore(dim=EMBEDDING_DIM, max_size=MAX_SNAPSHOTS)
         self.collector = MarketDataCollector(symbol)
@@ -1360,8 +1397,14 @@ class MarketRAG:
         }
         self._ollama_trade_controls: Dict = {}
 
-        # Carregar dados persistidos
-        self.store.load()
+        # Carregar dados persistidos (migra do index.pkl legado compartilhado
+        # na primeira execução, mantendo só os vetores deste símbolo)
+        if not self.store.load(self.index_file, symbol=self.symbol):
+            if self.store.load(INDEX_FILE, symbol=self.symbol):
+                logger.info(
+                    f"📦 Índice legado migrado para {self.index_file.name} "
+                    f"({self.store.size} vetores de {self.symbol})"
+                )
 
     def start(self) -> None:
         """Inicia o thread de coleta e recalibração."""
@@ -1391,7 +1434,7 @@ class MarketRAG:
             self._thread.join(timeout=30)  # 30s para garantir save completo
             if self._thread.is_alive():
                 logger.warning("⚠️ MarketRAG thread não finalizou em 30s")
-        self.store.save()
+        self.store.save(self.index_file)
         self._save_adjustments()
         logger.info("🛑 MarketRAG parado e dados salvos")
 
@@ -1795,7 +1838,7 @@ class MarketRAG:
         # Persistir snapshots a cada 5 recalibrações, ajustes sempre
         self._save_adjustments()
         if self._stats["recalibrations"] % 5 == 0:
-            self.store.save()
+            self.store.save(self.index_file)
 
         logger.info(
             f"🎯 RAG Adjustment: regime={adjustment.suggested_regime} "
@@ -1842,7 +1885,7 @@ class MarketRAG:
                 self._stop_event.wait(timeout=10)
 
         # Salvar ao sair
-        self.store.save()
+        self.store.save(self.index_file)
         self._save_adjustments()
         logger.info("🧠 MarketRAG loop finalizado")
 
