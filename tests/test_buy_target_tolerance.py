@@ -83,12 +83,58 @@ def test_buy_target_tolerance_is_zero_in_strong_bearish_context() -> None:
     assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0
 
 
-def test_aggressive_tolerance_is_zero_without_news_bullish() -> None:
+def test_aggressive_clean_oversold_reversal_gets_fallback_tolerance() -> None:
+    # Caso real 2026-07-13 13:37 BRT: fundo em V bloqueado por +0.03% com tol 0.00%.
     agent = _agent()
     rag = _rag(regime="RANGING")
-    signal = _signal("RSI oversold, bid pressure, buying pressure")
+    signal = SimpleNamespace(
+        action="BUY",
+        reason="RSI oversold, bid pressure, buying pressure",
+        price=62218.85,
+        confidence=0.666,
+    )
+
+    assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0010
+
+
+def test_aggressive_fallback_tolerance_requires_confidence_gate() -> None:
+    agent = _agent()
+    rag = _rag(regime="RANGING")
+    signal = SimpleNamespace(
+        action="BUY",
+        reason="RSI oversold, bid pressure, buying pressure",
+        price=100.0,
+        confidence=0.64,
+    )
 
     assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0
+
+
+def test_aggressive_fallback_tolerance_is_zero_on_dirty_context() -> None:
+    agent = _agent()
+    rag = _rag(regime="RANGING")
+    signal = SimpleNamespace(
+        action="BUY",
+        reason="RSI oversold, ask pressure, buying pressure",
+        price=100.0,
+        confidence=0.70,
+    )
+
+    assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0
+
+
+def test_conservative_clean_oversold_reversal_gets_fallback_tolerance() -> None:
+    agent = _agent()
+    agent.state.profile = "conservative"
+    rag = _rag(regime="RANGING")
+    signal = SimpleNamespace(
+        action="BUY",
+        reason="RSI oversold, bid pressure, buying pressure",
+        price=100.0,
+        confidence=0.659,
+    )
+
+    assert agent._get_buy_target_tolerance_pct(rag, signal) == 0.0008
 
 
 def test_conservative_tolerance_requires_high_confidence_oversold_reversal() -> None:

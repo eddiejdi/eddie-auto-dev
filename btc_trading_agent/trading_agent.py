@@ -4017,12 +4017,18 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
             # Permite entradas com gap mais amplo durante regimes bullish e contexto limpo.
             if confidence >= 0.62 and has_news_bull and clean_context and (has_bid_buy or regime == "BULLISH"):
                 return 0.0030
+            # Reversão limpa (oversold + bid/buying pressure) sem notícia ainda merece
+            # margem mínima: fundos em V raramente coincidem com news:bullish no cache.
+            if confidence >= 0.65 and clean_context and is_oversold and has_bid_buy:
+                return 0.0010
             return 0.0
 
         if profile == "conservative":
             # Conservador libera um pouco mais de tolerância em reversões claras.
             if confidence >= 0.66 and clean_context and is_oversold:
                 return 0.0015
+            if confidence >= 0.64 and clean_context and is_oversold and has_bid_buy:
+                return 0.0008
             return 0.0
 
         if regime == "BULLISH" and confidence >= 0.64 and clean_context and has_news_bull:
