@@ -44,3 +44,10 @@ def test_workflow_validates_slot_based_tests_before_deploy() -> None:
     assert "tests/test_grafana_dashboard_queries.py" in content
     assert "tests/test_deploy_btc_trading_profiles_script.py" in content
     assert content.index("Validate slot-based BTC trading flow") < content.index("Deploy optimized BTC profiles")
+
+
+def test_workflow_watches_market_rag() -> None:
+    """Mudanças no market_rag.py (buy target, VectorStore per-symbol) devem
+    disparar o deploy automaticamente."""
+    content = _load_workflow()
+    assert "btc_trading_agent/market_rag.py" in content

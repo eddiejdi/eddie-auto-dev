@@ -345,6 +345,9 @@ sync_trading_runtime() {
     "${REPO_ROOT}/btc_trading_agent/fast_model.py" \
     "${TARGET_DIR}/fast_model.py"
   sync_runtime_file \
+    "${REPO_ROOT}/btc_trading_agent/market_rag.py" \
+    "${TARGET_DIR}/market_rag.py"
+  sync_runtime_file \
     "${REPO_ROOT}/btc_trading_agent/kucoin_api.py" \
     "${TARGET_DIR}/kucoin_api.py"
   sync_runtime_file \

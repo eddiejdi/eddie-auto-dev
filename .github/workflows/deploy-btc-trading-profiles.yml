@@ -16,6 +16,7 @@ on:
       - 'btc_trading_agent/kucoin_api.py'
       - 'btc_trading_agent/llm.py'
       - 'btc_trading_agent/fast_model.py'
+      - 'btc_trading_agent/market_rag.py'
       - 'btc_trading_agent/prometheus_exporter.py'
       - 'btc_trading_agent/config_BTC_USDT_*.json'
       - 'btc_trading_agent/config_ETH_USDT_*.json'

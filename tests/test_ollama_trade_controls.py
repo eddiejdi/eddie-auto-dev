@@ -30,7 +30,7 @@ from market_rag import MarketRAG, RegimeAdjustment, VectorStore
 @pytest.fixture
 def rag(monkeypatch):
     monkeypatch.setattr(MarketRAG, "_save_adjustments", lambda self: None)
-    monkeypatch.setattr(VectorStore, "load", lambda self: None)
+    monkeypatch.setattr(VectorStore, "load", lambda self, *a, **kw: False)
     instance = MarketRAG("BTC-USDT", profile="aggressive", recalibrate_interval=300, snapshot_interval=30)
     instance._current_adjustment = RegimeAdjustment(
         timestamp=1.0,

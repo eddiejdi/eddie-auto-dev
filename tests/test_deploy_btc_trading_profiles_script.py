@@ -118,3 +118,12 @@ def test_script_verifies_deploy_completeness_after_restart() -> None:
     assert content.rindex("verify_agents_running_current_code") > content.index(
         'systemctl restart "${AGENT_SERVICES[@]}"'
     )
+
+
+def test_script_syncs_market_rag_runtime() -> None:
+    """market_rag.py precisa ser sincronizado no deploy — o fix do índice
+    per-symbol (contaminação de buy target entre símbolos) vive nesse módulo
+    e sem o sync os agents continuariam com o index.pkl compartilhado."""
+    content = _load_script()
+    assert "btc_trading_agent/market_rag.py" in content
+    assert '${TARGET_DIR}/market_rag.py' in content
