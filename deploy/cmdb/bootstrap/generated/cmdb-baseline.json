@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-07-13T14:26:48.568736+00:00",
+  "generated_at": "2026-07-14T18:39:28.838588+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 168,
+    "repo_services": 174,
     "trading_instances": 12,
-    "critical_services": 66,
+    "critical_services": 71,
     "domains": {
       "identity": 4,
-      "monitoring": 14,
-      "network": 16,
-      "operations": 93,
+      "monitoring": 15,
+      "network": 20,
+      "operations": 94,
       "storage": 32,
       "trading": 9
     }
@@ -286,6 +286,14 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "conube-exporter.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "tools/systemd/conube-exporter.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "eddie_central_extended_metrics.service",
       "domain": "monitoring",
       "kind": "systemd",
@@ -354,6 +362,38 @@
       "domain": "network",
       "kind": "systemd",
       "source": "tools/tunnels/cloudflared-named@.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "cloudflared-tunnel-guardian.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/cloudflared-tunnel-guardian.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "cloudflared-tunnel-guardian.timer",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/cloudflared-tunnel-guardian.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "cloudflared-vpn-routes.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/cloudflared-vpn-routes.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "cloudflared-vpn-routes.timer",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/cloudflared-vpn-routes.timer",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -468,6 +508,14 @@
       "source": "deploy/vpn/wireguard-nat.service",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "freecash-browser",
+      "domain": "operations",
+      "kind": "compose",
+      "source": "docker/docker-compose.freecash-browser.yml",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
     },
     {
       "name": "glpi",
@@ -1860,6 +1908,13 @@
         "critical": true
       },
       {
+        "name": "conube-exporter.service",
+        "domain": "monitoring",
+        "source": "tools/systemd/conube-exporter.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
         "name": "eddie_central_extended_metrics.service",
         "domain": "monitoring",
         "source": "systemd/eddie_central_extended_metrics.service",
@@ -1919,6 +1974,34 @@
         "name": "cloudflared-named@.service",
         "domain": "network",
         "source": "tools/tunnels/cloudflared-named@.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "cloudflared-tunnel-guardian.service",
+        "domain": "network",
+        "source": "systemd/cloudflared-tunnel-guardian.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "cloudflared-tunnel-guardian.timer",
+        "domain": "network",
+        "source": "systemd/cloudflared-tunnel-guardian.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "cloudflared-vpn-routes.service",
+        "domain": "network",
+        "source": "systemd/cloudflared-vpn-routes.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "cloudflared-vpn-routes.timer",
+        "domain": "network",
+        "source": "systemd/cloudflared-vpn-routes.timer",
         "kind": "systemd",
         "critical": true
       },

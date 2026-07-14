@@ -63,6 +63,26 @@ jobs:
           rsync -a --checksum \
             "$SRC/tests/test_nextcloud_agent.py" \
             "$DEST/tests/" || true
+
+          # Conube billing → Mercado Pago (boletos Vindi)
+          for f in \
+            conube_billing.py \
+            conube_agent.py \
+            conube_agent_langgraph.py \
+            conube_remediation.py \
+            conube_operational.py \
+            conube_selenium.py \
+            governance_resume.py; do
+            rsync -a --checksum \
+              "$SRC/specialized_agents/$f" \
+              "$DEST/specialized_agents/" || true
+          done
+          rsync -a --checksum --exclude '__pycache__' \
+            "$SRC/specialized_agents/banking/" \
+            "$DEST/specialized_agents/banking/" || true
+          rsync -a --checksum \
+            "$SRC/tests/test_conube_billing.py" \
+            "$DEST/tests/" || true
           echo "Sincronizacao concluida."
 
       - name: Restart do serviço
