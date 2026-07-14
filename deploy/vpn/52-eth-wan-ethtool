@@ -1,0 +1,30 @@
+#!/bin/bash
+# /etc/NetworkManager/dispatcher.d/52-eth-wan-ethtool
+#
+# Desabilita EEE (Energy Efficient Ethernet) na eth-wan sempre que o link sobe.
+#
+# Contexto (incidente 2026-07-14): o dongle USB r8152 da eth-wan flapava o
+# carrier ~32x/dia (off → 3s → on) com EEE ativo. Cada flap remove as rotas
+# da eth-wan de todas as tabelas (main + 205), derrubando o túnel ProtonVPN
+# e quebrando downloads de toda a LAN. EEE em r8152 é causa clássica desse
+# padrão de renegociação espúria de link.
+#
+# Chamado pelo NM a cada evento de interface. Só age quando iface=eth-wan e action=up.
+
+IFACE="$1"
+ACTION="$2"
+
+readonly WAN_IFACE="eth-wan"
+
+[[ "$IFACE" != "$WAN_IFACE" ]] && exit 0
+[[ "$ACTION" != "up" ]] && exit 0
+
+log() { logger -t "eth-wan-ethtool" "$*"; }
+
+if ethtool --set-eee "$WAN_IFACE" eee off 2>/dev/null; then
+    log "EEE desabilitado em $WAN_IFACE (link up)"
+else
+    log "WARNING: falha ao desabilitar EEE em $WAN_IFACE"
+fi
+
+exit 0

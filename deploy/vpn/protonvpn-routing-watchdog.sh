@@ -12,7 +12,7 @@ readonly PROTONVPN_FWMARK_FALLBACK="${PROTONVPN_FWMARK_FALLBACK:-0xca6c}"
 readonly LAN_NETWORK="${LAN_NETWORK:-192.168.15.0/24}"
 readonly LAN_INTERFACE="${LAN_INTERFACE:-eth-onboard}"
 readonly LAN_GATEWAY_IP="${LAN_GATEWAY_IP:-192.168.15.2}"
-readonly CHECK_CLIENT_IP="${CHECK_CLIENT_IP:-192.168.15.114}"
+readonly CHECK_CLIENT_IP="${CHECK_CLIENT_IP:-192.168.15.137}"
 readonly PUBLIC_IP_CHECK_URL="${PUBLIC_IP_CHECK_URL:-https://api.ipify.org}"
 readonly POLICY_RULE_PRIORITY="${POLICY_RULE_PRIORITY:-32764}"
 readonly MAIN_SUPPRESS_PRIORITY="${MAIN_SUPPRESS_PRIORITY:-32765}"
@@ -46,12 +46,24 @@ check_protonvpn_interface() {
 # ─────────────────────────────────────────────────────────
 # 2. Verifica se a tabela de policy routing continua indo para protonvpn
 # ─────────────────────────────────────────────────────────
+TABLE_ROUTES_CACHE=""
+
+refresh_table_routes_cache() {
+    TABLE_ROUTES_CACHE="$(ip route show table "$PROTONVPN_TABLE" 2>/dev/null || true)"
+}
+
+table_route_exists() {
+    local prefix="$1"
+    grep -q "^${prefix} " <<< "$TABLE_ROUTES_CACHE"
+}
+
 check_table_route() {
-    if ! ip route show table "$PROTONVPN_TABLE" | grep -Eq "^default .*dev ${PROTONVPN_IFACE}( |$)|^default dev ${PROTONVPN_IFACE}( |$)"; then
-        warn "Tabela $PROTONVPN_TABLE sem rota default via $PROTONVPN_IFACE"
-        return 1
+    refresh_table_routes_cache
+    if table_route_exists "default" && grep -q " dev ${PROTONVPN_IFACE}" <<< "$TABLE_ROUTES_CACHE"; then
+        return 0
     fi
-    return 0
+    warn "Tabela $PROTONVPN_TABLE sem rota default via $PROTONVPN_IFACE"
+    return 1
 }
 
 check_policy_rules() {
@@ -114,27 +126,34 @@ check_lan_route() {
 # ─────────────────────────────────────────────────────────
 check_table_lan_routes() {
     local missing=0
-    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-onboard"; then
+
+    refresh_table_routes_cache
+    if ! grep -q "^${LAN_NETWORK} dev eth-onboard" <<< "$TABLE_ROUTES_CACHE"; then
         warn "Rota LAN $LAN_NETWORK ausente na tabela $PROTONVPN_TABLE (eth-onboard)"
         missing=1
     fi
-    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-wan"; then
-        warn "Rota LAN $LAN_NETWORK ausente na tabela $PROTONVPN_TABLE (eth-wan)"
-        missing=1
+    if ip link show eth-wan &>/dev/null; then
+        if ! grep -q "^${LAN_NETWORK} dev eth-wan" <<< "$TABLE_ROUTES_CACHE"; then
+            warn "Rota LAN $LAN_NETWORK ausente na tabela $PROTONVPN_TABLE (eth-wan)"
+            missing=1
+        fi
     fi
     return $missing
 }
 
 ensure_table_lan_routes() {
-    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-onboard"; then
-        ip route add table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-onboard scope link metric 100 2>/dev/null || \
+    refresh_table_routes_cache
+    if ! grep -q "^${LAN_NETWORK} dev eth-onboard" <<< "$TABLE_ROUTES_CACHE"; then
         ip route replace table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-onboard scope link metric 100
         log "✓ Rota LAN $LAN_NETWORK → eth-onboard adicionada na tabela $PROTONVPN_TABLE"
+        refresh_table_routes_cache
     fi
-    if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${LAN_NETWORK} dev eth-wan"; then
-        ip route add table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-wan scope link metric 200 2>/dev/null || \
-        ip route replace table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-wan scope link metric 200
-        log "✓ Rota LAN $LAN_NETWORK → eth-wan adicionada na tabela $PROTONVPN_TABLE"
+    if ip link show eth-wan &>/dev/null; then
+        if ! grep -q "^${LAN_NETWORK} dev eth-wan" <<< "$TABLE_ROUTES_CACHE"; then
+            ip route replace table "$PROTONVPN_TABLE" "$LAN_NETWORK" dev eth-wan scope link metric 200
+            log "✓ Rota LAN $LAN_NETWORK → eth-wan adicionada na tabela $PROTONVPN_TABLE"
+            refresh_table_routes_cache
+        fi
     fi
 }
 
@@ -143,15 +162,20 @@ ensure_table_lan_routes() {
 #     Sem isso, tráfego host→container vai via ProtonVPN.
 #     Lê da tabela main — cobre docker0, br-* e qualquer nova rede.
 # ─────────────────────────────────────────────────────────
+docker_bridge_routes() {
+    ip route show table main | awk '$2 == "dev" && $0 !~ /linkdown/ && ($3 ~ /^br-/ || $3 == "docker0") {print $1, $2, $3}'
+}
+
 check_table_docker_routes() {
     local missing=0 net iface
 
+    refresh_table_routes_cache
     while read -r net _ iface; do
-        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${net} "; then
+        if ! table_route_exists "$net"; then
             warn "Rota Docker $net ($iface) ausente na tabela $PROTONVPN_TABLE"
             missing=1
         fi
-    done < <(ip route show table main | awk '$2 == "dev" && ($3 ~ /^br-/ || $3 == "docker0") {print $1, $2, $3}')
+    done < <(docker_bridge_routes)
 
     return $missing
 }
@@ -159,13 +183,67 @@ check_table_docker_routes() {
 ensure_table_docker_routes() {
     local net iface
 
+    refresh_table_routes_cache
     while read -r net _ iface; do
-        if ! ip route show table "$PROTONVPN_TABLE" | grep -q "^${net} "; then
-            ip route add table "$PROTONVPN_TABLE" "$net" dev "$iface" scope link 2>/dev/null \
-                || ip route replace table "$PROTONVPN_TABLE" "$net" dev "$iface" scope link
+        if ! table_route_exists "$net"; then
+            ip route replace table "$PROTONVPN_TABLE" "$net" dev "$iface" scope link
             log "✓ Rota Docker $net → $iface adicionada na tabela $PROTONVPN_TABLE"
+            refresh_table_routes_cache
         fi
-    done < <(ip route show table main | awk '$2 == "dev" && ($3 ~ /^br-/ || $3 == "docker0") {print $1, $2, $3}')
+    done < <(docker_bridge_routes)
+}
+
+# ─────────────────────────────────────────────────────────
+# 4d. Cloudflare Tunnel edges devem sair pela WAN, não ProtonVPN
+# ─────────────────────────────────────────────────────────
+check_cloudflared_wan_routes() {
+    local sample_ip="198.41.200.53"
+    local uid_path table_path
+
+    # cloudflared roda como _rpa4all — checar UID, não root (root sempre vê protonvpn via tabela 205).
+    if ! id _rpa4all &>/dev/null; then
+        table_path="$(ip route show table cloudflared-wan 2>/dev/null | grep -E '^198\.41\.(192|200)\.' || true)"
+        [[ -n "$table_path" ]]
+        return
+    fi
+
+    uid_path="$(sudo -u _rpa4all ip route get "$sample_ip" 2>/dev/null || true)"
+    if [[ "$uid_path" == *"dev protonvpn"* ]]; then
+        warn "Tráfego cloudflared UID (_rpa4all) ainda via protonvpn: $uid_path"
+        return 1
+    fi
+    if [[ "$uid_path" != *"dev eth-wan"* && "$uid_path" != *"dev eth-onboard"* ]]; then
+        warn "Tráfego cloudflared UID (_rpa4all) sem WAN: $uid_path"
+        return 1
+    fi
+    return 0
+}
+
+ensure_cloudflared_wan_routes() {
+    if [[ -x /usr/local/sbin/cloudflared-vpn-routes.sh ]]; then
+        /usr/local/sbin/cloudflared-vpn-routes.sh
+        log "✓ Rotas Cloudflare edge reaplicadas via WAN"
+        return 0
+    fi
+
+    local wan_if wan_gw
+    wan_if="$(ip route show default | awk '/^default/ {print $5; exit}')"
+    wan_gw="$(ip route show default dev "$wan_if" | awk '/^default/ {print $3; exit}')"
+    if [[ -z "$wan_if" || -z "$wan_gw" ]]; then
+        warn "Não foi possível determinar WAN para rotas Cloudflare"
+        return 1
+    fi
+
+    # Faixas Cloudflare NUNCA vão para a tabela $PROTONVPN_TABLE (205): ela
+    # roteia a LAN inteira e não há MASQUERADE LAN→eth-wan — LAN→Cloudflare
+    # morria sem NAT (incidente 2026-07-14). O bypass do cloudflared é feito
+    # pela regra de UID → tabela cloudflared-wan (206).
+    for net in 198.41.192.0/24 198.41.200.0/24 162.158.0.0/15; do
+        ip route replace "$net" via "$wan_gw" dev "$wan_if" table main
+        ip route del "$net" table "$PROTONVPN_TABLE" 2>/dev/null || true
+    done
+    log "✓ Rotas Cloudflare edge aplicadas manualmente via ${wan_gw} dev ${wan_if}"
+    return 0
 }
 
 # ─────────────────────────────────────────────────────────
@@ -227,6 +305,7 @@ force_protonvpn_route() {
 
     ensure_table_lan_routes
     ensure_table_docker_routes
+    ensure_cloudflared_wan_routes
 
     # Só faz del+add se a regra estiver ausente ou incorreta; evita janela sem rota
     if ! ip rule show | grep -Eq "^${POLICY_RULE_PRIORITY}:.*not.*fwmark.*lookup ${PROTONVPN_TABLE}"; then
@@ -249,7 +328,9 @@ force_protonvpn_route() {
         log "✓ Policy rule ${MAIN_SUPPRESS_PRIORITY} já está correta — sem alteração"
     fi
 
-    ip route flush cache
+    if [[ "${FLUSH_ROUTE_CACHE:-1}" == "1" ]]; then
+        ip route flush cache
+    fi
 
     if [[ -f /etc/systemd/network/99-force-protonvpn-routing.network ]]; then
         rm -f /etc/systemd/network/99-force-protonvpn-routing.network
@@ -311,16 +392,39 @@ health_check() {
     else
         warn "⚠️  Rotas LAN ausentes na tabela $PROTONVPN_TABLE — corrigindo..."
         ensure_table_lan_routes
-        ensure_table_docker_routes
-        status=1
+        if check_table_lan_routes; then
+            success "✅ Rotas LAN na tabela $PROTONVPN_TABLE restauradas"
+        else
+            status=1
+        fi
     fi
 
     if check_table_docker_routes; then
         success "✅ Rotas Docker bridges na tabela $PROTONVPN_TABLE presentes"
     else
-        warn "⚠️  Rotas Docker bridges ausentes — corrigindo (container restart apaga rotas de iface down)..."
+        warn "⚠️  Rotas Docker bridges ausentes — corrigindo (não bloqueia tráfego LAN)..."
         ensure_table_docker_routes
-        status=1
+        if check_table_docker_routes; then
+            success "✅ Rotas Docker bridges na tabela $PROTONVPN_TABLE restauradas"
+        else
+            warn "⚠️  Algumas rotas Docker seguem ausentes; homelab→container pode falhar até próximo ciclo"
+        fi
+    fi
+
+    if check_cloudflared_wan_routes; then
+        success "✅ Rotas Cloudflare edge via WAN (UID _rpa4all)"
+    else
+        warn "⚠️  Rotas Cloudflare edge desviadas — reaplicando (sem restart do tunnel)..."
+        if [[ "$EUID" -eq 0 ]]; then
+            ensure_cloudflared_wan_routes
+            if check_cloudflared_wan_routes; then
+                success "✅ Rotas Cloudflare edge restauradas"
+            else
+                status=1
+            fi
+        else
+            status=1
+        fi
     fi
 
     if check_public_ip; then
@@ -351,12 +455,45 @@ validate_pre_deploy() {
 # ─────────────────────────────────────────────────────────
 # 9. Modo ensure
 # ─────────────────────────────────────────────────────────
+repair_auxiliary_routes() {
+    local repaired=0
+
+    if ! check_table_lan_routes; then
+        ensure_table_lan_routes
+        repaired=1
+    fi
+
+    if ! check_table_docker_routes; then
+        ensure_table_docker_routes
+        repaired=1
+    fi
+
+    if ! check_cloudflared_wan_routes; then
+        ensure_cloudflared_wan_routes
+        repaired=1
+    fi
+
+    if [[ "$repaired" -eq 1 ]]; then
+        log "Rotas auxiliares reaplicadas sem flush de cache"
+    fi
+
+    return 0
+}
+
 ensure_vpn() {
     if health_check; then
         return 0
     fi
 
-    warn "Desvio detectado. Iniciando autocorreção..."
+    if [[ "$EUID" -eq 0 ]]; then
+        repair_auxiliary_routes
+        if health_check; then
+            success "Desvio corrigido sem forçar rota completa"
+            return 0
+        fi
+    fi
+
+    warn "Desvio crítico detectado. Iniciando autocorreção..."
     force_protonvpn_route
 }
 
