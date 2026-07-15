@@ -193,6 +193,16 @@ elif [ -n "${SKIP_CMDB_HOOK:-}" ]; then
     echo "     (SKIP_CMDB_HOOK set — pulando regeneração CMDB)"
 fi
 
+# ─── Check 10: Taxonomia de variáveis — bloqueia duplicatas ──────────────────
+# Consulta .variables-catalog/catalog.json antes de aceitar variável nova.
+# Cobre qualquer ferramenta (Copilot, Codex, Claude Code, edição manual).
+echo "  [10/10] Checking variable taxonomy (duplicates)..."
+if [ -f "tools/hooks/variable_registry_validate.py" ]; then
+    if ! python3 tools/hooks/variable_registry_validate.py --staged; then
+        exit 1
+    fi
+fi
+
 echo ""
 echo "✅ Pre-commit checks passed!"
 echo "   Ready to commit. Use --no-verify to skip checks if needed."

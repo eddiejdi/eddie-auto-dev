@@ -78,7 +78,7 @@ e bloqueia duplicatas de taxonomia (ex: `API_TOKEN` vs `APITOKEN` vs `Api_Token`
 | Camada | Ferramentas cobertas | Comportamento |
 |--------|----------------------|----------------|
 | `PreToolUse` hook (`.claude/settings.json`, `hooks.json`, `.cursor/hooks.json`, `.grok/hooks/claude-code-import.json`) | Claude Code, Cursor, Grok | Duplicata → `deny` (bloqueia a edição). Nome novo/fora do padrão → `warn` (não bloqueia, só avisa). |
-| `git pre-commit` (`scripts/git-hooks/pre-commit`, instalar com `bash scripts/git-hooks/install.sh`) | **Qualquer ferramenta**, inclusive Codex e edição manual | Duplicata → bloqueia o commit local. |
+| `git pre-commit` (`.githooks/pre-commit`, check `[10/10]`; ativo via `core.hooksPath=.githooks`, já configurado no repo) | **Qualquer ferramenta**, inclusive Codex e edição manual | Duplicata → bloqueia o commit local. |
 | CI (`.github/workflows/variable-registry-check.yml`) | Qualquer PR, independente do hook local estar instalado | Duplicata → falha o check do PR. |
 
 **Nota sobre Codex**: `.codex/config.json` referencia `hooks_path: hooks.json` só como metadado
@@ -311,10 +311,9 @@ When adding new variables, use this format:
 ```
 
 ### Pre-commit Hook (implementado)
-```bash
-bash scripts/git-hooks/install.sh   # symlink .git/hooks/pre-commit -> scripts/git-hooks/pre-commit
-```
-Valida o diff staged contra o catálogo em cada commit — ver seção
+Já ativo — é o check `[10/10]` em `.githooks/pre-commit` (repo usa
+`core.hooksPath=.githooks`, sem instalação extra necessária). Valida o diff
+staged contra o catálogo em cada commit — ver seção
 [Enforcement](#-enforcement--hook-obrigatório-multi-agente) acima.
 
 ---
