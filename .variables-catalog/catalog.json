@@ -1,6 +1,6 @@
 {
   "catalogVersion": "1.0.0",
-  "generatedAt": "2026-06-21T02:00:44.207745",
+  "generatedAt": "2026-07-14T22:29:22.627999",
   "environment": "production",
   "categories": {
     "services": {
@@ -241,7 +241,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "config"
+          "config",
+          "configure_authentik_nextcloud_oidc"
         ]
       },
       "NEXTCLOUD_ADMIN_USER": {
@@ -298,132 +299,6 @@
           "config"
         ]
       },
-      "RPA4ALL_DOMAIN": {
-        "name": "RPA4ALL_DOMAIN",
-        "type": "string",
-        "source": ".env",
-        "value": "rpa4all.com",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 4
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 4
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 4
-          }
-        ],
-        "contexts": []
-      },
-      "NEXTCLOUD_SUBDOMAIN": {
-        "name": "NEXTCLOUD_SUBDOMAIN",
-        "type": "string",
-        "source": ".env",
-        "value": "nextcloud",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 5
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 5
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 5
-          }
-        ],
-        "contexts": []
-      },
-      "NEXTCLOUD_IMAGE": {
-        "name": "NEXTCLOUD_IMAGE",
-        "type": "string",
-        "source": ".env",
-        "value": "nextcloud:29-apache",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 8
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 8
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 8
-          }
-        ],
-        "contexts": []
-      },
-      "NEXTCLOUD_PORT": {
-        "name": "NEXTCLOUD_PORT",
-        "type": "integer",
-        "source": ".env",
-        "value": "8880",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 12
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 12
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 12
-          }
-        ],
-        "contexts": []
-      },
-      "RPA4ALL_BG_API_BASE": {
-        "name": "RPA4ALL_BG_API_BASE",
-        "type": "url",
-        "source": ".env",
-        "value": "https://api.rpa4all.com/agents-api",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 32
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 32
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 32
-          }
-        ],
-        "contexts": []
-      },
-      "RPA4ALL_BG_MODEL": {
-        "name": "RPA4ALL_BG_MODEL",
-        "type": "string",
-        "source": ".env",
-        "value": "phi4-mini:latest",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 33
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 33
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 33
-          }
-        ],
-        "contexts": []
-      },
       "GEMINI_ENABLED": {
         "name": "GEMINI_ENABLED",
         "type": "string",
@@ -452,11 +327,11 @@
         "source": "docker-compose",
         "value": "${MAILU_DOMAIN:-mail.rpa4all.com}",
         "contexts": [
-          "mailu-postfix",
-          "mailu-backend",
-          "mailu-roundcube",
+          "mailu-dovecot",
           "mailu-frontend",
-          "mailu-dovecot"
+          "mailu-roundcube",
+          "mailu-postfix",
+          "mailu-backend"
         ]
       },
       "ADMIN_EMAIL": {
@@ -714,7 +589,7 @@
         "locations": [
           {
             "file": ".env.consolidated",
-            "line": 111
+            "line": 121
           }
         ],
         "contexts": []
@@ -727,7 +602,7 @@
         "locations": [
           {
             "file": ".env.consolidated",
-            "line": 112
+            "line": 122
           }
         ],
         "contexts": []
@@ -740,7 +615,7 @@
         "locations": [
           {
             "file": ".env.consolidated",
-            "line": 113
+            "line": 123
           }
         ],
         "contexts": []
@@ -753,7 +628,7 @@
         "locations": [
           {
             "file": ".env.consolidated",
-            "line": 114
+            "line": 124
           }
         ],
         "contexts": []
@@ -766,7 +641,7 @@
         "locations": [
           {
             "file": ".env.consolidated",
-            "line": 115
+            "line": 125
           }
         ],
         "contexts": []
@@ -873,8 +748,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_BASE_PATH:-}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "NETBOX_LOGIN_REQUIRED": {
@@ -1277,6 +1152,97 @@
         ],
         "contexts": []
       },
+      "KWAI_START_URL": {
+        "name": "KWAI_START_URL",
+        "type": "url",
+        "source": ".env",
+        "value": "https://www.kwai.com/discover",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 1
+          }
+        ],
+        "contexts": []
+      },
+      "KWAI_VIDEOS_PER_SESSION": {
+        "name": "KWAI_VIDEOS_PER_SESSION",
+        "type": "integer",
+        "source": ".env",
+        "value": "5",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 2
+          }
+        ],
+        "contexts": []
+      },
+      "KWAI_WATCH_SECONDS": {
+        "name": "KWAI_WATCH_SECONDS",
+        "type": "integer",
+        "source": ".env",
+        "value": "20",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 3
+          }
+        ],
+        "contexts": []
+      },
+      "KWAI_VIEWER_DATA_DIR": {
+        "name": "KWAI_VIEWER_DATA_DIR",
+        "type": "path",
+        "source": ".env",
+        "value": "/var/lib/eddie/kwai-viewer",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 4
+          }
+        ],
+        "contexts": []
+      },
+      "KWAI_CHROME_BINARY": {
+        "name": "KWAI_CHROME_BINARY",
+        "type": "path",
+        "source": ".env",
+        "value": "/usr/bin/chromium-browser",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 5
+          }
+        ],
+        "contexts": []
+      },
+      "KWAI_HEADLESS": {
+        "name": "KWAI_HEADLESS",
+        "type": "boolean",
+        "source": ".env",
+        "value": "0",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 6
+          }
+        ],
+        "contexts": []
+      },
+      "KWAI_VIRTUAL_DISPLAY": {
+        "name": "KWAI_VIRTUAL_DISPLAY",
+        "type": "boolean",
+        "source": ".env",
+        "value": "1",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 7
+          }
+        ],
+        "contexts": []
+      },
       "ANONYMIZED_TELEMETRY": {
         "name": "ANONYMIZED_TELEMETRY",
         "type": "boolean",
@@ -1557,10 +1523,12 @@
         "source": "docker-compose",
         "value": "America/Sao_Paulo",
         "contexts": [
-          "grafana",
           "netbox-postgres",
+          "kwai-browser",
+          "grafana",
+          "glpi",
           "glpi-db",
-          "glpi"
+          "freecash-browser"
         ]
       },
       "GF_DEFAULT_TIMEZONE": {
@@ -1689,6 +1657,46 @@
           "wikijs"
         ]
       },
+      "PUID": {
+        "name": "PUID",
+        "type": "integer",
+        "source": "docker-compose",
+        "value": "1000",
+        "contexts": [
+          "freecash-browser",
+          "kwai-browser"
+        ]
+      },
+      "PGID": {
+        "name": "PGID",
+        "type": "integer",
+        "source": "docker-compose",
+        "value": "1000",
+        "contexts": [
+          "freecash-browser",
+          "kwai-browser"
+        ]
+      },
+      "CHROME_CLI": {
+        "name": "CHROME_CLI",
+        "type": "url",
+        "source": "docker-compose",
+        "value": "https://www.kwai.com/discover",
+        "contexts": [
+          "freecash-browser",
+          "kwai-browser"
+        ]
+      },
+      "CUSTOM_USER": {
+        "name": "CUSTOM_USER",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "${REWARDS_BROWSER_USER:-rewards}",
+        "contexts": [
+          "freecash-browser",
+          "kwai-browser"
+        ]
+      },
       "ROCKET_WORKERS": {
         "name": "ROCKET_WORKERS",
         "type": "integer",
@@ -1704,8 +1712,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_ALLOWED_HOSTS:-*}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "CORS_ORIGIN_ALLOW_ALL": {
@@ -1714,8 +1722,8 @@
         "source": "docker-compose",
         "value": "True",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "CSRF_TRUSTED_ORIGINS": {
@@ -1724,8 +1732,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_CSRF_TRUSTED_ORIGINS:-}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "EMAIL_FROM": {
@@ -1734,8 +1742,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_EMAIL_FROM:-cmdb@local}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "EMAIL_PORT": {
@@ -1744,8 +1752,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_EMAIL_PORT:-25}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "EMAIL_SERVER": {
@@ -1754,8 +1762,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_EMAIL_SERVER:-localhost}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "EMAIL_TIMEOUT": {
@@ -1764,8 +1772,8 @@
         "source": "docker-compose",
         "value": "5",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "EMAIL_USE_SSL": {
@@ -1774,8 +1782,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_EMAIL_USE_SSL:-false}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "EMAIL_USE_TLS": {
@@ -1784,8 +1792,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_EMAIL_USE_TLS:-false}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "GRAPHQL_ENABLED": {
@@ -1794,8 +1802,8 @@
         "source": "docker-compose",
         "value": "true",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "LOGIN_REQUIRED": {
@@ -1804,8 +1812,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_LOGIN_REQUIRED:-true}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "LOGOUT_REDIRECT_URL": {
@@ -1814,8 +1822,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_LOGOUT_REDIRECT_URL:-/}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "METRICS_ENABLED": {
@@ -1824,8 +1832,8 @@
         "source": "docker-compose",
         "value": "true",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "SUPERUSER_EMAIL": {
@@ -1834,8 +1842,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_SUPERUSER_EMAIL:-cmdb-admin@local}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "SUPERUSER_NAME": {
@@ -1844,8 +1852,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_SUPERUSER_NAME:-cmdb-admin}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "SKIP_SUPERUSER": {
@@ -1854,8 +1862,8 @@
         "source": "docker-compose",
         "value": "${NETBOX_SKIP_SUPERUSER:-false}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "TIME_ZONE": {
@@ -1864,8 +1872,8 @@
         "source": "docker-compose",
         "value": "${CMDB_TIMEZONE:-America/Sao_Paulo}",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "BAUDRATE": {
@@ -1919,25 +1927,32 @@
         "source": "systemd",
         "value": "1",
         "contexts": [
-          "clear-trading-agent",
-          "marketing-email-drip",
+          "coordinator",
+          "rss-sentiment-exporter",
+          "marketing-x-posts",
+          "crypto-agent@",
+          "marketing-daily-report",
+          "candle-collector",
+          "notebook-power-agent",
+          "meeting-translator",
+          "approval-gateway",
+          "daily-agenda-panel",
+          "banking-metrics-exporter",
           "ollama-gpu-coordinator",
-          "marketing-api",
-          "diretor",
-          "eddie-telegram-bot",
           "eddie-expurgo",
           "agent-network-exporter",
-          "coordinator",
-          "crypto-agent@",
-          "eddie-calendar",
-          "marketing-x-posts",
-          "rss-sentiment-exporter",
-          "banking-metrics-exporter",
+          "marketing-email-drip",
+          "clear-trading-agent",
+          "daily-agenda-broadcast",
+          "marketing-api",
+          "eddie-telegram-bot",
           "tape-component-quality-exporter",
           "bn-acervo-agent",
-          "candle-collector",
-          "marketing-daily-report",
-          "notebook-power-agent"
+          "trading-daily-report",
+          "diretor",
+          "eddie-calendar",
+          "kucoin-postgres-sync",
+          "trading-analyst-weekly-retrain"
         ]
       },
       "PYTHONPATH": {
@@ -1946,14 +1961,17 @@
         "source": "systemd",
         "value": "/home/homelab/eddie-auto-dev",
         "contexts": [
-          "clear-trading-agent",
-          "marketing-email-drip",
-          "ollama-finetune",
-          "marketing-x-posts",
-          "marketing-daily-report",
+          "marketing-api",
+          "tape-component-quality-exporter",
+          "llm-log-panel",
           "rss-sentiment-exporter",
-          "candle-collector",
-          "marketing-api"
+          "marketing-x-posts",
+          "ollama-finetune",
+          "marketing-daily-report",
+          "kwai-viewer-homelab",
+          "marketing-email-drip",
+          "clear-trading-agent",
+          "candle-collector"
         ]
       },
       "X_AGENT_URL": {
@@ -2016,9 +2034,10 @@
         "source": "systemd",
         "value": "1",
         "contexts": [
+          "ollama-finetune",
           "rss-sentiment-exporter",
-          "candle-collector",
-          "ollama-finetune"
+          "llm-log-panel",
+          "candle-collector"
         ]
       },
       "HOME": {
@@ -2028,18 +2047,27 @@
         "value": "/apps/crypto-trader",
         "contexts": [
           "rss-sentiment-exporter",
-          "candle-collector",
+          "llm-log-panel",
+          "ollama-finetune",
           "crypto-agent@",
-          "ollama-finetune"
+          "candle-collector"
         ]
       },
-      "TAPE_COMPONENT_QUALITY_PORT": {
-        "name": "TAPE_COMPONENT_QUALITY_PORT",
-        "type": "integer",
+      "PATH": {
+        "name": "PATH",
+        "type": "path",
         "source": "systemd",
-        "value": "9124",
+        "value": "/var/db/ltfs-patched/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         "contexts": [
-          "tape-component-quality-exporter"
+          "tape-component-quality-exporter",
+          "specialized_agents-dashboard",
+          "job-monitor",
+          "homelab-dashboard",
+          "crypto-agent@",
+          "kucoin-postgres-sync",
+          "rpa4all-validation",
+          "github-agent",
+          "eddie-whatsapp-bot"
         ]
       },
       "CHECK_INTERVAL": {
@@ -2048,8 +2076,8 @@
         "source": "systemd",
         "value": "30",
         "contexts": [
-          "grafana-selfheal",
-          "dhcp-selfheal"
+          "dhcp-selfheal",
+          "grafana-selfheal"
         ]
       },
       "DHCP_SERVICE": {
@@ -2112,8 +2140,18 @@
         "source": "systemd",
         "value": "5",
         "contexts": [
-          "grafana-selfheal",
-          "dhcp-selfheal"
+          "dhcp-selfheal",
+          "grafana-selfheal"
+        ]
+      },
+      "AGENDA_YOUTUBE_CHANNEL_ID": {
+        "name": "AGENDA_YOUTUBE_CHANNEL_ID",
+        "type": "string",
+        "source": "systemd",
+        "value": "UCEyYr2YE1HLDTKT4cnMefmw",
+        "contexts": [
+          "daily-agenda-panel",
+          "daily-agenda-broadcast"
         ]
       },
       "CLEAR_CONFIG_FILE": {
@@ -2122,8 +2160,8 @@
         "source": "systemd",
         "value": "config_%I.json",
         "contexts": [
-          "clear-agent@",
-          "clear-trading-agent"
+          "clear-trading-agent",
+          "clear-agent@"
         ]
       },
       "ROUTE_NAME": {
@@ -2146,21 +2184,6 @@
           "homelab-tape-log-drain-sg1"
         ]
       },
-      "PATH": {
-        "name": "PATH",
-        "type": "path",
-        "source": "systemd",
-        "value": "/home/eddie/.local/bin:/usr/local/bin:/usr/bin:/bin",
-        "contexts": [
-          "eddie-whatsapp-bot",
-          "crypto-agent@",
-          "github-agent",
-          "job-monitor",
-          "specialized_agents-dashboard",
-          "homelab-dashboard",
-          "rpa4all-validation"
-        ]
-      },
       "WHATSAPP_NUMBER": {
         "name": "WHATSAPP_NUMBER",
         "type": "string",
@@ -2176,8 +2199,8 @@
         "source": "systemd",
         "value": "http://localhost:3004",
         "contexts": [
-          "eddie-whatsapp-bot",
-          "eddie-expurgo"
+          "eddie-expurgo",
+          "eddie-whatsapp-bot"
         ]
       },
       "ADMIN_NUMBERS": {
@@ -2225,6 +2248,42 @@
           "banking-metrics-exporter"
         ]
       },
+      "LLM_LOG_PANEL_HOST": {
+        "name": "LLM_LOG_PANEL_HOST",
+        "type": "string",
+        "source": "systemd",
+        "value": "0.0.0.0",
+        "contexts": [
+          "llm-log-panel"
+        ]
+      },
+      "LLM_LOG_PANEL_PORT": {
+        "name": "LLM_LOG_PANEL_PORT",
+        "type": "integer",
+        "source": "systemd",
+        "value": "8092",
+        "contexts": [
+          "llm-log-panel"
+        ]
+      },
+      "DAILY_AGENDA_PANEL_HOST": {
+        "name": "DAILY_AGENDA_PANEL_HOST",
+        "type": "string",
+        "source": "systemd",
+        "value": "0.0.0.0",
+        "contexts": [
+          "daily-agenda-panel"
+        ]
+      },
+      "DAILY_AGENDA_PANEL_PORT": {
+        "name": "DAILY_AGENDA_PANEL_PORT",
+        "type": "integer",
+        "source": "systemd",
+        "value": "8093",
+        "contexts": [
+          "daily-agenda-panel"
+        ]
+      },
       "OLLAMA_WARM_MODEL_GPU0": {
         "name": "OLLAMA_WARM_MODEL_GPU0",
         "type": "string",
@@ -2238,7 +2297,7 @@
         "name": "OLLAMA_WARM_MODEL_GPU1",
         "type": "string",
         "source": "systemd",
-        "value": "qwen3:0.6b",
+        "value": "gemma3:1b",
         "contexts": [
           "ollama-warmup"
         ]
@@ -2310,7 +2369,7 @@
         "name": "OLLAMA_SENTIMENT_MODEL",
         "type": "string",
         "source": "systemd",
-        "value": "qwen3:1.7b",
+        "value": "phi4-mini:latest",
         "contexts": [
           "rss-sentiment-exporter"
         ]
@@ -2319,7 +2378,7 @@
         "name": "OLLAMA_FALLBACK_MODEL",
         "type": "string",
         "source": "systemd",
-        "value": "qwen3:0.6b",
+        "value": "gemma3:1b",
         "contexts": [
           "rss-sentiment-exporter"
         ]
@@ -2357,8 +2416,8 @@
         "source": "systemd",
         "value": "0",
         "contexts": [
-          "ollama-gpu1",
-          "ollama-finetune"
+          "ollama-finetune",
+          "ollama-gpu1"
         ]
       },
       "PYTORCH_CUDA_ALLOC_CONF": {
@@ -2398,6 +2457,51 @@
           "eddie-expurgo"
         ]
       },
+      "TG_LONG_POLL": {
+        "name": "TG_LONG_POLL",
+        "type": "integer",
+        "source": "systemd",
+        "value": "30",
+        "contexts": [
+          "approval-gateway"
+        ]
+      },
+      "INTENT_EXP_MIN": {
+        "name": "INTENT_EXP_MIN",
+        "type": "integer",
+        "source": "systemd",
+        "value": "10",
+        "contexts": [
+          "approval-gateway"
+        ]
+      },
+      "CONUBE_CHROME_BINARY": {
+        "name": "CONUBE_CHROME_BINARY",
+        "type": "path",
+        "source": "systemd",
+        "value": "/usr/bin/chromium-browser",
+        "contexts": [
+          "approval-gateway"
+        ]
+      },
+      "CHROMEDRIVER_PATH": {
+        "name": "CHROMEDRIVER_PATH",
+        "type": "path",
+        "source": "systemd",
+        "value": "/usr/bin/chromedriver",
+        "contexts": [
+          "approval-gateway"
+        ]
+      },
+      "AGENTS_API_URL": {
+        "name": "AGENTS_API_URL",
+        "type": "url",
+        "source": "systemd",
+        "value": "http://127.0.0.1:8503",
+        "contexts": [
+          "approval-gateway"
+        ]
+      },
       "NARRATOR_STATE_FILE": {
         "name": "NARRATOR_STATE_FILE",
         "type": "path",
@@ -2405,6 +2509,15 @@
         "value": "/var/lib/tape-quality/narrator_state.json",
         "contexts": [
           "tape-quality-ollama-narrator"
+        ]
+      },
+      "MEETING_TRANSLATOR_PORT": {
+        "name": "MEETING_TRANSLATOR_PORT",
+        "type": "integer",
+        "source": "systemd",
+        "value": "8712",
+        "contexts": [
+          "meeting-translator"
         ]
       },
       "EXTENDED_METRICS_PORT": {
@@ -2456,7 +2569,7 @@
         "name": "OLLAMA_PRELOAD_MODEL",
         "type": "string",
         "source": "systemd",
-        "value": "qwen3:0.6b",
+        "value": "gemma3:1b",
         "contexts": [
           "ollama-gpu1"
         ]
@@ -2683,8 +2796,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "configure_diretor_model",
-          "config"
+          "config",
+          "configure_diretor_model"
         ]
       },
       "HOMELAB_USER": {
@@ -2813,6 +2926,15 @@
           "config"
         ]
       },
+      "NAS_URL": {
+        "name": "NAS_URL",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
       "OPENWEBUI_URL": {
         "name": "OPENWEBUI_URL",
         "type": "string",
@@ -2828,11 +2950,11 @@
         "source": "yaml",
         "value": "rpa4all_snapshot_alerts",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_INTERVAL": {
@@ -2841,11 +2963,11 @@
         "source": "yaml",
         "value": "30s",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_0_EXPR": {
@@ -2854,10 +2976,10 @@
         "source": "yaml",
         "value": "rpa4all_snapshot_service_up == 0",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "selfhealing_rules",
-          "alert_rules",
-          "ltfs-selfheal-rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_0_FOR": {
@@ -2866,11 +2988,11 @@
         "source": "yaml",
         "value": "5m",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_0_LABELS_SEVERITY": {
@@ -2879,11 +3001,11 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_0_LABELS_COMPONENT": {
@@ -2901,11 +3023,11 @@
         "source": "yaml",
         "value": "\ud83d\udd34 RPA4All Snapshot Service DOWN",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_0_ANNOTATIONS_DESCRIPTION": {
@@ -2914,11 +3036,11 @@
         "source": "yaml",
         "value": "O servi\u00e7o rpa4all-snapshot.service n\u00e3o est\u00e1 rodando por mais de 5 minutos",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_0_ANNOTATIONS_DASHBOARD": {
@@ -2945,10 +3067,10 @@
         "source": "yaml",
         "value": "rpa4all_snapshot_hung == 1",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "selfhealing_rules",
-          "alert_rules",
-          "ltfs-selfheal-rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_1_FOR": {
@@ -2957,11 +3079,11 @@
         "source": "yaml",
         "value": "3m",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_1_LABELS_SEVERITY": {
@@ -2970,11 +3092,11 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_1_LABELS_COMPONENT": {
@@ -2992,11 +3114,11 @@
         "source": "yaml",
         "value": "\u23f8\ufe0f RPA4All Snapshot HUNG (Travado)",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_1_ANNOTATIONS_DESCRIPTION": {
@@ -3005,11 +3127,11 @@
         "source": "yaml",
         "value": "Lock file com idade {{ $value | humanizeDuration }}. Snapshot pode estar travado em I/O ou rede",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_1_ANNOTATIONS_ACTION": {
@@ -3036,10 +3158,10 @@
         "source": "yaml",
         "value": "(time() - rpa4all_snapshot_last_run_timestamp) > 86400",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "selfhealing_rules",
-          "alert_rules",
-          "ltfs-selfheal-rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_2_FOR": {
@@ -3048,11 +3170,11 @@
         "source": "yaml",
         "value": "1m",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_2_LABELS_SEVERITY": {
@@ -3061,11 +3183,11 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_2_LABELS_COMPONENT": {
@@ -3083,11 +3205,11 @@
         "source": "yaml",
         "value": "\u23f3 RPA4All Snapshot \u2014 \u00daltima execu\u00e7\u00e3o > 24h",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_2_ANNOTATIONS_DESCRIPTION": {
@@ -3096,11 +3218,11 @@
         "source": "yaml",
         "value": "\u00daltima execu\u00e7\u00e3o bem-sucedida h\u00e1 {{ $value | humanizeDuration }}. Timer pode estar desabilitado",
         "contexts": [
-          "alert_rules",
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_2_ANNOTATIONS_DASHBOARD": {
@@ -3118,10 +3240,10 @@
         "source": "yaml",
         "value": "increase(rpa4all_snapshot_failed_total[1h]) > 3",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "selfhealing_rules",
-          "alert_rules",
-          "ltfs-selfheal-rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_3_FOR": {
@@ -3130,10 +3252,10 @@
         "source": "yaml",
         "value": "5m",
         "contexts": [
-          "rpa4all-snapshot-alerts",
-          "alert_rules",
           "ltfs-selfheal-rules",
-          "rules"
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_3_LABELS_SEVERITY": {
@@ -3142,10 +3264,10 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "rpa4all-snapshot-alerts",
-          "alert_rules",
           "ltfs-selfheal-rules",
-          "rules"
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_3_LABELS_COMPONENT": {
@@ -3163,10 +3285,10 @@
         "source": "yaml",
         "value": "\u26a0\ufe0f RPA4All Snapshot \u2014 Taxa de Falha Elevada",
         "contexts": [
-          "rpa4all-snapshot-alerts",
-          "alert_rules",
           "ltfs-selfheal-rules",
-          "rules"
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_3_ANNOTATIONS_DESCRIPTION": {
@@ -3175,10 +3297,10 @@
         "source": "yaml",
         "value": "{{ $value }} falhas de snapshot na \u00faltima hora",
         "contexts": [
-          "rpa4all-snapshot-alerts",
-          "alert_rules",
           "ltfs-selfheal-rules",
-          "rules"
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_3_ANNOTATIONS_DASHBOARD": {
@@ -3196,9 +3318,9 @@
         "source": "yaml",
         "value": "rpa4all_snapshot_backup_size_bytes > 500000000000",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "selfhealing_rules",
-          "ltfs-selfheal-rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_0_RULES_4_FOR": {
@@ -3207,8 +3329,8 @@
         "source": "yaml",
         "value": "10m",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules"
         ]
       },
@@ -3218,8 +3340,8 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules"
         ]
       },
@@ -3238,8 +3360,8 @@
         "source": "yaml",
         "value": "\u26a0\ufe0f RPA4All Backup \u2014 Tamanho Anormal",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules"
         ]
       },
@@ -3249,8 +3371,8 @@
         "source": "yaml",
         "value": "\u00daltimo backup com {{ $value | humanize1024 }}B. Poss\u00edvel duplica\u00e7\u00e3o ou bloat",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules"
         ]
       },
@@ -3269,8 +3391,8 @@
         "source": "yaml",
         "value": "increase(rpa4all_snapshot_recovery_triggered_total[1h]) > 0",
         "contexts": [
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_0_RULES_5_FOR": {
@@ -3279,8 +3401,8 @@
         "source": "yaml",
         "value": "1m",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules"
         ]
       },
@@ -3290,8 +3412,8 @@
         "source": "yaml",
         "value": "info",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules"
         ]
       },
@@ -3310,8 +3432,8 @@
         "source": "yaml",
         "value": "\u2139\ufe0f RPA4All Snapshot \u2014 Recupera\u00e7\u00e3o Acionada",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules"
         ]
       },
@@ -3321,8 +3443,8 @@
         "source": "yaml",
         "value": "{{ $value }} recupera\u00e7\u00f5es autom\u00e1ticas acionadas na \u00faltima hora",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules"
         ]
       },
@@ -3416,7 +3538,7 @@
         "name": "SCRAPE_CONFIGS_3_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "agent-network-exporter",
+        "value": "crypto-exporter-btc_usdt_conservative",
         "contexts": [
           "prometheus-config",
           "prometheus"
@@ -3426,7 +3548,7 @@
         "name": "SCRAPE_CONFIGS_3_SCRAPE_INTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "10s",
+        "value": "30s",
         "contexts": [
           "prometheus-config",
           "prometheus"
@@ -3436,7 +3558,35 @@
         "name": "SCRAPE_CONFIGS_3_SCRAPE_TIMEOUT",
         "type": "string",
         "source": "yaml",
-        "value": "5s",
+        "value": "25s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_INSTANCE": {
+        "name": "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_INSTANCE",
+        "type": "string",
+        "source": "yaml",
+        "value": "btc_usdt_conservative",
+        "contexts": [
+          "prometheus-config",
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_PROFILE",
+        "type": "string",
+        "source": "yaml",
+        "value": "conservative",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
         "contexts": [
           "prometheus"
         ]
@@ -3445,7 +3595,7 @@
         "name": "SCRAPE_CONFIGS_4_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-eth_usdt",
+        "value": "crypto-exporter-btc_usdt_aggressive",
         "contexts": [
           "prometheus-config",
           "prometheus"
@@ -3461,13 +3611,40 @@
           "prometheus"
         ]
       },
+      "SCRAPE_CONFIGS_4_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_4_SCRAPE_TIMEOUT",
+        "type": "string",
+        "source": "yaml",
+        "value": "25s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
       "SCRAPE_CONFIGS_4_STATIC_CONFIGS_0_LABELS_INSTANCE": {
         "name": "SCRAPE_CONFIGS_4_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "eth_usdt",
+        "value": "btc_usdt_aggressive",
         "contexts": [
           "prometheus-config",
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_4_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_4_STATIC_CONFIGS_0_LABELS_PROFILE",
+        "type": "string",
+        "source": "yaml",
+        "value": "aggressive",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_4_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_4_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
+        "contexts": [
           "prometheus"
         ]
       },
@@ -3475,7 +3652,7 @@
         "name": "SCRAPE_CONFIGS_5_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-btc_usdt_conservative",
+        "value": "btc-signals-exporter",
         "contexts": [
           "prometheus"
         ]
@@ -3493,16 +3670,16 @@
         "name": "SCRAPE_CONFIGS_5_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "btc_usdt_conservative",
+        "value": "btc_signals",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_5_STATIC_CONFIGS_0_LABELS_PROFILE": {
-        "name": "SCRAPE_CONFIGS_5_STATIC_CONFIGS_0_LABELS_PROFILE",
+      "SCRAPE_CONFIGS_5_STATIC_CONFIGS_0_LABELS_SERVICE": {
+        "name": "SCRAPE_CONFIGS_5_STATIC_CONFIGS_0_LABELS_SERVICE",
         "type": "string",
         "source": "yaml",
-        "value": "conservative",
+        "value": "leading-signals",
         "contexts": [
           "prometheus"
         ]
@@ -3511,7 +3688,7 @@
         "name": "SCRAPE_CONFIGS_6_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-btc_usdt_aggressive",
+        "value": "storj-exporter",
         "contexts": [
           "prometheus"
         ]
@@ -3529,16 +3706,16 @@
         "name": "SCRAPE_CONFIGS_6_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "btc_usdt_aggressive",
+        "value": "storj-node",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_6_STATIC_CONFIGS_0_LABELS_PROFILE": {
-        "name": "SCRAPE_CONFIGS_6_STATIC_CONFIGS_0_LABELS_PROFILE",
+      "SCRAPE_CONFIGS_6_STATIC_CONFIGS_0_LABELS_SERVICE": {
+        "name": "SCRAPE_CONFIGS_6_STATIC_CONFIGS_0_LABELS_SERVICE",
         "type": "string",
         "source": "yaml",
-        "value": "aggressive",
+        "value": "storj",
         "contexts": [
           "prometheus"
         ]
@@ -3547,7 +3724,7 @@
         "name": "SCRAPE_CONFIGS_7_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "btc-signals-exporter",
+        "value": "storj-selfheal",
         "contexts": [
           "prometheus"
         ]
@@ -3565,7 +3742,7 @@
         "name": "SCRAPE_CONFIGS_7_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "btc_signals",
+        "value": "storj-node",
         "contexts": [
           "prometheus"
         ]
@@ -3574,7 +3751,7 @@
         "name": "SCRAPE_CONFIGS_7_STATIC_CONFIGS_0_LABELS_SERVICE",
         "type": "string",
         "source": "yaml",
-        "value": "leading-signals",
+        "value": "storj",
         "contexts": [
           "prometheus"
         ]
@@ -3583,7 +3760,7 @@
         "name": "SCRAPE_CONFIGS_8_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-doge_usdt",
+        "value": "conube-exporter",
         "contexts": [
           "prometheus"
         ]
@@ -3592,7 +3769,16 @@
         "name": "SCRAPE_CONFIGS_8_SCRAPE_INTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "30s",
+        "value": "5m",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_8_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_8_SCRAPE_TIMEOUT",
+        "type": "string",
+        "source": "yaml",
+        "value": "60s",
         "contexts": [
           "prometheus"
         ]
@@ -3601,7 +3787,16 @@
         "name": "SCRAPE_CONFIGS_8_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "doge_usdt",
+        "value": "conube",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_8_STATIC_CONFIGS_0_LABELS_SERVICE": {
+        "name": "SCRAPE_CONFIGS_8_STATIC_CONFIGS_0_LABELS_SERVICE",
+        "type": "string",
+        "source": "yaml",
+        "value": "conube-agent",
         "contexts": [
           "prometheus"
         ]
@@ -3610,7 +3805,7 @@
         "name": "SCRAPE_CONFIGS_9_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-ada_usdt",
+        "value": "kwai-exporter",
         "contexts": [
           "prometheus"
         ]
@@ -3619,7 +3814,16 @@
         "name": "SCRAPE_CONFIGS_9_SCRAPE_INTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "30s",
+        "value": "1m",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_9_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_9_SCRAPE_TIMEOUT",
+        "type": "string",
+        "source": "yaml",
+        "value": "15s",
         "contexts": [
           "prometheus"
         ]
@@ -3628,7 +3832,16 @@
         "name": "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "ada_usdt",
+        "value": "homelab",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_SERVICE": {
+        "name": "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_SERVICE",
+        "type": "string",
+        "source": "yaml",
+        "value": "kwai-viewer",
         "contexts": [
           "prometheus"
         ]
@@ -3637,7 +3850,7 @@
         "name": "SCRAPE_CONFIGS_10_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-usdt_brl_conservative",
+        "value": "nas-node-exporter",
         "contexts": [
           "prometheus"
         ]
@@ -3646,7 +3859,7 @@
         "name": "SCRAPE_CONFIGS_10_SCRAPE_INTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "30s",
+        "value": "15s",
         "contexts": [
           "prometheus"
         ]
@@ -3655,16 +3868,16 @@
         "name": "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "usdt_brl_conservative",
+        "value": "rpa4all-nas-001",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_PROFILE": {
-        "name": "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_PROFILE",
+      "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_ROLE": {
+        "name": "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_ROLE",
         "type": "string",
         "source": "yaml",
-        "value": "conservative",
+        "value": "nas",
         "contexts": [
           "prometheus"
         ]
@@ -3673,7 +3886,7 @@
         "name": "SCRAPE_CONFIGS_11_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-usdt_brl_aggressive",
+        "value": "tape-component-quality",
         "contexts": [
           "prometheus"
         ]
@@ -3687,20 +3900,47 @@
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_INSTANCE": {
-        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_INSTANCE",
+      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_HOST": {
+        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_HOST",
         "type": "string",
         "source": "yaml",
-        "value": "usdt_brl_aggressive",
+        "value": "rpa4all-nas-001",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_PROFILE": {
-        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_PROFILE",
+      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_SERVICE": {
+        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_SERVICE",
         "type": "string",
         "source": "yaml",
-        "value": "aggressive",
+        "value": "tape-component-quality",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_DRIVE": {
+        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_DRIVE",
+        "type": "string",
+        "source": "yaml",
+        "value": "host0-sg0",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_FC_HOST": {
+        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_FC_HOST",
+        "type": "string",
+        "source": "yaml",
+        "value": "host0",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_DEVICE": {
+        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_DEVICE",
+        "type": "path",
+        "source": "yaml",
+        "value": "/dev/sg0",
         "contexts": [
           "prometheus"
         ]
@@ -3709,7 +3949,7 @@
         "name": "SCRAPE_CONFIGS_12_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "clear-b3-exporter",
+        "value": "crypto-exporter-btc_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
@@ -3718,25 +3958,43 @@
         "name": "SCRAPE_CONFIGS_12_SCRAPE_INTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "15s",
+        "value": "30s",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_SYMBOL": {
-        "name": "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_SYMBOL",
+      "SCRAPE_CONFIGS_12_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_12_SCRAPE_TIMEOUT",
         "type": "string",
         "source": "yaml",
-        "value": "PETR4",
+        "value": "25s",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_MARKET": {
-        "name": "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_MARKET",
+      "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_INSTANCE": {
+        "name": "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "B3",
+        "value": "btc_usdt_shadow",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_PROFILE",
+        "type": "string",
+        "source": "yaml",
+        "value": "shadow",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
         "contexts": [
           "prometheus"
         ]
@@ -3745,7 +4003,7 @@
         "name": "SCRAPE_CONFIGS_13_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "storj-exporter",
+        "value": "crypto-exporter-eth_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
@@ -3759,20 +4017,38 @@
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_INSTANCE": {
-        "name": "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_INSTANCE",
+      "SCRAPE_CONFIGS_13_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_13_SCRAPE_TIMEOUT",
         "type": "string",
         "source": "yaml",
-        "value": "storj-node",
+        "value": "25s",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_SERVICE": {
-        "name": "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_SERVICE",
+      "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_INSTANCE": {
+        "name": "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "storj",
+        "value": "eth_usdt_shadow",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_PROFILE",
+        "type": "string",
+        "source": "yaml",
+        "value": "shadow",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
         "contexts": [
           "prometheus"
         ]
@@ -3781,7 +4057,7 @@
         "name": "SCRAPE_CONFIGS_14_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "storj-selfheal",
+        "value": "crypto-exporter-eth_usdt_conservative",
         "contexts": [
           "prometheus"
         ]
@@ -3795,20 +4071,38 @@
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_INSTANCE": {
-        "name": "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_INSTANCE",
+      "SCRAPE_CONFIGS_14_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_14_SCRAPE_TIMEOUT",
         "type": "string",
         "source": "yaml",
-        "value": "storj-node",
+        "value": "25s",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_SERVICE": {
-        "name": "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_SERVICE",
+      "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_INSTANCE": {
+        "name": "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "storj",
+        "value": "eth_usdt_conservative",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_PROFILE",
+        "type": "string",
+        "source": "yaml",
+        "value": "conservative",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
         "contexts": [
           "prometheus"
         ]
@@ -3817,7 +4111,7 @@
         "name": "SCRAPE_CONFIGS_15_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "nas-node-exporter",
+        "value": "crypto-exporter-eth_usdt_aggressive",
         "contexts": [
           "prometheus"
         ]
@@ -3826,7 +4120,16 @@
         "name": "SCRAPE_CONFIGS_15_SCRAPE_INTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "15s",
+        "value": "30s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_15_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_15_SCRAPE_TIMEOUT",
+        "type": "string",
+        "source": "yaml",
+        "value": "25s",
         "contexts": [
           "prometheus"
         ]
@@ -3835,16 +4138,25 @@
         "name": "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "rpa4all-nas-001",
+        "value": "eth_usdt_aggressive",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_ROLE": {
-        "name": "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_ROLE",
+      "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "nas",
+        "value": "aggressive",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
         "contexts": [
           "prometheus"
         ]
@@ -3853,7 +4165,7 @@
         "name": "SCRAPE_CONFIGS_16_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "tape-component-quality",
+        "value": "crypto-exporter-sol_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
@@ -3867,47 +4179,38 @@
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_HOST": {
-        "name": "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_HOST",
+      "SCRAPE_CONFIGS_16_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_16_SCRAPE_TIMEOUT",
         "type": "string",
         "source": "yaml",
-        "value": "rpa4all-nas-001",
+        "value": "25s",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_SERVICE": {
-        "name": "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_SERVICE",
+      "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_INSTANCE": {
+        "name": "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "tape-component-quality",
+        "value": "sol_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_DRIVE": {
-        "name": "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_DRIVE",
+      "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "host0-sg0",
+        "value": "shadow",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_FC_HOST": {
-        "name": "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_FC_HOST",
+      "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_SERVIDOR",
         "type": "string",
         "source": "yaml",
-        "value": "host0",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_DEVICE": {
-        "name": "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_DEVICE",
-        "type": "path",
-        "source": "yaml",
-        "value": "/dev/sg0",
+        "value": "homelab",
         "contexts": [
           "prometheus"
         ]
@@ -3916,7 +4219,7 @@
         "name": "SCRAPE_CONFIGS_17_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-btc_usdt_shadow",
+        "value": "crypto-exporter-sol_usdt_conservative",
         "contexts": [
           "prometheus"
         ]
@@ -3930,11 +4233,20 @@
           "prometheus"
         ]
       },
+      "SCRAPE_CONFIGS_17_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_17_SCRAPE_TIMEOUT",
+        "type": "string",
+        "source": "yaml",
+        "value": "25s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
       "SCRAPE_CONFIGS_17_STATIC_CONFIGS_0_LABELS_INSTANCE": {
         "name": "SCRAPE_CONFIGS_17_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "btc_usdt_shadow",
+        "value": "sol_usdt_conservative",
         "contexts": [
           "prometheus"
         ]
@@ -3943,7 +4255,16 @@
         "name": "SCRAPE_CONFIGS_17_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "shadow",
+        "value": "conservative",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_17_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_17_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
         "contexts": [
           "prometheus"
         ]
@@ -3952,7 +4273,7 @@
         "name": "SCRAPE_CONFIGS_18_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "akash-provider",
+        "value": "crypto-exporter-sol_usdt_aggressive",
         "contexts": [
           "prometheus"
         ]
@@ -3966,20 +4287,290 @@
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_INSTANCE": {
-        "name": "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_INSTANCE",
+      "SCRAPE_CONFIGS_18_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_18_SCRAPE_TIMEOUT",
         "type": "string",
         "source": "yaml",
-        "value": "akash-provider",
+        "value": "25s",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_SERVICE": {
-        "name": "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_SERVICE",
+      "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_INSTANCE": {
+        "name": "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "akash",
+        "value": "sol_usdt_aggressive",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_PROFILE",
+        "type": "string",
+        "source": "yaml",
+        "value": "aggressive",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_19_JOB_NAME": {
+        "name": "SCRAPE_CONFIGS_19_JOB_NAME",
+        "type": "string",
+        "source": "yaml",
+        "value": "crypto-exporter-doge_usdt_shadow",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_19_SCRAPE_INTERVAL": {
+        "name": "SCRAPE_CONFIGS_19_SCRAPE_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "30s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_19_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_19_SCRAPE_TIMEOUT",
+        "type": "string",
+        "source": "yaml",
+        "value": "25s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_INSTANCE": {
+        "name": "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_INSTANCE",
+        "type": "string",
+        "source": "yaml",
+        "value": "doge_usdt_shadow",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_PROFILE",
+        "type": "string",
+        "source": "yaml",
+        "value": "shadow",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_20_JOB_NAME": {
+        "name": "SCRAPE_CONFIGS_20_JOB_NAME",
+        "type": "string",
+        "source": "yaml",
+        "value": "crypto-exporter-doge_usdt_conservative",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_20_SCRAPE_INTERVAL": {
+        "name": "SCRAPE_CONFIGS_20_SCRAPE_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "30s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_20_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_20_SCRAPE_TIMEOUT",
+        "type": "string",
+        "source": "yaml",
+        "value": "25s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_INSTANCE": {
+        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_INSTANCE",
+        "type": "string",
+        "source": "yaml",
+        "value": "doge_usdt_conservative",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_PROFILE",
+        "type": "string",
+        "source": "yaml",
+        "value": "conservative",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_21_JOB_NAME": {
+        "name": "SCRAPE_CONFIGS_21_JOB_NAME",
+        "type": "string",
+        "source": "yaml",
+        "value": "crypto-exporter-doge_usdt_aggressive",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_21_SCRAPE_INTERVAL": {
+        "name": "SCRAPE_CONFIGS_21_SCRAPE_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "30s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_21_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_21_SCRAPE_TIMEOUT",
+        "type": "string",
+        "source": "yaml",
+        "value": "25s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_INSTANCE": {
+        "name": "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_INSTANCE",
+        "type": "string",
+        "source": "yaml",
+        "value": "doge_usdt_aggressive",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_PROFILE",
+        "type": "string",
+        "source": "yaml",
+        "value": "aggressive",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_22_JOB_NAME": {
+        "name": "SCRAPE_CONFIGS_22_JOB_NAME",
+        "type": "string",
+        "source": "yaml",
+        "value": "ollama-nas-rtx2060",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_22_SCRAPE_INTERVAL": {
+        "name": "SCRAPE_CONFIGS_22_SCRAPE_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "15s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_GPU": {
+        "name": "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_GPU",
+        "type": "string",
+        "source": "yaml",
+        "value": "rtx2060super",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_VRAM": {
+        "name": "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_VRAM",
+        "type": "string",
+        "source": "yaml",
+        "value": "8gb",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_HOST": {
+        "name": "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_HOST",
+        "type": "string",
+        "source": "yaml",
+        "value": "nas",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_ENDPOINT": {
+        "name": "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_ENDPOINT",
+        "type": "string",
+        "source": "yaml",
+        "value": "nas",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_23_JOB_NAME": {
+        "name": "SCRAPE_CONFIGS_23_JOB_NAME",
+        "type": "string",
+        "source": "yaml",
+        "value": "ollama-gpu-coordinator",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_23_SCRAPE_INTERVAL": {
+        "name": "SCRAPE_CONFIGS_23_SCRAPE_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "10s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_23_STATIC_CONFIGS_0_LABELS_SERVICE": {
+        "name": "SCRAPE_CONFIGS_23_STATIC_CONFIGS_0_LABELS_SERVICE",
+        "type": "string",
+        "source": "yaml",
+        "value": "gpu-coordinator",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_23_STATIC_CONFIGS_0_LABELS_HOST": {
+        "name": "SCRAPE_CONFIGS_23_STATIC_CONFIGS_0_LABELS_HOST",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
         "contexts": [
           "prometheus"
         ]
@@ -3991,8 +4582,8 @@
         "value": "trading_agent_alerts",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_INTERVAL": {
@@ -4002,8 +4593,8 @@
         "value": "15s",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_0_EXPR": {
@@ -4023,8 +4614,8 @@
         "value": "3m",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_0_LABELS_SEVERITY": {
@@ -4034,8 +4625,8 @@
         "value": "critical",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_0_LABELS_COMPONENT": {
@@ -4054,8 +4645,8 @@
         "value": "\ud83d\udd34 Trading Agent {{ $labels.symbol }} DOWN",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_0_ANNOTATIONS_DESCRIPTION": {
@@ -4065,8 +4656,8 @@
         "value": "Agent {{ $labels.symbol }} \u00e9 est\u00e1 inativo por mais de 3 minutos. Systemd unit pode estar crashed.",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_0_ANNOTATIONS_DASHBOARD": {
@@ -4095,8 +4686,8 @@
         "value": "5m",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_1_LABELS_SEVERITY": {
@@ -4106,8 +4697,8 @@
         "value": "warning",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_1_LABELS_COMPONENT": {
@@ -4126,8 +4717,8 @@
         "value": "\u23f8\ufe0f Trading Agent {{ $labels.symbol }} STALLED",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_1_ANNOTATIONS_DESCRIPTION": {
@@ -4137,8 +4728,8 @@
         "value": "Agent {{ $labels.symbol }} n\u00e3o gerou decis\u00f5es por mais de 5 minutos. Poss\u00edvel deadlock na DB ou timeout na API KuCoin.",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_1_ANNOTATIONS_DASHBOARD": {
@@ -4167,8 +4758,8 @@
         "value": "3m",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_2_LABELS_SEVERITY": {
@@ -4178,8 +4769,8 @@
         "value": "warning",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_2_LABELS_COMPONENT": {
@@ -4198,8 +4789,8 @@
         "value": "\u23f3 Trading Agent {{ $labels.symbol }} \u2014 Decisions Gap 15+ min",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_2_ANNOTATIONS_DESCRIPTION": {
@@ -4209,8 +4800,8 @@
         "value": "Agent {{ $labels.symbol }} n\u00e3o gerou decis\u00e3o h\u00e1 {{ $value | humanizeDuration }}. Self-heal pode executar restart.",
         "contexts": [
           "selfhealing_rules",
-          "alert_rules",
-          "rules"
+          "rules",
+          "alert_rules"
         ]
       },
       "GROUPS_1_RULES_3_EXPR": {
@@ -4480,15 +5071,6 @@
         "value": "Check audit log: curl -s http://192.168.15.2:9121/audit | jq '.[] | select(.symbol==\"{{ $labels.symbol }}\")'  | tail -20",
         "contexts": [
           "alert_rules"
-        ]
-      },
-      "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_INSTANCE": {
-        "name": "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_INSTANCE",
-        "type": "string",
-        "source": "yaml",
-        "value": "storj-node",
-        "contexts": [
-          "prometheus-config"
         ]
       },
       "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_SERVICE": {
@@ -5093,12 +5675,12 @@
         "source": "yaml",
         "value": "1",
         "contexts": [
-          "authentik-http",
-          "dashboards",
           "policies",
+          "rules",
           "datasources",
+          "dashboards",
           "contactpoints",
-          "rules"
+          "authentik-http"
         ]
       },
       "POLICIES_0_ORGID": {
@@ -15127,7 +15709,7 @@
         "name": "MCPSERVERS_0_ENV_API_BASE_URL",
         "type": "url",
         "source": "yaml",
-        "value": "http://192.168.15.2:3456",
+        "value": "http://192.168.15.2:3000",
         "contexts": [
           "new-mcp-server",
           "homelab"
@@ -15228,8 +15810,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "NEXTCLOUD_ADMIN_PASSWORD": {
@@ -15240,130 +15822,6 @@
         "contexts": [
           "config"
         ]
-      },
-      "AUTHENTIK_SUBDOMAIN": {
-        "name": "AUTHENTIK_SUBDOMAIN",
-        "type": "string",
-        "source": ".env",
-        "value": "***REDACTED***",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 6
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 6
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 6
-          }
-        ],
-        "contexts": []
-      },
-      "MYSQL_PASSWORD": {
-        "name": "MYSQL_PASSWORD",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "***REDACTED***",
-        "contexts": [
-          "nextcloud",
-          "nextcloud-db"
-        ]
-      },
-      "MYSQL_ROOT_PASSWORD": {
-        "name": "MYSQL_ROOT_PASSWORD",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "***REDACTED***",
-        "contexts": [
-          "nextcloud-db"
-        ]
-      },
-      "AUTHENTIK_TOKEN": {
-        "name": "AUTHENTIK_TOKEN",
-        "type": "string",
-        "source": ".env",
-        "value": "***REDACTED***",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 24
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 24
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 24
-          }
-        ],
-        "contexts": []
-      },
-      "AUTHENTIK_VERIFY_TLS": {
-        "name": "AUTHENTIK_VERIFY_TLS",
-        "type": "boolean",
-        "source": ".env",
-        "value": "***REDACTED***",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 25
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 25
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 25
-          }
-        ],
-        "contexts": []
-      },
-      "AUTHENTIK_NEXTCLOUD_CLIENT_ID": {
-        "name": "AUTHENTIK_NEXTCLOUD_CLIENT_ID",
-        "type": "string",
-        "source": ".env",
-        "value": "***REDACTED***",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 28
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 28
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 28
-          }
-        ],
-        "contexts": []
-      },
-      "AUTHENTIK_NEXTCLOUD_CLIENT_SECRET": {
-        "name": "AUTHENTIK_NEXTCLOUD_CLIENT_SECRET",
-        "type": "string",
-        "source": ".env",
-        "value": "***REDACTED***",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 29
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 29
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 29
-          }
-        ],
-        "contexts": []
       },
       "GOOGLE_AI_API_KEY": {
         "name": "GOOGLE_AI_API_KEY",
@@ -15419,11 +15877,11 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "mailu-postfix",
-          "mailu-backend",
-          "mailu-roundcube",
+          "mailu-dovecot",
           "mailu-frontend",
-          "mailu-dovecot"
+          "mailu-roundcube",
+          "mailu-postfix",
+          "mailu-backend"
         ]
       },
       "MAILU_DB_PASSWORD": {
@@ -15739,6 +16197,16 @@
         ],
         "contexts": []
       },
+      "SECRETS_AGENT_DATA": {
+        "name": "SECRETS_AGENT_DATA",
+        "type": "path",
+        "source": "systemd",
+        "value": "***REDACTED***",
+        "contexts": [
+          "clear-trading-agent",
+          "kwai-viewer-homelab"
+        ]
+      },
       "ENABLE_OAUTH_SIGNUP": {
         "name": "ENABLE_OAUTH_SIGNUP",
         "type": "boolean",
@@ -15898,11 +16366,11 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "mail-db",
-          "postgres",
           "wikijs-db",
+          "netbox-postgres",
+          "mail-db",
           "mailu-db",
-          "netbox-postgres"
+          "postgres"
         ]
       },
       "ROUNDCUBEMAIL_DB_PASSWORD": {
@@ -16022,6 +16490,16 @@
           "wikijs"
         ]
       },
+      "PASSWORD": {
+        "name": "PASSWORD",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "***REDACTED***",
+        "contexts": [
+          "freecash-browser",
+          "kwai-browser"
+        ]
+      },
       "ADMIN_TOKEN": {
         "name": "ADMIN_TOKEN",
         "type": "string",
@@ -16037,8 +16515,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REDIS_PASSWORD": {
@@ -16047,10 +16525,10 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox",
+          "netbox-redis-cache",
           "netbox-redis",
-          "netbox-redis-cache"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REMOTE_AUTH_AUTO_CREATE_USER": {
@@ -16059,8 +16537,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REMOTE_AUTH_ENABLED": {
@@ -16069,8 +16547,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REMOTE_AUTH_GROUP_HEADER": {
@@ -16079,8 +16557,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REMOTE_AUTH_GROUP_SEPARATOR": {
@@ -16089,8 +16567,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REMOTE_AUTH_GROUP_SYNC_ENABLED": {
@@ -16099,8 +16577,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REMOTE_AUTH_HEADER": {
@@ -16109,8 +16587,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REMOTE_AUTH_STAFF_GROUPS": {
@@ -16119,8 +16597,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REMOTE_AUTH_SUPERUSER_GROUPS": {
@@ -16129,8 +16607,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REMOTE_AUTH_USER_EMAIL": {
@@ -16139,8 +16617,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "SECRET_KEY": {
@@ -16149,8 +16627,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "SUPERUSER_PASSWORD": {
@@ -16159,8 +16637,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "MARIADB_PASSWORD": {
@@ -16181,22 +16659,13 @@
           "glpi-db"
         ]
       },
-      "SECRETS_AGENT_DATA": {
-        "name": "SECRETS_AGENT_DATA",
-        "type": "path",
-        "source": "systemd",
-        "value": "***REDACTED***",
-        "contexts": [
-          "clear-trading-agent"
-        ]
-      },
       "SECRETS_AGENT_URL": {
         "name": "SECRETS_AGENT_URL",
-        "type": "url",
-        "source": "systemd",
+        "type": "string",
+        "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "ollama-finetune"
+          "configure_authentik_nas_ldap"
         ]
       },
       "HF_TOKEN": {
@@ -16233,6 +16702,179 @@
         "value": "***REDACTED***",
         "contexts": [
           "router_network_config"
+        ]
+      },
+      "AUTHENTIK_URL": {
+        "name": "AUTHENTIK_URL",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap",
+          "configure_authentik_nextcloud_oidc"
+        ]
+      },
+      "AUTHENTIK_NAS_LDAP_PROVIDER_NAME": {
+        "name": "AUTHENTIK_NAS_LDAP_PROVIDER_NAME",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_LDAP_BASE_DN": {
+        "name": "AUTHENTIK_LDAP_BASE_DN",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_LDAP_OUTPOST_NAME": {
+        "name": "AUTHENTIK_LDAP_OUTPOST_NAME",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_LDAP_OUTPOST_CONTAINER": {
+        "name": "AUTHENTIK_LDAP_OUTPOST_CONTAINER",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_LDAP_HOST": {
+        "name": "AUTHENTIK_LDAP_HOST",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_LDAP_PORT": {
+        "name": "AUTHENTIK_LDAP_PORT",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_NAS_LDAP_BIND_USER": {
+        "name": "AUTHENTIK_NAS_LDAP_BIND_USER",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_NAS_LDAP_BIND_TOKEN_ID": {
+        "name": "AUTHENTIK_NAS_LDAP_BIND_TOKEN_ID",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_WORKER_CONTAINER": {
+        "name": "AUTHENTIK_WORKER_CONTAINER",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "SECRETS_AGENT_API_KEY": {
+        "name": "SECRETS_AGENT_API_KEY",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_TOKEN": {
+        "name": "AUTHENTIK_TOKEN",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap",
+          "configure_authentik_nextcloud_oidc"
+        ]
+      },
+      "NAS_API_KEY": {
+        "name": "NAS_API_KEY",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_NAS_LDAP_BIND_PASSWORD": {
+        "name": "AUTHENTIK_NAS_LDAP_BIND_PASSWORD",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_NEXTCLOUD_CLIENT_ID": {
+        "name": "AUTHENTIK_NEXTCLOUD_CLIENT_ID",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nextcloud_oidc"
+        ]
+      },
+      "AUTHENTIK_NEXTCLOUD_CLIENT_SECRET": {
+        "name": "AUTHENTIK_NEXTCLOUD_CLIENT_SECRET",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nextcloud_oidc"
+        ]
+      },
+      "AUTHENTIK_NEXTCLOUD_PROVIDER_NAME": {
+        "name": "AUTHENTIK_NEXTCLOUD_PROVIDER_NAME",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nextcloud_oidc"
+        ]
+      },
+      "AUTHENTIK_NEXTCLOUD_APP_NAME": {
+        "name": "AUTHENTIK_NEXTCLOUD_APP_NAME",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nextcloud_oidc"
+        ]
+      },
+      "AUTHENTIK_NEXTCLOUD_APP_SLUG": {
+        "name": "AUTHENTIK_NEXTCLOUD_APP_SLUG",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nextcloud_oidc"
         ]
       },
       "ALL_CHILDREN_HOMELAB_HOSTS_HOMELAB_ANSIBLE_SSH_PRIVATE_KEY_FILE": {
@@ -16405,9 +17047,9 @@
         "source": "docker-compose",
         "value": "wikijs-db",
         "contexts": [
-          "netbox-worker",
           "wikijs",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "DB_PORT": {
@@ -16425,9 +17067,9 @@
         "source": "docker-compose",
         "value": "wikijs",
         "contexts": [
-          "netbox-worker",
           "wikijs",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "DB_NAME": {
@@ -16436,78 +17078,16 @@
         "source": "docker-compose",
         "value": "wikijs",
         "contexts": [
-          "netbox-worker",
           "wikijs",
-          "netbox"
-        ]
-      },
-      "MARIADB_IMAGE": {
-        "name": "MARIADB_IMAGE",
-        "type": "string",
-        "source": ".env",
-        "value": "mariadb:11",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 9
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 9
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 9
-          }
-        ],
-        "contexts": []
-      },
-      "REDIS_IMAGE": {
-        "name": "REDIS_IMAGE",
-        "type": "string",
-        "source": ".env",
-        "value": "redis:7-alpine",
-        "locations": [
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 10
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env.example",
-            "line": 10
-          },
-          {
-            "file": "forks/rpa4all-nextcloud-authentik/.env",
-            "line": 10
-          }
-        ],
-        "contexts": []
-      },
-      "MYSQL_DATABASE": {
-        "name": "MYSQL_DATABASE",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "${MYSQL_DATABASE}",
-        "contexts": [
-          "nextcloud",
-          "nextcloud-db"
-        ]
-      },
-      "MYSQL_USER": {
-        "name": "MYSQL_USER",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "${MYSQL_USER}",
-        "contexts": [
-          "nextcloud",
-          "nextcloud-db"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "MAILU_DATABASE_URL": {
         "name": "MAILU_DATABASE_URL",
         "type": "url",
         "source": ".env",
-        "value": "postgresql://mailu:${MAILU_DB_PASSWORD}@mailu-db/mailu",
+        "value": "***REDACTED***",
         "locations": [
           {
             "file": ".env.consolidated",
@@ -16657,11 +17237,11 @@
         "source": "docker-compose",
         "value": "roundcube",
         "contexts": [
-          "mail-db",
-          "postgres",
           "wikijs-db",
+          "netbox-postgres",
+          "mail-db",
           "mailu-db",
-          "netbox-postgres"
+          "postgres"
         ]
       },
       "POSTGRES_USER": {
@@ -16670,11 +17250,11 @@
         "source": "docker-compose",
         "value": "roundcube",
         "contexts": [
-          "mail-db",
-          "postgres",
           "wikijs-db",
+          "netbox-postgres",
+          "mail-db",
           "mailu-db",
-          "netbox-postgres"
+          "postgres"
         ]
       },
       "ROUNDCUBEMAIL_DB_TYPE": {
@@ -16726,7 +17306,7 @@
         "name": "MAILU_DB_URI",
         "type": "url",
         "source": "docker-compose",
-        "value": "postgresql://mailu:${MAILU_DB_PASSWORD:-mailu_secure_password_change_me}@mailu-db/mailu",
+        "value": "***REDACTED***",
         "contexts": [
           "mailu-backend"
         ]
@@ -16735,10 +17315,10 @@
         "name": "MAILU_REDIS_URI",
         "type": "url",
         "source": "docker-compose",
-        "value": "redis://:${MAILU_REDIS_PASSWORD:-redis_secure_password_change_me}@mailu-redis",
+        "value": "***REDACTED***",
         "contexts": [
-          "mailu-backend",
-          "mailu-roundcube"
+          "mailu-roundcube",
+          "mailu-backend"
         ]
       },
       "GF_DATABASE_TYPE": {
@@ -16810,8 +17390,8 @@
         "source": "docker-compose",
         "value": "1",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REDIS_CACHE_HOST": {
@@ -16820,8 +17400,8 @@
         "source": "docker-compose",
         "value": "netbox-redis-cache",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REDIS_DATABASE": {
@@ -16830,8 +17410,8 @@
         "source": "docker-compose",
         "value": "0",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "REDIS_HOST": {
@@ -16840,9 +17420,8 @@
         "source": "docker-compose",
         "value": "netbox-redis",
         "contexts": [
-          "nextcloud",
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "MARIADB_DATABASE": {
@@ -16881,13 +17460,13 @@
           "glpi"
         ]
       },
-      "MYSQL_HOST": {
-        "name": "MYSQL_HOST",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "nextcloud-db",
+      "DB_POLL_SECS": {
+        "name": "DB_POLL_SECS",
+        "type": "integer",
+        "source": "systemd",
+        "value": "5",
         "contexts": [
-          "nextcloud"
+          "approval-gateway"
         ]
       },
       "DATASOURCES_1_DATABASE": {
@@ -16930,7 +17509,7 @@
         "name": "MCPSERVERS_0_ENV_DATABASE_URL",
         "type": "url",
         "source": "yaml",
-        "value": "postgresql://postgres:shared_memory_2026@localhost:5433/postgres",
+        "value": "***REDACTED***",
         "contexts": [
           "new-mcp-server",
           "homelab"
@@ -17014,6 +17593,45 @@
         ],
         "contexts": []
       },
+      "TRADING_TELEGRAM_CHAT_ID": {
+        "name": "TRADING_TELEGRAM_CHAT_ID",
+        "type": "string",
+        "source": ".env",
+        "value": "your_trading_chat_id_here",
+        "locations": [
+          {
+            "file": ".env.consolidated",
+            "line": 102
+          }
+        ],
+        "contexts": []
+      },
+      "TRADING_TELEGRAM_THREAD_ID": {
+        "name": "TRADING_TELEGRAM_THREAD_ID",
+        "type": "string",
+        "source": ".env",
+        "value": "your_trading_thread_id_here",
+        "locations": [
+          {
+            "file": ".env.consolidated",
+            "line": 104
+          }
+        ],
+        "contexts": []
+      },
+      "TRADING_TELEGRAM_EXTRA_CHAT_IDS": {
+        "name": "TRADING_TELEGRAM_EXTRA_CHAT_IDS",
+        "type": "string",
+        "source": ".env",
+        "value": "",
+        "locations": [
+          {
+            "file": ".env.consolidated",
+            "line": 108
+          }
+        ],
+        "contexts": []
+      },
       "BTC_ENGINE_API_PORT": {
         "name": "BTC_ENGINE_API_PORT",
         "type": "integer",
@@ -17036,6 +17654,15 @@
           "validate_btc_config"
         ]
       },
+      "OLLAMA_TRADING_MODEL": {
+        "name": "OLLAMA_TRADING_MODEL",
+        "type": "string",
+        "source": "systemd",
+        "value": "trading-analyst:latest",
+        "contexts": [
+          "trading-daily-report"
+        ]
+      },
       "COMPATIBILITY_METHOD": {
         "name": "COMPATIBILITY_METHOD",
         "type": "string",
@@ -17054,11 +17681,29 @@
           "tape-quality-ollama-narrator"
         ]
       },
+      "BTC_AGENT_DIR": {
+        "name": "BTC_AGENT_DIR",
+        "type": "path",
+        "source": "systemd",
+        "value": "/apps/crypto-trader/trading/btc_trading_agent",
+        "contexts": [
+          "kucoin-postgres-sync"
+        ]
+      },
+      "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_COIN",
+        "type": "string",
+        "source": "yaml",
+        "value": "BTC-USDT",
+        "contexts": [
+          "prometheus"
+        ]
+      },
       "SCRAPE_CONFIGS_4_STATIC_CONFIGS_0_LABELS_COIN": {
         "name": "SCRAPE_CONFIGS_4_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
-        "value": "ETH-USDT",
+        "value": "BTC-USDT",
         "contexts": [
           "prometheus"
         ]
@@ -17072,8 +17717,8 @@
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_6_STATIC_CONFIGS_0_LABELS_COIN": {
-        "name": "SCRAPE_CONFIGS_6_STATIC_CONFIGS_0_LABELS_COIN",
+      "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
         "value": "BTC-USDT",
@@ -17081,47 +17726,38 @@
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_7_STATIC_CONFIGS_0_LABELS_COIN": {
-        "name": "SCRAPE_CONFIGS_7_STATIC_CONFIGS_0_LABELS_COIN",
+      "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
-        "value": "BTC-USDT",
+        "value": "ETH-USDT",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_8_STATIC_CONFIGS_0_LABELS_COIN": {
-        "name": "SCRAPE_CONFIGS_8_STATIC_CONFIGS_0_LABELS_COIN",
+      "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
-        "value": "DOGE-USDT",
+        "value": "ETH-USDT",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_COIN": {
-        "name": "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_COIN",
+      "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
-        "value": "ADA-USDT",
+        "value": "ETH-USDT",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_COIN": {
-        "name": "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_COIN",
+      "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
-        "value": "USDT-BRL",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_COIN": {
-        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_COIN",
-        "type": "string",
-        "source": "yaml",
-        "value": "USDT-BRL",
+        "value": "SOL-USDT",
         "contexts": [
           "prometheus"
         ]
@@ -17130,7 +17766,43 @@
         "name": "SCRAPE_CONFIGS_17_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
-        "value": "BTC-USDT",
+        "value": "SOL-USDT",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_COIN",
+        "type": "string",
+        "source": "yaml",
+        "value": "SOL-USDT",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_COIN",
+        "type": "string",
+        "source": "yaml",
+        "value": "DOGE-USDT",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_COIN",
+        "type": "string",
+        "source": "yaml",
+        "value": "DOGE-USDT",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_COIN",
+        "type": "string",
+        "source": "yaml",
+        "value": "DOGE-USDT",
         "contexts": [
           "prometheus"
         ]
@@ -17320,14 +17992,27 @@
           "config"
         ]
       },
+      "KWAI_TELEGRAM_NOTIFY": {
+        "name": "KWAI_TELEGRAM_NOTIFY",
+        "type": "boolean",
+        "source": ".env",
+        "value": "1",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 8
+          }
+        ],
+        "contexts": []
+      },
       "WEBHOOKS_ENABLED": {
         "name": "WEBHOOKS_ENABLED",
         "type": "boolean",
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
-          "netbox"
+          "netbox",
+          "netbox-worker"
         ]
       },
       "GITHUB_AGENT_URL": {
@@ -17337,6 +18022,15 @@
         "value": null,
         "contexts": [
           "config"
+        ]
+      },
+      "AGENDA_TELEGRAM_CHAT_ID": {
+        "name": "AGENDA_TELEGRAM_CHAT_ID",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "daily_agenda_config"
         ]
       },
       "GLOBAL_TELEGRAM_API_URL": {
@@ -17455,14 +18149,27 @@
       }
     },
     "monitoring": {
+      "KWAI_GRAFANA_DASHBOARD_URL": {
+        "name": "KWAI_GRAFANA_DASHBOARD_URL",
+        "type": "url",
+        "source": ".env",
+        "value": "https://grafana.rpa4all.com/d/kwai-viewer/kwai-viewer-monitor",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 9
+          }
+        ],
+        "contexts": []
+      },
       "GRAFANA_URL": {
         "name": "GRAFANA_URL",
         "type": "url",
         "source": "systemd",
         "value": "http://localhost:3002",
         "contexts": [
-          "grafana-selfheal",
-          "tape-quality-ollama-narrator"
+          "tape-quality-ollama-narrator",
+          "grafana-selfheal"
         ]
       },
       "GRAFANA_CONTAINER": {
@@ -17480,10 +18187,10 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotServiceDown",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "selfhealing_rules",
-          "alert_rules",
-          "ltfs-selfheal-rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_1_ALERT": {
@@ -17492,10 +18199,10 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotHung",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "selfhealing_rules",
-          "alert_rules",
-          "ltfs-selfheal-rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_2_ALERT": {
@@ -17504,10 +18211,10 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotLastRunTooOld",
         "contexts": [
-          "rpa4all-snapshot-alerts",
           "selfhealing_rules",
-          "alert_rules",
-          "ltfs-selfheal-rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_3_ALERT": {
@@ -17516,9 +18223,9 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotFailureRate",
         "contexts": [
+          "ltfs-selfheal-rules",
           "rpa4all-snapshot-alerts",
-          "alert_rules",
-          "ltfs-selfheal-rules"
+          "alert_rules"
         ]
       },
       "GROUPS_0_RULES_4_ALERT": {
@@ -17527,8 +18234,8 @@
         "source": "yaml",
         "value": "RPA4AllBackupSizeUnusual",
         "contexts": [
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_0_RULES_5_ALERT": {
@@ -17537,8 +18244,8 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotRecoveryTriggered",
         "contexts": [
-          "rpa4all-snapshot-alerts",
-          "ltfs-selfheal-rules"
+          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_1_RULES_0_ALERT": {
@@ -17629,23 +18336,21 @@
     }
   },
   "metadata": {
-    "totalVariables": 1838,
+    "totalVariables": 1926,
     "sourceFiles": [
       ".env",
-      "forks/rpa4all-nextcloud-authentik/.env",
       ".env.openai-compatible.example",
       ".env.example",
       ".env.consolidated",
       ".env.example.wiki",
       "deploy/cmdb/.env.example",
-      "forks/rpa4all-nextcloud-authentik/.env.example",
       ".env",
       "btc_trading_agent/BTC_USDT_shadow.env",
       "systemd/ltfs-lto6-sg1.env",
       "deploy/production_autonomous.env",
+      "config/kwai-viewer.homelab.env",
       "tools/authentik_management/configs/openwebui.env",
       "tools/authentik_management/configs/grafana.env",
-      "forks/rpa4all-nextcloud-authentik/.env",
       "docker/docker-compose.gdrive.yml",
       "docker/docker-compose.simple-mail.yml",
       "docker/docker-compose.mailu.yml",
@@ -17654,12 +18359,13 @@
       "docker/docker-compose-exporters.yml",
       "docker/docker-compose.wikijs.yml",
       "docker/docker-compose.email-simple.yml",
+      "docker/docker-compose.kwai-browser.yml",
+      "docker/docker-compose.freecash-browser.yml",
       "docker/docker-compose.ntopng.yml",
       "tools/vaultwarden/docker-compose.yml",
       "tools/authentik_management/configs/docker-compose.override.yml",
       "deploy/cmdb/docker-compose.yml",
       "deploy/printshare/docker-compose.yml",
-      "forks/rpa4all-nextcloud-authentik/docker-compose.yml",
       "systemd/homelab-vault-close.service",
       "systemd/marketing-x-posts.service",
       "systemd/coordinator.service",
@@ -17673,6 +18379,8 @@
       "systemd/ltfs-lto6-sg1.service",
       "systemd/diretor.service",
       "systemd/dhcp-selfheal.service",
+      "systemd/daily-agenda-broadcast.service",
+      "systemd/trading-analyst-weekly-retrain.service",
       "systemd/clear-agent@.service",
       "systemd/akash-sweep.service",
       "systemd/ltfs-backup-catalog.service",
@@ -17681,6 +18389,7 @@
       "systemd/clear-trading-agent.service",
       "systemd/eddie-whatsapp-bot.service",
       "systemd/specialized_agents-dashboard.service",
+      "systemd/storj-host-shim.service",
       "systemd/github-agent.service",
       "systemd/grafana-selfheal.service",
       "systemd/banking-metrics-exporter.service",
@@ -17688,42 +18397,59 @@
       "systemd/notebook-power-agent.service",
       "systemd/check_projects.service",
       "systemd/ltfs-deep-recovery.service",
+      "systemd/llm-log-panel.service",
       "systemd/crypto-agent@.service",
       "systemd/rpa4all-validation.service",
+      "systemd/daily-agenda-panel.service",
       "systemd/ollama-warmup.service",
       "systemd/bn-acervo-agent.service",
+      "systemd/trading-daily-report.service",
+      "systemd/ltfs-lto6b.service",
       "systemd/job-monitor.service",
       "systemd/rss-sentiment-exporter.service",
       "systemd/homelab-vault-backup.service",
+      "systemd/journal-ingestor.service",
       "systemd/tuya-token-renewer.service",
       "systemd/ollama-finetune.service",
       "systemd/homelab-tape-logrotate.service",
       "systemd/eddie-expurgo.service",
+      "systemd/ltfs-button-watch.service",
       "systemd/python-training.service",
       "systemd/workstation-win11l-http@.service",
+      "systemd/approval-gateway.service",
       "systemd/ltfs-window-enforcer.service",
       "systemd/tape-quality-ollama-narrator.service",
+      "systemd/kwai-viewer.service",
       "systemd/ipv6-proxy.service",
       "systemd/monitoring-containers-bootstrap.service",
       "systemd/iot-vpn-bypass-watchdog.service",
       "systemd/homelab-dashboard.service",
+      "systemd/meeting-translator.service",
       "systemd/eddie_central_extended_metrics.service",
+      "systemd/storj-macvlan-network.service",
       "systemd/eddie-telegram-bot.service",
       "systemd/disk-clean.service",
+      "systemd/cloudflared-vpn-routes.service",
       "systemd/chromecast-ambilight.service",
       "systemd/ollama-gpu1.service",
       "systemd/lto6-checkpoint-drain.service",
       "systemd/homelab-tape-log-drain-nextcloud.service",
       "systemd/lto6-drain-backups.service",
+      "systemd/kucoin-postgres-sync.service",
+      "systemd/cloudflared-tunnel-guardian.service",
       "systemd/protonvpn-boot-selfheal.service",
       "systemd/ltfs-lto6-selfheal-escalator.service",
+      "systemd/ltfs-log-rotation.service",
       "systemd/lto6-checkpoint-recover.service",
       "systemd/pihole-ipv6-dns-fix.service",
+      "systemd/storj-macvlan-watchdog.service",
       "systemd/marketing-daily-report.service",
       "systemd/tape-safe-eject.service",
       "systemd/post-boot-check.service",
       "systemd/marketing-api.service",
       "systemd/agent-network-exporter.service",
+      "systemd/kwai-viewer-homelab.service",
+      "systemd/ltfs-boot-reconcile.service",
       "systemd/eddie-calendar.service",
       "tests/test_authentik_openwebui_config_consistency.py",
       "tests/test_validate_btc_config.py",
@@ -17740,10 +18466,12 @@
       "scripts/generate_profile_configs.py",
       "scripts/render_wireguard_client_config.py",
       "scripts/wikijs_configure.py",
+      "tools/daily_agenda_config.py",
       "dashboard/config.py",
       "tools/pandaplus_bridge/config.py",
+      "tools/authentik_management/configure_authentik_nas_ldap.py",
+      "tools/authentik_management/configure_authentik_nextcloud_oidc.py",
       "tools/authentik_management/configure_authentik_os_strict.py",
-      "forks/rpa4all-nextcloud-authentik/scripts/configure_authentik_nextcloud_oidc.py",
       "scripts/misc/configure_diretor_model.py",
       "tests/copilot_hooks/test_hook_configs.py",
       "tests/unit/test_trading_profile_config.py",

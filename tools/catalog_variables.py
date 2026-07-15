@@ -84,7 +84,7 @@ class VariablesCatalog:
                                 "name": key,
                                 "type": self._infer_type(value),
                                 "source": ".env",
-                                "value": value if not self._is_sensitive(key) else "***REDACTED***",
+                                "value": value if not self._is_sensitive(key, value) else "***REDACTED***",
                                 "locations": []
                             }
                         
@@ -254,7 +254,7 @@ class VariablesCatalog:
                 "name": key,
                 "type": self._infer_type(str(value)) if value else "string",
                 "source": source,
-                "value": value if not self._is_sensitive(key) else "***REDACTED***",
+                "value": value if not self._is_sensitive(key, value) else "***REDACTED***",
                 "contexts": set()
             }
         
@@ -289,16 +289,26 @@ class VariablesCatalog:
         
         return "string"
     
-    def _is_sensitive(self, key: str) -> bool:
-        """Check if a variable name suggests it contains sensitive data."""
+    def _is_sensitive(self, key: str, value: str = "") -> bool:
+        """Check if a variable name or value suggests it contains sensitive data."""
         sensitive_keywords = [
             'secret', 'password', 'token', 'key', 'api_key', 'apikey',
             'auth', 'credential', 'private', 'oauth', 'jwt', 'bearer',
-            'access_token', 'refresh_token', 'webhook', 'seed'
+            'access_token', 'refresh_token', 'webhook', 'seed',
+            'dsn', 'connection_string', 'conn_str',
         ]
-        
+
         key_lower = key.lower()
-        return any(keyword in key_lower for keyword in sensitive_keywords)
+        if any(keyword in key_lower for keyword in sensitive_keywords):
+            return True
+
+        # DATABASE_URL/URI-style names don't match the keyword list, but their
+        # value often embeds a credential (scheme://user:pass@host) — catch by shape.
+        if value and self._DSN_CRED_RE.search(str(value)):
+            return True
+        return False
+
+    _DSN_CRED_RE = re.compile(r"://[^/@\s]+:[^/@\s]+@")
     
     def categorize_variables(self, all_vars: Dict[str, Any]):
         """Categorize variables into semantic groups."""

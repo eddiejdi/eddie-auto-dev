@@ -1,19 +1,19 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-14T18:56:56.450480+00:00`
+- Generated at: `2026-07-15T01:40:20.281224+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `174`
-- Critical services flagged for MVP: `71`
+- Repo services discovered: `182`
+- Critical services flagged for MVP: `72`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
 - `identity`: 4
-- `monitoring`: 15
+- `monitoring`: 16
 - `network`: 20
-- `operations`: 94
+- `operations`: 101
 - `storage`: 32
 - `trading`: 9
 
@@ -53,6 +53,7 @@
 - `eddie_central_extended_metrics.service` (monitoring, systemd) from `systemd/eddie_central_extended_metrics.service`
 - `grafana-selfheal.service` (monitoring, systemd) from `systemd/grafana-selfheal.service`
 - `job-monitor.service` (monitoring, systemd) from `systemd/job-monitor.service`
+- `kwai-exporter.service` (monitoring, systemd) from `tools/systemd/kwai-exporter.service`
 - `monitoring-containers-bootstrap.service` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.service`
 - `rss-sentiment-exporter.service` (monitoring, systemd) from `systemd/rss-sentiment-exporter.service`
 - `storj-exporter.service` (monitoring, systemd) from `deploy/storj-exporter.service`
@@ -77,7 +78,6 @@
 - `rpa4all-ddns-server.service` (network, systemd) from `deploy/vpn/rpa4all-ddns-server.service`
 - `rpa4all-vpn-ddns.service` (network, systemd) from `deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service`
 - `wireguard-nat.service` (network, systemd) from `deploy/vpn/wireguard-nat.service`
-- `disk-clean.service` (storage, systemd) from `systemd/disk-clean.service`
 
 ## Serviços anotados manualmente
 

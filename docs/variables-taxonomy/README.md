@@ -69,6 +69,28 @@ The catalog automatically organizes variables:
 
 ---
 
+## 🛡️ Enforcement — hook obrigatório multi-agente
+
+O catálogo deixou de ser só documentação passiva: `tools/hooks/variable_registry_validate.py`
+consulta `.variables-catalog/catalog.json` **antes** de qualquer agente criar uma variável nova,
+e bloqueia duplicatas de taxonomia (ex: `API_TOKEN` vs `APITOKEN` vs `Api_Token`).
+
+| Camada | Ferramentas cobertas | Comportamento |
+|--------|----------------------|----------------|
+| `PreToolUse` hook (`.claude/settings.json`, `hooks.json`, `.cursor/hooks.json`, `.grok/hooks/claude-code-import.json`) | Claude Code, Cursor, Grok | Duplicata → `deny` (bloqueia a edição). Nome novo/fora do padrão → `warn` (não bloqueia, só avisa). |
+| `git pre-commit` (`scripts/git-hooks/pre-commit`, instalar com `bash scripts/git-hooks/install.sh`) | **Qualquer ferramenta**, inclusive Codex e edição manual | Duplicata → bloqueia o commit local. |
+| CI (`.github/workflows/variable-registry-check.yml`) | Qualquer PR, independente do hook local estar instalado | Duplicata → falha o check do PR. |
+
+**Nota sobre Codex**: `.codex/config.json` referencia `hooks_path: hooks.json` só como metadado
+informativo — o Codex CLI não consome hooks `PreToolUse` nativamente hoje. Para Codex, a única
+camada garantida é o pre-commit + CI acima.
+
+Quando o hook bloqueia uma duplicata, a mensagem já indica o nome canônico existente para reutilizar.
+Quando só avisa (nome genuinamente novo), o fluxo esperado é: documentar o propósito aqui/no
+serviço correspondente e rodar `python3 tools/catalog_variables.py` para reindexar.
+
+---
+
 ## 🔐 Secrets Management
 
 ### Sensitive Variables Detection
@@ -288,12 +310,12 @@ When adding new variables, use this format:
     git commit -m "chore: update variables catalog"
 ```
 
-### Pre-commit Hook
+### Pre-commit Hook (implementado)
 ```bash
-#!/bin/bash
-python3 tools/catalog_variables.py
-exit 0
+bash scripts/git-hooks/install.sh   # symlink .git/hooks/pre-commit -> scripts/git-hooks/pre-commit
 ```
+Valida o diff staged contra o catálogo em cada commit — ver seção
+[Enforcement](#-enforcement--hook-obrigatório-multi-agente) acima.
 
 ---
 
@@ -312,7 +334,7 @@ For questions about specific variables:
 | Date | Changes | Author |
 |------|---------|--------|
 | 2026-06-21 | Initial catalog generation | Auto-scanner |
-| TBD | ... | ... |
+| 2026-07-14 | Enforcement hook (PreToolUse + pre-commit + CI); fix DSN-embedded-credential leak in scanner | Infrastructure Agent |
 
 ---
 

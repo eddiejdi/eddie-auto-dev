@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Pre-commit gate — camada garantida para QUALQUER agente/ferramenta
+# (Claude Code, Cursor, Grok, Codex, edição manual), independente de hooks
+# nativos de cada extensão. Bloqueia commit se houver duplicata de taxonomia
+# de variável (ex: API_TOKEN vs APITOKEN) no diff staged.
+#
+# Instalação: bash scripts/git-hooks/install.sh
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+python3 tools/hooks/variable_registry_validate.py --staged
