@@ -376,6 +376,12 @@ def parse_args() -> argparse.Namespace:
         help="Publica no canal YouTube após gerar o áudio.",
     )
     parser.add_argument(
+        "--upload-kwai",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Publica também no Kwai após gerar o áudio.",
+    )
+    parser.add_argument(
         "--require-approval",
         action=argparse.BooleanOptionalAction,
         default=None,
@@ -410,6 +416,57 @@ def _publish_youtube(date_str: str, artifacts_dir: Path, panel_cfg: dict) -> str
     return yt_result.video_url
 
 
+def _publish_kwai(date_str: str, artifacts_dir: Path, panel_cfg: dict) -> str:
+    from kwai_agenda_publisher import publish_edition as publish_kwai_edition
+
+    kwai_result = publish_kwai_edition(
+        date_str,
+        artifacts_dir=artifacts_dir,
+        config=panel_cfg,
+    )
+    return kwai_result.post_url
+
+
+def _publish_platforms(
+    *,
+    date_str: str,
+    artifacts_dir: Path,
+    panel_cfg: dict,
+    upload_youtube: bool,
+    upload_kwai: bool,
+) -> tuple[str, str]:
+    """Publica nas plataformas habilitadas; falha em uma não bloqueia a outra."""
+    youtube_url = ""
+    kwai_url = ""
+    if upload_youtube:
+        try:
+            youtube_url = _publish_youtube(date_str, artifacts_dir, panel_cfg)
+        except Exception:
+            logger.warning("Falha ao publicar no YouTube.", exc_info=True)
+    if upload_kwai:
+        try:
+            kwai_url = _publish_kwai(date_str, artifacts_dir, panel_cfg)
+        except Exception:
+            logger.warning("Falha ao publicar no Kwai.", exc_info=True)
+    return youtube_url, kwai_url
+
+
+def _publish_summary_message(
+    date_str: str,
+    youtube_url: str,
+    kwai_url: str,
+    *,
+    upload_youtube: bool,
+    upload_kwai: bool,
+) -> str:
+    lines = [f"✅ Agenda {date_str} publicada:"]
+    if upload_youtube:
+        lines.append(f"YouTube: {youtube_url}" if youtube_url else "YouTube: falhou ⚠️")
+    if upload_kwai:
+        lines.append(f"Kwai: {kwai_url}" if kwai_url else "Kwai: falhou ⚠️")
+    return "\n".join(lines)
+
+
 def _run_with_optional_approval(
     *,
     args: argparse.Namespace,
@@ -417,7 +474,7 @@ def _run_with_optional_approval(
     date_str: str,
     media_plan,
     telegram_chat_id: str | None,
-) -> tuple[BroadcastArtifacts, str, str]:
+) -> tuple[BroadcastArtifacts, str, str, str]:
     approval_cfg = panel_cfg.get("approval", {})
     require_approval = (
         args.require_approval
@@ -428,6 +485,11 @@ def _run_with_optional_approval(
         args.upload_youtube
         if args.upload_youtube is not None
         else panel_cfg["defaults"].get("upload_youtube", False)
+    )
+    upload_kwai = (
+        args.upload_kwai
+        if args.upload_kwai is not None
+        else panel_cfg["defaults"].get("upload_kwai", False)
     )
     timeout_minutes = (
         args.approval_timeout_minutes
@@ -452,6 +514,7 @@ def _run_with_optional_approval(
     if args.retries == 4 and search_cfg.get("retries"):
         args.retries = int(search_cfg["retries"])
     youtube_url = ""
+    kwai_url = ""
     approval_note = ""
 
     while True:
@@ -479,12 +542,15 @@ def _run_with_optional_approval(
         )
 
         if args.dry_run or not require_approval:
-            if upload_youtube and not args.dry_run and result.wav_path:
-                try:
-                    youtube_url = _publish_youtube(date_str, args.artifacts_dir, panel_cfg)
-                except Exception:
-                    logger.warning("Falha ao publicar no YouTube.", exc_info=True)
-            return result, youtube_url, approval_note
+            if not args.dry_run and result.wav_path:
+                youtube_url, kwai_url = _publish_platforms(
+                    date_str=date_str,
+                    artifacts_dir=args.artifacts_dir,
+                    panel_cfg=panel_cfg,
+                    upload_youtube=upload_youtube,
+                    upload_kwai=upload_kwai,
+                )
+            return result, youtube_url, kwai_url, approval_note
 
         if not telegram_chat_id:
             raise RuntimeError("require_approval exige telegram_chat_id configurado.")
@@ -500,21 +566,30 @@ def _run_with_optional_approval(
         )
         if decision == "approved":
             approval_note = "Aprovado no Telegram."
-            if upload_youtube and result.wav_path:
-                try:
-                    youtube_url = _publish_youtube(date_str, args.artifacts_dir, panel_cfg)
-                    send_telegram_message(
-                        f"✅ Agenda publicada no YouTube\n{youtube_url}",
-                        chat_id=telegram_chat_id,
-                    )
-                except Exception:
-                    logger.warning("Falha ao publicar no YouTube após aprovação.", exc_info=True)
-            else:
+            if (upload_youtube or upload_kwai) and result.wav_path:
+                youtube_url, kwai_url = _publish_platforms(
+                    date_str=date_str,
+                    artifacts_dir=args.artifacts_dir,
+                    panel_cfg=panel_cfg,
+                    upload_youtube=upload_youtube,
+                    upload_kwai=upload_kwai,
+                )
                 send_telegram_message(
-                    "✅ Agenda aprovada. Publicação YouTube desabilitada.",
+                    _publish_summary_message(
+                        date_str,
+                        youtube_url,
+                        kwai_url,
+                        upload_youtube=upload_youtube,
+                        upload_kwai=upload_kwai,
+                    ),
                     chat_id=telegram_chat_id,
                 )
-            return result, youtube_url, approval_note
+            else:
+                send_telegram_message(
+                    "✅ Agenda aprovada. Publicação em plataformas desabilitada.",
+                    chat_id=telegram_chat_id,
+                )
+            return result, youtube_url, kwai_url, approval_note
 
         if decision == "regenerate" and attempt <= max_regenerations:
             attempt += 1
@@ -536,7 +611,7 @@ def _run_with_optional_approval(
                 f"⏹️ Agenda {date_str} não publicada ({decision}).",
                 chat_id=telegram_chat_id,
             )
-        return result, "", approval_note
+        return result, "", "", approval_note
 
 
 def main() -> int:
@@ -569,7 +644,7 @@ def main() -> int:
     if not telegram_chat_id:
         telegram_chat_id = get_agenda_telegram_chat_id() or None
 
-    result, youtube_url, approval_note = _run_with_optional_approval(
+    result, youtube_url, kwai_url, approval_note = _run_with_optional_approval(
         args=args,
         panel_cfg=panel_cfg,
         date_str=date_str,
@@ -592,6 +667,10 @@ def main() -> int:
         print(f"Fontes utilizadas: {', '.join(result.sources_used)}")
     if result.sources_failed:
         print(f"Fontes sem resultado: {', '.join(result.sources_failed)}")
+    if youtube_url:
+        print(f"YouTube: {youtube_url}")
+    if kwai_url:
+        print(f"Kwai: {kwai_url}")
     if args.dry_run:
         print("\nDry-run: Telegram nao foi acionado.")
     elif approval_note:

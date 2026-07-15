@@ -19,6 +19,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "include_news": True,
         "send_telegram": True,
         "upload_youtube": True,
+        "upload_kwai": True,
         "require_approval": True,
         "deep_search": True,
     },
@@ -56,6 +57,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "telegram": {
         "enabled": True,
         "chat_id": os.getenv("AGENDA_TELEGRAM_CHAT_ID", ""),
+    },
+    "kwai": {
+        "enabled": True,
+        "profile_handle": os.getenv("AGENDA_KWAI_HANDLE", ""),
+        "upload_url": "",
     },
     "editorial": {
         "stance": "pro_bolsonaro_allies",
@@ -170,6 +176,8 @@ def list_editions(artifacts_dir: Path | None = None) -> list[dict[str, Any]]:
                 "has_mp4": (day_dir / "locution.mp4").exists(),
                 "youtube_video_id": meta.get("youtube_video_id", ""),
                 "youtube_url": meta.get("youtube_url", ""),
+                "kwai_post_id": meta.get("kwai_post_id", ""),
+                "kwai_url": meta.get("kwai_url", ""),
                 "updated_at": meta.get("updated_at", ""),
             }
         )
