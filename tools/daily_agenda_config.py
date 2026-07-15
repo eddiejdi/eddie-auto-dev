@@ -61,7 +61,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "kwai": {
         "enabled": True,
         "profile_handle": os.getenv("AGENDA_KWAI_HANDLE", ""),
-        "upload_url": "",
+        "upload_url": os.getenv("KWAI_UPLOAD_URL", ""),
     },
     "editorial": {
         "stance": "pro_bolsonaro_allies",
