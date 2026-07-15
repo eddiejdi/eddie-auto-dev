@@ -79,6 +79,7 @@ def _run_pipeline(payload: dict) -> None:
     dry_run = bool(payload.get("dry_run", False))
     send_telegram = bool(payload.get("send_telegram", cfg["defaults"]["send_telegram"]))
     upload_youtube = bool(payload.get("upload_youtube", cfg["defaults"]["upload_youtube"]))
+    upload_kwai = bool(payload.get("upload_kwai", cfg["defaults"].get("upload_kwai", False)))
     include_news = bool(payload.get("include_news", cfg["defaults"]["include_news"]))
     require_approval = bool(
         payload.get("require_approval", cfg["defaults"].get("require_approval", False))
@@ -117,6 +118,10 @@ def _run_pipeline(payload: dict) -> None:
         cmd.append("--require-approval")
     if upload_youtube and not dry_run:
         cmd.append("--upload-youtube")
+    if upload_kwai and not dry_run:
+        cmd.append("--upload-kwai")
+    else:
+        cmd.append("--no-upload-kwai")
 
     _set_job(
         {

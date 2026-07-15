@@ -1,6 +1,6 @@
 {
   "catalogVersion": "1.0.0",
-  "generatedAt": "2026-07-14T22:29:22.627999",
+  "generatedAt": "2026-07-15T00:13:03.503351",
   "environment": "production",
   "categories": {
     "services": {
@@ -241,8 +241,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "config",
-          "configure_authentik_nextcloud_oidc"
+          "configure_authentik_nextcloud_oidc",
+          "config"
         ]
       },
       "NEXTCLOUD_ADMIN_USER": {
@@ -328,10 +328,10 @@
         "value": "${MAILU_DOMAIN:-mail.rpa4all.com}",
         "contexts": [
           "mailu-dovecot",
-          "mailu-frontend",
+          "mailu-backend",
           "mailu-roundcube",
-          "mailu-postfix",
-          "mailu-backend"
+          "mailu-frontend",
+          "mailu-postfix"
         ]
       },
       "ADMIN_EMAIL": {
@@ -1208,7 +1208,7 @@
         "name": "KWAI_CHROME_BINARY",
         "type": "path",
         "source": ".env",
-        "value": "/usr/bin/chromium-browser",
+        "value": "/opt/google/chrome/google-chrome",
         "locations": [
           {
             "file": "config/kwai-viewer.homelab.env",
@@ -1239,6 +1239,58 @@
           {
             "file": "config/kwai-viewer.homelab.env",
             "line": 7
+          }
+        ],
+        "contexts": []
+      },
+      "KWAI_BALANCE_SCRAPE": {
+        "name": "KWAI_BALANCE_SCRAPE",
+        "type": "boolean",
+        "source": ".env",
+        "value": "1",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 14
+          }
+        ],
+        "contexts": []
+      },
+      "KWAI_CHROME_PROFILE_DIR": {
+        "name": "KWAI_CHROME_PROFILE_DIR",
+        "type": "path",
+        "source": ".env",
+        "value": "/home/homelab/.local/share/kwai-viewer/chrome-profile",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 15
+          }
+        ],
+        "contexts": []
+      },
+      "KWAI_COOKIE_SOURCE": {
+        "name": "KWAI_COOKIE_SOURCE",
+        "type": "path",
+        "source": ".env",
+        "value": "/home/homelab/docker/kwai-browser/config/.config/chromium/Default/Cookies",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 16
+          }
+        ],
+        "contexts": []
+      },
+      "KWAI_BALANCE_URLS": {
+        "name": "KWAI_BALANCE_URLS",
+        "type": "url",
+        "source": ".env",
+        "value": "https://m-wallet.kwai.com/main/transfer,https://m-wallet.kwai.com/,https://m-creative.kwai.com/creator/center,https://www.kwai.com/discover",
+        "locations": [
+          {
+            "file": "config/kwai-viewer.homelab.env",
+            "line": 17
           }
         ],
         "contexts": []
@@ -1523,12 +1575,12 @@
         "source": "docker-compose",
         "value": "America/Sao_Paulo",
         "contexts": [
-          "netbox-postgres",
-          "kwai-browser",
-          "grafana",
           "glpi",
           "glpi-db",
-          "freecash-browser"
+          "grafana",
+          "kwai-browser",
+          "freecash-browser",
+          "netbox-postgres"
         ]
       },
       "GF_DEFAULT_TIMEZONE": {
@@ -1663,8 +1715,8 @@
         "source": "docker-compose",
         "value": "1000",
         "contexts": [
-          "freecash-browser",
-          "kwai-browser"
+          "kwai-browser",
+          "freecash-browser"
         ]
       },
       "PGID": {
@@ -1673,8 +1725,8 @@
         "source": "docker-compose",
         "value": "1000",
         "contexts": [
-          "freecash-browser",
-          "kwai-browser"
+          "kwai-browser",
+          "freecash-browser"
         ]
       },
       "CHROME_CLI": {
@@ -1683,8 +1735,8 @@
         "source": "docker-compose",
         "value": "https://www.kwai.com/discover",
         "contexts": [
-          "freecash-browser",
-          "kwai-browser"
+          "kwai-browser",
+          "freecash-browser"
         ]
       },
       "CUSTOM_USER": {
@@ -1693,8 +1745,8 @@
         "source": "docker-compose",
         "value": "${REWARDS_BROWSER_USER:-rewards}",
         "contexts": [
-          "freecash-browser",
-          "kwai-browser"
+          "kwai-browser",
+          "freecash-browser"
         ]
       },
       "ROCKET_WORKERS": {
@@ -1927,32 +1979,32 @@
         "source": "systemd",
         "value": "1",
         "contexts": [
-          "coordinator",
-          "rss-sentiment-exporter",
-          "marketing-x-posts",
-          "crypto-agent@",
-          "marketing-daily-report",
-          "candle-collector",
-          "notebook-power-agent",
-          "meeting-translator",
-          "approval-gateway",
-          "daily-agenda-panel",
-          "banking-metrics-exporter",
-          "ollama-gpu-coordinator",
-          "eddie-expurgo",
-          "agent-network-exporter",
-          "marketing-email-drip",
-          "clear-trading-agent",
-          "daily-agenda-broadcast",
-          "marketing-api",
-          "eddie-telegram-bot",
-          "tape-component-quality-exporter",
-          "bn-acervo-agent",
-          "trading-daily-report",
           "diretor",
+          "agent-network-exporter",
+          "ollama-gpu-coordinator",
+          "rss-sentiment-exporter",
+          "daily-agenda-panel",
+          "eddie-expurgo",
+          "clear-trading-agent",
+          "banking-metrics-exporter",
+          "daily-agenda-broadcast",
+          "trading-daily-report",
+          "marketing-daily-report",
+          "marketing-email-drip",
+          "eddie-telegram-bot",
+          "coordinator",
+          "trading-analyst-weekly-retrain",
+          "notebook-power-agent",
           "eddie-calendar",
+          "meeting-translator",
+          "bn-acervo-agent",
           "kucoin-postgres-sync",
-          "trading-analyst-weekly-retrain"
+          "crypto-agent@",
+          "tape-component-quality-exporter",
+          "approval-gateway",
+          "candle-collector",
+          "marketing-x-posts",
+          "marketing-api"
         ]
       },
       "PYTHONPATH": {
@@ -1961,17 +2013,18 @@
         "source": "systemd",
         "value": "/home/homelab/eddie-auto-dev",
         "contexts": [
-          "marketing-api",
+          "marketing-daily-report",
+          "marketing-email-drip",
           "tape-component-quality-exporter",
-          "llm-log-panel",
+          "candle-collector",
           "rss-sentiment-exporter",
+          "clear-trading-agent",
+          "marketing-api",
           "marketing-x-posts",
           "ollama-finetune",
-          "marketing-daily-report",
-          "kwai-viewer-homelab",
-          "marketing-email-drip",
-          "clear-trading-agent",
-          "candle-collector"
+          "llm-log-panel",
+          "kwai-balance-scrape",
+          "kwai-viewer-homelab"
         ]
       },
       "X_AGENT_URL": {
@@ -2034,8 +2087,8 @@
         "source": "systemd",
         "value": "1",
         "contexts": [
-          "ollama-finetune",
           "rss-sentiment-exporter",
+          "ollama-finetune",
           "llm-log-panel",
           "candle-collector"
         ]
@@ -2046,11 +2099,11 @@
         "source": "systemd",
         "value": "/apps/crypto-trader",
         "contexts": [
-          "rss-sentiment-exporter",
-          "llm-log-panel",
-          "ollama-finetune",
           "crypto-agent@",
-          "candle-collector"
+          "rss-sentiment-exporter",
+          "candle-collector",
+          "ollama-finetune",
+          "llm-log-panel"
         ]
       },
       "PATH": {
@@ -2059,15 +2112,15 @@
         "source": "systemd",
         "value": "/var/db/ltfs-patched/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         "contexts": [
-          "tape-component-quality-exporter",
-          "specialized_agents-dashboard",
-          "job-monitor",
-          "homelab-dashboard",
-          "crypto-agent@",
-          "kucoin-postgres-sync",
           "rpa4all-validation",
+          "homelab-dashboard",
+          "kucoin-postgres-sync",
+          "crypto-agent@",
+          "specialized_agents-dashboard",
+          "tape-component-quality-exporter",
+          "eddie-whatsapp-bot",
           "github-agent",
-          "eddie-whatsapp-bot"
+          "job-monitor"
         ]
       },
       "CHECK_INTERVAL": {
@@ -2170,8 +2223,8 @@
         "source": "systemd",
         "value": "tape_sg1",
         "contexts": [
-          "homelab-tape-log-drain-nextcloud",
-          "homelab-tape-log-drain-sg1"
+          "homelab-tape-log-drain-sg1",
+          "homelab-tape-log-drain-nextcloud"
         ]
       },
       "ROUTE_TARGET_ROOT": {
@@ -2180,8 +2233,8 @@
         "source": "systemd",
         "value": "/mnt/tape_sg1/logs",
         "contexts": [
-          "homelab-tape-log-drain-nextcloud",
-          "homelab-tape-log-drain-sg1"
+          "homelab-tape-log-drain-sg1",
+          "homelab-tape-log-drain-nextcloud"
         ]
       },
       "WHATSAPP_NUMBER": {
@@ -2199,8 +2252,8 @@
         "source": "systemd",
         "value": "http://localhost:3004",
         "contexts": [
-          "eddie-expurgo",
-          "eddie-whatsapp-bot"
+          "eddie-whatsapp-bot",
+          "eddie-expurgo"
         ]
       },
       "ADMIN_NUMBERS": {
@@ -2444,8 +2497,8 @@
         "source": "systemd",
         "value": "948686300",
         "contexts": [
-          "eddie-calendar",
-          "eddie-expurgo"
+          "eddie-expurgo",
+          "eddie-calendar"
         ]
       },
       "ADMIN_PHONE": {
@@ -2796,8 +2849,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "config",
-          "configure_diretor_model"
+          "configure_diretor_model",
+          "config"
         ]
       },
       "HOMELAB_USER": {
@@ -2881,6 +2934,24 @@
           "router_network_config"
         ]
       },
+      "AGENDA_KWAI_HANDLE": {
+        "name": "AGENDA_KWAI_HANDLE",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "daily_agenda_config"
+        ]
+      },
+      "KWAI_UPLOAD_URL": {
+        "name": "KWAI_UPLOAD_URL",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "daily_agenda_config"
+        ]
+      },
       "PANDAPLUS_DEVICE_ID": {
         "name": "PANDAPLUS_DEVICE_ID",
         "type": "string",
@@ -2951,9 +3022,9 @@
         "value": "rpa4all_snapshot_alerts",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -2964,9 +3035,9 @@
         "value": "30s",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -2976,9 +3047,9 @@
         "source": "yaml",
         "value": "rpa4all_snapshot_service_up == 0",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
           "rpa4all-snapshot-alerts",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -2989,9 +3060,9 @@
         "value": "5m",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3002,9 +3073,9 @@
         "value": "critical",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3024,9 +3095,9 @@
         "value": "\ud83d\udd34 RPA4All Snapshot Service DOWN",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3037,9 +3108,9 @@
         "value": "O servi\u00e7o rpa4all-snapshot.service n\u00e3o est\u00e1 rodando por mais de 5 minutos",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3067,9 +3138,9 @@
         "source": "yaml",
         "value": "rpa4all_snapshot_hung == 1",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
           "rpa4all-snapshot-alerts",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -3080,9 +3151,9 @@
         "value": "3m",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3093,9 +3164,9 @@
         "value": "critical",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3115,9 +3186,9 @@
         "value": "\u23f8\ufe0f RPA4All Snapshot HUNG (Travado)",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3128,9 +3199,9 @@
         "value": "Lock file com idade {{ $value | humanizeDuration }}. Snapshot pode estar travado em I/O ou rede",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3158,9 +3229,9 @@
         "source": "yaml",
         "value": "(time() - rpa4all_snapshot_last_run_timestamp) > 86400",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
           "rpa4all-snapshot-alerts",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -3171,9 +3242,9 @@
         "value": "1m",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3184,9 +3255,9 @@
         "value": "warning",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3206,9 +3277,9 @@
         "value": "\u23f3 RPA4All Snapshot \u2014 \u00daltima execu\u00e7\u00e3o > 24h",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3219,9 +3290,9 @@
         "value": "\u00daltima execu\u00e7\u00e3o bem-sucedida h\u00e1 {{ $value | humanizeDuration }}. Timer pode estar desabilitado",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
           "rules",
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
           "alert_rules"
         ]
       },
@@ -3240,9 +3311,9 @@
         "source": "yaml",
         "value": "increase(rpa4all_snapshot_failed_total[1h]) > 3",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
           "rpa4all-snapshot-alerts",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -3318,9 +3389,9 @@
         "source": "yaml",
         "value": "rpa4all_snapshot_backup_size_bytes > 500000000000",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_0_RULES_4_FOR": {
@@ -4581,8 +4652,8 @@
         "source": "yaml",
         "value": "trading_agent_alerts",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4592,8 +4663,8 @@
         "source": "yaml",
         "value": "15s",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4613,8 +4684,8 @@
         "source": "yaml",
         "value": "3m",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4624,8 +4695,8 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4644,8 +4715,8 @@
         "source": "yaml",
         "value": "\ud83d\udd34 Trading Agent {{ $labels.symbol }} DOWN",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4655,8 +4726,8 @@
         "source": "yaml",
         "value": "Agent {{ $labels.symbol }} \u00e9 est\u00e1 inativo por mais de 3 minutos. Systemd unit pode estar crashed.",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4685,8 +4756,8 @@
         "source": "yaml",
         "value": "5m",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4696,8 +4767,8 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4716,8 +4787,8 @@
         "source": "yaml",
         "value": "\u23f8\ufe0f Trading Agent {{ $labels.symbol }} STALLED",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4727,8 +4798,8 @@
         "source": "yaml",
         "value": "Agent {{ $labels.symbol }} n\u00e3o gerou decis\u00f5es por mais de 5 minutos. Poss\u00edvel deadlock na DB ou timeout na API KuCoin.",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4757,8 +4828,8 @@
         "source": "yaml",
         "value": "3m",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4768,8 +4839,8 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4788,8 +4859,8 @@
         "source": "yaml",
         "value": "\u23f3 Trading Agent {{ $labels.symbol }} \u2014 Decisions Gap 15+ min",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -4799,8 +4870,8 @@
         "source": "yaml",
         "value": "Agent {{ $labels.symbol }} n\u00e3o gerou decis\u00e3o h\u00e1 {{ $value | humanizeDuration }}. Self-heal pode executar restart.",
         "contexts": [
-          "selfhealing_rules",
           "rules",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -5675,12 +5746,12 @@
         "source": "yaml",
         "value": "1",
         "contexts": [
+          "authentik-http",
           "policies",
           "rules",
-          "datasources",
           "dashboards",
           "contactpoints",
-          "authentik-http"
+          "datasources"
         ]
       },
       "POLICIES_0_ORGID": {
@@ -14860,8 +14931,8 @@
         "source": "yaml",
         "value": "Prometheus",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_UID": {
@@ -14870,8 +14941,8 @@
         "source": "yaml",
         "value": "dfc0w4yioe4u8e",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_TYPE": {
@@ -14880,8 +14951,8 @@
         "source": "yaml",
         "value": "prometheus",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_ACCESS": {
@@ -14890,8 +14961,8 @@
         "source": "yaml",
         "value": "proxy",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_ORGID": {
@@ -14909,8 +14980,8 @@
         "source": "yaml",
         "value": "http://prometheus:9090",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_ISDEFAULT": {
@@ -14919,8 +14990,8 @@
         "source": "yaml",
         "value": "True",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_JSONDATA_TIMEINTERVAL": {
@@ -14938,8 +15009,8 @@
         "source": "yaml",
         "value": "False",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_1_NAME": {
@@ -15645,14 +15716,193 @@
           "openapi.generated"
         ]
       },
+      "SCHEDULER_POSTS_PER_DAY": {
+        "name": "SCHEDULER_POSTS_PER_DAY",
+        "type": "integer",
+        "source": "yaml",
+        "value": "3",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "SCHEDULER_POLL_INTERVAL_SECONDS": {
+        "name": "SCHEDULER_POLL_INTERVAL_SECONDS",
+        "type": "integer",
+        "source": "yaml",
+        "value": "60",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "SCHEDULER_MAX_RETRIES": {
+        "name": "SCHEDULER_MAX_RETRIES",
+        "type": "integer",
+        "source": "yaml",
+        "value": "3",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "SCHEDULER_TIMEZONE": {
+        "name": "SCHEDULER_TIMEZONE",
+        "type": "string",
+        "source": "yaml",
+        "value": "America/Sao_Paulo",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "DAILY_LIMIT": {
+        "name": "DAILY_LIMIT",
+        "type": "integer",
+        "source": "yaml",
+        "value": "3",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PATHS_DATA_DIR": {
+        "name": "PATHS_DATA_DIR",
+        "type": "string",
+        "source": "yaml",
+        "value": "content_automation/data",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PATHS_OUTPUT_DIR": {
+        "name": "PATHS_OUTPUT_DIR",
+        "type": "string",
+        "source": "yaml",
+        "value": "content_automation/output",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PATHS_PROMPTS_DIR": {
+        "name": "PATHS_PROMPTS_DIR",
+        "type": "string",
+        "source": "yaml",
+        "value": "content_automation/data/prompts",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PATHS_LOGS_DIR": {
+        "name": "PATHS_LOGS_DIR",
+        "type": "string",
+        "source": "yaml",
+        "value": "content_automation/data/logs",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "VIDEO_WIDTH": {
+        "name": "VIDEO_WIDTH",
+        "type": "integer",
+        "source": "yaml",
+        "value": "1080",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "VIDEO_HEIGHT": {
+        "name": "VIDEO_HEIGHT",
+        "type": "integer",
+        "source": "yaml",
+        "value": "1920",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "VIDEO_MAX_DURATION_SECONDS": {
+        "name": "VIDEO_MAX_DURATION_SECONDS",
+        "type": "integer",
+        "source": "yaml",
+        "value": "60",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "VIDEO_TTS_BACKEND": {
+        "name": "VIDEO_TTS_BACKEND",
+        "type": "string",
+        "source": "yaml",
+        "value": "mock",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PUBLISHER_MODE": {
+        "name": "PUBLISHER_MODE",
+        "type": "string",
+        "source": "yaml",
+        "value": "kwai",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PUBLISHER_PLATFORM": {
+        "name": "PUBLISHER_PLATFORM",
+        "type": "string",
+        "source": "yaml",
+        "value": "kwai",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "TOPIC": {
+        "name": "TOPIC",
+        "type": "string",
+        "source": "yaml",
+        "value": "curiosidades",
+        "contexts": [
+          "cripto",
+          "viral_trends",
+          "curiosidades"
+        ]
+      },
+      "TITLE_TEMPLATE": {
+        "name": "TITLE_TEMPLATE",
+        "type": "string",
+        "source": "yaml",
+        "value": "Voc\u00ea sabia? {trend_title}",
+        "contexts": [
+          "cripto",
+          "viral_trends",
+          "curiosidades"
+        ]
+      },
+      "SCRIPT_TEMPLATE": {
+        "name": "SCRIPT_TEMPLATE",
+        "type": "string",
+        "source": "yaml",
+        "value": "Hook: Em 60 segundos voc\u00ea vai entender {trend_title}.\nFato 1: Um detalhe pouco conhecido que muda a forma de ver o assunto.\nFato 2: Por que isso viraliza agora ({tags}).\nFechamento: Curiosidade pr\u00e1tica para compartilhar hoje.\n",
+        "contexts": [
+          "cripto",
+          "viral_trends",
+          "curiosidades"
+        ]
+      },
+      "CTA_TEMPLATE": {
+        "name": "CTA_TEMPLATE",
+        "type": "string",
+        "source": "yaml",
+        "value": "Comenta qual curiosidade voc\u00ea quer no pr\u00f3ximo v\u00eddeo!",
+        "contexts": [
+          "cripto",
+          "viral_trends",
+          "curiosidades"
+        ]
+      },
       "NAME": {
         "name": "NAME",
         "type": "string",
         "source": "yaml",
         "value": "Homelab MCP Server",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "VERSION": {
@@ -15661,8 +15911,8 @@
         "source": "yaml",
         "value": "0.0.1",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "SCHEMA": {
@@ -15671,8 +15921,8 @@
         "source": "yaml",
         "value": "v1",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "MCPSERVERS_0_NAME": {
@@ -15681,8 +15931,8 @@
         "source": "yaml",
         "value": "homelab",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "MCPSERVERS_0_COMMAND": {
@@ -15691,8 +15941,8 @@
         "source": "yaml",
         "value": "/home/edenilson/shared-auto-dev/.venv/bin/python",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "MCPSERVERS_0_ENV_HOMELAB_URL": {
@@ -15701,8 +15951,8 @@
         "source": "yaml",
         "value": "http://192.168.15.2:8503",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "MCPSERVERS_0_ENV_API_BASE_URL": {
@@ -15711,8 +15961,8 @@
         "source": "yaml",
         "value": "http://192.168.15.2:3000",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "DATASOURCES_0_JSONDATA_TLSSKIPVERIFY": {
@@ -15878,10 +16128,10 @@
         "value": "***REDACTED***",
         "contexts": [
           "mailu-dovecot",
-          "mailu-frontend",
+          "mailu-backend",
           "mailu-roundcube",
-          "mailu-postfix",
-          "mailu-backend"
+          "mailu-frontend",
+          "mailu-postfix"
         ]
       },
       "MAILU_DB_PASSWORD": {
@@ -16203,8 +16453,8 @@
         "source": "systemd",
         "value": "***REDACTED***",
         "contexts": [
-          "clear-trading-agent",
-          "kwai-viewer-homelab"
+          "kwai-viewer-homelab",
+          "clear-trading-agent"
         ]
       },
       "ENABLE_OAUTH_SIGNUP": {
@@ -16366,11 +16616,11 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
+          "postgres",
+          "mailu-db",
           "wikijs-db",
           "netbox-postgres",
-          "mail-db",
-          "mailu-db",
-          "postgres"
+          "mail-db"
         ]
       },
       "ROUNDCUBEMAIL_DB_PASSWORD": {
@@ -16496,8 +16746,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "freecash-browser",
-          "kwai-browser"
+          "kwai-browser",
+          "freecash-browser"
         ]
       },
       "ADMIN_TOKEN": {
@@ -16526,9 +16776,9 @@
         "value": "***REDACTED***",
         "contexts": [
           "netbox-redis-cache",
-          "netbox-redis",
           "netbox",
-          "netbox-worker"
+          "netbox-worker",
+          "netbox-redis"
         ]
       },
       "REMOTE_AUTH_AUTO_CREATE_USER": {
@@ -16710,8 +16960,8 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "configure_authentik_nas_ldap",
-          "configure_authentik_nextcloud_oidc"
+          "configure_authentik_nextcloud_oidc",
+          "configure_authentik_nas_ldap"
         ]
       },
       "AUTHENTIK_NAS_LDAP_PROVIDER_NAME": {
@@ -16810,8 +17060,8 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "configure_authentik_nas_ldap",
-          "configure_authentik_nextcloud_oidc"
+          "configure_authentik_nextcloud_oidc",
+          "configure_authentik_nas_ldap"
         ]
       },
       "NAS_API_KEY": {
@@ -17026,8 +17276,8 @@
         "source": "yaml",
         "value": "***REDACTED***",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       }
     },
@@ -17047,9 +17297,9 @@
         "source": "docker-compose",
         "value": "wikijs-db",
         "contexts": [
-          "wikijs",
           "netbox",
-          "netbox-worker"
+          "netbox-worker",
+          "wikijs"
         ]
       },
       "DB_PORT": {
@@ -17067,9 +17317,9 @@
         "source": "docker-compose",
         "value": "wikijs",
         "contexts": [
-          "wikijs",
           "netbox",
-          "netbox-worker"
+          "netbox-worker",
+          "wikijs"
         ]
       },
       "DB_NAME": {
@@ -17078,9 +17328,9 @@
         "source": "docker-compose",
         "value": "wikijs",
         "contexts": [
-          "wikijs",
           "netbox",
-          "netbox-worker"
+          "netbox-worker",
+          "wikijs"
         ]
       },
       "MAILU_DATABASE_URL": {
@@ -17237,11 +17487,11 @@
         "source": "docker-compose",
         "value": "roundcube",
         "contexts": [
+          "postgres",
+          "mailu-db",
           "wikijs-db",
           "netbox-postgres",
-          "mail-db",
-          "mailu-db",
-          "postgres"
+          "mail-db"
         ]
       },
       "POSTGRES_USER": {
@@ -17250,11 +17500,11 @@
         "source": "docker-compose",
         "value": "roundcube",
         "contexts": [
+          "postgres",
+          "mailu-db",
           "wikijs-db",
           "netbox-postgres",
-          "mail-db",
-          "mailu-db",
-          "postgres"
+          "mail-db"
         ]
       },
       "ROUNDCUBEMAIL_DB_TYPE": {
@@ -17317,8 +17567,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "mailu-roundcube",
-          "mailu-backend"
+          "mailu-backend",
+          "mailu-roundcube"
         ]
       },
       "GF_DATABASE_TYPE": {
@@ -17505,14 +17755,23 @@
           "datasources"
         ]
       },
+      "PATHS_DB_PATH": {
+        "name": "PATHS_DB_PATH",
+        "type": "string",
+        "source": "yaml",
+        "value": "content_automation/data/queue.db",
+        "contexts": [
+          "settings"
+        ]
+      },
       "MCPSERVERS_0_ENV_DATABASE_URL": {
         "name": "MCPSERVERS_0_ENV_DATABASE_URL",
         "type": "url",
         "source": "yaml",
         "value": "***REDACTED***",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       }
     },
@@ -18187,9 +18446,9 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotServiceDown",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
           "rpa4all-snapshot-alerts",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -18199,9 +18458,9 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotHung",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
           "rpa4all-snapshot-alerts",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -18211,9 +18470,9 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotLastRunTooOld",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
           "rpa4all-snapshot-alerts",
+          "selfhealing_rules",
           "alert_rules"
         ]
       },
@@ -18336,7 +18595,7 @@
     }
   },
   "metadata": {
-    "totalVariables": 1926,
+    "totalVariables": 1952,
     "sourceFiles": [
       ".env",
       ".env.openai-compatible.example",
@@ -18415,6 +18674,7 @@
       "systemd/eddie-expurgo.service",
       "systemd/ltfs-button-watch.service",
       "systemd/python-training.service",
+      "systemd/kwai-balance-scrape.service",
       "systemd/workstation-win11l-http@.service",
       "systemd/approval-gateway.service",
       "systemd/ltfs-window-enforcer.service",
@@ -18466,6 +18726,7 @@
       "scripts/generate_profile_configs.py",
       "scripts/render_wireguard_client_config.py",
       "scripts/wikijs_configure.py",
+      "content_automation/config.py",
       "tools/daily_agenda_config.py",
       "dashboard/config.py",
       "tools/pandaplus_bridge/config.py",
@@ -18494,7 +18755,11 @@
       "site/deploy/cloudflared-rpa4all-ide.yml",
       "docs/openapi.yaml",
       "docs/openapi.generated.yaml",
+      "content_automation/settings.yaml",
       ".venv/lib/python3.13/site-packages/markdown_it/port.yaml",
+      "content_automation/data/prompts/curiosidades.yaml",
+      "content_automation/data/prompts/cripto.yaml",
+      "content_automation/data/prompts/viral_trends.yaml",
       ".continue/mcpServers/new-mcp-server.yaml",
       ".continue/mcpServers/homelab.yaml",
       "grafana/provisioning/datasources/authentik-http.yaml",
