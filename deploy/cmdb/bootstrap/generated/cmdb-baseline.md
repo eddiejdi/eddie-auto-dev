@@ -1,10 +1,10 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-15T03:13:08.226523+00:00`
+- Generated at: `2026-07-15T18:10:41.761569+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `182`
-- Critical services flagged for MVP: `72`
+- Repo services discovered: `183`
+- Critical services flagged for MVP: `73`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
@@ -12,7 +12,7 @@
 
 - `identity`: 4
 - `monitoring`: 16
-- `network`: 20
+- `network`: 21
 - `operations`: 101
 - `storage`: 32
 - `trading`: 9
@@ -66,6 +66,7 @@
 - `cloudflared-vpn-routes.timer` (network, systemd) from `systemd/cloudflared-vpn-routes.timer`
 - `cloudflared.service` (network, systemd) from `tools/tunnels/cloudflared/cloudflared.service`
 - `dhcp-selfheal.service` (network, systemd) from `systemd/dhcp-selfheal.service`
+- `eth-wan-bringup.service` (network, systemd) from `deploy/vpn/eth-wan-bringup.service`
 - `homelab-lan-gateway.service` (network, systemd) from `deploy/vpn/homelab-lan-gateway.service`
 - `iot-vpn-bypass-watchdog.service` (network, systemd) from `systemd/iot-vpn-bypass-watchdog.service`
 - `iot-vpn-bypass-watchdog.timer` (network, systemd) from `systemd/iot-vpn-bypass-watchdog.timer`
@@ -77,7 +78,6 @@
 - `protonvpn-routing-watchdog.service` (network, systemd) from `deploy/vpn/protonvpn-routing-watchdog.service`
 - `rpa4all-ddns-server.service` (network, systemd) from `deploy/vpn/rpa4all-ddns-server.service`
 - `rpa4all-vpn-ddns.service` (network, systemd) from `deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service`
-- `wireguard-nat.service` (network, systemd) from `deploy/vpn/wireguard-nat.service`
 
 ## Serviços anotados manualmente
 

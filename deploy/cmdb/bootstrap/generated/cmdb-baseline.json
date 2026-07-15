@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-07-15T03:13:08.226523+00:00",
+  "generated_at": "2026-07-15T18:10:41.761569+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 182,
+    "repo_services": 183,
     "trading_instances": 12,
-    "critical_services": 72,
+    "critical_services": 73,
     "domains": {
       "identity": 4,
       "monitoring": 16,
-      "network": 20,
+      "network": 21,
       "operations": 101,
       "storage": 32,
       "trading": 9
@@ -418,6 +418,14 @@
       "domain": "network",
       "kind": "systemd",
       "source": "systemd/dhcp-selfheal.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "eth-wan-bringup.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "deploy/vpn/eth-wan-bringup.service",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -2087,6 +2095,13 @@
         "name": "dhcp-selfheal.service",
         "domain": "network",
         "source": "systemd/dhcp-selfheal.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "eth-wan-bringup.service",
+        "domain": "network",
+        "source": "deploy/vpn/eth-wan-bringup.service",
         "kind": "systemd",
         "critical": true
       },
