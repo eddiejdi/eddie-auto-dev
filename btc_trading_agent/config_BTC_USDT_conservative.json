@@ -5,7 +5,7 @@
   "poll_interval": 5,
   "min_trade_interval": 900,
   "min_confidence": 0.6,
-  "min_trade_amount": 10,
+  "min_trade_amount": 15,
   "max_position_pct": 0.6,
   "dca_valley_bounce_pct": 0.004,
   "stop_loss_pct": 0.03,
@@ -78,7 +78,12 @@
   "guardrails_min_sell_pnl_pct": 0.003,
   "guardrails_active": true,
   "guardrails_positive_only_sells": true,
-  "rebuy_lock_enabled": false,
+  "rebuy_lock_enabled": true,
+  "rebuy_envelope": {
+    "grace_hours": 2,
+    "decay_pct_per_hour": 0.25,
+    "max_premium_pct": 5.0
+  },
   "track_record_confidence": {
     "enabled": true,
     "mode": "apply",

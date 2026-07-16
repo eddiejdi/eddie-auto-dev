@@ -5,7 +5,7 @@
   "poll_interval": 5,
   "min_trade_interval": 600,
   "min_confidence": 0.55,
-  "min_trade_amount": 10,
+  "min_trade_amount": 15,
   "max_position_pct": 1.0,
   "dca_valley_bounce_pct": 0.003,
   "stop_loss_pct": 0.05,
@@ -72,7 +72,12 @@
   "guardrails_active": true,
   "guardrails_min_sell_pnl_pct": 0.003,
   "guardrails_positive_only_sells": true,
-  "rebuy_lock_enabled": false,
+  "rebuy_lock_enabled": true,
+  "rebuy_envelope": {
+    "grace_hours": 2,
+    "decay_pct_per_hour": 0.25,
+    "max_premium_pct": 5.0
+  },
   "_eth_live_notes": {
     "origem": "clonado de config_BTC_USDT_aggressive.json em 2026-07-04",
     "conta": "subconta sub:ETHAgressive via KUCOIN_SECRET_NAMES",

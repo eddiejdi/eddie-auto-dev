@@ -277,6 +277,7 @@ class PositionManagerMixin:
                 self._sync_position_tracking()
 
                 self.state.last_sell_entry_price = entry_price
+                self.state.last_sell_ts = time.time()
                 logger.info(
                     "🔒 REBUY lock: próxima compra deve ser < $%.2f (entrada slot #%d)",
                     entry_price, entry_idx + 1,
