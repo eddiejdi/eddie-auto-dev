@@ -2,9 +2,18 @@
 """Testes — lógica BUY vs REBUY vs DCA:
 
   BUY  (position=0, sem histórico de venda): livre, segue regras de mercado
-  REBUY (position=0, após fechar posição):   bloqueado se preço >= entrada da última venda
+  REBUY (position=0, após fechar posição):   bloqueado se preço >= teto do envelope
   DCA  (position>0, adicionando slot):       não tem rebuy lock; segue valley bounce
+
+Envelope determinístico (2026-07-16): o REBUY lock é um envelope mecânico
+sempre ativo — fase grace (teto = last_sell), fase decay (teto sobe
+decay_pct_per_hour) e expiração (max_premium_pct). A IA só pode APERTAR o
+teto (ai_rebuy_margin_pct); falha da IA ou rebuy_lock_enabled=false no
+config NUNCA desligam o envelope (fix do incidente "falha da IA = falha do
+freio"). Contrato antigo em que ai_rebuy_lock_enabled=False liberava a
+recompra foi intencionalmente invertido.
 """
+import time
 from types import SimpleNamespace
 import sys
 from pathlib import Path
@@ -40,11 +49,17 @@ def _make_agent(
     ai_rebuy_margin_pct=0.0,
     ai_controlled=False,
     rebuy_lock_enabled=None,
+    last_sell_age_hours=0.0,
+    rebuy_envelope=None,
 ):
     agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
     agent.symbol = "BTC-USDT"
     agent.state = SimpleNamespace(
         last_sell_entry_price=last_sell_entry_price,
+        last_sell_ts=(
+            time.time() - last_sell_age_hours * 3600.0
+            if last_sell_entry_price > 0 else 0.0
+        ),
         position=position,
         entry_price=entry_price,
         last_trade_time=0.0,
@@ -88,6 +103,8 @@ def _make_agent(
     cfg = {}
     if rebuy_lock_enabled is not None:
         cfg["rebuy_lock_enabled"] = rebuy_lock_enabled
+    if rebuy_envelope is not None:
+        cfg["rebuy_envelope"] = rebuy_envelope
     agent._load_live_config = lambda: cfg
     agent._current_profile = lambda: "default"
     agent._sync_target_sell_with_ai = lambda reason_prefix="IA": None
@@ -196,14 +213,18 @@ def test_ai_rebuy_blocks_when_config_disabled_but_rag_enabled():
 
 
 def test_ai_rebuy_margin_requires_deeper_discount():
-    """Margem IA exige preço abaixo de last_sell * (1 - margin_pct)."""
+    """Margem IA exige preço abaixo de last_sell * (1 - margin_pct).
+
+    Novo contrato: a margem da IA só se aplica com rebuy_lock_enabled=True
+    (config false desliga apenas a margem — ver
+    test_config_disabled_only_strips_ai_margin)."""
     agent = _make_agent(
         position=0.0,
         last_sell_entry_price=70000.0,
         ai_rebuy_lock_enabled=True,
         ai_rebuy_margin_pct=0.01,
         ai_controlled=True,
-        rebuy_lock_enabled=False,
+        rebuy_lock_enabled=True,
     )
     # 70000 * 0.99 = 69300 — abaixo disso permitido
     sig_block = SimpleNamespace(action="BUY", price=69500.0, confidence=0.9, reason="unit")
@@ -214,8 +235,10 @@ def test_ai_rebuy_margin_requires_deeper_discount():
     assert agent._check_can_trade(sig_ok) is True
 
 
-def test_ai_rebuy_off_allows_reentry_when_config_disabled():
-    """Sem IA nem config, reentrada após venda é livre."""
+def test_envelope_blocks_in_grace_even_with_ai_off_and_config_off():
+    """CONTRATO INVERTIDO (fix do incidente): BULLISH (ai_rebuy_lock_enabled=False)
+    + config desligado NÃO liberam mais a recompra durante a graça — o envelope
+    mecânico continua valendo."""
     agent = _make_agent(
         position=0.0,
         last_sell_entry_price=70000.0,
@@ -224,4 +247,124 @@ def test_ai_rebuy_off_allows_reentry_when_config_disabled():
         rebuy_lock_enabled=False,
     )
     sig = SimpleNamespace(action="BUY", price=71000.0, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig) is False
+    assert agent.state.last_trade_block_reason == "buy_rebuy_lock_last_sell"
+
+
+# ── Envelope determinístico: grace → decay → expired ─────────────────────────
+
+def test_envelope_blocks_when_ai_cold_and_config_disabled():
+    """Regressão do incidente 'falha da IA = falha do freio': IA fria
+    (ai_controlled=False) + rebuy_lock_enabled=false → envelope ainda bloqueia."""
+    agent = _make_agent(
+        position=0.0,
+        last_sell_entry_price=70000.0,
+        ai_controlled=False,
+        rebuy_lock_enabled=False,
+    )
+    sig = SimpleNamespace(action="BUY", price=70000.0, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig) is False
+    assert agent.state.last_trade_block_reason == "buy_rebuy_lock_last_sell"
+    assert agent.state.last_trade_block_context["rebuy_phase"] == "grace"
+
+
+def test_envelope_decay_raises_ceiling():
+    """Após a graça o teto sobe decay_pct_per_hour: 6h de idade, graça 2h,
+    0.25%/h → prêmio 1%. Preço +0.5% permitido; +1.5% bloqueado."""
+    kwargs = dict(
+        position=0.0,
+        last_sell_entry_price=70000.0,
+        last_sell_age_hours=6.0,
+        rebuy_envelope={"grace_hours": 2, "decay_pct_per_hour": 0.25, "max_premium_pct": 5.0},
+    )
+    agent = _make_agent(**kwargs)
+    sig_ok = SimpleNamespace(action="BUY", price=70000.0 * 1.005, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig_ok) is True
+
+    agent = _make_agent(**kwargs)
+    sig_block = SimpleNamespace(action="BUY", price=70000.0 * 1.015, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig_block) is False
+    assert agent.state.last_trade_block_reason == "buy_rebuy_lock_last_sell"
+    assert agent.state.last_trade_block_context["rebuy_phase"] == "decay"
+
+
+def test_envelope_expires_after_max_premium():
+    """Idade 23h (graça 2h + 21h×0.25%/h = 5.25% ≥ 5%): envelope expira,
+    BUY permitido e lock limpo do estado."""
+    agent = _make_agent(
+        position=0.0,
+        last_sell_entry_price=70000.0,
+        last_sell_age_hours=23.0,
+    )
+    sig = SimpleNamespace(action="BUY", price=75000.0, confidence=0.9, reason="unit")
     assert agent._check_can_trade(sig) is True
+    assert agent.state.last_sell_entry_price == 0.0
+    assert agent.state.last_sell_ts == 0.0
+
+
+def test_ai_margin_tightens_within_decay_envelope():
+    """Margem da IA aperta o teto decaído: 6h → envelope +1%; margem 1% →
+    teto efetivo = last_sell×1.01×0.99. Preço entre os dois tetos: bloqueado."""
+    agent = _make_agent(
+        position=0.0,
+        last_sell_entry_price=70000.0,
+        last_sell_age_hours=6.0,
+        ai_rebuy_lock_enabled=True,
+        ai_rebuy_margin_pct=0.01,
+        ai_controlled=True,
+        rebuy_lock_enabled=True,
+    )
+    envelope_ceiling = 70000.0 * 1.01          # 70700
+    effective = envelope_ceiling * 0.99        # 69993
+    between = (effective + envelope_ceiling) / 2
+    sig = SimpleNamespace(action="BUY", price=between, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig) is False
+    assert agent.state.last_trade_block_reason == "buy_rebuy_lock_last_sell"
+    assert agent.state.last_trade_block_context["rebuy_margin_pct"] == 0.01
+
+
+def test_config_disabled_only_strips_ai_margin():
+    """rebuy_lock_enabled=false remove apenas a margem da IA — o envelope fica.
+    Na graça: preço == last_sell bloqueado; preço 0.5% abaixo permitido
+    (a margem de 1% da IA teria bloqueado, mas foi desligada pelo config)."""
+    kwargs = dict(
+        position=0.0,
+        last_sell_entry_price=70000.0,
+        ai_rebuy_lock_enabled=True,
+        ai_rebuy_margin_pct=0.01,
+        ai_controlled=True,
+        rebuy_lock_enabled=False,
+    )
+    agent = _make_agent(**kwargs)
+    sig_block = SimpleNamespace(action="BUY", price=70000.0, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig_block) is False
+
+    agent = _make_agent(**kwargs)
+    sig_ok = SimpleNamespace(action="BUY", price=70000.0 * 0.995, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig_ok) is True
+
+
+def test_missing_ts_self_heals_to_grace():
+    """Estado legado (last_sell_entry_price>0 sem last_sell_ts): self-heal —
+    assume 'agora' como âncora (graça) e bloqueia."""
+    agent = _make_agent(position=0.0, last_sell_entry_price=70000.0)
+    agent.state.last_sell_ts = 0.0  # simula estado antigo sem âncora
+    sig = SimpleNamespace(action="BUY", price=70000.0, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig) is False
+    assert agent.state.last_sell_ts > 0  # âncora self-healed
+
+
+def test_block_context_reports_phase_and_ceiling():
+    """Contexto do bloqueio (→ decisions.features) carrega fase, teto e idade."""
+    agent = _make_agent(
+        position=0.0,
+        last_sell_entry_price=70000.0,
+        last_sell_age_hours=6.0,
+    )
+    sig = SimpleNamespace(action="BUY", price=72000.0, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig) is False
+    ctx = agent.state.last_trade_block_context
+    assert ctx["rebuy_phase"] == "decay"
+    assert ctx["rebuy_max_price"] > 70000.0            # teto decaído acima do last_sell
+    assert ctx["rebuy_envelope_ceiling"] >= ctx["rebuy_max_price"]
+    assert 5.5 < ctx["rebuy_elapsed_hours"] < 6.5

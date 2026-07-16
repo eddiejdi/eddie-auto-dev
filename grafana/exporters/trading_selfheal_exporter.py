@@ -355,19 +355,25 @@ class AgentHealthChecker:
         except Exception:
             return False
 
-    def get_last_decision_age(self, symbol: str) -> Optional[float]:
-        """Query PostgreSQL for time since last decision."""
+    def get_last_decision_age(self, symbol: str, profile: str = "") -> Optional[float]:
+        """Query PostgreSQL for time since last decision (por profile quando informado)."""
         try:
             self._ensure_pg_conn()
             if self._pg_conn is None:
                 return None
-            
+
             cur = self._pg_conn.cursor()
             cur.execute("SET search_path TO btc, public")
-            cur.execute(
-                "SELECT MAX(timestamp) FROM btc.decisions WHERE symbol=%s",
-                (symbol,)
-            )
+            if profile:
+                cur.execute(
+                    "SELECT MAX(timestamp) FROM btc.decisions WHERE symbol=%s AND profile=%s",
+                    (symbol, profile)
+                )
+            else:
+                cur.execute(
+                    "SELECT MAX(timestamp) FROM btc.decisions WHERE symbol=%s",
+                    (symbol,)
+                )
             result = cur.fetchone()
             if result and result[0]:
                 age = time.time() - float(result[0])
@@ -591,17 +597,27 @@ class AgentHealthChecker:
         else:
             checks.append(("process", False))
 
-        # 3. Stall detection (DB query + Ollama analysis)
+        # 3. Stall detection — GATE DETERMINÍSTICO primeiro, LLM só dentro dele.
+        # Decisões mais novas que STALL_THRESHOLD = saudável por definição; o
+        # Ollama nunca pode declarar stall abaixo do gate (fix 2026-07-16: o LLM
+        # fraco marcava stalled com decisões de 0s → 62 restarts/dia falsos).
         stalled = False
-        age = self.get_last_decision_age(agent.symbol)
+        age = self.get_last_decision_age(agent.symbol, getattr(agent, "profile", "") or "")
         if age is not None:
             state.last_decision_age = age
-            # Use Ollama for intelligent stall detection
-            conf, reasoning = analyze_stall_with_ollama(agent.metric_id, age, "")
-            state.ollama_stall_confidence = conf
-            state.ollama_reasoning = reasoning
-            stalled = conf > 0.7  # Stalled if confidence > 70%
-        
+            if age > STALL_THRESHOLD:
+                # Acima do gate: Ollama pode confirmar/vetar (indisponível = não stall)
+                conf, reasoning = analyze_stall_with_ollama(agent.metric_id, age, "")
+                state.ollama_stall_confidence = conf
+                state.ollama_reasoning = reasoning
+                stalled = conf > 0.7  # Stalled if confidence > 70%
+            else:
+                state.ollama_stall_confidence = 0.0
+                state.ollama_reasoning = (
+                    f"decisões frescas ({age:.0f}s <= {STALL_THRESHOLD}s) — "
+                    "saudável por gate determinístico, LLM não consultado"
+                )
+
         state.stalled = stalled
         checks.append(("stalled", not stalled))
 

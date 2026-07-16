@@ -1,0 +1,26 @@
+[Unit]
+Description=KuCoin — rebalanceia USDT entre master TRADE e subcontas (one-shot)
+After=network.target secrets_agent.service
+Wants=secrets_agent.service
+
+[Service]
+Type=oneshot
+User=btc-trading
+Group=btc-trading
+WorkingDirectory=/apps/crypto-trader/trading
+
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+Environment=BTC_AGENT_DIR=/apps/crypto-trader/trading/btc_trading_agent
+EnvironmentFile=/etc/crypto-agent/secrets-api.env
+
+ExecStart=/usr/bin/python3 /apps/crypto-trader/trading/scripts/rebalance_kucoin_trading_capital.py --execute
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=kucoin-usdt-rebalance
+
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/apps/crypto-trader

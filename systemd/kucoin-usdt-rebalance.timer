@@ -1,0 +1,10 @@
+[Unit]
+Description=KuCoin USDT rebalance — a cada hora
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=kucoin-usdt-rebalance.service
+
+[Install]
+WantedBy=timers.target

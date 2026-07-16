@@ -636,9 +636,53 @@ class MetricsCollector:
         # Variação de equity por dia calendário (equivalente ao PnL "de ontem" da KuCoin)
         metrics.update(self._get_equity_daily_changes())
 
+        # ── REBUY envelope (último bloqueio anotado pelo agente) ──
+        metrics.update(self._collect_rebuy_envelope(cursor))
+
         cursor.close()
         conn.close()
         return metrics
+
+    def _collect_rebuy_envelope(self, cursor) -> Dict:
+        """Último bloqueio de rebuy anotado em decisions.features pelo agente.
+
+        O envelope é mecânico (grace→decay→expired) e calculado pelo próprio
+        agente; aqui apenas espelhamos a anotação mais recente (janela 30 min)
+        para o Prometheus — sem duplicar a matemática do envelope.
+        Fases: 0=nenhum bloqueio recente, 1=grace, 2=decay.
+        """
+        out = {
+            'rebuy_envelope_phase': 0,
+            'rebuy_envelope_ceiling': 0.0,
+            'rebuy_envelope_raw_ceiling': 0.0,
+            'rebuy_envelope_elapsed_hours': 0.0,
+            'rebuy_envelope_block_age_seconds': 0.0,
+        }
+        try:
+            cursor.execute("""
+                SELECT features->'block_context'->>'rebuy_phase',
+                       features->'block_context'->>'rebuy_max_price',
+                       features->'block_context'->>'rebuy_envelope_ceiling',
+                       features->'block_context'->>'rebuy_elapsed_hours',
+                       timestamp
+                FROM decisions
+                WHERE symbol = %s AND profile = %s
+                  AND features->>'block_reason' = 'buy_rebuy_lock_last_sell'
+                  AND timestamp > extract(epoch from now()) - 1800
+                ORDER BY timestamp DESC LIMIT 1
+            """, (self.symbol, self.profile))
+            row = cursor.fetchone()
+            if row:
+                phase_map = {'grace': 1, 'decay': 2}
+                out['rebuy_envelope_phase'] = phase_map.get(str(row[0] or ''), 0)
+                out['rebuy_envelope_ceiling'] = float(row[1] or 0.0)
+                out['rebuy_envelope_raw_ceiling'] = float(row[2] or 0.0)
+                out['rebuy_envelope_elapsed_hours'] = float(row[3] or 0.0)
+                out['rebuy_envelope_block_age_seconds'] = max(
+                    0.0, datetime.now().timestamp() - float(row[4] or 0.0))
+        except Exception as e:
+            print(f"⚠️ Erro ao coletar rebuy envelope: {e}")
+        return out
 
 
 class PrometheusHandler(BaseHTTPRequestHandler):
@@ -1281,6 +1325,20 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                         output.append("")
             except Exception:
                 pass  # RAG metrics non-critical
+
+            # ═══════════════ REBUY ENVELOPE (mecânico, não-RAG) ═══════════════
+            envelope_metrics = [
+                ("btc_rebuy_envelope_phase", "Rebuy envelope phase from latest block annotation (0=none recent, 1=grace, 2=decay)", metrics.get('rebuy_envelope_phase', 0), "{v}"),
+                ("btc_rebuy_envelope_ceiling", "Effective rebuy ceiling (envelope × AI margin) at latest block", metrics.get('rebuy_envelope_ceiling', 0), "{v:.2f}"),
+                ("btc_rebuy_envelope_raw_ceiling", "Deterministic envelope ceiling (before AI margin) at latest block", metrics.get('rebuy_envelope_raw_ceiling', 0), "{v:.2f}"),
+                ("btc_rebuy_envelope_elapsed_hours", "Hours since last sell at latest rebuy block", metrics.get('rebuy_envelope_elapsed_hours', 0), "{v:.2f}"),
+                ("btc_rebuy_envelope_block_age_seconds", "Age of latest rebuy block annotation", metrics.get('rebuy_envelope_block_age_seconds', 0), "{v:.0f}"),
+            ]
+            for prom_name, help_text, v, fmt in envelope_metrics:
+                output.append(f"# HELP {prom_name} {help_text}")
+                output.append(f"# TYPE {prom_name} gauge")
+                output.append(f'{prom_name}{{{_cl}}} {fmt.format(v=v)}')
+                output.append("")
 
             # ═══════════════ AGENT STATUS ═══════════════
             output.append("# HELP btc_trading_agent_running Agent running (1=yes, 0=no)")

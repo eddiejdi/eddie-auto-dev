@@ -204,6 +204,7 @@ class AgentState:
     total_pnl: float = 0.0
     dry_run: bool = True
     last_sell_entry_price: float = 0.0  # Trava de recompra: preço médio da última venda
+    last_sell_ts: float = 0.0  # Epoch da última venda (âncora temporal do envelope de recompra)
     trailing_high: float = 0.0  # Máxima atingida para trailing stop
     target_sell_price: float = 0.0  # Target de venda calculado pela IA no BUY
     target_sell_reason: str = ""  # Razão do cálculo do target
@@ -234,6 +235,7 @@ class AgentState:
             "total_pnl": self.total_pnl,
             "dry_run": self.dry_run,
             "last_sell_entry_price": self.last_sell_entry_price,
+            "last_sell_ts": self.last_sell_ts,
             "target_sell_price": self.target_sell_price,
             "target_sell_reason": self.target_sell_reason,
             "profile": self.profile,
@@ -532,18 +534,89 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         """Desconto mínimo abaixo do preço médio para liberar reforço."""
         return 0.01
 
-    def _resolve_rebuy_lock(self, rag_adj, controls: "TradeControls") -> tuple[bool, float, str]:
-        """Resolve trava de recompra: IA (RAG) tem prioridade sobre config estático.
+    def _resolve_rebuy_envelope(self, rag_adj, controls: "TradeControls",
+                                now: Optional[float] = None) -> Dict[str, Any]:
+        """Envelope determinístico de recompra + margem extra da IA (só aperta).
 
-        Returns:
-            (ativo, margem_pct, fonte) onde fonte é ``ai``, ``config`` ou ``off``.
+        O envelope é mecânico e SEMPRE ativo enquanto houver venda registrada —
+        independe de IA disponível ou de config. Falha da IA nunca desliga o freio.
+
+        Fases (relativas a ``last_sell_ts``):
+          - grace  (0..grace_hours): teto = last_sell — anti-churn, nada compra acima.
+          - decay  (após a graça): teto sobe ``decay_pct_per_hour`` linearmente.
+          - expired (prêmio >= max_premium_pct): limpa o lock (efeito colateral
+            intencional: zera last_sell_entry_price/last_sell_ts; chamada única
+            no caminho de BUY em _check_can_trade).
+
+        A IA só pode APERTAR: ``ceiling = envelope_ceiling * (1 - ai_margin)``,
+        com ai_margin clampado [0, 0.01] e aplicado apenas se o config
+        ``rebuy_lock_enabled`` permitir, a IA estiver quente (ai_controlled) e
+        ``ai_rebuy_lock_enabled`` for True. Regime BULLISH (ai_rebuy_lock_enabled
+        False) significa apenas margem zero — o envelope permanece.
+
+        Returns dict: active, phase (grace|decay|expired|off), ceiling,
+            envelope_ceiling, ai_margin_pct, elapsed_hours, last_sell, source.
         """
-        if controls.ai_controlled and bool(getattr(rag_adj, "ai_rebuy_lock_enabled", False)):
-            margin_pct = float(getattr(rag_adj, "ai_rebuy_margin_pct", 0.0) or 0.0)
-            return True, max(0.0, min(margin_pct, 0.01)), "ai"
-        if self._load_live_config().get("rebuy_lock_enabled", True):
-            return True, 0.0, "config"
-        return False, 0.0, "off"
+        last_sell = float(getattr(self.state, "last_sell_entry_price", 0.0) or 0.0)
+        if last_sell <= 0:
+            return {
+                "active": False, "phase": "off", "ceiling": 0.0,
+                "envelope_ceiling": 0.0, "ai_margin_pct": 0.0,
+                "elapsed_hours": 0.0, "last_sell": 0.0, "source": "off",
+            }
+
+        cfg = self._load_live_config()
+        env_cfg = cfg.get("rebuy_envelope") or {}
+        grace_hours = min(max(float(env_cfg.get("grace_hours", 2.0)), 0.0), 24.0)
+        decay_pct_h = min(max(float(env_cfg.get("decay_pct_per_hour", 0.25)), 0.01), 5.0)
+        max_premium = min(max(float(env_cfg.get("max_premium_pct", 5.0)), 0.5), 20.0)
+
+        now = time.time() if now is None else now
+        sell_ts = float(getattr(self.state, "last_sell_ts", 0.0) or 0.0)
+        if sell_ts <= 0:
+            # Self-heal (estado legado sem âncora temporal): graça começa agora.
+            self.state.last_sell_ts = sell_ts = now
+        elapsed_h = max(0.0, (now - sell_ts) / 3600.0)
+
+        if elapsed_h <= grace_hours:
+            phase, premium_pct = "grace", 0.0
+        else:
+            premium_pct = (elapsed_h - grace_hours) * decay_pct_h
+            if premium_pct >= max_premium:
+                logger.info(
+                    "🔓 REBUY envelope expirado após %.1fh (teto atingiu +%.2f%% "
+                    "sobre $%.2f) — lock liberado",
+                    elapsed_h, max_premium, last_sell,
+                )
+                self.state.last_sell_entry_price = 0.0
+                self.state.last_sell_ts = 0.0
+                return {
+                    "active": False, "phase": "expired", "ceiling": 0.0,
+                    "envelope_ceiling": 0.0, "ai_margin_pct": 0.0,
+                    "elapsed_hours": elapsed_h, "last_sell": last_sell,
+                    "source": "expired",
+                }
+            phase = "decay"
+
+        envelope_ceiling = last_sell * (1.0 + premium_pct / 100.0)
+
+        ai_margin = 0.0
+        if (cfg.get("rebuy_lock_enabled", True)
+                and controls.ai_controlled
+                and bool(getattr(rag_adj, "ai_rebuy_lock_enabled", True))):
+            ai_margin = max(0.0, min(
+                float(getattr(rag_adj, "ai_rebuy_margin_pct", 0.0) or 0.0), 0.01))
+
+        return {
+            "active": True,
+            "phase": phase,
+            "ceiling": envelope_ceiling * (1.0 - ai_margin),
+            "envelope_ceiling": envelope_ceiling,
+            "ai_margin_pct": ai_margin,
+            "elapsed_hours": elapsed_h,
+            "last_sell": last_sell,
+            "source": "envelope+ai" if ai_margin > 0 else f"envelope_{phase}",
+        }
 
     def _resolve_dynamic_buy_batch_limit(self, remaining_exposure: float) -> Dict[str, float]:
         """Resolve o cap dinâmico por lote usando a pressão recente do profile."""
@@ -3632,9 +3705,14 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     total_ct = sum((b.get("size", 0) or 0) * (b.get("price", 0) or 0) for b in buys_before_sell)
                     if total_sz > 0:
                         self.state.last_sell_entry_price = total_ct / total_sz
+                        self.state.last_sell_ts = (
+                            float(last_sell.get("timestamp") or 0.0) or time.time()
+                        )
+                        sell_age_h = max(0.0, (time.time() - self.state.last_sell_ts) / 3600.0)
                         logger.info(
                             f"🔒 REBUY lock restaurado: próxima reentrada deve ser "
-                            f"abaixo de ${self.state.last_sell_entry_price:,.2f}"
+                            f"abaixo de ${self.state.last_sell_entry_price:,.2f} "
+                            f"(venda há {sell_age_h:.1f}h — envelope grace/decay aplica)"
                         )
             logger.info(f"📭 Last trade was sell — no open position")
             return
@@ -4462,35 +4540,32 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         elif signal.action == "SELL" and context["strong_bearish"]:
             min_confidence = max(0.45, min_confidence - 0.05)
 
-        # REBUY lock: IA (ai_rebuy_lock_enabled + ai_rebuy_margin_pct) ou config estático.
+        # REBUY lock: envelope determinístico (grace→decay→expired) + margem IA dentro.
         if signal.action == "BUY":
-            rebuy_active, rebuy_margin_pct, rebuy_source = self._resolve_rebuy_lock(rag_adj, controls)
-            if rebuy_active:
-                try:
-                    last_sell = float(getattr(self.state, "last_sell_entry_price", 0.0) or 0.0)
-                    if last_sell > 0:
-                        price = float(getattr(signal, "price", 0.0) or 0.0)
-                        max_buy_price = last_sell * (1.0 - rebuy_margin_pct)
-                        if price >= max_buy_price:
-                            margin_label = (
-                                f", alvo < ${max_buy_price:,.2f} (margem {rebuy_margin_pct * 100:.2f}%)"
-                                if rebuy_margin_pct > 0 else ""
-                            )
-                            source_label = "IA" if rebuy_source == "ai" else "config"
-                            logger.info(
-                                f"🔒 REBUY blocked [{source_label}]: preço ${price:,.2f} >= "
-                                f"entrada da última venda ${last_sell:,.2f}{margin_label} — aguardando desconto"
-                            )
-                            return self._block_trade(
-                                "buy_rebuy_lock_last_sell",
-                                price=price,
-                                last_sell_entry_price=last_sell,
-                                rebuy_max_price=max_buy_price,
-                                rebuy_margin_pct=rebuy_margin_pct,
-                                rebuy_source=rebuy_source,
-                            )
-                except Exception:
-                    logger.debug("Erro ao aplicar rebuy lock; ignorando bloqueio")
+            try:
+                env = self._resolve_rebuy_envelope(rag_adj, controls)
+                if env["active"]:
+                    price = float(getattr(signal, "price", 0.0) or 0.0)
+                    if price >= env["ceiling"]:
+                        logger.info(
+                            f"🔒 REBUY blocked [{env['source']}]: preço ${price:,.2f} >= "
+                            f"teto ${env['ceiling']:,.2f} (venda ${env['last_sell']:,.2f} "
+                            f"há {env['elapsed_hours']:.1f}h, fase={env['phase']}, "
+                            f"margem IA {env['ai_margin_pct'] * 100:.2f}%)"
+                        )
+                        return self._block_trade(
+                            "buy_rebuy_lock_last_sell",
+                            price=price,
+                            last_sell_entry_price=env["last_sell"],
+                            rebuy_max_price=env["ceiling"],
+                            rebuy_envelope_ceiling=env["envelope_ceiling"],
+                            rebuy_margin_pct=env["ai_margin_pct"],
+                            rebuy_phase=env["phase"],
+                            rebuy_elapsed_hours=round(env["elapsed_hours"], 2),
+                            rebuy_source=env["source"],
+                        )
+            except Exception:
+                logger.debug("Erro ao aplicar rebuy envelope; ignorando bloqueio")
 
         if signal.action == "SELL":
             guardrail_sell = self._get_guardrail_sell_verdict(signal.price)
@@ -5213,6 +5288,7 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     # REBUY lock: liberar após qualquer BUY confirmado na exchange.
                     if self.state.last_sell_entry_price > 0:
                         self.state.last_sell_entry_price = 0.0
+                        self.state.last_sell_ts = 0.0
                         logger.info("🔓 REBUY lock liberado após compra confirmada")
                     
                     logger.info(
@@ -5367,9 +5443,10 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                     
                     # Trava de recompra: salvar preço de entrada antes de zerar
                     self.state.last_sell_entry_price = self.state.entry_price
+                    self.state.last_sell_ts = time.time()
                     logger.info(
                         f"🔒 Rebuy lock set: next BUY only when price < "
-                        f"${self.state.entry_price:,.2f}"
+                        f"${self.state.entry_price:,.2f} (envelope: graça + decay)"
                     )
                     
                     self.state.position = 0

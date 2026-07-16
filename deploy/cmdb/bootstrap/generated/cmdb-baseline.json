@@ -1,21 +1,21 @@
 {
-  "generated_at": "2026-07-15T01:43:27.593658+00:00",
+  "generated_at": "2026-07-16T18:24:51.611516+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 182,
+    "repo_services": 170,
     "trading_instances": 12,
-    "critical_services": 72,
+    "critical_services": 66,
     "domains": {
       "identity": 4,
-      "monitoring": 16,
-      "network": 20,
-      "operations": 101,
+      "monitoring": 14,
+      "network": 16,
+      "operations": 93,
       "storage": 32,
-      "trading": 9
+      "trading": 11
     }
   },
   "trading_instances": [
@@ -286,14 +286,6 @@
       "candidate_system": "NetBox service model"
     },
     {
-      "name": "conube-exporter.service",
-      "domain": "monitoring",
-      "kind": "systemd",
-      "source": "tools/systemd/conube-exporter.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
       "name": "eddie_central_extended_metrics.service",
       "domain": "monitoring",
       "kind": "systemd",
@@ -314,14 +306,6 @@
       "domain": "monitoring",
       "kind": "systemd",
       "source": "systemd/job-monitor.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "kwai-exporter.service",
-      "domain": "monitoring",
-      "kind": "systemd",
-      "source": "tools/systemd/kwai-exporter.service",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -370,38 +354,6 @@
       "domain": "network",
       "kind": "systemd",
       "source": "tools/tunnels/cloudflared-named@.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "cloudflared-tunnel-guardian.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/cloudflared-tunnel-guardian.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "cloudflared-tunnel-guardian.timer",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/cloudflared-tunnel-guardian.timer",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "cloudflared-vpn-routes.service",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/cloudflared-vpn-routes.service",
-      "recommended_owner": "platform",
-      "candidate_system": "NetBox service model"
-    },
-    {
-      "name": "cloudflared-vpn-routes.timer",
-      "domain": "network",
-      "kind": "systemd",
-      "source": "systemd/cloudflared-vpn-routes.timer",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -518,14 +470,6 @@
       "candidate_system": "NetBox service model"
     },
     {
-      "name": "freecash-browser",
-      "domain": "operations",
-      "kind": "compose",
-      "source": "docker/docker-compose.freecash-browser.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
       "name": "glpi",
       "domain": "operations",
       "kind": "compose",
@@ -538,14 +482,6 @@
       "domain": "operations",
       "kind": "compose",
       "source": "deploy/cmdb/docker-compose.yml",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "kwai-browser",
-      "domain": "operations",
-      "kind": "compose",
-      "source": "docker/docker-compose.kwai-browser.yml",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -954,54 +890,6 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/journal-ingestor.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "kwai-balance-scrape.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/kwai-balance-scrape.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "kwai-balance-scrape.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/kwai-balance-scrape.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "kwai-viewer-homelab.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/kwai-viewer-homelab.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "kwai-viewer-homelab.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/kwai-viewer-homelab.timer",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "kwai-viewer.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/kwai-viewer.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "kwai-viewer.timer",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/kwai-viewer.timer",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -1622,6 +1510,22 @@
       "candidate_system": "GLPI review"
     },
     {
+      "name": "kucoin-usdt-rebalance.service",
+      "domain": "trading",
+      "kind": "systemd",
+      "source": "systemd/kucoin-usdt-rebalance.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "kucoin-usdt-rebalance.timer",
+      "domain": "trading",
+      "kind": "systemd",
+      "source": "systemd/kucoin-usdt-rebalance.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
       "name": "trading-analyst-weekly-retrain.service",
       "domain": "trading",
       "kind": "systemd",
@@ -1972,13 +1876,6 @@
         "critical": true
       },
       {
-        "name": "conube-exporter.service",
-        "domain": "monitoring",
-        "source": "tools/systemd/conube-exporter.service",
-        "kind": "systemd",
-        "critical": true
-      },
-      {
         "name": "eddie_central_extended_metrics.service",
         "domain": "monitoring",
         "source": "systemd/eddie_central_extended_metrics.service",
@@ -1996,13 +1893,6 @@
         "name": "job-monitor.service",
         "domain": "monitoring",
         "source": "systemd/job-monitor.service",
-        "kind": "systemd",
-        "critical": true
-      },
-      {
-        "name": "kwai-exporter.service",
-        "domain": "monitoring",
-        "source": "tools/systemd/kwai-exporter.service",
         "kind": "systemd",
         "critical": true
       },
@@ -2045,34 +1935,6 @@
         "name": "cloudflared-named@.service",
         "domain": "network",
         "source": "tools/tunnels/cloudflared-named@.service",
-        "kind": "systemd",
-        "critical": true
-      },
-      {
-        "name": "cloudflared-tunnel-guardian.service",
-        "domain": "network",
-        "source": "systemd/cloudflared-tunnel-guardian.service",
-        "kind": "systemd",
-        "critical": true
-      },
-      {
-        "name": "cloudflared-tunnel-guardian.timer",
-        "domain": "network",
-        "source": "systemd/cloudflared-tunnel-guardian.timer",
-        "kind": "systemd",
-        "critical": true
-      },
-      {
-        "name": "cloudflared-vpn-routes.service",
-        "domain": "network",
-        "source": "systemd/cloudflared-vpn-routes.service",
-        "kind": "systemd",
-        "critical": true
-      },
-      {
-        "name": "cloudflared-vpn-routes.timer",
-        "domain": "network",
-        "source": "systemd/cloudflared-vpn-routes.timer",
         "kind": "systemd",
         "critical": true
       },

@@ -1,21 +1,21 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-15T01:43:27.593658+00:00`
+- Generated at: `2026-07-16T18:24:51.611516+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `182`
-- Critical services flagged for MVP: `72`
+- Repo services discovered: `170`
+- Critical services flagged for MVP: `66`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
 - `identity`: 4
-- `monitoring`: 16
-- `network`: 20
-- `operations`: 101
+- `monitoring`: 14
+- `network`: 16
+- `operations`: 93
 - `storage`: 32
-- `trading`: 9
+- `trading`: 11
 
 ## Trading profile instances (`12`)
 
@@ -49,21 +49,15 @@
 - `prometheus` (monitoring, compose) from `docker/docker-compose.grafana.yml`
 - `agent-network-exporter.service` (monitoring, systemd) from `tools/systemd/agent-network-exporter.service`
 - `banking-metrics-exporter.service` (monitoring, systemd) from `systemd/banking-metrics-exporter.service`
-- `conube-exporter.service` (monitoring, systemd) from `tools/systemd/conube-exporter.service`
 - `eddie_central_extended_metrics.service` (monitoring, systemd) from `systemd/eddie_central_extended_metrics.service`
 - `grafana-selfheal.service` (monitoring, systemd) from `systemd/grafana-selfheal.service`
 - `job-monitor.service` (monitoring, systemd) from `systemd/job-monitor.service`
-- `kwai-exporter.service` (monitoring, systemd) from `tools/systemd/kwai-exporter.service`
 - `monitoring-containers-bootstrap.service` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.service`
 - `rss-sentiment-exporter.service` (monitoring, systemd) from `systemd/rss-sentiment-exporter.service`
 - `storj-exporter.service` (monitoring, systemd) from `deploy/storj-exporter.service`
 - `tape-component-quality-exporter.service` (monitoring, systemd) from `systemd/tape-component-quality-exporter.service`
 - `proxy` (network, compose) from `deploy/cmdb/docker-compose.yml`
 - `cloudflared-named@.service` (network, systemd) from `tools/tunnels/cloudflared-named@.service`
-- `cloudflared-tunnel-guardian.service` (network, systemd) from `systemd/cloudflared-tunnel-guardian.service`
-- `cloudflared-tunnel-guardian.timer` (network, systemd) from `systemd/cloudflared-tunnel-guardian.timer`
-- `cloudflared-vpn-routes.service` (network, systemd) from `systemd/cloudflared-vpn-routes.service`
-- `cloudflared-vpn-routes.timer` (network, systemd) from `systemd/cloudflared-vpn-routes.timer`
 - `cloudflared.service` (network, systemd) from `tools/tunnels/cloudflared/cloudflared.service`
 - `dhcp-selfheal.service` (network, systemd) from `systemd/dhcp-selfheal.service`
 - `homelab-lan-gateway.service` (network, systemd) from `deploy/vpn/homelab-lan-gateway.service`
@@ -78,6 +72,12 @@
 - `rpa4all-ddns-server.service` (network, systemd) from `deploy/vpn/rpa4all-ddns-server.service`
 - `rpa4all-vpn-ddns.service` (network, systemd) from `deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service`
 - `wireguard-nat.service` (network, systemd) from `deploy/vpn/wireguard-nat.service`
+- `disk-clean.service` (storage, systemd) from `systemd/disk-clean.service`
+- `disk-clean.timer` (storage, systemd) from `systemd/disk-clean.timer`
+- `disk-spindown.service` (storage, systemd) from `tools/homelab/disk-spindown.service`
+- `homelab-disk-backup.service` (storage, systemd) from `tools/backup/homelab-disk-backup.service`
+- `homelab-tape-log-drain-nextcloud.service` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.service`
+- `homelab-tape-log-drain-nextcloud.timer` (storage, systemd) from `systemd/homelab-tape-log-drain-nextcloud.timer`
 
 ## Serviços anotados manualmente
 
