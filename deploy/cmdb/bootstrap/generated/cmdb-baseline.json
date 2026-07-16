@@ -1,12 +1,12 @@
 {
-  "generated_at": "2026-07-16T18:24:29.968872+00:00",
+  "generated_at": "2026-07-16T18:24:51.611516+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 168,
+    "repo_services": 170,
     "trading_instances": 12,
     "critical_services": 66,
     "domains": {
@@ -15,7 +15,7 @@
       "network": 16,
       "operations": 93,
       "storage": 32,
-      "trading": 9
+      "trading": 11
     }
   },
   "trading_instances": [
@@ -1506,6 +1506,22 @@
       "domain": "trading",
       "kind": "systemd",
       "source": "systemd/kucoin-postgres-sync.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "kucoin-usdt-rebalance.service",
+      "domain": "trading",
+      "kind": "systemd",
+      "source": "systemd/kucoin-usdt-rebalance.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "kucoin-usdt-rebalance.timer",
+      "domain": "trading",
+      "kind": "systemd",
+      "source": "systemd/kucoin-usdt-rebalance.timer",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
