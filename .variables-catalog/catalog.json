@@ -1,156 +1,9 @@
 {
   "catalogVersion": "1.0.0",
-  "generatedAt": "2026-07-14T22:29:22.627999",
+  "generatedAt": "2026-07-16T22:02:16.706426",
   "environment": "production",
   "categories": {
     "services": {
-      "WIKI_API": {
-        "name": "WIKI_API",
-        "type": "url",
-        "source": ".env",
-        "value": "http://192.168.15.2:3009/graphql",
-        "locations": [
-          {
-            "file": ".env",
-            "line": 3
-          },
-          {
-            "file": ".env.example.wiki",
-            "line": 2
-          },
-          {
-            "file": ".env",
-            "line": 3
-          }
-        ],
-        "contexts": []
-      },
-      "WIKI_PUBLIC": {
-        "name": "WIKI_PUBLIC",
-        "type": "url",
-        "source": ".env",
-        "value": "https://wiki.rpa4all.com",
-        "locations": [
-          {
-            "file": ".env",
-            "line": 4
-          },
-          {
-            "file": ".env.example.wiki",
-            "line": 3
-          },
-          {
-            "file": ".env",
-            "line": 4
-          }
-        ],
-        "contexts": []
-      },
-      "WIKI_OLLAMA_API": {
-        "name": "WIKI_OLLAMA_API",
-        "type": "url",
-        "source": ".env",
-        "value": "http://192.168.15.2:11437/api",
-        "locations": [
-          {
-            "file": ".env",
-            "line": 6
-          },
-          {
-            "file": ".env.example.wiki",
-            "line": 5
-          },
-          {
-            "file": ".env",
-            "line": 6
-          }
-        ],
-        "contexts": []
-      },
-      "WIKI_OLLAMA_MODEL": {
-        "name": "WIKI_OLLAMA_MODEL",
-        "type": "string",
-        "source": ".env",
-        "value": "qwen3:8b",
-        "locations": [
-          {
-            "file": ".env",
-            "line": 7
-          },
-          {
-            "file": ".env.example.wiki",
-            "line": 6
-          },
-          {
-            "file": ".env",
-            "line": 7
-          }
-        ],
-        "contexts": []
-      },
-      "WIKI_LOCALE": {
-        "name": "WIKI_LOCALE",
-        "type": "string",
-        "source": ".env",
-        "value": "en",
-        "locations": [
-          {
-            "file": ".env",
-            "line": 8
-          },
-          {
-            "file": ".env.example.wiki",
-            "line": 7
-          },
-          {
-            "file": ".env",
-            "line": 8
-          }
-        ],
-        "contexts": []
-      },
-      "WIKI_TIMEOUT": {
-        "name": "WIKI_TIMEOUT",
-        "type": "integer",
-        "source": ".env",
-        "value": "90",
-        "locations": [
-          {
-            "file": ".env",
-            "line": 9
-          },
-          {
-            "file": ".env.example.wiki",
-            "line": 8
-          },
-          {
-            "file": ".env",
-            "line": 9
-          }
-        ],
-        "contexts": []
-      },
-      "PAGES_FILE": {
-        "name": "PAGES_FILE",
-        "type": "string",
-        "source": ".env",
-        "value": "wiki_pages.json",
-        "locations": [
-          {
-            "file": ".env",
-            "line": 10
-          },
-          {
-            "file": ".env.example.wiki",
-            "line": 9
-          },
-          {
-            "file": ".env",
-            "line": 10
-          }
-        ],
-        "contexts": []
-      },
       "OPENAI_COMPATIBLE_ENABLED": {
         "name": "OPENAI_COMPATIBLE_ENABLED",
         "type": "string",
@@ -221,83 +74,102 @@
         "value": "5",
         "locations": [
           {
-            "file": ".env",
-            "line": 22
-          },
-          {
             "file": ".env.openai-compatible.example",
             "line": 39
-          },
-          {
-            "file": ".env",
-            "line": 22
           }
         ],
         "contexts": []
       },
-      "NEXTCLOUD_URL": {
-        "name": "NEXTCLOUD_URL",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config",
-          "configure_authentik_nextcloud_oidc"
-        ]
+      "WIKI_API": {
+        "name": "WIKI_API",
+        "type": "url",
+        "source": ".env",
+        "value": "http://<homelab-ip>:3009/graphql",
+        "locations": [
+          {
+            "file": ".env.example.wiki",
+            "line": 2
+          }
+        ],
+        "contexts": []
       },
-      "NEXTCLOUD_ADMIN_USER": {
-        "name": "NEXTCLOUD_ADMIN_USER",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
+      "WIKI_PUBLIC": {
+        "name": "WIKI_PUBLIC",
+        "type": "url",
+        "source": ".env",
+        "value": "https://wiki.rpa4all.com",
+        "locations": [
+          {
+            "file": ".env.example.wiki",
+            "line": 3
+          }
+        ],
+        "contexts": []
       },
-      "NEXTCLOUD_CONTAINER": {
-        "name": "NEXTCLOUD_CONTAINER",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
+      "WIKI_OLLAMA_API": {
+        "name": "WIKI_OLLAMA_API",
+        "type": "url",
+        "source": ".env",
+        "value": "http://<homelab-ip>:11437/api",
+        "locations": [
+          {
+            "file": ".env.example.wiki",
+            "line": 5
+          }
+        ],
+        "contexts": []
       },
-      "NEXTCLOUD_AGENT_ENABLED": {
-        "name": "NEXTCLOUD_AGENT_ENABLED",
+      "WIKI_OLLAMA_MODEL": {
+        "name": "WIKI_OLLAMA_MODEL",
         "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
+        "source": ".env",
+        "value": "qwen3:8b",
+        "locations": [
+          {
+            "file": ".env.example.wiki",
+            "line": 6
+          }
+        ],
+        "contexts": []
       },
-      "NEXTCLOUD_OLLAMA_GPU": {
-        "name": "NEXTCLOUD_OLLAMA_GPU",
+      "WIKI_LOCALE": {
+        "name": "WIKI_LOCALE",
         "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
+        "source": ".env",
+        "value": "en",
+        "locations": [
+          {
+            "file": ".env.example.wiki",
+            "line": 7
+          }
+        ],
+        "contexts": []
       },
-      "NEXTCLOUD_OLLAMA_TIMEOUT": {
-        "name": "NEXTCLOUD_OLLAMA_TIMEOUT",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
+      "WIKI_TIMEOUT": {
+        "name": "WIKI_TIMEOUT",
+        "type": "integer",
+        "source": ".env",
+        "value": "90",
+        "locations": [
+          {
+            "file": ".env.example.wiki",
+            "line": 8
+          }
+        ],
+        "contexts": []
       },
-      "NEXTCLOUD_DEFAULT_DRY_RUN": {
-        "name": "NEXTCLOUD_DEFAULT_DRY_RUN",
+      "PAGES_FILE": {
+        "name": "PAGES_FILE",
         "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
+        "source": ".env",
+        "value": "wiki_pages.json",
+        "locations": [
+          {
+            "file": ".env.example.wiki",
+            "line": 9
+          }
+        ],
+        "contexts": []
       },
       "GEMINI_ENABLED": {
         "name": "GEMINI_ENABLED",
@@ -327,11 +199,11 @@
         "source": "docker-compose",
         "value": "${MAILU_DOMAIN:-mail.rpa4all.com}",
         "contexts": [
-          "mailu-dovecot",
-          "mailu-frontend",
+          "mailu-backend",
           "mailu-roundcube",
           "mailu-postfix",
-          "mailu-backend"
+          "mailu-frontend",
+          "mailu-dovecot"
         ]
       },
       "ADMIN_EMAIL": {
@@ -957,19 +829,6 @@
           "glpi"
         ]
       },
-      "METRICS_PORT": {
-        "name": "METRICS_PORT",
-        "type": "integer",
-        "source": ".env",
-        "value": "9099",
-        "locations": [
-          {
-            "file": "btc_trading_agent/BTC_USDT_shadow.env",
-            "line": 1
-          }
-        ],
-        "contexts": []
-      },
       "LTFS_SERVICE": {
         "name": "LTFS_SERVICE",
         "type": "string",
@@ -1152,93 +1011,15 @@
         ],
         "contexts": []
       },
-      "KWAI_START_URL": {
-        "name": "KWAI_START_URL",
-        "type": "url",
+      "METRICS_PORT": {
+        "name": "METRICS_PORT",
+        "type": "integer",
         "source": ".env",
-        "value": "https://www.kwai.com/discover",
+        "value": "9099",
         "locations": [
           {
-            "file": "config/kwai-viewer.homelab.env",
+            "file": "btc_trading_agent/BTC_USDT_shadow.env",
             "line": 1
-          }
-        ],
-        "contexts": []
-      },
-      "KWAI_VIDEOS_PER_SESSION": {
-        "name": "KWAI_VIDEOS_PER_SESSION",
-        "type": "integer",
-        "source": ".env",
-        "value": "5",
-        "locations": [
-          {
-            "file": "config/kwai-viewer.homelab.env",
-            "line": 2
-          }
-        ],
-        "contexts": []
-      },
-      "KWAI_WATCH_SECONDS": {
-        "name": "KWAI_WATCH_SECONDS",
-        "type": "integer",
-        "source": ".env",
-        "value": "20",
-        "locations": [
-          {
-            "file": "config/kwai-viewer.homelab.env",
-            "line": 3
-          }
-        ],
-        "contexts": []
-      },
-      "KWAI_VIEWER_DATA_DIR": {
-        "name": "KWAI_VIEWER_DATA_DIR",
-        "type": "path",
-        "source": ".env",
-        "value": "/var/lib/eddie/kwai-viewer",
-        "locations": [
-          {
-            "file": "config/kwai-viewer.homelab.env",
-            "line": 4
-          }
-        ],
-        "contexts": []
-      },
-      "KWAI_CHROME_BINARY": {
-        "name": "KWAI_CHROME_BINARY",
-        "type": "path",
-        "source": ".env",
-        "value": "/usr/bin/chromium-browser",
-        "locations": [
-          {
-            "file": "config/kwai-viewer.homelab.env",
-            "line": 5
-          }
-        ],
-        "contexts": []
-      },
-      "KWAI_HEADLESS": {
-        "name": "KWAI_HEADLESS",
-        "type": "boolean",
-        "source": ".env",
-        "value": "0",
-        "locations": [
-          {
-            "file": "config/kwai-viewer.homelab.env",
-            "line": 6
-          }
-        ],
-        "contexts": []
-      },
-      "KWAI_VIRTUAL_DISPLAY": {
-        "name": "KWAI_VIRTUAL_DISPLAY",
-        "type": "boolean",
-        "source": ".env",
-        "value": "1",
-        "locations": [
-          {
-            "file": "config/kwai-viewer.homelab.env",
-            "line": 7
           }
         ],
         "contexts": []
@@ -1282,6 +1063,69 @@
           }
         ],
         "contexts": []
+      },
+      "HA_ACTIVE": {
+        "name": "HA_ACTIVE",
+        "type": "boolean",
+        "source": "docker-compose",
+        "value": "false",
+        "contexts": [
+          "wikijs"
+        ]
+      },
+      "OIDC_ISSUER": {
+        "name": "OIDC_ISSUER",
+        "type": "url",
+        "source": "docker-compose",
+        "value": "http://authentik-server:9000",
+        "contexts": [
+          "wikijs"
+        ]
+      },
+      "OIDC_CLIENT_ID": {
+        "name": "OIDC_CLIENT_ID",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "wikijs-3cd3a4331641a2b7",
+        "contexts": [
+          "wikijs"
+        ]
+      },
+      "OIDC_REDIRECT_URI": {
+        "name": "OIDC_REDIRECT_URI",
+        "type": "url",
+        "source": "docker-compose",
+        "value": "http://192.168.15.2:3009/auth/oauth2/callback",
+        "contexts": [
+          "wikijs"
+        ]
+      },
+      "OIDC_USERINFO_ENDPOINT": {
+        "name": "OIDC_USERINFO_ENDPOINT",
+        "type": "url",
+        "source": "docker-compose",
+        "value": "http://authentik-server:9000/application/o/userinfo/",
+        "contexts": [
+          "wikijs"
+        ]
+      },
+      "OIDC_DISCOVERY": {
+        "name": "OIDC_DISCOVERY",
+        "type": "url",
+        "source": "docker-compose",
+        "value": "http://authentik-server:9000/application/o/.well-known/openid-configuration",
+        "contexts": [
+          "wikijs"
+        ]
+      },
+      "OIDC_SCOPE": {
+        "name": "OIDC_SCOPE",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "openid profile email",
+        "contexts": [
+          "wikijs"
+        ]
       },
       "HOSTNAME": {
         "name": "HOSTNAME",
@@ -1409,6 +1253,60 @@
           "postfix-exporter"
         ]
       },
+      "cluster.name": {
+        "name": "cluster.name",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "shared-cluster",
+        "contexts": [
+          "opensearch-node1"
+        ]
+      },
+      "node.name": {
+        "name": "node.name",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "shared-opensearch-node1",
+        "contexts": [
+          "opensearch-node1"
+        ]
+      },
+      "discovery.type": {
+        "name": "discovery.type",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "single-node",
+        "contexts": [
+          "opensearch-node1"
+        ]
+      },
+      "bootstrap.memory_lock": {
+        "name": "bootstrap.memory_lock",
+        "type": "boolean",
+        "source": "docker-compose",
+        "value": "true",
+        "contexts": [
+          "opensearch-node1"
+        ]
+      },
+      "OPENSEARCH_JAVA_OPTS": {
+        "name": "OPENSEARCH_JAVA_OPTS",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "-Xms1g -Xmx1g",
+        "contexts": [
+          "opensearch-node1"
+        ]
+      },
+      "OPENSEARCH_HOSTS": {
+        "name": "OPENSEARCH_HOSTS",
+        "type": "json",
+        "source": "docker-compose",
+        "value": "[\"https://shared-opensearch:9200\"]",
+        "contexts": [
+          "opensearch-dashboards"
+        ]
+      },
       "TLS_FLAVOR": {
         "name": "TLS_FLAVOR",
         "type": "string",
@@ -1524,11 +1422,9 @@
         "value": "America/Sao_Paulo",
         "contexts": [
           "netbox-postgres",
-          "kwai-browser",
           "grafana",
           "glpi",
-          "glpi-db",
-          "freecash-browser"
+          "glpi-db"
         ]
       },
       "GF_DEFAULT_TIMEZONE": {
@@ -1540,170 +1436,49 @@
           "grafana"
         ]
       },
-      "cluster.name": {
-        "name": "cluster.name",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "shared-cluster",
-        "contexts": [
-          "opensearch-node1"
-        ]
-      },
-      "node.name": {
-        "name": "node.name",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "shared-opensearch-node1",
-        "contexts": [
-          "opensearch-node1"
-        ]
-      },
-      "discovery.type": {
-        "name": "discovery.type",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "single-node",
-        "contexts": [
-          "opensearch-node1"
-        ]
-      },
-      "bootstrap.memory_lock": {
-        "name": "bootstrap.memory_lock",
-        "type": "boolean",
-        "source": "docker-compose",
-        "value": "true",
-        "contexts": [
-          "opensearch-node1"
-        ]
-      },
-      "OPENSEARCH_JAVA_OPTS": {
-        "name": "OPENSEARCH_JAVA_OPTS",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "-Xms1g -Xmx1g",
-        "contexts": [
-          "opensearch-node1"
-        ]
-      },
-      "OPENSEARCH_HOSTS": {
-        "name": "OPENSEARCH_HOSTS",
-        "type": "json",
-        "source": "docker-compose",
-        "value": "[\"https://shared-opensearch:9200\"]",
-        "contexts": [
-          "opensearch-dashboards"
-        ]
-      },
-      "HA_ACTIVE": {
-        "name": "HA_ACTIVE",
-        "type": "boolean",
-        "source": "docker-compose",
-        "value": "false",
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "OIDC_ISSUER": {
-        "name": "OIDC_ISSUER",
-        "type": "url",
-        "source": "docker-compose",
-        "value": "http://authentik-server:9000",
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "OIDC_CLIENT_ID": {
-        "name": "OIDC_CLIENT_ID",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "wikijs-3cd3a4331641a2b7",
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "OIDC_REDIRECT_URI": {
-        "name": "OIDC_REDIRECT_URI",
-        "type": "url",
-        "source": "docker-compose",
-        "value": "http://192.168.15.2:3009/auth/oauth2/callback",
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "OIDC_USERINFO_ENDPOINT": {
-        "name": "OIDC_USERINFO_ENDPOINT",
-        "type": "url",
-        "source": "docker-compose",
-        "value": "http://authentik-server:9000/application/o/userinfo/",
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "OIDC_DISCOVERY": {
-        "name": "OIDC_DISCOVERY",
-        "type": "url",
-        "source": "docker-compose",
-        "value": "http://authentik-server:9000/application/o/.well-known/openid-configuration",
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "OIDC_SCOPE": {
-        "name": "OIDC_SCOPE",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "openid profile email",
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "PUID": {
-        "name": "PUID",
+      "BAUDRATE": {
+        "name": "BAUDRATE",
         "type": "integer",
         "source": "docker-compose",
-        "value": "1000",
+        "value": "9600",
         "contexts": [
-          "freecash-browser",
-          "kwai-browser"
+          "printshare"
         ]
       },
-      "PGID": {
-        "name": "PGID",
-        "type": "integer",
-        "source": "docker-compose",
-        "value": "1000",
-        "contexts": [
-          "freecash-browser",
-          "kwai-browser"
-        ]
-      },
-      "CHROME_CLI": {
-        "name": "CHROME_CLI",
-        "type": "url",
-        "source": "docker-compose",
-        "value": "https://www.kwai.com/discover",
-        "contexts": [
-          "freecash-browser",
-          "kwai-browser"
-        ]
-      },
-      "CUSTOM_USER": {
-        "name": "CUSTOM_USER",
+      "PORT_HINT": {
+        "name": "PORT_HINT",
         "type": "string",
         "source": "docker-compose",
-        "value": "${REWARDS_BROWSER_USER:-rewards}",
+        "value": "PHOMEMO",
         "contexts": [
-          "freecash-browser",
-          "kwai-browser"
+          "printshare"
         ]
       },
-      "ROCKET_WORKERS": {
-        "name": "ROCKET_WORKERS",
-        "type": "integer",
+      "PHOMEMO_SCRIPT": {
+        "name": "PHOMEMO_SCRIPT",
+        "type": "path",
         "source": "docker-compose",
-        "value": "4",
+        "value": "/home/homelab/agents_workspace/phomemo_print.py",
         "contexts": [
-          "vaultwarden"
+          "printshare"
+        ]
+      },
+      "PRINTER_PORT": {
+        "name": "PRINTER_PORT",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "",
+        "contexts": [
+          "printshare"
+        ]
+      },
+      "CUPS_PRINTER": {
+        "name": "CUPS_PRINTER",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "L380",
+        "contexts": [
+          "printshare"
         ]
       },
       "ALLOWED_HOSTS": {
@@ -1876,49 +1651,67 @@
           "netbox-worker"
         ]
       },
-      "BAUDRATE": {
-        "name": "BAUDRATE",
+      "ROCKET_WORKERS": {
+        "name": "ROCKET_WORKERS",
         "type": "integer",
         "source": "docker-compose",
-        "value": "9600",
+        "value": "4",
         "contexts": [
-          "printshare"
+          "vaultwarden"
         ]
       },
-      "PORT_HINT": {
-        "name": "PORT_HINT",
+      "HA_CONTAINER": {
+        "name": "HA_CONTAINER",
         "type": "string",
-        "source": "docker-compose",
-        "value": "PHOMEMO",
+        "source": "systemd",
+        "value": "homeassistant",
         "contexts": [
-          "printshare"
+          "tuya-token-selfheal"
         ]
       },
-      "PHOMEMO_SCRIPT": {
-        "name": "PHOMEMO_SCRIPT",
+      "HA_CONFIG_ENTRIES": {
+        "name": "HA_CONFIG_ENTRIES",
         "type": "path",
-        "source": "docker-compose",
-        "value": "/home/homelab/agents_workspace/phomemo_print.py",
+        "source": "systemd",
+        "value": "/home/homelab/homeassistant/config/.storage/core.config_entries",
         "contexts": [
-          "printshare"
+          "tuya-token-selfheal"
         ]
       },
-      "PRINTER_PORT": {
-        "name": "PRINTER_PORT",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "",
+      "STATE_FILE": {
+        "name": "STATE_FILE",
+        "type": "path",
+        "source": "systemd",
+        "value": "/var/lib/tuya-selfheal/state.json",
         "contexts": [
-          "printshare"
+          "tuya-token-selfheal"
         ]
       },
-      "CUPS_PRINTER": {
-        "name": "CUPS_PRINTER",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "L380",
+      "PROM_FILE": {
+        "name": "PROM_FILE",
+        "type": "path",
+        "source": "systemd",
+        "value": "/var/lib/prometheus/node-exporter/tuya_token_selfheal.prom",
         "contexts": [
-          "printshare"
+          "tuya-token-selfheal"
+        ]
+      },
+      "MAX_HEALS_24H": {
+        "name": "MAX_HEALS_24H",
+        "type": "integer",
+        "source": "systemd",
+        "value": "3",
+        "contexts": [
+          "tuya-token-selfheal"
+        ]
+      },
+      "HA_BOOT_WAIT_S": {
+        "name": "HA_BOOT_WAIT_S",
+        "type": "integer",
+        "source": "systemd",
+        "value": "300",
+        "contexts": [
+          "tuya-token-selfheal"
         ]
       },
       "PYTHONUNBUFFERED": {
@@ -1927,129 +1720,59 @@
         "source": "systemd",
         "value": "1",
         "contexts": [
-          "coordinator",
-          "rss-sentiment-exporter",
           "marketing-x-posts",
-          "crypto-agent@",
-          "marketing-daily-report",
-          "candle-collector",
-          "notebook-power-agent",
-          "meeting-translator",
-          "approval-gateway",
-          "daily-agenda-panel",
-          "banking-metrics-exporter",
-          "ollama-gpu-coordinator",
           "eddie-expurgo",
-          "agent-network-exporter",
-          "marketing-email-drip",
-          "clear-trading-agent",
-          "daily-agenda-broadcast",
-          "marketing-api",
-          "eddie-telegram-bot",
-          "tape-component-quality-exporter",
-          "bn-acervo-agent",
-          "trading-daily-report",
-          "diretor",
           "eddie-calendar",
-          "kucoin-postgres-sync",
-          "trading-analyst-weekly-retrain"
+          "coordinator",
+          "crypto-agent@",
+          "approval-gateway",
+          "eddie-telegram-bot",
+          "marketing-email-drip",
+          "daily-agenda-panel",
+          "tape-component-quality-exporter",
+          "clear-trading-agent",
+          "bn-acervo-agent",
+          "marketing-api",
+          "marketing-daily-report",
+          "ollama-gpu-coordinator",
+          "banking-metrics-exporter",
+          "candle-collector",
+          "diretor",
+          "kucoin-usdt-rebalance",
+          "notebook-power-agent",
+          "trading-analyst-weekly-retrain",
+          "trading-daily-report",
+          "meeting-translator",
+          "daily-agenda-broadcast",
+          "rss-sentiment-exporter",
+          "agent-network-exporter",
+          "kucoin-postgres-sync"
+        ]
+      },
+      "NARRATOR_STATE_FILE": {
+        "name": "NARRATOR_STATE_FILE",
+        "type": "path",
+        "source": "systemd",
+        "value": "/var/lib/tape-quality/narrator_state.json",
+        "contexts": [
+          "tape-quality-ollama-narrator"
         ]
       },
       "PYTHONPATH": {
         "name": "PYTHONPATH",
         "type": "path",
         "source": "systemd",
-        "value": "/home/homelab/eddie-auto-dev",
+        "value": "/var/db/ltfs-tools/libs",
         "contexts": [
-          "marketing-api",
           "tape-component-quality-exporter",
-          "llm-log-panel",
-          "rss-sentiment-exporter",
           "marketing-x-posts",
-          "ollama-finetune",
           "marketing-daily-report",
-          "kwai-viewer-homelab",
-          "marketing-email-drip",
+          "ollama-finetune",
           "clear-trading-agent",
-          "candle-collector"
-        ]
-      },
-      "X_AGENT_URL": {
-        "name": "X_AGENT_URL",
-        "type": "url",
-        "source": "systemd",
-        "value": "http://localhost:8515",
-        "contexts": [
-          "marketing-x-posts"
-        ]
-      },
-      "OLLAMA_GPU0_HOST": {
-        "name": "OLLAMA_GPU0_HOST",
-        "type": "url",
-        "source": "systemd",
-        "value": "http://192.168.15.2:11434",
-        "contexts": [
-          "ollama-gpu-coordinator"
-        ]
-      },
-      "OLLAMA_GPU1_HOST": {
-        "name": "OLLAMA_GPU1_HOST",
-        "type": "url",
-        "source": "systemd",
-        "value": "http://192.168.15.2:11435",
-        "contexts": [
-          "ollama-gpu-coordinator"
-        ]
-      },
-      "GPU_COORD_PORT": {
-        "name": "GPU_COORD_PORT",
-        "type": "integer",
-        "source": "systemd",
-        "value": "11437",
-        "contexts": [
-          "ollama-gpu-coordinator"
-        ]
-      },
-      "GPU_COORD_BUSY_WAIT_SEC": {
-        "name": "GPU_COORD_BUSY_WAIT_SEC",
-        "type": "integer",
-        "source": "systemd",
-        "value": "10",
-        "contexts": [
-          "ollama-gpu-coordinator"
-        ]
-      },
-      "GPU_COORD_REQUEST_TIMEOUT_SEC": {
-        "name": "GPU_COORD_REQUEST_TIMEOUT_SEC",
-        "type": "integer",
-        "source": "systemd",
-        "value": "180",
-        "contexts": [
-          "ollama-gpu-coordinator"
-        ]
-      },
-      "PYTHONDONTWRITEBYTECODE": {
-        "name": "PYTHONDONTWRITEBYTECODE",
-        "type": "boolean",
-        "source": "systemd",
-        "value": "1",
-        "contexts": [
-          "ollama-finetune",
           "rss-sentiment-exporter",
+          "marketing-api",
           "llm-log-panel",
-          "candle-collector"
-        ]
-      },
-      "HOME": {
-        "name": "HOME",
-        "type": "path",
-        "source": "systemd",
-        "value": "/apps/crypto-trader",
-        "contexts": [
-          "rss-sentiment-exporter",
-          "llm-log-panel",
-          "ollama-finetune",
-          "crypto-agent@",
+          "marketing-email-drip",
           "candle-collector"
         ]
       },
@@ -2060,309 +1783,15 @@
         "value": "/var/db/ltfs-patched/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         "contexts": [
           "tape-component-quality-exporter",
+          "kucoin-postgres-sync",
+          "kucoin-usdt-rebalance",
+          "github-agent",
           "specialized_agents-dashboard",
-          "job-monitor",
           "homelab-dashboard",
           "crypto-agent@",
-          "kucoin-postgres-sync",
-          "rpa4all-validation",
-          "github-agent",
-          "eddie-whatsapp-bot"
-        ]
-      },
-      "CHECK_INTERVAL": {
-        "name": "CHECK_INTERVAL",
-        "type": "integer",
-        "source": "systemd",
-        "value": "30",
-        "contexts": [
-          "dhcp-selfheal",
-          "grafana-selfheal"
-        ]
-      },
-      "DHCP_SERVICE": {
-        "name": "DHCP_SERVICE",
-        "type": "string",
-        "source": "systemd",
-        "value": "homelab-lan-dhcp.service",
-        "contexts": [
-          "dhcp-selfheal"
-        ]
-      },
-      "LEASES_FILE": {
-        "name": "LEASES_FILE",
-        "type": "path",
-        "source": "systemd",
-        "value": "/var/lib/misc/dnsmasq.leases",
-        "contexts": [
-          "dhcp-selfheal"
-        ]
-      },
-      "FIX_NFTABLES": {
-        "name": "FIX_NFTABLES",
-        "type": "path",
-        "source": "systemd",
-        "value": "/usr/local/bin/fix-dhcp-nftables.sh",
-        "contexts": [
-          "dhcp-selfheal"
-        ]
-      },
-      "DHCP_RANGE_START": {
-        "name": "DHCP_RANGE_START",
-        "type": "string",
-        "source": "systemd",
-        "value": "192.168.15.60",
-        "contexts": [
-          "dhcp-selfheal"
-        ]
-      },
-      "DHCP_RANGE_END": {
-        "name": "DHCP_RANGE_END",
-        "type": "string",
-        "source": "systemd",
-        "value": "192.168.15.200",
-        "contexts": [
-          "dhcp-selfheal"
-        ]
-      },
-      "MAX_STUCK_SECONDS": {
-        "name": "MAX_STUCK_SECONDS",
-        "type": "integer",
-        "source": "systemd",
-        "value": "300",
-        "contexts": [
-          "dhcp-selfheal"
-        ]
-      },
-      "MAX_RESTARTS_HOUR": {
-        "name": "MAX_RESTARTS_HOUR",
-        "type": "integer",
-        "source": "systemd",
-        "value": "5",
-        "contexts": [
-          "dhcp-selfheal",
-          "grafana-selfheal"
-        ]
-      },
-      "AGENDA_YOUTUBE_CHANNEL_ID": {
-        "name": "AGENDA_YOUTUBE_CHANNEL_ID",
-        "type": "string",
-        "source": "systemd",
-        "value": "UCEyYr2YE1HLDTKT4cnMefmw",
-        "contexts": [
-          "daily-agenda-panel",
-          "daily-agenda-broadcast"
-        ]
-      },
-      "CLEAR_CONFIG_FILE": {
-        "name": "CLEAR_CONFIG_FILE",
-        "type": "string",
-        "source": "systemd",
-        "value": "config_%I.json",
-        "contexts": [
-          "clear-trading-agent",
-          "clear-agent@"
-        ]
-      },
-      "ROUTE_NAME": {
-        "name": "ROUTE_NAME",
-        "type": "string",
-        "source": "systemd",
-        "value": "tape_sg1",
-        "contexts": [
-          "homelab-tape-log-drain-nextcloud",
-          "homelab-tape-log-drain-sg1"
-        ]
-      },
-      "ROUTE_TARGET_ROOT": {
-        "name": "ROUTE_TARGET_ROOT",
-        "type": "path",
-        "source": "systemd",
-        "value": "/mnt/tape_sg1/logs",
-        "contexts": [
-          "homelab-tape-log-drain-nextcloud",
-          "homelab-tape-log-drain-sg1"
-        ]
-      },
-      "WHATSAPP_NUMBER": {
-        "name": "WHATSAPP_NUMBER",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
-      },
-      "WAHA_URL": {
-        "name": "WAHA_URL",
-        "type": "url",
-        "source": "systemd",
-        "value": "http://localhost:3004",
-        "contexts": [
-          "eddie-expurgo",
-          "eddie-whatsapp-bot"
-        ]
-      },
-      "ADMIN_NUMBERS": {
-        "name": "ADMIN_NUMBERS",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
-      },
-      "OLLAMA_PORT": {
-        "name": "OLLAMA_PORT",
-        "type": "integer",
-        "source": "systemd",
-        "value": "11434",
-        "contexts": [
-          "github-agent"
-        ]
-      },
-      "FAIL_THRESHOLD": {
-        "name": "FAIL_THRESHOLD",
-        "type": "integer",
-        "source": "systemd",
-        "value": "3",
-        "contexts": [
-          "grafana-selfheal"
-        ]
-      },
-      "TEXTFILE_DIR": {
-        "name": "TEXTFILE_DIR",
-        "type": "path",
-        "source": "systemd",
-        "value": "/var/lib/prometheus/node-exporter",
-        "contexts": [
-          "grafana-selfheal"
-        ]
-      },
-      "BANKING_EXPORTER_PORT": {
-        "name": "BANKING_EXPORTER_PORT",
-        "type": "integer",
-        "source": "systemd",
-        "value": "9102",
-        "contexts": [
-          "banking-metrics-exporter"
-        ]
-      },
-      "LLM_LOG_PANEL_HOST": {
-        "name": "LLM_LOG_PANEL_HOST",
-        "type": "string",
-        "source": "systemd",
-        "value": "0.0.0.0",
-        "contexts": [
-          "llm-log-panel"
-        ]
-      },
-      "LLM_LOG_PANEL_PORT": {
-        "name": "LLM_LOG_PANEL_PORT",
-        "type": "integer",
-        "source": "systemd",
-        "value": "8092",
-        "contexts": [
-          "llm-log-panel"
-        ]
-      },
-      "DAILY_AGENDA_PANEL_HOST": {
-        "name": "DAILY_AGENDA_PANEL_HOST",
-        "type": "string",
-        "source": "systemd",
-        "value": "0.0.0.0",
-        "contexts": [
-          "daily-agenda-panel"
-        ]
-      },
-      "DAILY_AGENDA_PANEL_PORT": {
-        "name": "DAILY_AGENDA_PANEL_PORT",
-        "type": "integer",
-        "source": "systemd",
-        "value": "8093",
-        "contexts": [
-          "daily-agenda-panel"
-        ]
-      },
-      "OLLAMA_WARM_MODEL_GPU0": {
-        "name": "OLLAMA_WARM_MODEL_GPU0",
-        "type": "string",
-        "source": "systemd",
-        "value": "trading-analyst:latest",
-        "contexts": [
-          "ollama-warmup"
-        ]
-      },
-      "OLLAMA_WARM_MODEL_GPU1": {
-        "name": "OLLAMA_WARM_MODEL_GPU1",
-        "type": "string",
-        "source": "systemd",
-        "value": "gemma3:1b",
-        "contexts": [
-          "ollama-warmup"
-        ]
-      },
-      "BN_ACERVO_DEBUG_LOG_PATH": {
-        "name": "BN_ACERVO_DEBUG_LOG_PATH",
-        "type": "path",
-        "source": "systemd",
-        "value": "/tmp/bn-acervo-dev-8513.log",
-        "contexts": [
-          "bn-acervo-agent"
-        ]
-      },
-      "BN_ACERVO_HTTP_TRUST_ENV": {
-        "name": "BN_ACERVO_HTTP_TRUST_ENV",
-        "type": "boolean",
-        "source": "systemd",
-        "value": "false",
-        "contexts": [
-          "bn-acervo-agent"
-        ]
-      },
-      "VIRTUAL_ENV": {
-        "name": "VIRTUAL_ENV",
-        "type": "path",
-        "source": "systemd",
-        "value": "/home/homelab/docling_venv",
-        "contexts": [
-          "job-monitor"
-        ]
-      },
-      "CHECK_INTERVAL_MINUTES": {
-        "name": "CHECK_INTERVAL_MINUTES",
-        "type": "integer",
-        "source": "systemd",
-        "value": "60",
-        "contexts": [
-          "job-monitor"
-        ]
-      },
-      "COMPATIBILITY_THRESHOLD": {
-        "name": "COMPATIBILITY_THRESHOLD",
-        "type": "float",
-        "source": "systemd",
-        "value": "20.0",
-        "contexts": [
-          "job-monitor"
-        ]
-      },
-      "MAX_CHATS_PER_RUN": {
-        "name": "MAX_CHATS_PER_RUN",
-        "type": "integer",
-        "source": "systemd",
-        "value": "300",
-        "contexts": [
-          "job-monitor"
-        ]
-      },
-      "MESSAGES_PER_CHAT": {
-        "name": "MESSAGES_PER_CHAT",
-        "type": "integer",
-        "source": "systemd",
-        "value": "60",
-        "contexts": [
-          "job-monitor"
+          "job-monitor",
+          "eddie-whatsapp-bot",
+          "rpa4all-validation"
         ]
       },
       "OLLAMA_SENTIMENT_MODEL": {
@@ -2401,132 +1830,84 @@
           "rss-sentiment-exporter"
         ]
       },
-      "OLLAMA_HOST_GPU0": {
-        "name": "OLLAMA_HOST_GPU0",
-        "type": "url",
+      "PYTHONDONTWRITEBYTECODE": {
+        "name": "PYTHONDONTWRITEBYTECODE",
+        "type": "boolean",
         "source": "systemd",
-        "value": "http://192.168.15.2:11434",
+        "value": "1",
         "contexts": [
-          "ollama-finetune"
+          "llm-log-panel",
+          "ollama-finetune",
+          "candle-collector",
+          "rss-sentiment-exporter"
+        ]
+      },
+      "HOME": {
+        "name": "HOME",
+        "type": "path",
+        "source": "systemd",
+        "value": "/apps/crypto-trader",
+        "contexts": [
+          "crypto-agent@",
+          "rss-sentiment-exporter",
+          "llm-log-panel",
+          "ollama-finetune",
+          "candle-collector"
+        ]
+      },
+      "WAIT_SECONDS": {
+        "name": "WAIT_SECONDS",
+        "type": "integer",
+        "source": "systemd",
+        "value": "20",
+        "contexts": [
+          "protonvpn-boot-selfheal"
+        ]
+      },
+      "MAX_ATTEMPTS": {
+        "name": "MAX_ATTEMPTS",
+        "type": "integer",
+        "source": "systemd",
+        "value": "3",
+        "contexts": [
+          "protonvpn-boot-selfheal"
+        ]
+      },
+      "RETRY_DELAY": {
+        "name": "RETRY_DELAY",
+        "type": "integer",
+        "source": "systemd",
+        "value": "15",
+        "contexts": [
+          "protonvpn-boot-selfheal"
+        ]
+      },
+      "OLLAMA_WARM_MODEL_GPU0": {
+        "name": "OLLAMA_WARM_MODEL_GPU0",
+        "type": "string",
+        "source": "systemd",
+        "value": "trading-analyst:latest",
+        "contexts": [
+          "ollama-warmup"
+        ]
+      },
+      "OLLAMA_WARM_MODEL_GPU1": {
+        "name": "OLLAMA_WARM_MODEL_GPU1",
+        "type": "string",
+        "source": "systemd",
+        "value": "gemma3:1b",
+        "contexts": [
+          "ollama-warmup"
         ]
       },
       "CUDA_VISIBLE_DEVICES": {
         "name": "CUDA_VISIBLE_DEVICES",
         "type": "boolean",
         "source": "systemd",
-        "value": "0",
+        "value": "1",
         "contexts": [
           "ollama-finetune",
           "ollama-gpu1"
-        ]
-      },
-      "PYTORCH_CUDA_ALLOC_CONF": {
-        "name": "PYTORCH_CUDA_ALLOC_CONF",
-        "type": "string",
-        "source": "systemd",
-        "value": "expandable_segments:True",
-        "contexts": [
-          "ollama-finetune"
-        ]
-      },
-      "GMAIL_DATA_DIR": {
-        "name": "GMAIL_DATA_DIR",
-        "type": "path",
-        "source": "systemd",
-        "value": "/home/homelab/myClaude/gmail_data",
-        "contexts": [
-          "eddie-expurgo"
-        ]
-      },
-      "ADMIN_CHAT_ID": {
-        "name": "ADMIN_CHAT_ID",
-        "type": "integer",
-        "source": "systemd",
-        "value": "948686300",
-        "contexts": [
-          "eddie-calendar",
-          "eddie-expurgo"
-        ]
-      },
-      "ADMIN_PHONE": {
-        "name": "ADMIN_PHONE",
-        "type": "integer",
-        "source": "systemd",
-        "value": "5511999999999",
-        "contexts": [
-          "eddie-expurgo"
-        ]
-      },
-      "TG_LONG_POLL": {
-        "name": "TG_LONG_POLL",
-        "type": "integer",
-        "source": "systemd",
-        "value": "30",
-        "contexts": [
-          "approval-gateway"
-        ]
-      },
-      "INTENT_EXP_MIN": {
-        "name": "INTENT_EXP_MIN",
-        "type": "integer",
-        "source": "systemd",
-        "value": "10",
-        "contexts": [
-          "approval-gateway"
-        ]
-      },
-      "CONUBE_CHROME_BINARY": {
-        "name": "CONUBE_CHROME_BINARY",
-        "type": "path",
-        "source": "systemd",
-        "value": "/usr/bin/chromium-browser",
-        "contexts": [
-          "approval-gateway"
-        ]
-      },
-      "CHROMEDRIVER_PATH": {
-        "name": "CHROMEDRIVER_PATH",
-        "type": "path",
-        "source": "systemd",
-        "value": "/usr/bin/chromedriver",
-        "contexts": [
-          "approval-gateway"
-        ]
-      },
-      "AGENTS_API_URL": {
-        "name": "AGENTS_API_URL",
-        "type": "url",
-        "source": "systemd",
-        "value": "http://127.0.0.1:8503",
-        "contexts": [
-          "approval-gateway"
-        ]
-      },
-      "NARRATOR_STATE_FILE": {
-        "name": "NARRATOR_STATE_FILE",
-        "type": "path",
-        "source": "systemd",
-        "value": "/var/lib/tape-quality/narrator_state.json",
-        "contexts": [
-          "tape-quality-ollama-narrator"
-        ]
-      },
-      "MEETING_TRANSLATOR_PORT": {
-        "name": "MEETING_TRANSLATOR_PORT",
-        "type": "integer",
-        "source": "systemd",
-        "value": "8712",
-        "contexts": [
-          "meeting-translator"
-        ]
-      },
-      "EXTENDED_METRICS_PORT": {
-        "name": "EXTENDED_METRICS_PORT",
-        "type": "integer",
-        "source": "systemd",
-        "value": "9106",
-        "contexts": [
-          "eddie_central_extended_metrics"
         ]
       },
       "OLLAMA_LLM_LIBRARY": {
@@ -2664,31 +2045,280 @@
           "ollama-gpu1"
         ]
       },
-      "WAIT_SECONDS": {
-        "name": "WAIT_SECONDS",
-        "type": "integer",
+      "OLLAMA_GPU0_HOST": {
+        "name": "OLLAMA_GPU0_HOST",
+        "type": "url",
         "source": "systemd",
-        "value": "20",
+        "value": "http://192.168.15.2:11434",
         "contexts": [
-          "protonvpn-boot-selfheal"
+          "ollama-gpu-coordinator"
         ]
       },
-      "MAX_ATTEMPTS": {
-        "name": "MAX_ATTEMPTS",
+      "OLLAMA_GPU1_HOST": {
+        "name": "OLLAMA_GPU1_HOST",
+        "type": "url",
+        "source": "systemd",
+        "value": "http://192.168.15.2:11435",
+        "contexts": [
+          "ollama-gpu-coordinator"
+        ]
+      },
+      "GPU_COORD_PORT": {
+        "name": "GPU_COORD_PORT",
+        "type": "integer",
+        "source": "systemd",
+        "value": "11437",
+        "contexts": [
+          "ollama-gpu-coordinator"
+        ]
+      },
+      "GPU_COORD_BUSY_WAIT_SEC": {
+        "name": "GPU_COORD_BUSY_WAIT_SEC",
+        "type": "integer",
+        "source": "systemd",
+        "value": "10",
+        "contexts": [
+          "ollama-gpu-coordinator"
+        ]
+      },
+      "GPU_COORD_REQUEST_TIMEOUT_SEC": {
+        "name": "GPU_COORD_REQUEST_TIMEOUT_SEC",
+        "type": "integer",
+        "source": "systemd",
+        "value": "180",
+        "contexts": [
+          "ollama-gpu-coordinator"
+        ]
+      },
+      "OLLAMA_HOST_GPU0": {
+        "name": "OLLAMA_HOST_GPU0",
+        "type": "url",
+        "source": "systemd",
+        "value": "http://192.168.15.2:11434",
+        "contexts": [
+          "ollama-finetune"
+        ]
+      },
+      "PYTORCH_CUDA_ALLOC_CONF": {
+        "name": "PYTORCH_CUDA_ALLOC_CONF",
+        "type": "string",
+        "source": "systemd",
+        "value": "expandable_segments:True",
+        "contexts": [
+          "ollama-finetune"
+        ]
+      },
+      "MEETING_TRANSLATOR_PORT": {
+        "name": "MEETING_TRANSLATOR_PORT",
+        "type": "integer",
+        "source": "systemd",
+        "value": "8712",
+        "contexts": [
+          "meeting-translator"
+        ]
+      },
+      "X_AGENT_URL": {
+        "name": "X_AGENT_URL",
+        "type": "url",
+        "source": "systemd",
+        "value": "http://localhost:8515",
+        "contexts": [
+          "marketing-x-posts"
+        ]
+      },
+      "LLM_LOG_PANEL_HOST": {
+        "name": "LLM_LOG_PANEL_HOST",
+        "type": "string",
+        "source": "systemd",
+        "value": "0.0.0.0",
+        "contexts": [
+          "llm-log-panel"
+        ]
+      },
+      "LLM_LOG_PANEL_PORT": {
+        "name": "LLM_LOG_PANEL_PORT",
+        "type": "integer",
+        "source": "systemd",
+        "value": "8092",
+        "contexts": [
+          "llm-log-panel"
+        ]
+      },
+      "VIRTUAL_ENV": {
+        "name": "VIRTUAL_ENV",
+        "type": "path",
+        "source": "systemd",
+        "value": "/home/homelab/docling_venv",
+        "contexts": [
+          "job-monitor"
+        ]
+      },
+      "CHECK_INTERVAL_MINUTES": {
+        "name": "CHECK_INTERVAL_MINUTES",
+        "type": "integer",
+        "source": "systemd",
+        "value": "60",
+        "contexts": [
+          "job-monitor"
+        ]
+      },
+      "COMPATIBILITY_THRESHOLD": {
+        "name": "COMPATIBILITY_THRESHOLD",
+        "type": "float",
+        "source": "systemd",
+        "value": "20.0",
+        "contexts": [
+          "job-monitor"
+        ]
+      },
+      "MAX_CHATS_PER_RUN": {
+        "name": "MAX_CHATS_PER_RUN",
+        "type": "integer",
+        "source": "systemd",
+        "value": "300",
+        "contexts": [
+          "job-monitor"
+        ]
+      },
+      "MESSAGES_PER_CHAT": {
+        "name": "MESSAGES_PER_CHAT",
+        "type": "integer",
+        "source": "systemd",
+        "value": "60",
+        "contexts": [
+          "job-monitor"
+        ]
+      },
+      "ROUTE_NAME": {
+        "name": "ROUTE_NAME",
+        "type": "string",
+        "source": "systemd",
+        "value": "tape_sg1",
+        "contexts": [
+          "homelab-tape-log-drain-nextcloud",
+          "homelab-tape-log-drain-sg1"
+        ]
+      },
+      "ROUTE_TARGET_ROOT": {
+        "name": "ROUTE_TARGET_ROOT",
+        "type": "path",
+        "source": "systemd",
+        "value": "/mnt/tape_sg1/logs",
+        "contexts": [
+          "homelab-tape-log-drain-nextcloud",
+          "homelab-tape-log-drain-sg1"
+        ]
+      },
+      "CHECK_INTERVAL": {
+        "name": "CHECK_INTERVAL",
+        "type": "integer",
+        "source": "systemd",
+        "value": "30",
+        "contexts": [
+          "dhcp-selfheal",
+          "grafana-selfheal"
+        ]
+      },
+      "FAIL_THRESHOLD": {
+        "name": "FAIL_THRESHOLD",
         "type": "integer",
         "source": "systemd",
         "value": "3",
         "contexts": [
-          "protonvpn-boot-selfheal"
+          "grafana-selfheal"
         ]
       },
-      "RETRY_DELAY": {
-        "name": "RETRY_DELAY",
+      "MAX_RESTARTS_HOUR": {
+        "name": "MAX_RESTARTS_HOUR",
         "type": "integer",
         "source": "systemd",
-        "value": "15",
+        "value": "3",
         "contexts": [
-          "protonvpn-boot-selfheal"
+          "dhcp-selfheal",
+          "grafana-selfheal"
+        ]
+      },
+      "TEXTFILE_DIR": {
+        "name": "TEXTFILE_DIR",
+        "type": "path",
+        "source": "systemd",
+        "value": "/var/lib/prometheus/node-exporter",
+        "contexts": [
+          "grafana-selfheal"
+        ]
+      },
+      "OLLAMA_PORT": {
+        "name": "OLLAMA_PORT",
+        "type": "integer",
+        "source": "systemd",
+        "value": "11434",
+        "contexts": [
+          "github-agent"
+        ]
+      },
+      "EXTENDED_METRICS_PORT": {
+        "name": "EXTENDED_METRICS_PORT",
+        "type": "integer",
+        "source": "systemd",
+        "value": "9106",
+        "contexts": [
+          "eddie_central_extended_metrics"
+        ]
+      },
+      "WHATSAPP_NUMBER": {
+        "name": "WHATSAPP_NUMBER",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config"
+        ]
+      },
+      "WAHA_URL": {
+        "name": "WAHA_URL",
+        "type": "url",
+        "source": "systemd",
+        "value": "http://localhost:3004",
+        "contexts": [
+          "eddie-whatsapp-bot",
+          "eddie-expurgo"
+        ]
+      },
+      "ADMIN_NUMBERS": {
+        "name": "ADMIN_NUMBERS",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config"
+        ]
+      },
+      "GMAIL_DATA_DIR": {
+        "name": "GMAIL_DATA_DIR",
+        "type": "path",
+        "source": "systemd",
+        "value": "/home/homelab/myClaude/gmail_data",
+        "contexts": [
+          "eddie-expurgo"
+        ]
+      },
+      "ADMIN_CHAT_ID": {
+        "name": "ADMIN_CHAT_ID",
+        "type": "integer",
+        "source": "systemd",
+        "value": "948686300",
+        "contexts": [
+          "eddie-expurgo",
+          "eddie-calendar"
+        ]
+      },
+      "ADMIN_PHONE": {
+        "name": "ADMIN_PHONE",
+        "type": "integer",
+        "source": "systemd",
+        "value": "5511999999999",
+        "contexts": [
+          "eddie-expurgo"
         ]
       },
       "WAHA_API": {
@@ -2716,6 +2346,143 @@
         "value": "7",
         "contexts": [
           "eddie-calendar"
+        ]
+      },
+      "DHCP_SERVICE": {
+        "name": "DHCP_SERVICE",
+        "type": "string",
+        "source": "systemd",
+        "value": "homelab-lan-dhcp.service",
+        "contexts": [
+          "dhcp-selfheal"
+        ]
+      },
+      "LEASES_FILE": {
+        "name": "LEASES_FILE",
+        "type": "path",
+        "source": "systemd",
+        "value": "/var/lib/misc/dnsmasq.leases",
+        "contexts": [
+          "dhcp-selfheal"
+        ]
+      },
+      "FIX_NFTABLES": {
+        "name": "FIX_NFTABLES",
+        "type": "path",
+        "source": "systemd",
+        "value": "/usr/local/bin/fix-dhcp-nftables.sh",
+        "contexts": [
+          "dhcp-selfheal"
+        ]
+      },
+      "DHCP_RANGE_START": {
+        "name": "DHCP_RANGE_START",
+        "type": "string",
+        "source": "systemd",
+        "value": "192.168.15.60",
+        "contexts": [
+          "dhcp-selfheal"
+        ]
+      },
+      "DHCP_RANGE_END": {
+        "name": "DHCP_RANGE_END",
+        "type": "string",
+        "source": "systemd",
+        "value": "192.168.15.200",
+        "contexts": [
+          "dhcp-selfheal"
+        ]
+      },
+      "MAX_STUCK_SECONDS": {
+        "name": "MAX_STUCK_SECONDS",
+        "type": "integer",
+        "source": "systemd",
+        "value": "300",
+        "contexts": [
+          "dhcp-selfheal"
+        ]
+      },
+      "DAILY_AGENDA_PANEL_HOST": {
+        "name": "DAILY_AGENDA_PANEL_HOST",
+        "type": "string",
+        "source": "systemd",
+        "value": "0.0.0.0",
+        "contexts": [
+          "daily-agenda-panel"
+        ]
+      },
+      "DAILY_AGENDA_PANEL_PORT": {
+        "name": "DAILY_AGENDA_PANEL_PORT",
+        "type": "integer",
+        "source": "systemd",
+        "value": "8093",
+        "contexts": [
+          "daily-agenda-panel"
+        ]
+      },
+      "AGENDA_YOUTUBE_CHANNEL_ID": {
+        "name": "AGENDA_YOUTUBE_CHANNEL_ID",
+        "type": "string",
+        "source": "systemd",
+        "value": "UCEyYr2YE1HLDTKT4cnMefmw",
+        "contexts": [
+          "daily-agenda-panel",
+          "daily-agenda-broadcast"
+        ]
+      },
+      "CLEAR_CONFIG_FILE": {
+        "name": "CLEAR_CONFIG_FILE",
+        "type": "string",
+        "source": "systemd",
+        "value": "config_PETR4.json",
+        "contexts": [
+          "clear-trading-agent",
+          "clear-agent@"
+        ]
+      },
+      "BN_ACERVO_DEBUG_LOG_PATH": {
+        "name": "BN_ACERVO_DEBUG_LOG_PATH",
+        "type": "path",
+        "source": "systemd",
+        "value": "/tmp/bn-acervo-dev-8513.log",
+        "contexts": [
+          "bn-acervo-agent"
+        ]
+      },
+      "BN_ACERVO_HTTP_TRUST_ENV": {
+        "name": "BN_ACERVO_HTTP_TRUST_ENV",
+        "type": "boolean",
+        "source": "systemd",
+        "value": "false",
+        "contexts": [
+          "bn-acervo-agent"
+        ]
+      },
+      "BANKING_EXPORTER_PORT": {
+        "name": "BANKING_EXPORTER_PORT",
+        "type": "integer",
+        "source": "systemd",
+        "value": "9102",
+        "contexts": [
+          "banking-metrics-exporter"
+        ]
+      },
+      "TG_LONG_POLL": {
+        "name": "TG_LONG_POLL",
+        "type": "integer",
+        "source": "systemd",
+        "value": "30",
+        "contexts": [
+          "approval-gateway"
+        ]
+      },
+      "INTENT_EXP_MIN": {
+        "name": "INTENT_EXP_MIN",
+        "type": "integer",
+        "source": "systemd",
+        "value": "10",
+        "contexts": [
+          "approval-gateway"
         ]
       },
       "HF_INFERENCE_ENABLED": {
@@ -2781,6 +2548,70 @@
           "config"
         ]
       },
+      "NEXTCLOUD_AGENT_ENABLED": {
+        "name": "NEXTCLOUD_AGENT_ENABLED",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config"
+        ]
+      },
+      "NEXTCLOUD_URL": {
+        "name": "NEXTCLOUD_URL",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config",
+          "configure_authentik_nextcloud_oidc"
+        ]
+      },
+      "NEXTCLOUD_ADMIN_USER": {
+        "name": "NEXTCLOUD_ADMIN_USER",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config"
+        ]
+      },
+      "NEXTCLOUD_CONTAINER": {
+        "name": "NEXTCLOUD_CONTAINER",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config"
+        ]
+      },
+      "NEXTCLOUD_OLLAMA_GPU": {
+        "name": "NEXTCLOUD_OLLAMA_GPU",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config"
+        ]
+      },
+      "NEXTCLOUD_OLLAMA_TIMEOUT": {
+        "name": "NEXTCLOUD_OLLAMA_TIMEOUT",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config"
+        ]
+      },
+      "NEXTCLOUD_DEFAULT_DRY_RUN": {
+        "name": "NEXTCLOUD_DEFAULT_DRY_RUN",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config"
+        ]
+      },
       "REMOTE_ORCHESTRATOR_ENABLED": {
         "name": "REMOTE_ORCHESTRATOR_ENABLED",
         "type": "string",
@@ -2836,24 +2667,6 @@
           "config"
         ]
       },
-      "DEV_AGENT_PROJECTS_DIR": {
-        "name": "DEV_AGENT_PROJECTS_DIR",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
-      },
-      "DEV_AGENT_TRAINING_DIR": {
-        "name": "DEV_AGENT_TRAINING_DIR",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
-      },
       "ROUTER_URL": {
         "name": "ROUTER_URL",
         "type": "string",
@@ -2879,6 +2692,33 @@
         "value": null,
         "contexts": [
           "router_network_config"
+        ]
+      },
+      "DEV_AGENT_PROJECTS_DIR": {
+        "name": "DEV_AGENT_PROJECTS_DIR",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config"
+        ]
+      },
+      "DEV_AGENT_TRAINING_DIR": {
+        "name": "DEV_AGENT_TRAINING_DIR",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config"
+        ]
+      },
+      "OPENWEBUI_URL": {
+        "name": "OPENWEBUI_URL",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "configure_diretor_model"
         ]
       },
       "PANDAPLUS_DEVICE_ID": {
@@ -2935,23 +2775,14 @@
           "configure_authentik_nas_ldap"
         ]
       },
-      "OPENWEBUI_URL": {
-        "name": "OPENWEBUI_URL",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "configure_diretor_model"
-        ]
-      },
       "GROUPS_0_NAME": {
         "name": "GROUPS_0_NAME",
         "type": "string",
         "source": "yaml",
         "value": "rpa4all_snapshot_alerts",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -2963,8 +2794,8 @@
         "source": "yaml",
         "value": "30s",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -2978,8 +2809,8 @@
         "contexts": [
           "selfhealing_rules",
           "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
-          "alert_rules"
+          "alert_rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_0_RULES_0_FOR": {
@@ -2988,8 +2819,8 @@
         "source": "yaml",
         "value": "5m",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3001,8 +2832,8 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3023,8 +2854,8 @@
         "source": "yaml",
         "value": "\ud83d\udd34 RPA4All Snapshot Service DOWN",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3036,8 +2867,8 @@
         "source": "yaml",
         "value": "O servi\u00e7o rpa4all-snapshot.service n\u00e3o est\u00e1 rodando por mais de 5 minutos",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3069,8 +2900,8 @@
         "contexts": [
           "selfhealing_rules",
           "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
-          "alert_rules"
+          "alert_rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_0_RULES_1_FOR": {
@@ -3079,8 +2910,8 @@
         "source": "yaml",
         "value": "3m",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3092,8 +2923,8 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3114,8 +2945,8 @@
         "source": "yaml",
         "value": "\u23f8\ufe0f RPA4All Snapshot HUNG (Travado)",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3127,8 +2958,8 @@
         "source": "yaml",
         "value": "Lock file com idade {{ $value | humanizeDuration }}. Snapshot pode estar travado em I/O ou rede",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3160,8 +2991,8 @@
         "contexts": [
           "selfhealing_rules",
           "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
-          "alert_rules"
+          "alert_rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_0_RULES_2_FOR": {
@@ -3170,8 +3001,8 @@
         "source": "yaml",
         "value": "1m",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3183,8 +3014,8 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3205,8 +3036,8 @@
         "source": "yaml",
         "value": "\u23f3 RPA4All Snapshot \u2014 \u00daltima execu\u00e7\u00e3o > 24h",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3218,8 +3049,8 @@
         "source": "yaml",
         "value": "\u00daltima execu\u00e7\u00e3o bem-sucedida h\u00e1 {{ $value | humanizeDuration }}. Timer pode estar desabilitado",
         "contexts": [
-          "selfhealing_rules",
           "ltfs-selfheal-rules",
+          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
           "alert_rules"
@@ -3242,8 +3073,8 @@
         "contexts": [
           "selfhealing_rules",
           "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
-          "alert_rules"
+          "alert_rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_0_RULES_3_FOR": {
@@ -3253,9 +3084,9 @@
         "value": "5m",
         "contexts": [
           "ltfs-selfheal-rules",
+          "alert_rules",
           "rpa4all-snapshot-alerts",
-          "rules",
-          "alert_rules"
+          "rules"
         ]
       },
       "GROUPS_0_RULES_3_LABELS_SEVERITY": {
@@ -3265,9 +3096,9 @@
         "value": "warning",
         "contexts": [
           "ltfs-selfheal-rules",
+          "alert_rules",
           "rpa4all-snapshot-alerts",
-          "rules",
-          "alert_rules"
+          "rules"
         ]
       },
       "GROUPS_0_RULES_3_LABELS_COMPONENT": {
@@ -3286,9 +3117,9 @@
         "value": "\u26a0\ufe0f RPA4All Snapshot \u2014 Taxa de Falha Elevada",
         "contexts": [
           "ltfs-selfheal-rules",
+          "alert_rules",
           "rpa4all-snapshot-alerts",
-          "rules",
-          "alert_rules"
+          "rules"
         ]
       },
       "GROUPS_0_RULES_3_ANNOTATIONS_DESCRIPTION": {
@@ -3298,9 +3129,9 @@
         "value": "{{ $value }} falhas de snapshot na \u00faltima hora",
         "contexts": [
           "ltfs-selfheal-rules",
+          "alert_rules",
           "rpa4all-snapshot-alerts",
-          "rules",
-          "alert_rules"
+          "rules"
         ]
       },
       "GROUPS_0_RULES_3_ANNOTATIONS_DASHBOARD": {
@@ -3463,8 +3294,8 @@
         "source": "yaml",
         "value": "15s",
         "contexts": [
-          "prometheus-config",
-          "prometheus"
+          "prometheus",
+          "prometheus-config"
         ]
       },
       "GLOBAL_EVALUATION_INTERVAL": {
@@ -3473,8 +3304,8 @@
         "source": "yaml",
         "value": "15s",
         "contexts": [
-          "prometheus-config",
-          "prometheus"
+          "prometheus",
+          "prometheus-config"
         ]
       },
       "SCRAPE_CONFIGS_0_JOB_NAME": {
@@ -3483,8 +3314,8 @@
         "source": "yaml",
         "value": "prometheus",
         "contexts": [
-          "prometheus-config",
-          "prometheus"
+          "prometheus",
+          "prometheus-config"
         ]
       },
       "SCRAPE_CONFIGS_1_JOB_NAME": {
@@ -3493,8 +3324,8 @@
         "source": "yaml",
         "value": "node-exporter",
         "contexts": [
-          "prometheus-config",
-          "prometheus"
+          "prometheus",
+          "prometheus-config"
         ]
       },
       "SCRAPE_CONFIGS_1_STATIC_CONFIGS_0_LABELS_INSTANCE": {
@@ -3512,8 +3343,8 @@
         "source": "yaml",
         "value": "cadvisor",
         "contexts": [
-          "prometheus-config",
-          "prometheus"
+          "prometheus",
+          "prometheus-config"
         ]
       },
       "SCRAPE_CONFIGS_2_SCRAPE_INTERVAL": {
@@ -3540,8 +3371,8 @@
         "source": "yaml",
         "value": "crypto-exporter-btc_usdt_conservative",
         "contexts": [
-          "prometheus-config",
-          "prometheus"
+          "prometheus",
+          "prometheus-config"
         ]
       },
       "SCRAPE_CONFIGS_3_SCRAPE_INTERVAL": {
@@ -3550,8 +3381,8 @@
         "source": "yaml",
         "value": "30s",
         "contexts": [
-          "prometheus-config",
-          "prometheus"
+          "prometheus",
+          "prometheus-config"
         ]
       },
       "SCRAPE_CONFIGS_3_SCRAPE_TIMEOUT": {
@@ -3569,8 +3400,8 @@
         "source": "yaml",
         "value": "btc_usdt_conservative",
         "contexts": [
-          "prometheus-config",
-          "prometheus"
+          "prometheus",
+          "prometheus-config"
         ]
       },
       "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_PROFILE": {
@@ -3597,8 +3428,8 @@
         "source": "yaml",
         "value": "crypto-exporter-btc_usdt_aggressive",
         "contexts": [
-          "prometheus-config",
-          "prometheus"
+          "prometheus",
+          "prometheus-config"
         ]
       },
       "SCRAPE_CONFIGS_4_SCRAPE_INTERVAL": {
@@ -3607,8 +3438,8 @@
         "source": "yaml",
         "value": "30s",
         "contexts": [
-          "prometheus-config",
-          "prometheus"
+          "prometheus",
+          "prometheus-config"
         ]
       },
       "SCRAPE_CONFIGS_4_SCRAPE_TIMEOUT": {
@@ -3626,8 +3457,8 @@
         "source": "yaml",
         "value": "btc_usdt_aggressive",
         "contexts": [
-          "prometheus-config",
-          "prometheus"
+          "prometheus",
+          "prometheus-config"
         ]
       },
       "SCRAPE_CONFIGS_4_STATIC_CONFIGS_0_LABELS_PROFILE": {
@@ -3760,7 +3591,7 @@
         "name": "SCRAPE_CONFIGS_8_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "conube-exporter",
+        "value": "nas-node-exporter",
         "contexts": [
           "prometheus"
         ]
@@ -3769,16 +3600,7 @@
         "name": "SCRAPE_CONFIGS_8_SCRAPE_INTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "5m",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_8_SCRAPE_TIMEOUT": {
-        "name": "SCRAPE_CONFIGS_8_SCRAPE_TIMEOUT",
-        "type": "string",
-        "source": "yaml",
-        "value": "60s",
+        "value": "15s",
         "contexts": [
           "prometheus"
         ]
@@ -3787,16 +3609,16 @@
         "name": "SCRAPE_CONFIGS_8_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "conube",
+        "value": "rpa4all-nas-001",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_8_STATIC_CONFIGS_0_LABELS_SERVICE": {
-        "name": "SCRAPE_CONFIGS_8_STATIC_CONFIGS_0_LABELS_SERVICE",
+      "SCRAPE_CONFIGS_8_STATIC_CONFIGS_0_LABELS_ROLE": {
+        "name": "SCRAPE_CONFIGS_8_STATIC_CONFIGS_0_LABELS_ROLE",
         "type": "string",
         "source": "yaml",
-        "value": "conube-agent",
+        "value": "nas",
         "contexts": [
           "prometheus"
         ]
@@ -3805,7 +3627,7 @@
         "name": "SCRAPE_CONFIGS_9_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "kwai-exporter",
+        "value": "tape-component-quality",
         "contexts": [
           "prometheus"
         ]
@@ -3814,25 +3636,16 @@
         "name": "SCRAPE_CONFIGS_9_SCRAPE_INTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "1m",
+        "value": "30s",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_9_SCRAPE_TIMEOUT": {
-        "name": "SCRAPE_CONFIGS_9_SCRAPE_TIMEOUT",
+      "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_HOST": {
+        "name": "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_HOST",
         "type": "string",
         "source": "yaml",
-        "value": "15s",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_INSTANCE": {
-        "name": "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_INSTANCE",
-        "type": "string",
-        "source": "yaml",
-        "value": "homelab",
+        "value": "rpa4all-nas-001",
         "contexts": [
           "prometheus"
         ]
@@ -3841,7 +3654,34 @@
         "name": "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_SERVICE",
         "type": "string",
         "source": "yaml",
-        "value": "kwai-viewer",
+        "value": "tape-component-quality",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_DRIVE": {
+        "name": "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_DRIVE",
+        "type": "string",
+        "source": "yaml",
+        "value": "host0-sg0",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_FC_HOST": {
+        "name": "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_FC_HOST",
+        "type": "string",
+        "source": "yaml",
+        "value": "host0",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_DEVICE": {
+        "name": "SCRAPE_CONFIGS_9_STATIC_CONFIGS_0_LABELS_DEVICE",
+        "type": "path",
+        "source": "yaml",
+        "value": "/dev/sg0",
         "contexts": [
           "prometheus"
         ]
@@ -3850,7 +3690,7 @@
         "name": "SCRAPE_CONFIGS_10_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "nas-node-exporter",
+        "value": "crypto-exporter-btc_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
@@ -3859,7 +3699,16 @@
         "name": "SCRAPE_CONFIGS_10_SCRAPE_INTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "15s",
+        "value": "30s",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_10_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_10_SCRAPE_TIMEOUT",
+        "type": "string",
+        "source": "yaml",
+        "value": "25s",
         "contexts": [
           "prometheus"
         ]
@@ -3868,16 +3717,25 @@
         "name": "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "rpa4all-nas-001",
+        "value": "btc_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_ROLE": {
-        "name": "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_ROLE",
+      "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "nas",
+        "value": "shadow",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+        "type": "string",
+        "source": "yaml",
+        "value": "homelab",
         "contexts": [
           "prometheus"
         ]
@@ -3886,7 +3744,7 @@
         "name": "SCRAPE_CONFIGS_11_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "tape-component-quality",
+        "value": "crypto-exporter-eth_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
@@ -3900,47 +3758,38 @@
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_HOST": {
-        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_HOST",
+      "SCRAPE_CONFIGS_11_SCRAPE_TIMEOUT": {
+        "name": "SCRAPE_CONFIGS_11_SCRAPE_TIMEOUT",
         "type": "string",
         "source": "yaml",
-        "value": "rpa4all-nas-001",
+        "value": "25s",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_SERVICE": {
-        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_SERVICE",
+      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_INSTANCE": {
+        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "tape-component-quality",
+        "value": "eth_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_DRIVE": {
-        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_DRIVE",
+      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_PROFILE": {
+        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "host0-sg0",
+        "value": "shadow",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_FC_HOST": {
-        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_FC_HOST",
+      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
+        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_SERVIDOR",
         "type": "string",
         "source": "yaml",
-        "value": "host0",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_DEVICE": {
-        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_DEVICE",
-        "type": "path",
-        "source": "yaml",
-        "value": "/dev/sg0",
+        "value": "homelab",
         "contexts": [
           "prometheus"
         ]
@@ -3949,7 +3798,7 @@
         "name": "SCRAPE_CONFIGS_12_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-btc_usdt_shadow",
+        "value": "crypto-exporter-eth_usdt_conservative",
         "contexts": [
           "prometheus"
         ]
@@ -3976,7 +3825,7 @@
         "name": "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "btc_usdt_shadow",
+        "value": "eth_usdt_conservative",
         "contexts": [
           "prometheus"
         ]
@@ -3985,7 +3834,7 @@
         "name": "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "shadow",
+        "value": "conservative",
         "contexts": [
           "prometheus"
         ]
@@ -4003,7 +3852,7 @@
         "name": "SCRAPE_CONFIGS_13_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-eth_usdt_shadow",
+        "value": "crypto-exporter-eth_usdt_aggressive",
         "contexts": [
           "prometheus"
         ]
@@ -4030,7 +3879,7 @@
         "name": "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "eth_usdt_shadow",
+        "value": "eth_usdt_aggressive",
         "contexts": [
           "prometheus"
         ]
@@ -4039,7 +3888,7 @@
         "name": "SCRAPE_CONFIGS_13_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "shadow",
+        "value": "aggressive",
         "contexts": [
           "prometheus"
         ]
@@ -4057,7 +3906,7 @@
         "name": "SCRAPE_CONFIGS_14_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-eth_usdt_conservative",
+        "value": "crypto-exporter-sol_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
@@ -4084,7 +3933,7 @@
         "name": "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "eth_usdt_conservative",
+        "value": "sol_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
@@ -4093,7 +3942,7 @@
         "name": "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "conservative",
+        "value": "shadow",
         "contexts": [
           "prometheus"
         ]
@@ -4111,7 +3960,7 @@
         "name": "SCRAPE_CONFIGS_15_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-eth_usdt_aggressive",
+        "value": "crypto-exporter-sol_usdt_conservative",
         "contexts": [
           "prometheus"
         ]
@@ -4138,7 +3987,7 @@
         "name": "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "eth_usdt_aggressive",
+        "value": "sol_usdt_conservative",
         "contexts": [
           "prometheus"
         ]
@@ -4147,7 +3996,7 @@
         "name": "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "aggressive",
+        "value": "conservative",
         "contexts": [
           "prometheus"
         ]
@@ -4165,7 +4014,7 @@
         "name": "SCRAPE_CONFIGS_16_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-sol_usdt_shadow",
+        "value": "crypto-exporter-sol_usdt_aggressive",
         "contexts": [
           "prometheus"
         ]
@@ -4192,7 +4041,7 @@
         "name": "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "sol_usdt_shadow",
+        "value": "sol_usdt_aggressive",
         "contexts": [
           "prometheus"
         ]
@@ -4201,7 +4050,7 @@
         "name": "SCRAPE_CONFIGS_16_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "shadow",
+        "value": "aggressive",
         "contexts": [
           "prometheus"
         ]
@@ -4219,7 +4068,7 @@
         "name": "SCRAPE_CONFIGS_17_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-sol_usdt_conservative",
+        "value": "crypto-exporter-doge_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
@@ -4246,7 +4095,7 @@
         "name": "SCRAPE_CONFIGS_17_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "sol_usdt_conservative",
+        "value": "doge_usdt_shadow",
         "contexts": [
           "prometheus"
         ]
@@ -4255,7 +4104,7 @@
         "name": "SCRAPE_CONFIGS_17_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "conservative",
+        "value": "shadow",
         "contexts": [
           "prometheus"
         ]
@@ -4273,7 +4122,7 @@
         "name": "SCRAPE_CONFIGS_18_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-sol_usdt_aggressive",
+        "value": "crypto-exporter-doge_usdt_conservative",
         "contexts": [
           "prometheus"
         ]
@@ -4300,7 +4149,7 @@
         "name": "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "sol_usdt_aggressive",
+        "value": "doge_usdt_conservative",
         "contexts": [
           "prometheus"
         ]
@@ -4309,7 +4158,7 @@
         "name": "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "aggressive",
+        "value": "conservative",
         "contexts": [
           "prometheus"
         ]
@@ -4327,7 +4176,7 @@
         "name": "SCRAPE_CONFIGS_19_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-doge_usdt_shadow",
+        "value": "crypto-exporter-doge_usdt_aggressive",
         "contexts": [
           "prometheus"
         ]
@@ -4354,7 +4203,7 @@
         "name": "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_INSTANCE",
         "type": "string",
         "source": "yaml",
-        "value": "doge_usdt_shadow",
+        "value": "doge_usdt_aggressive",
         "contexts": [
           "prometheus"
         ]
@@ -4363,7 +4212,7 @@
         "name": "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_PROFILE",
         "type": "string",
         "source": "yaml",
-        "value": "shadow",
+        "value": "aggressive",
         "contexts": [
           "prometheus"
         ]
@@ -4381,7 +4230,7 @@
         "name": "SCRAPE_CONFIGS_20_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-doge_usdt_conservative",
+        "value": "ollama-nas-rtx2060",
         "contexts": [
           "prometheus"
         ]
@@ -4390,43 +4239,43 @@
         "name": "SCRAPE_CONFIGS_20_SCRAPE_INTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "30s",
+        "value": "15s",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_20_SCRAPE_TIMEOUT": {
-        "name": "SCRAPE_CONFIGS_20_SCRAPE_TIMEOUT",
+      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_GPU": {
+        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_GPU",
         "type": "string",
         "source": "yaml",
-        "value": "25s",
+        "value": "rtx2060super",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_INSTANCE": {
-        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_INSTANCE",
+      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_VRAM": {
+        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_VRAM",
         "type": "string",
         "source": "yaml",
-        "value": "doge_usdt_conservative",
+        "value": "8gb",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_PROFILE": {
-        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_PROFILE",
+      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_HOST": {
+        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_HOST",
         "type": "string",
         "source": "yaml",
-        "value": "conservative",
+        "value": "nas",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
-        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_SERVIDOR",
+      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_ENDPOINT": {
+        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_ENDPOINT",
         "type": "string",
         "source": "yaml",
-        "value": "homelab",
+        "value": "nas",
         "contexts": [
           "prometheus"
         ]
@@ -4435,7 +4284,7 @@
         "name": "SCRAPE_CONFIGS_21_JOB_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "crypto-exporter-doge_usdt_aggressive",
+        "value": "ollama-gpu-coordinator",
         "contexts": [
           "prometheus"
         ]
@@ -4444,121 +4293,13 @@
         "name": "SCRAPE_CONFIGS_21_SCRAPE_INTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "30s",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_21_SCRAPE_TIMEOUT": {
-        "name": "SCRAPE_CONFIGS_21_SCRAPE_TIMEOUT",
-        "type": "string",
-        "source": "yaml",
-        "value": "25s",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_INSTANCE": {
-        "name": "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_INSTANCE",
-        "type": "string",
-        "source": "yaml",
-        "value": "doge_usdt_aggressive",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_PROFILE": {
-        "name": "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_PROFILE",
-        "type": "string",
-        "source": "yaml",
-        "value": "aggressive",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_SERVIDOR": {
-        "name": "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_SERVIDOR",
-        "type": "string",
-        "source": "yaml",
-        "value": "homelab",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_22_JOB_NAME": {
-        "name": "SCRAPE_CONFIGS_22_JOB_NAME",
-        "type": "string",
-        "source": "yaml",
-        "value": "ollama-nas-rtx2060",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_22_SCRAPE_INTERVAL": {
-        "name": "SCRAPE_CONFIGS_22_SCRAPE_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "15s",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_GPU": {
-        "name": "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_GPU",
-        "type": "string",
-        "source": "yaml",
-        "value": "rtx2060super",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_VRAM": {
-        "name": "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_VRAM",
-        "type": "string",
-        "source": "yaml",
-        "value": "8gb",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_HOST": {
-        "name": "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_HOST",
-        "type": "string",
-        "source": "yaml",
-        "value": "nas",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_ENDPOINT": {
-        "name": "SCRAPE_CONFIGS_22_STATIC_CONFIGS_0_LABELS_ENDPOINT",
-        "type": "string",
-        "source": "yaml",
-        "value": "nas",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_23_JOB_NAME": {
-        "name": "SCRAPE_CONFIGS_23_JOB_NAME",
-        "type": "string",
-        "source": "yaml",
-        "value": "ollama-gpu-coordinator",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_23_SCRAPE_INTERVAL": {
-        "name": "SCRAPE_CONFIGS_23_SCRAPE_INTERVAL",
-        "type": "string",
-        "source": "yaml",
         "value": "10s",
         "contexts": [
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_23_STATIC_CONFIGS_0_LABELS_SERVICE": {
-        "name": "SCRAPE_CONFIGS_23_STATIC_CONFIGS_0_LABELS_SERVICE",
+      "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_SERVICE": {
+        "name": "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_SERVICE",
         "type": "string",
         "source": "yaml",
         "value": "gpu-coordinator",
@@ -4566,8 +4307,8 @@
           "prometheus"
         ]
       },
-      "SCRAPE_CONFIGS_23_STATIC_CONFIGS_0_LABELS_HOST": {
-        "name": "SCRAPE_CONFIGS_23_STATIC_CONFIGS_0_LABELS_HOST",
+      "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_HOST": {
+        "name": "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_HOST",
         "type": "string",
         "source": "yaml",
         "value": "homelab",
@@ -5217,195 +4958,6 @@
           "inventory_homelab"
         ]
       },
-      "GLOBAL_RESOLVE_TIMEOUT": {
-        "name": "GLOBAL_RESOLVE_TIMEOUT",
-        "type": "string",
-        "source": "yaml",
-        "value": "5m",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_RECEIVER": {
-        "name": "ROUTE_RECEIVER",
-        "type": "string",
-        "source": "yaml",
-        "value": "default",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_GROUP_WAIT": {
-        "name": "ROUTE_GROUP_WAIT",
-        "type": "string",
-        "source": "yaml",
-        "value": "30s",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_GROUP_INTERVAL": {
-        "name": "ROUTE_GROUP_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "5m",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_REPEAT_INTERVAL": {
-        "name": "ROUTE_REPEAT_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "3h",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_0_RECEIVER": {
-        "name": "ROUTE_ROUTES_0_RECEIVER",
-        "type": "string",
-        "source": "yaml",
-        "value": "telegram-selfhealing",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_0_GROUP_WAIT": {
-        "name": "ROUTE_ROUTES_0_GROUP_WAIT",
-        "type": "string",
-        "source": "yaml",
-        "value": "10s",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_0_GROUP_INTERVAL": {
-        "name": "ROUTE_ROUTES_0_GROUP_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "5m",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_0_REPEAT_INTERVAL": {
-        "name": "ROUTE_ROUTES_0_REPEAT_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "1h",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_0_CONTINUE": {
-        "name": "ROUTE_ROUTES_0_CONTINUE",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "True",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_1_RECEIVER": {
-        "name": "ROUTE_ROUTES_1_RECEIVER",
-        "type": "string",
-        "source": "yaml",
-        "value": "telegram-selfhealing",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_1_GROUP_WAIT": {
-        "name": "ROUTE_ROUTES_1_GROUP_WAIT",
-        "type": "string",
-        "source": "yaml",
-        "value": "15s",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_1_GROUP_INTERVAL": {
-        "name": "ROUTE_ROUTES_1_GROUP_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "5m",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_1_REPEAT_INTERVAL": {
-        "name": "ROUTE_ROUTES_1_REPEAT_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "1h",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_2_RECEIVER": {
-        "name": "ROUTE_ROUTES_2_RECEIVER",
-        "type": "string",
-        "source": "yaml",
-        "value": "telegram-critical",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_2_GROUP_WAIT": {
-        "name": "ROUTE_ROUTES_2_GROUP_WAIT",
-        "type": "string",
-        "source": "yaml",
-        "value": "10s",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_2_GROUP_INTERVAL": {
-        "name": "ROUTE_ROUTES_2_GROUP_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "5m",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "ROUTE_ROUTES_2_REPEAT_INTERVAL": {
-        "name": "ROUTE_ROUTES_2_REPEAT_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "30m",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "RECEIVERS_0_NAME": {
-        "name": "RECEIVERS_0_NAME",
-        "type": "string",
-        "source": "yaml",
-        "value": "default",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "RECEIVERS_1_NAME": {
-        "name": "RECEIVERS_1_NAME",
-        "type": "string",
-        "source": "yaml",
-        "value": "telegram-selfhealing",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "RECEIVERS_2_NAME": {
-        "name": "RECEIVERS_2_NAME",
-        "type": "string",
-        "source": "yaml",
-        "value": "telegram-critical",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
       "GROUPS_0_RULES_0_LABELS_ACTION": {
         "name": "GROUPS_0_RULES_0_LABELS_ACTION",
         "type": "string",
@@ -5675,282 +5227,379 @@
         "source": "yaml",
         "value": "1",
         "contexts": [
-          "policies",
-          "rules",
-          "datasources",
-          "dashboards",
           "contactpoints",
-          "authentik-http"
+          "dashboards",
+          "datasources",
+          "policies",
+          "authentik-http",
+          "rules"
         ]
       },
-      "POLICIES_0_ORGID": {
-        "name": "POLICIES_0_ORGID",
+      "DELETEDATASOURCES_0_NAME": {
+        "name": "DELETEDATASOURCES_0_NAME",
+        "type": "string",
+        "source": "yaml",
+        "value": "Authentik HTTP",
+        "contexts": [
+          "datasources"
+        ]
+      },
+      "DELETEDATASOURCES_0_ORGID": {
+        "name": "DELETEDATASOURCES_0_ORGID",
         "type": "boolean",
         "source": "yaml",
         "value": "1",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_RECEIVER": {
-        "name": "POLICIES_0_RECEIVER",
+      "DATASOURCES_0_NAME": {
+        "name": "DATASOURCES_0_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "eddie-telegram",
+        "value": "Prometheus",
         "contexts": [
-          "policies"
+          "authentik-http",
+          "datasources"
         ]
       },
-      "POLICIES_0_GROUP_WAIT": {
-        "name": "POLICIES_0_GROUP_WAIT",
+      "DATASOURCES_0_UID": {
+        "name": "DATASOURCES_0_UID",
         "type": "string",
         "source": "yaml",
-        "value": "30s",
+        "value": "dfc0w4yioe4u8e",
         "contexts": [
-          "policies"
+          "authentik-http",
+          "datasources"
         ]
       },
-      "POLICIES_0_GROUP_INTERVAL": {
-        "name": "POLICIES_0_GROUP_INTERVAL",
+      "DATASOURCES_0_TYPE": {
+        "name": "DATASOURCES_0_TYPE",
         "type": "string",
         "source": "yaml",
-        "value": "5m",
+        "value": "prometheus",
         "contexts": [
-          "policies"
+          "authentik-http",
+          "datasources"
         ]
       },
-      "POLICIES_0_REPEAT_INTERVAL": {
-        "name": "POLICIES_0_REPEAT_INTERVAL",
+      "DATASOURCES_0_ACCESS": {
+        "name": "DATASOURCES_0_ACCESS",
         "type": "string",
         "source": "yaml",
-        "value": "4h",
+        "value": "proxy",
         "contexts": [
-          "policies"
+          "authentik-http",
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_0_RECEIVER": {
-        "name": "POLICIES_0_ROUTES_0_RECEIVER",
+      "DATASOURCES_0_ORGID": {
+        "name": "DATASOURCES_0_ORGID",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "1",
+        "contexts": [
+          "datasources"
+        ]
+      },
+      "DATASOURCES_0_URL": {
+        "name": "DATASOURCES_0_URL",
+        "type": "url",
+        "source": "yaml",
+        "value": "http://prometheus:9090",
+        "contexts": [
+          "authentik-http",
+          "datasources"
+        ]
+      },
+      "DATASOURCES_0_ISDEFAULT": {
+        "name": "DATASOURCES_0_ISDEFAULT",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "True",
+        "contexts": [
+          "authentik-http",
+          "datasources"
+        ]
+      },
+      "DATASOURCES_0_JSONDATA_TIMEINTERVAL": {
+        "name": "DATASOURCES_0_JSONDATA_TIMEINTERVAL",
         "type": "string",
         "source": "yaml",
-        "value": "eddie-ltfs-webhook",
+        "value": "15s",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_0_GROUP_WAIT": {
-        "name": "POLICIES_0_ROUTES_0_GROUP_WAIT",
-        "type": "string",
-        "source": "yaml",
-        "value": "10s",
-        "contexts": [
-          "policies"
-        ]
-      },
-      "POLICIES_0_ROUTES_0_GROUP_INTERVAL": {
-        "name": "POLICIES_0_ROUTES_0_GROUP_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "2m",
-        "contexts": [
-          "policies"
-        ]
-      },
-      "POLICIES_0_ROUTES_0_REPEAT_INTERVAL": {
-        "name": "POLICIES_0_ROUTES_0_REPEAT_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "30m",
-        "contexts": [
-          "policies"
-        ]
-      },
-      "POLICIES_0_ROUTES_0_CONTINUE": {
-        "name": "POLICIES_0_ROUTES_0_CONTINUE",
+      "DATASOURCES_0_READONLY": {
+        "name": "DATASOURCES_0_READONLY",
         "type": "boolean",
         "source": "yaml",
         "value": "False",
         "contexts": [
-          "policies"
+          "authentik-http",
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_1_RECEIVER": {
-        "name": "POLICIES_0_ROUTES_1_RECEIVER",
+      "DATASOURCES_1_NAME": {
+        "name": "DATASOURCES_1_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "eddie-telegram",
+        "value": "Eddie Bus PostgreSQL",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_1_GROUP_WAIT": {
-        "name": "POLICIES_0_ROUTES_1_GROUP_WAIT",
+      "DATASOURCES_1_UID": {
+        "name": "DATASOURCES_1_UID",
         "type": "string",
         "source": "yaml",
-        "value": "10s",
+        "value": "cfbzi6b6m5gcgb",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_1_GROUP_INTERVAL": {
-        "name": "POLICIES_0_ROUTES_1_GROUP_INTERVAL",
+      "DATASOURCES_1_TYPE": {
+        "name": "DATASOURCES_1_TYPE",
         "type": "string",
         "source": "yaml",
-        "value": "2m",
+        "value": "grafana-postgresql-datasource",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_1_REPEAT_INTERVAL": {
-        "name": "POLICIES_0_ROUTES_1_REPEAT_INTERVAL",
+      "DATASOURCES_1_ACCESS": {
+        "name": "DATASOURCES_1_ACCESS",
         "type": "string",
         "source": "yaml",
-        "value": "30m",
+        "value": "proxy",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_1_CONTINUE": {
-        "name": "POLICIES_0_ROUTES_1_CONTINUE",
+      "DATASOURCES_1_ORGID": {
+        "name": "DATASOURCES_1_ORGID",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "1",
+        "contexts": [
+          "datasources"
+        ]
+      },
+      "DATASOURCES_1_URL": {
+        "name": "DATASOURCES_1_URL",
+        "type": "string",
+        "source": "yaml",
+        "value": "172.17.0.1:5433",
+        "contexts": [
+          "datasources"
+        ]
+      },
+      "DATASOURCES_1_USER": {
+        "name": "DATASOURCES_1_USER",
+        "type": "string",
+        "source": "yaml",
+        "value": "postgres",
+        "contexts": [
+          "datasources"
+        ]
+      },
+      "DATASOURCES_1_JSONDATA_SSLMODE": {
+        "name": "DATASOURCES_1_JSONDATA_SSLMODE",
+        "type": "string",
+        "source": "yaml",
+        "value": "disable",
+        "contexts": [
+          "datasources"
+        ]
+      },
+      "DATASOURCES_1_JSONDATA_TIMESCALEDB": {
+        "name": "DATASOURCES_1_JSONDATA_TIMESCALEDB",
         "type": "boolean",
         "source": "yaml",
         "value": "False",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_2_RECEIVER": {
-        "name": "POLICIES_0_ROUTES_2_RECEIVER",
-        "type": "string",
-        "source": "yaml",
-        "value": "eddie-telegram",
-        "contexts": [
-          "policies"
-        ]
-      },
-      "POLICIES_0_ROUTES_2_GROUP_WAIT": {
-        "name": "POLICIES_0_ROUTES_2_GROUP_WAIT",
-        "type": "string",
-        "source": "yaml",
-        "value": "30s",
-        "contexts": [
-          "policies"
-        ]
-      },
-      "POLICIES_0_ROUTES_2_GROUP_INTERVAL": {
-        "name": "POLICIES_0_ROUTES_2_GROUP_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "5m",
-        "contexts": [
-          "policies"
-        ]
-      },
-      "POLICIES_0_ROUTES_2_REPEAT_INTERVAL": {
-        "name": "POLICIES_0_ROUTES_2_REPEAT_INTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "1h",
-        "contexts": [
-          "policies"
-        ]
-      },
-      "POLICIES_0_ROUTES_2_CONTINUE": {
-        "name": "POLICIES_0_ROUTES_2_CONTINUE",
+      "DATASOURCES_1_READONLY": {
+        "name": "DATASOURCES_1_READONLY",
         "type": "boolean",
         "source": "yaml",
         "value": "False",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_3_RECEIVER": {
-        "name": "POLICIES_0_ROUTES_3_RECEIVER",
+      "DATASOURCES_2_NAME": {
+        "name": "DATASOURCES_2_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "eddie-telegram",
+        "value": "BTC Trading PostgreSQL",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_3_GROUP_WAIT": {
-        "name": "POLICIES_0_ROUTES_3_GROUP_WAIT",
+      "DATASOURCES_2_UID": {
+        "name": "DATASOURCES_2_UID",
         "type": "string",
         "source": "yaml",
-        "value": "30s",
+        "value": "btc-trading-pg",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_3_GROUP_INTERVAL": {
-        "name": "POLICIES_0_ROUTES_3_GROUP_INTERVAL",
+      "DATASOURCES_2_TYPE": {
+        "name": "DATASOURCES_2_TYPE",
         "type": "string",
         "source": "yaml",
-        "value": "5m",
+        "value": "grafana-postgresql-datasource",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_3_REPEAT_INTERVAL": {
-        "name": "POLICIES_0_ROUTES_3_REPEAT_INTERVAL",
+      "DATASOURCES_2_ACCESS": {
+        "name": "DATASOURCES_2_ACCESS",
         "type": "string",
         "source": "yaml",
-        "value": "4h",
+        "value": "proxy",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_3_CONTINUE": {
-        "name": "POLICIES_0_ROUTES_3_CONTINUE",
+      "DATASOURCES_2_ORGID": {
+        "name": "DATASOURCES_2_ORGID",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "1",
+        "contexts": [
+          "datasources"
+        ]
+      },
+      "DATASOURCES_2_URL": {
+        "name": "DATASOURCES_2_URL",
+        "type": "string",
+        "source": "yaml",
+        "value": "172.17.0.1:5433",
+        "contexts": [
+          "datasources"
+        ]
+      },
+      "DATASOURCES_2_USER": {
+        "name": "DATASOURCES_2_USER",
+        "type": "string",
+        "source": "yaml",
+        "value": "postgres",
+        "contexts": [
+          "datasources"
+        ]
+      },
+      "DATASOURCES_2_JSONDATA_SSLMODE": {
+        "name": "DATASOURCES_2_JSONDATA_SSLMODE",
+        "type": "string",
+        "source": "yaml",
+        "value": "disable",
+        "contexts": [
+          "datasources"
+        ]
+      },
+      "DATASOURCES_2_JSONDATA_TIMESCALEDB": {
+        "name": "DATASOURCES_2_JSONDATA_TIMESCALEDB",
         "type": "boolean",
         "source": "yaml",
         "value": "False",
         "contexts": [
-          "policies"
+          "datasources"
         ]
       },
-      "POLICIES_0_ROUTES_4_RECEIVER": {
-        "name": "POLICIES_0_ROUTES_4_RECEIVER",
+      "DATASOURCES_2_READONLY": {
+        "name": "DATASOURCES_2_READONLY",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "True",
+        "contexts": [
+          "datasources"
+        ]
+      },
+      "PROVIDERS_0_NAME": {
+        "name": "PROVIDERS_0_NAME",
         "type": "string",
         "source": "yaml",
-        "value": "eddie-telegram",
+        "value": "eddie-dashboards",
         "contexts": [
-          "policies"
+          "dashboards"
         ]
       },
-      "POLICIES_0_ROUTES_4_GROUP_WAIT": {
-        "name": "POLICIES_0_ROUTES_4_GROUP_WAIT",
+      "PROVIDERS_0_ORGID": {
+        "name": "PROVIDERS_0_ORGID",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "1",
+        "contexts": [
+          "dashboards"
+        ]
+      },
+      "PROVIDERS_0_FOLDER": {
+        "name": "PROVIDERS_0_FOLDER",
         "type": "string",
         "source": "yaml",
-        "value": "30s",
+        "value": "Eddie Auto-Dev",
         "contexts": [
-          "policies"
+          "dashboards"
         ]
       },
-      "POLICIES_0_ROUTES_4_GROUP_INTERVAL": {
-        "name": "POLICIES_0_ROUTES_4_GROUP_INTERVAL",
+      "PROVIDERS_0_TYPE": {
+        "name": "PROVIDERS_0_TYPE",
         "type": "string",
         "source": "yaml",
-        "value": "5m",
+        "value": "file",
         "contexts": [
-          "policies"
+          "dashboards"
         ]
       },
-      "POLICIES_0_ROUTES_4_REPEAT_INTERVAL": {
-        "name": "POLICIES_0_ROUTES_4_REPEAT_INTERVAL",
-        "type": "string",
+      "PROVIDERS_0_DISABLEDELETION": {
+        "name": "PROVIDERS_0_DISABLEDELETION",
+        "type": "boolean",
         "source": "yaml",
-        "value": "2h",
+        "value": "True",
         "contexts": [
-          "policies"
+          "dashboards"
         ]
       },
-      "POLICIES_0_ROUTES_4_CONTINUE": {
-        "name": "POLICIES_0_ROUTES_4_CONTINUE",
+      "PROVIDERS_0_EDITABLE": {
+        "name": "PROVIDERS_0_EDITABLE",
         "type": "boolean",
         "source": "yaml",
         "value": "False",
         "contexts": [
-          "policies"
+          "dashboards"
+        ]
+      },
+      "PROVIDERS_0_ALLOWUIUPDATES": {
+        "name": "PROVIDERS_0_ALLOWUIUPDATES",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "False",
+        "contexts": [
+          "dashboards"
+        ]
+      },
+      "PROVIDERS_0_UPDATEINTERVALSECONDS": {
+        "name": "PROVIDERS_0_UPDATEINTERVALSECONDS",
+        "type": "integer",
+        "source": "yaml",
+        "value": "30",
+        "contexts": [
+          "dashboards"
+        ]
+      },
+      "PROVIDERS_0_OPTIONS_PATH": {
+        "name": "PROVIDERS_0_OPTIONS_PATH",
+        "type": "path",
+        "source": "yaml",
+        "value": "/etc/grafana/provisioning/dashboards",
+        "contexts": [
+          "dashboards"
         ]
       },
       "GROUPS_0_ORGID": {
@@ -14620,6 +14269,276 @@
           "rules"
         ]
       },
+      "POLICIES_0_ORGID": {
+        "name": "POLICIES_0_ORGID",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "1",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_RECEIVER": {
+        "name": "POLICIES_0_RECEIVER",
+        "type": "string",
+        "source": "yaml",
+        "value": "eddie-telegram",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_GROUP_WAIT": {
+        "name": "POLICIES_0_GROUP_WAIT",
+        "type": "string",
+        "source": "yaml",
+        "value": "30s",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_GROUP_INTERVAL": {
+        "name": "POLICIES_0_GROUP_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "5m",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_REPEAT_INTERVAL": {
+        "name": "POLICIES_0_REPEAT_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "4h",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_0_RECEIVER": {
+        "name": "POLICIES_0_ROUTES_0_RECEIVER",
+        "type": "string",
+        "source": "yaml",
+        "value": "eddie-ltfs-webhook",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_0_GROUP_WAIT": {
+        "name": "POLICIES_0_ROUTES_0_GROUP_WAIT",
+        "type": "string",
+        "source": "yaml",
+        "value": "10s",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_0_GROUP_INTERVAL": {
+        "name": "POLICIES_0_ROUTES_0_GROUP_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "2m",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_0_REPEAT_INTERVAL": {
+        "name": "POLICIES_0_ROUTES_0_REPEAT_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "30m",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_0_CONTINUE": {
+        "name": "POLICIES_0_ROUTES_0_CONTINUE",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "False",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_1_RECEIVER": {
+        "name": "POLICIES_0_ROUTES_1_RECEIVER",
+        "type": "string",
+        "source": "yaml",
+        "value": "eddie-telegram",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_1_GROUP_WAIT": {
+        "name": "POLICIES_0_ROUTES_1_GROUP_WAIT",
+        "type": "string",
+        "source": "yaml",
+        "value": "10s",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_1_GROUP_INTERVAL": {
+        "name": "POLICIES_0_ROUTES_1_GROUP_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "2m",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_1_REPEAT_INTERVAL": {
+        "name": "POLICIES_0_ROUTES_1_REPEAT_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "30m",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_1_CONTINUE": {
+        "name": "POLICIES_0_ROUTES_1_CONTINUE",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "False",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_2_RECEIVER": {
+        "name": "POLICIES_0_ROUTES_2_RECEIVER",
+        "type": "string",
+        "source": "yaml",
+        "value": "eddie-telegram",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_2_GROUP_WAIT": {
+        "name": "POLICIES_0_ROUTES_2_GROUP_WAIT",
+        "type": "string",
+        "source": "yaml",
+        "value": "30s",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_2_GROUP_INTERVAL": {
+        "name": "POLICIES_0_ROUTES_2_GROUP_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "5m",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_2_REPEAT_INTERVAL": {
+        "name": "POLICIES_0_ROUTES_2_REPEAT_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "1h",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_2_CONTINUE": {
+        "name": "POLICIES_0_ROUTES_2_CONTINUE",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "False",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_3_RECEIVER": {
+        "name": "POLICIES_0_ROUTES_3_RECEIVER",
+        "type": "string",
+        "source": "yaml",
+        "value": "eddie-telegram",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_3_GROUP_WAIT": {
+        "name": "POLICIES_0_ROUTES_3_GROUP_WAIT",
+        "type": "string",
+        "source": "yaml",
+        "value": "30s",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_3_GROUP_INTERVAL": {
+        "name": "POLICIES_0_ROUTES_3_GROUP_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "5m",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_3_REPEAT_INTERVAL": {
+        "name": "POLICIES_0_ROUTES_3_REPEAT_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "4h",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_3_CONTINUE": {
+        "name": "POLICIES_0_ROUTES_3_CONTINUE",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "False",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_4_RECEIVER": {
+        "name": "POLICIES_0_ROUTES_4_RECEIVER",
+        "type": "string",
+        "source": "yaml",
+        "value": "eddie-telegram",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_4_GROUP_WAIT": {
+        "name": "POLICIES_0_ROUTES_4_GROUP_WAIT",
+        "type": "string",
+        "source": "yaml",
+        "value": "30s",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_4_GROUP_INTERVAL": {
+        "name": "POLICIES_0_ROUTES_4_GROUP_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "5m",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_4_REPEAT_INTERVAL": {
+        "name": "POLICIES_0_ROUTES_4_REPEAT_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "2h",
+        "contexts": [
+          "policies"
+        ]
+      },
+      "POLICIES_0_ROUTES_4_CONTINUE": {
+        "name": "POLICIES_0_ROUTES_4_CONTINUE",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "False",
+        "contexts": [
+          "policies"
+        ]
+      },
       "CONTACTPOINTS_0_ORGID": {
         "name": "CONTACTPOINTS_0_ORGID",
         "type": "boolean",
@@ -14753,373 +14672,6 @@
         "value": "http://192.168.15.2:5001/alerts",
         "contexts": [
           "contactpoints"
-        ]
-      },
-      "PROVIDERS_0_NAME": {
-        "name": "PROVIDERS_0_NAME",
-        "type": "string",
-        "source": "yaml",
-        "value": "eddie-dashboards",
-        "contexts": [
-          "dashboards"
-        ]
-      },
-      "PROVIDERS_0_ORGID": {
-        "name": "PROVIDERS_0_ORGID",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "1",
-        "contexts": [
-          "dashboards"
-        ]
-      },
-      "PROVIDERS_0_FOLDER": {
-        "name": "PROVIDERS_0_FOLDER",
-        "type": "string",
-        "source": "yaml",
-        "value": "Eddie Auto-Dev",
-        "contexts": [
-          "dashboards"
-        ]
-      },
-      "PROVIDERS_0_TYPE": {
-        "name": "PROVIDERS_0_TYPE",
-        "type": "string",
-        "source": "yaml",
-        "value": "file",
-        "contexts": [
-          "dashboards"
-        ]
-      },
-      "PROVIDERS_0_DISABLEDELETION": {
-        "name": "PROVIDERS_0_DISABLEDELETION",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "True",
-        "contexts": [
-          "dashboards"
-        ]
-      },
-      "PROVIDERS_0_EDITABLE": {
-        "name": "PROVIDERS_0_EDITABLE",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "False",
-        "contexts": [
-          "dashboards"
-        ]
-      },
-      "PROVIDERS_0_ALLOWUIUPDATES": {
-        "name": "PROVIDERS_0_ALLOWUIUPDATES",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "False",
-        "contexts": [
-          "dashboards"
-        ]
-      },
-      "PROVIDERS_0_UPDATEINTERVALSECONDS": {
-        "name": "PROVIDERS_0_UPDATEINTERVALSECONDS",
-        "type": "integer",
-        "source": "yaml",
-        "value": "30",
-        "contexts": [
-          "dashboards"
-        ]
-      },
-      "PROVIDERS_0_OPTIONS_PATH": {
-        "name": "PROVIDERS_0_OPTIONS_PATH",
-        "type": "path",
-        "source": "yaml",
-        "value": "/etc/grafana/provisioning/dashboards",
-        "contexts": [
-          "dashboards"
-        ]
-      },
-      "DELETEDATASOURCES_0_NAME": {
-        "name": "DELETEDATASOURCES_0_NAME",
-        "type": "string",
-        "source": "yaml",
-        "value": "Authentik HTTP",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DELETEDATASOURCES_0_ORGID": {
-        "name": "DELETEDATASOURCES_0_ORGID",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "1",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_0_NAME": {
-        "name": "DATASOURCES_0_NAME",
-        "type": "string",
-        "source": "yaml",
-        "value": "Prometheus",
-        "contexts": [
-          "authentik-http",
-          "datasources"
-        ]
-      },
-      "DATASOURCES_0_UID": {
-        "name": "DATASOURCES_0_UID",
-        "type": "string",
-        "source": "yaml",
-        "value": "dfc0w4yioe4u8e",
-        "contexts": [
-          "authentik-http",
-          "datasources"
-        ]
-      },
-      "DATASOURCES_0_TYPE": {
-        "name": "DATASOURCES_0_TYPE",
-        "type": "string",
-        "source": "yaml",
-        "value": "prometheus",
-        "contexts": [
-          "authentik-http",
-          "datasources"
-        ]
-      },
-      "DATASOURCES_0_ACCESS": {
-        "name": "DATASOURCES_0_ACCESS",
-        "type": "string",
-        "source": "yaml",
-        "value": "proxy",
-        "contexts": [
-          "authentik-http",
-          "datasources"
-        ]
-      },
-      "DATASOURCES_0_ORGID": {
-        "name": "DATASOURCES_0_ORGID",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "1",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_0_URL": {
-        "name": "DATASOURCES_0_URL",
-        "type": "url",
-        "source": "yaml",
-        "value": "http://prometheus:9090",
-        "contexts": [
-          "authentik-http",
-          "datasources"
-        ]
-      },
-      "DATASOURCES_0_ISDEFAULT": {
-        "name": "DATASOURCES_0_ISDEFAULT",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "True",
-        "contexts": [
-          "authentik-http",
-          "datasources"
-        ]
-      },
-      "DATASOURCES_0_JSONDATA_TIMEINTERVAL": {
-        "name": "DATASOURCES_0_JSONDATA_TIMEINTERVAL",
-        "type": "string",
-        "source": "yaml",
-        "value": "15s",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_0_READONLY": {
-        "name": "DATASOURCES_0_READONLY",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "False",
-        "contexts": [
-          "authentik-http",
-          "datasources"
-        ]
-      },
-      "DATASOURCES_1_NAME": {
-        "name": "DATASOURCES_1_NAME",
-        "type": "string",
-        "source": "yaml",
-        "value": "Eddie Bus PostgreSQL",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_1_UID": {
-        "name": "DATASOURCES_1_UID",
-        "type": "string",
-        "source": "yaml",
-        "value": "cfbzi6b6m5gcgb",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_1_TYPE": {
-        "name": "DATASOURCES_1_TYPE",
-        "type": "string",
-        "source": "yaml",
-        "value": "grafana-postgresql-datasource",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_1_ACCESS": {
-        "name": "DATASOURCES_1_ACCESS",
-        "type": "string",
-        "source": "yaml",
-        "value": "proxy",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_1_ORGID": {
-        "name": "DATASOURCES_1_ORGID",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "1",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_1_URL": {
-        "name": "DATASOURCES_1_URL",
-        "type": "string",
-        "source": "yaml",
-        "value": "172.17.0.1:5433",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_1_USER": {
-        "name": "DATASOURCES_1_USER",
-        "type": "string",
-        "source": "yaml",
-        "value": "postgres",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_1_JSONDATA_SSLMODE": {
-        "name": "DATASOURCES_1_JSONDATA_SSLMODE",
-        "type": "string",
-        "source": "yaml",
-        "value": "disable",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_1_JSONDATA_TIMESCALEDB": {
-        "name": "DATASOURCES_1_JSONDATA_TIMESCALEDB",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "False",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_1_READONLY": {
-        "name": "DATASOURCES_1_READONLY",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "False",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_2_NAME": {
-        "name": "DATASOURCES_2_NAME",
-        "type": "string",
-        "source": "yaml",
-        "value": "BTC Trading PostgreSQL",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_2_UID": {
-        "name": "DATASOURCES_2_UID",
-        "type": "string",
-        "source": "yaml",
-        "value": "btc-trading-pg",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_2_TYPE": {
-        "name": "DATASOURCES_2_TYPE",
-        "type": "string",
-        "source": "yaml",
-        "value": "grafana-postgresql-datasource",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_2_ACCESS": {
-        "name": "DATASOURCES_2_ACCESS",
-        "type": "string",
-        "source": "yaml",
-        "value": "proxy",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_2_ORGID": {
-        "name": "DATASOURCES_2_ORGID",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "1",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_2_URL": {
-        "name": "DATASOURCES_2_URL",
-        "type": "string",
-        "source": "yaml",
-        "value": "172.17.0.1:5433",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_2_USER": {
-        "name": "DATASOURCES_2_USER",
-        "type": "string",
-        "source": "yaml",
-        "value": "postgres",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_2_JSONDATA_SSLMODE": {
-        "name": "DATASOURCES_2_JSONDATA_SSLMODE",
-        "type": "string",
-        "source": "yaml",
-        "value": "disable",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_2_JSONDATA_TIMESCALEDB": {
-        "name": "DATASOURCES_2_JSONDATA_TIMESCALEDB",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "False",
-        "contexts": [
-          "datasources"
-        ]
-      },
-      "DATASOURCES_2_READONLY": {
-        "name": "DATASOURCES_2_READONLY",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "True",
-        "contexts": [
-          "datasources"
         ]
       },
       "TUNNEL": {
@@ -15363,6 +14915,195 @@
         "value": "30s",
         "contexts": [
           "cloudflared-rpa4all-ide"
+        ]
+      },
+      "GLOBAL_RESOLVE_TIMEOUT": {
+        "name": "GLOBAL_RESOLVE_TIMEOUT",
+        "type": "string",
+        "source": "yaml",
+        "value": "5m",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_RECEIVER": {
+        "name": "ROUTE_RECEIVER",
+        "type": "string",
+        "source": "yaml",
+        "value": "default",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_GROUP_WAIT": {
+        "name": "ROUTE_GROUP_WAIT",
+        "type": "string",
+        "source": "yaml",
+        "value": "30s",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_GROUP_INTERVAL": {
+        "name": "ROUTE_GROUP_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "5m",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_REPEAT_INTERVAL": {
+        "name": "ROUTE_REPEAT_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "3h",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_0_RECEIVER": {
+        "name": "ROUTE_ROUTES_0_RECEIVER",
+        "type": "string",
+        "source": "yaml",
+        "value": "telegram-selfhealing",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_0_GROUP_WAIT": {
+        "name": "ROUTE_ROUTES_0_GROUP_WAIT",
+        "type": "string",
+        "source": "yaml",
+        "value": "10s",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_0_GROUP_INTERVAL": {
+        "name": "ROUTE_ROUTES_0_GROUP_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "5m",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_0_REPEAT_INTERVAL": {
+        "name": "ROUTE_ROUTES_0_REPEAT_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "1h",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_0_CONTINUE": {
+        "name": "ROUTE_ROUTES_0_CONTINUE",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "True",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_1_RECEIVER": {
+        "name": "ROUTE_ROUTES_1_RECEIVER",
+        "type": "string",
+        "source": "yaml",
+        "value": "telegram-selfhealing",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_1_GROUP_WAIT": {
+        "name": "ROUTE_ROUTES_1_GROUP_WAIT",
+        "type": "string",
+        "source": "yaml",
+        "value": "15s",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_1_GROUP_INTERVAL": {
+        "name": "ROUTE_ROUTES_1_GROUP_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "5m",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_1_REPEAT_INTERVAL": {
+        "name": "ROUTE_ROUTES_1_REPEAT_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "1h",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_2_RECEIVER": {
+        "name": "ROUTE_ROUTES_2_RECEIVER",
+        "type": "string",
+        "source": "yaml",
+        "value": "telegram-critical",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_2_GROUP_WAIT": {
+        "name": "ROUTE_ROUTES_2_GROUP_WAIT",
+        "type": "string",
+        "source": "yaml",
+        "value": "10s",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_2_GROUP_INTERVAL": {
+        "name": "ROUTE_ROUTES_2_GROUP_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "5m",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "ROUTE_ROUTES_2_REPEAT_INTERVAL": {
+        "name": "ROUTE_ROUTES_2_REPEAT_INTERVAL",
+        "type": "string",
+        "source": "yaml",
+        "value": "30m",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "RECEIVERS_0_NAME": {
+        "name": "RECEIVERS_0_NAME",
+        "type": "string",
+        "source": "yaml",
+        "value": "default",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "RECEIVERS_1_NAME": {
+        "name": "RECEIVERS_1_NAME",
+        "type": "string",
+        "source": "yaml",
+        "value": "telegram-selfhealing",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "RECEIVERS_2_NAME": {
+        "name": "RECEIVERS_2_NAME",
+        "type": "string",
+        "source": "yaml",
+        "value": "telegram-critical",
+        "contexts": [
+          "alertmanager_telegram"
         ]
       },
       "OPENAPI": {
@@ -15645,14 +15386,149 @@
           "openapi.generated"
         ]
       },
+      "SCHEDULER_POSTS_PER_DAY": {
+        "name": "SCHEDULER_POSTS_PER_DAY",
+        "type": "integer",
+        "source": "yaml",
+        "value": "3",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "SCHEDULER_POLL_INTERVAL_SECONDS": {
+        "name": "SCHEDULER_POLL_INTERVAL_SECONDS",
+        "type": "integer",
+        "source": "yaml",
+        "value": "60",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "SCHEDULER_MAX_RETRIES": {
+        "name": "SCHEDULER_MAX_RETRIES",
+        "type": "integer",
+        "source": "yaml",
+        "value": "3",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "SCHEDULER_TIMEZONE": {
+        "name": "SCHEDULER_TIMEZONE",
+        "type": "string",
+        "source": "yaml",
+        "value": "America/Sao_Paulo",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "DAILY_LIMIT": {
+        "name": "DAILY_LIMIT",
+        "type": "integer",
+        "source": "yaml",
+        "value": "3",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PATHS_DATA_DIR": {
+        "name": "PATHS_DATA_DIR",
+        "type": "string",
+        "source": "yaml",
+        "value": "content_automation/data",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PATHS_OUTPUT_DIR": {
+        "name": "PATHS_OUTPUT_DIR",
+        "type": "string",
+        "source": "yaml",
+        "value": "content_automation/output",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PATHS_PROMPTS_DIR": {
+        "name": "PATHS_PROMPTS_DIR",
+        "type": "string",
+        "source": "yaml",
+        "value": "content_automation/data/prompts",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PATHS_LOGS_DIR": {
+        "name": "PATHS_LOGS_DIR",
+        "type": "string",
+        "source": "yaml",
+        "value": "content_automation/data/logs",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "VIDEO_WIDTH": {
+        "name": "VIDEO_WIDTH",
+        "type": "integer",
+        "source": "yaml",
+        "value": "1080",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "VIDEO_HEIGHT": {
+        "name": "VIDEO_HEIGHT",
+        "type": "integer",
+        "source": "yaml",
+        "value": "1920",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "VIDEO_MAX_DURATION_SECONDS": {
+        "name": "VIDEO_MAX_DURATION_SECONDS",
+        "type": "integer",
+        "source": "yaml",
+        "value": "60",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "VIDEO_TTS_BACKEND": {
+        "name": "VIDEO_TTS_BACKEND",
+        "type": "string",
+        "source": "yaml",
+        "value": "mock",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PUBLISHER_MODE": {
+        "name": "PUBLISHER_MODE",
+        "type": "string",
+        "source": "yaml",
+        "value": "kwai",
+        "contexts": [
+          "settings"
+        ]
+      },
+      "PUBLISHER_PLATFORM": {
+        "name": "PUBLISHER_PLATFORM",
+        "type": "string",
+        "source": "yaml",
+        "value": "kwai",
+        "contexts": [
+          "settings"
+        ]
+      },
       "NAME": {
         "name": "NAME",
         "type": "string",
         "source": "yaml",
         "value": "Homelab MCP Server",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "VERSION": {
@@ -15661,8 +15537,8 @@
         "source": "yaml",
         "value": "0.0.1",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "SCHEMA": {
@@ -15671,8 +15547,8 @@
         "source": "yaml",
         "value": "v1",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "MCPSERVERS_0_NAME": {
@@ -15681,8 +15557,8 @@
         "source": "yaml",
         "value": "homelab",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "MCPSERVERS_0_COMMAND": {
@@ -15691,8 +15567,8 @@
         "source": "yaml",
         "value": "/home/edenilson/shared-auto-dev/.venv/bin/python",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "MCPSERVERS_0_ENV_HOMELAB_URL": {
@@ -15701,8 +15577,8 @@
         "source": "yaml",
         "value": "http://192.168.15.2:8503",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       },
       "MCPSERVERS_0_ENV_API_BASE_URL": {
@@ -15711,8 +15587,52 @@
         "source": "yaml",
         "value": "http://192.168.15.2:3000",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
+        ]
+      },
+      "TOPIC": {
+        "name": "TOPIC",
+        "type": "string",
+        "source": "yaml",
+        "value": "viral_trends",
+        "contexts": [
+          "curiosidades",
+          "viral_trends",
+          "cripto"
+        ]
+      },
+      "TITLE_TEMPLATE": {
+        "name": "TITLE_TEMPLATE",
+        "type": "string",
+        "source": "yaml",
+        "value": "Trend alert: {trend_title}",
+        "contexts": [
+          "curiosidades",
+          "viral_trends",
+          "cripto"
+        ]
+      },
+      "SCRIPT_TEMPLATE": {
+        "name": "SCRIPT_TEMPLATE",
+        "type": "string",
+        "source": "yaml",
+        "value": "Hook: Essa trend est\u00e1 com score {score} agora.\nPasso 1: Use o gancho nos primeiros 2 segundos.\nPasso 2: Entregue valor r\u00e1pido sobre {trend_title}.\nPasso 3: CTA claro no final para aumentar reten\u00e7\u00e3o.\nTags: {tags}.\n",
+        "contexts": [
+          "curiosidades",
+          "viral_trends",
+          "cripto"
+        ]
+      },
+      "CTA_TEMPLATE": {
+        "name": "CTA_TEMPLATE",
+        "type": "string",
+        "source": "yaml",
+        "value": "Marca algu\u00e9m que precisa surfar essa trend hoje!",
+        "contexts": [
+          "curiosidades",
+          "viral_trends",
+          "cripto"
         ]
       },
       "DATASOURCES_0_JSONDATA_TLSSKIPVERIFY": {
@@ -15753,27 +15673,6 @@
       }
     },
     "authentication": {
-      "WIKI_TOKEN": {
-        "name": "WIKI_TOKEN",
-        "type": "string",
-        "source": ".env",
-        "value": "***REDACTED***",
-        "locations": [
-          {
-            "file": ".env",
-            "line": 5
-          },
-          {
-            "file": ".env.example.wiki",
-            "line": 4
-          },
-          {
-            "file": ".env",
-            "line": 5
-          }
-        ],
-        "contexts": []
-      },
       "OPENAI_COMPATIBLE_API_KEY": {
         "name": "OPENAI_COMPATIBLE_API_KEY",
         "type": "string",
@@ -15783,6 +15682,19 @@
           "config"
         ]
       },
+      "WIKI_TOKEN": {
+        "name": "WIKI_TOKEN",
+        "type": "string",
+        "source": ".env",
+        "value": "***REDACTED***",
+        "locations": [
+          {
+            "file": ".env.example.wiki",
+            "line": 4
+          }
+        ],
+        "contexts": []
+      },
       "OPENROUTER_API_KEY": {
         "name": "OPENROUTER_API_KEY",
         "type": "string",
@@ -15790,38 +15702,11 @@
         "value": "***REDACTED***",
         "locations": [
           {
-            "file": ".env",
-            "line": 17
-          },
-          {
             "file": ".env.example",
             "line": 1
-          },
-          {
-            "file": ".env",
-            "line": 17
           }
         ],
         "contexts": []
-      },
-      "DB_PASSWORD": {
-        "name": "DB_PASSWORD",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "***REDACTED***",
-        "contexts": [
-          "netbox",
-          "netbox-worker"
-        ]
-      },
-      "NEXTCLOUD_ADMIN_PASSWORD": {
-        "name": "NEXTCLOUD_ADMIN_PASSWORD",
-        "type": "string",
-        "source": "python-config",
-        "value": "***REDACTED***",
-        "contexts": [
-          "config"
-        ]
       },
       "GOOGLE_AI_API_KEY": {
         "name": "GOOGLE_AI_API_KEY",
@@ -15877,11 +15762,11 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "mailu-dovecot",
-          "mailu-frontend",
+          "mailu-backend",
           "mailu-roundcube",
           "mailu-postfix",
-          "mailu-backend"
+          "mailu-frontend",
+          "mailu-dovecot"
         ]
       },
       "MAILU_DB_PASSWORD": {
@@ -15948,6 +15833,16 @@
           }
         ],
         "contexts": []
+      },
+      "DB_PASSWORD": {
+        "name": "DB_PASSWORD",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "***REDACTED***",
+        "contexts": [
+          "netbox",
+          "netbox-worker"
+        ]
       },
       "SHARED_IPC_SECRET": {
         "name": "SHARED_IPC_SECRET",
@@ -16197,16 +16092,6 @@
         ],
         "contexts": []
       },
-      "SECRETS_AGENT_DATA": {
-        "name": "SECRETS_AGENT_DATA",
-        "type": "path",
-        "source": "systemd",
-        "value": "***REDACTED***",
-        "contexts": [
-          "clear-trading-agent",
-          "kwai-viewer-homelab"
-        ]
-      },
       "ENABLE_OAUTH_SIGNUP": {
         "name": "ENABLE_OAUTH_SIGNUP",
         "type": "boolean",
@@ -16366,11 +16251,38 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
+          "mailu-db",
           "wikijs-db",
           "netbox-postgres",
           "mail-db",
-          "mailu-db",
           "postgres"
+        ]
+      },
+      "OIDC_CLIENT_SECRET": {
+        "name": "OIDC_CLIENT_SECRET",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "***REDACTED***",
+        "contexts": [
+          "wikijs"
+        ]
+      },
+      "OIDC_AUTH_ENDPOINT": {
+        "name": "OIDC_AUTH_ENDPOINT",
+        "type": "url",
+        "source": "docker-compose",
+        "value": "***REDACTED***",
+        "contexts": [
+          "wikijs"
+        ]
+      },
+      "OIDC_TOKEN_ENDPOINT": {
+        "name": "OIDC_TOKEN_ENDPOINT",
+        "type": "url",
+        "source": "docker-compose",
+        "value": "***REDACTED***",
+        "contexts": [
+          "wikijs"
         ]
       },
       "ROUNDCUBEMAIL_DB_PASSWORD": {
@@ -16380,6 +16292,15 @@
         "value": "***REDACTED***",
         "contexts": [
           "roundcube"
+        ]
+      },
+      "OPENSEARCH_INITIAL_ADMIN_PASSWORD": {
+        "name": "OPENSEARCH_INITIAL_ADMIN_PASSWORD",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "***REDACTED***",
+        "contexts": [
+          "opensearch-node1"
         ]
       },
       "GF_SECURITY_ADMIN_PASSWORD": {
@@ -16454,61 +16375,6 @@
           "grafana"
         ]
       },
-      "OPENSEARCH_INITIAL_ADMIN_PASSWORD": {
-        "name": "OPENSEARCH_INITIAL_ADMIN_PASSWORD",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "***REDACTED***",
-        "contexts": [
-          "opensearch-node1"
-        ]
-      },
-      "OIDC_CLIENT_SECRET": {
-        "name": "OIDC_CLIENT_SECRET",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "***REDACTED***",
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "OIDC_AUTH_ENDPOINT": {
-        "name": "OIDC_AUTH_ENDPOINT",
-        "type": "url",
-        "source": "docker-compose",
-        "value": "***REDACTED***",
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "OIDC_TOKEN_ENDPOINT": {
-        "name": "OIDC_TOKEN_ENDPOINT",
-        "type": "url",
-        "source": "docker-compose",
-        "value": "***REDACTED***",
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "PASSWORD": {
-        "name": "PASSWORD",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "***REDACTED***",
-        "contexts": [
-          "freecash-browser",
-          "kwai-browser"
-        ]
-      },
-      "ADMIN_TOKEN": {
-        "name": "ADMIN_TOKEN",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "***REDACTED***",
-        "contexts": [
-          "vaultwarden"
-        ]
-      },
       "REDIS_CACHE_PASSWORD": {
         "name": "REDIS_CACHE_PASSWORD",
         "type": "string",
@@ -16526,8 +16392,8 @@
         "value": "***REDACTED***",
         "contexts": [
           "netbox-redis-cache",
-          "netbox-redis",
           "netbox",
+          "netbox-redis",
           "netbox-worker"
         ]
       },
@@ -16659,6 +16525,24 @@
           "glpi-db"
         ]
       },
+      "ADMIN_TOKEN": {
+        "name": "ADMIN_TOKEN",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "***REDACTED***",
+        "contexts": [
+          "vaultwarden"
+        ]
+      },
+      "BRIDGE_RUNTIME_TOKENS": {
+        "name": "BRIDGE_RUNTIME_TOKENS",
+        "type": "path",
+        "source": "systemd",
+        "value": "***REDACTED***",
+        "contexts": [
+          "tuya-token-selfheal"
+        ]
+      },
       "SECRETS_AGENT_URL": {
         "name": "SECRETS_AGENT_URL",
         "type": "string",
@@ -16666,6 +16550,15 @@
         "value": "***REDACTED***",
         "contexts": [
           "configure_authentik_nas_ldap"
+        ]
+      },
+      "SECRETS_AGENT_DATA": {
+        "name": "SECRETS_AGENT_DATA",
+        "type": "path",
+        "source": "systemd",
+        "value": "***REDACTED***",
+        "contexts": [
+          "clear-trading-agent"
         ]
       },
       "HF_TOKEN": {
@@ -16679,6 +16572,15 @@
       },
       "HUGGINGFACEHUB_API_TOKEN": {
         "name": "HUGGINGFACEHUB_API_TOKEN",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "config"
+        ]
+      },
+      "NEXTCLOUD_ADMIN_PASSWORD": {
+        "name": "NEXTCLOUD_ADMIN_PASSWORD",
         "type": "string",
         "source": "python-config",
         "value": "***REDACTED***",
@@ -16710,7 +16612,62 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "configure_authentik_nas_ldap",
+          "configure_authentik_nextcloud_oidc",
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_TOKEN": {
+        "name": "AUTHENTIK_TOKEN",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nextcloud_oidc",
+          "configure_authentik_nas_ldap"
+        ]
+      },
+      "AUTHENTIK_NEXTCLOUD_CLIENT_ID": {
+        "name": "AUTHENTIK_NEXTCLOUD_CLIENT_ID",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nextcloud_oidc"
+        ]
+      },
+      "AUTHENTIK_NEXTCLOUD_CLIENT_SECRET": {
+        "name": "AUTHENTIK_NEXTCLOUD_CLIENT_SECRET",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nextcloud_oidc"
+        ]
+      },
+      "AUTHENTIK_NEXTCLOUD_PROVIDER_NAME": {
+        "name": "AUTHENTIK_NEXTCLOUD_PROVIDER_NAME",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nextcloud_oidc"
+        ]
+      },
+      "AUTHENTIK_NEXTCLOUD_APP_NAME": {
+        "name": "AUTHENTIK_NEXTCLOUD_APP_NAME",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
+          "configure_authentik_nextcloud_oidc"
+        ]
+      },
+      "AUTHENTIK_NEXTCLOUD_APP_SLUG": {
+        "name": "AUTHENTIK_NEXTCLOUD_APP_SLUG",
+        "type": "string",
+        "source": "python-config",
+        "value": "***REDACTED***",
+        "contexts": [
           "configure_authentik_nextcloud_oidc"
         ]
       },
@@ -16804,16 +16761,6 @@
           "configure_authentik_nas_ldap"
         ]
       },
-      "AUTHENTIK_TOKEN": {
-        "name": "AUTHENTIK_TOKEN",
-        "type": "string",
-        "source": "python-config",
-        "value": "***REDACTED***",
-        "contexts": [
-          "configure_authentik_nas_ldap",
-          "configure_authentik_nextcloud_oidc"
-        ]
-      },
       "NAS_API_KEY": {
         "name": "NAS_API_KEY",
         "type": "string",
@@ -16832,51 +16779,6 @@
           "configure_authentik_nas_ldap"
         ]
       },
-      "AUTHENTIK_NEXTCLOUD_CLIENT_ID": {
-        "name": "AUTHENTIK_NEXTCLOUD_CLIENT_ID",
-        "type": "string",
-        "source": "python-config",
-        "value": "***REDACTED***",
-        "contexts": [
-          "configure_authentik_nextcloud_oidc"
-        ]
-      },
-      "AUTHENTIK_NEXTCLOUD_CLIENT_SECRET": {
-        "name": "AUTHENTIK_NEXTCLOUD_CLIENT_SECRET",
-        "type": "string",
-        "source": "python-config",
-        "value": "***REDACTED***",
-        "contexts": [
-          "configure_authentik_nextcloud_oidc"
-        ]
-      },
-      "AUTHENTIK_NEXTCLOUD_PROVIDER_NAME": {
-        "name": "AUTHENTIK_NEXTCLOUD_PROVIDER_NAME",
-        "type": "string",
-        "source": "python-config",
-        "value": "***REDACTED***",
-        "contexts": [
-          "configure_authentik_nextcloud_oidc"
-        ]
-      },
-      "AUTHENTIK_NEXTCLOUD_APP_NAME": {
-        "name": "AUTHENTIK_NEXTCLOUD_APP_NAME",
-        "type": "string",
-        "source": "python-config",
-        "value": "***REDACTED***",
-        "contexts": [
-          "configure_authentik_nextcloud_oidc"
-        ]
-      },
-      "AUTHENTIK_NEXTCLOUD_APP_SLUG": {
-        "name": "AUTHENTIK_NEXTCLOUD_APP_SLUG",
-        "type": "string",
-        "source": "python-config",
-        "value": "***REDACTED***",
-        "contexts": [
-          "configure_authentik_nextcloud_oidc"
-        ]
-      },
       "ALL_CHILDREN_HOMELAB_HOSTS_HOMELAB_ANSIBLE_SSH_PRIVATE_KEY_FILE": {
         "name": "ALL_CHILDREN_HOMELAB_HOSTS_HOMELAB_ANSIBLE_SSH_PRIVATE_KEY_FILE",
         "type": "string",
@@ -16884,15 +16786,6 @@
         "value": "***REDACTED***",
         "contexts": [
           "inventory_homelab"
-        ]
-      },
-      "CONTACTPOINTS_0_RECEIVERS_0_SETTINGS_BOTTOKEN": {
-        "name": "CONTACTPOINTS_0_RECEIVERS_0_SETTINGS_BOTTOKEN",
-        "type": "string",
-        "source": "yaml",
-        "value": "***REDACTED***",
-        "contexts": [
-          "contactpoints"
         ]
       },
       "DATASOURCES_0_BASICAUTH": {
@@ -16938,6 +16831,15 @@
         "value": "***REDACTED***",
         "contexts": [
           "datasources"
+        ]
+      },
+      "CONTACTPOINTS_0_RECEIVERS_0_SETTINGS_BOTTOKEN": {
+        "name": "CONTACTPOINTS_0_RECEIVERS_0_SETTINGS_BOTTOKEN",
+        "type": "string",
+        "source": "yaml",
+        "value": "***REDACTED***",
+        "contexts": [
+          "contactpoints"
         ]
       },
       "PATHS_/API/V1/AUTHS/SIGNIN_POST_SUMMARY": {
@@ -17026,14 +16928,53 @@
         "source": "yaml",
         "value": "***REDACTED***",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       }
     },
-    "database": {
-      "DATABASE_URL": {
-        "name": "DATABASE_URL",
+    "integrations": {
+      "GOOGLE_SDM_PROJECT": {
+        "name": "GOOGLE_SDM_PROJECT",
+        "type": "string",
+        "source": ".env",
+        "value": "projects/your_project_id",
+        "locations": [
+          {
+            "file": ".env.consolidated",
+            "line": 17
+          }
+        ],
+        "contexts": []
+      },
+      "GOOGLE_SDM_PROJECT_NUMBER": {
+        "name": "GOOGLE_SDM_PROJECT_NUMBER",
+        "type": "string",
+        "source": ".env",
+        "value": "your_project_number",
+        "locations": [
+          {
+            "file": ".env.consolidated",
+            "line": 18
+          }
+        ],
+        "contexts": []
+      },
+      "GOOGLE_SDM_PROJECT_ID": {
+        "name": "GOOGLE_SDM_PROJECT_ID",
+        "type": "string",
+        "source": ".env",
+        "value": "your_project_id",
+        "locations": [
+          {
+            "file": ".env.consolidated",
+            "line": 19
+          }
+        ],
+        "contexts": []
+      },
+      "TELEGRAM_CHAT_ID": {
+        "name": "TELEGRAM_CHAT_ID",
         "type": "string",
         "source": "python-config",
         "value": null,
@@ -17041,48 +16982,99 @@
           "config"
         ]
       },
-      "DB_HOST": {
-        "name": "DB_HOST",
-        "type": "string",
+      "WEBHOOKS_ENABLED": {
+        "name": "WEBHOOKS_ENABLED",
+        "type": "boolean",
         "source": "docker-compose",
-        "value": "wikijs-db",
+        "value": "***REDACTED***",
         "contexts": [
-          "wikijs",
           "netbox",
           "netbox-worker"
         ]
       },
-      "DB_PORT": {
-        "name": "DB_PORT",
-        "type": "integer",
-        "source": "docker-compose",
-        "value": 5432,
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "DB_USER": {
-        "name": "DB_USER",
+      "AGENDA_TELEGRAM_CHAT_ID": {
+        "name": "AGENDA_TELEGRAM_CHAT_ID",
         "type": "string",
-        "source": "docker-compose",
-        "value": "wikijs",
+        "source": "python-config",
+        "value": null,
         "contexts": [
-          "wikijs",
-          "netbox",
-          "netbox-worker"
+          "daily_agenda_config"
         ]
       },
-      "DB_NAME": {
-        "name": "DB_NAME",
+      "GITHUB_AGENT_URL": {
+        "name": "GITHUB_AGENT_URL",
         "type": "string",
-        "source": "docker-compose",
-        "value": "wikijs",
+        "source": "python-config",
+        "value": null,
         "contexts": [
-          "wikijs",
-          "netbox",
-          "netbox-worker"
+          "config"
         ]
       },
+      "GLOBAL_TELEGRAM_API_URL": {
+        "name": "GLOBAL_TELEGRAM_API_URL",
+        "type": "url",
+        "source": "yaml",
+        "value": "https://api.telegram.org/bot",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "RECEIVERS_1_WEBHOOK_CONFIGS_0_URL": {
+        "name": "RECEIVERS_1_WEBHOOK_CONFIGS_0_URL",
+        "type": "url",
+        "source": "yaml",
+        "value": "***REDACTED***",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "RECEIVERS_1_WEBHOOK_CONFIGS_0_SEND_RESOLVED": {
+        "name": "RECEIVERS_1_WEBHOOK_CONFIGS_0_SEND_RESOLVED",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "***REDACTED***",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "RECEIVERS_1_WEBHOOK_CONFIGS_0_HEADERS_X-ALERT-TYPE": {
+        "name": "RECEIVERS_1_WEBHOOK_CONFIGS_0_HEADERS_X-ALERT-TYPE",
+        "type": "string",
+        "source": "yaml",
+        "value": "***REDACTED***",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "RECEIVERS_2_WEBHOOK_CONFIGS_0_URL": {
+        "name": "RECEIVERS_2_WEBHOOK_CONFIGS_0_URL",
+        "type": "url",
+        "source": "yaml",
+        "value": "***REDACTED***",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "RECEIVERS_2_WEBHOOK_CONFIGS_0_SEND_RESOLVED": {
+        "name": "RECEIVERS_2_WEBHOOK_CONFIGS_0_SEND_RESOLVED",
+        "type": "boolean",
+        "source": "yaml",
+        "value": "***REDACTED***",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      },
+      "RECEIVERS_2_WEBHOOK_CONFIGS_0_HEADERS_X-ALERT-TYPE": {
+        "name": "RECEIVERS_2_WEBHOOK_CONFIGS_0_HEADERS_X-ALERT-TYPE",
+        "type": "string",
+        "source": "yaml",
+        "value": "***REDACTED***",
+        "contexts": [
+          "alertmanager_telegram"
+        ]
+      }
+    },
+    "database": {
       "MAILU_DATABASE_URL": {
         "name": "MAILU_DATABASE_URL",
         "type": "url",
@@ -17108,6 +17100,57 @@
           }
         ],
         "contexts": []
+      },
+      "DB_HOST": {
+        "name": "DB_HOST",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "wikijs-db",
+        "contexts": [
+          "netbox",
+          "wikijs",
+          "netbox-worker"
+        ]
+      },
+      "DB_PORT": {
+        "name": "DB_PORT",
+        "type": "integer",
+        "source": "docker-compose",
+        "value": 5432,
+        "contexts": [
+          "wikijs"
+        ]
+      },
+      "DB_USER": {
+        "name": "DB_USER",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "wikijs",
+        "contexts": [
+          "netbox",
+          "wikijs",
+          "netbox-worker"
+        ]
+      },
+      "DB_NAME": {
+        "name": "DB_NAME",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "wikijs",
+        "contexts": [
+          "netbox",
+          "wikijs",
+          "netbox-worker"
+        ]
+      },
+      "DATABASE_URL": {
+        "name": "DATABASE_URL",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "config"
+        ]
       },
       "CMDB_TIMEZONE": {
         "name": "CMDB_TIMEZONE",
@@ -17235,12 +17278,12 @@
         "name": "POSTGRES_DB",
         "type": "string",
         "source": "docker-compose",
-        "value": "roundcube",
+        "value": "wikijs",
         "contexts": [
+          "mailu-db",
           "wikijs-db",
           "netbox-postgres",
           "mail-db",
-          "mailu-db",
           "postgres"
         ]
       },
@@ -17248,13 +17291,31 @@
         "name": "POSTGRES_USER",
         "type": "string",
         "source": "docker-compose",
-        "value": "roundcube",
+        "value": "wikijs",
         "contexts": [
+          "mailu-db",
           "wikijs-db",
           "netbox-postgres",
           "mail-db",
-          "mailu-db",
           "postgres"
+        ]
+      },
+      "DB_TYPE": {
+        "name": "DB_TYPE",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "postgres",
+        "contexts": [
+          "wikijs"
+        ]
+      },
+      "DB_PASS": {
+        "name": "DB_PASS",
+        "type": "string",
+        "source": "docker-compose",
+        "value": "${WIKIJS_DB_PASSWORD:-wikijs_rpa4all_2026}",
+        "contexts": [
+          "wikijs"
         ]
       },
       "ROUNDCUBEMAIL_DB_TYPE": {
@@ -17317,8 +17378,8 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "mailu-roundcube",
-          "mailu-backend"
+          "mailu-backend",
+          "mailu-roundcube"
         ]
       },
       "GF_DATABASE_TYPE": {
@@ -17364,24 +17425,6 @@
         "value": "disable",
         "contexts": [
           "grafana"
-        ]
-      },
-      "DB_TYPE": {
-        "name": "DB_TYPE",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "postgres",
-        "contexts": [
-          "wikijs"
-        ]
-      },
-      "DB_PASS": {
-        "name": "DB_PASS",
-        "type": "string",
-        "source": "docker-compose",
-        "value": "${WIKIJS_DB_PASSWORD:-wikijs_rpa4all_2026}",
-        "contexts": [
-          "wikijs"
         ]
       },
       "REDIS_CACHE_DATABASE": {
@@ -17505,14 +17548,23 @@
           "datasources"
         ]
       },
+      "PATHS_DB_PATH": {
+        "name": "PATHS_DB_PATH",
+        "type": "string",
+        "source": "yaml",
+        "value": "content_automation/data/queue.db",
+        "contexts": [
+          "settings"
+        ]
+      },
       "MCPSERVERS_0_ENV_DATABASE_URL": {
         "name": "MCPSERVERS_0_ENV_DATABASE_URL",
         "type": "url",
         "source": "yaml",
         "value": "***REDACTED***",
         "contexts": [
-          "new-mcp-server",
-          "homelab"
+          "homelab",
+          "new-mcp-server"
         ]
       }
     },
@@ -17524,16 +17576,8 @@
         "value": "***REDACTED***",
         "locations": [
           {
-            "file": ".env",
-            "line": 35
-          },
-          {
             "file": ".env.consolidated",
             "line": 66
-          },
-          {
-            "file": ".env",
-            "line": 35
           }
         ],
         "contexts": []
@@ -17545,16 +17589,8 @@
         "value": "***REDACTED***",
         "locations": [
           {
-            "file": ".env",
-            "line": 36
-          },
-          {
             "file": ".env.consolidated",
             "line": 67
-          },
-          {
-            "file": ".env",
-            "line": 36
           }
         ],
         "contexts": []
@@ -17563,19 +17599,11 @@
         "name": "KUCOIN_API_PASSPHRASE",
         "type": "string",
         "source": ".env",
-        "value": "PLACEHOLDER_SET_ME",
+        "value": "your_kucoin_api_passphrase_here",
         "locations": [
-          {
-            "file": ".env",
-            "line": 37
-          },
           {
             "file": ".env.consolidated",
             "line": 68
-          },
-          {
-            "file": ".env",
-            "line": 37
           }
         ],
         "contexts": []
@@ -17645,15 +17673,6 @@
         ],
         "contexts": []
       },
-      "COIN_CONFIG_FILE": {
-        "name": "COIN_CONFIG_FILE",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "validate_btc_config"
-        ]
-      },
       "OLLAMA_TRADING_MODEL": {
         "name": "OLLAMA_TRADING_MODEL",
         "type": "string",
@@ -17661,15 +17680,6 @@
         "value": "trading-analyst:latest",
         "contexts": [
           "trading-daily-report"
-        ]
-      },
-      "COMPATIBILITY_METHOD": {
-        "name": "COMPATIBILITY_METHOD",
-        "type": "string",
-        "source": "systemd",
-        "value": "semantic",
-        "contexts": [
-          "job-monitor"
         ]
       },
       "PROMETHEUS_URL": {
@@ -17687,7 +17697,26 @@
         "source": "systemd",
         "value": "/apps/crypto-trader/trading/btc_trading_agent",
         "contexts": [
-          "kucoin-postgres-sync"
+          "kucoin-postgres-sync",
+          "kucoin-usdt-rebalance"
+        ]
+      },
+      "COMPATIBILITY_METHOD": {
+        "name": "COMPATIBILITY_METHOD",
+        "type": "string",
+        "source": "systemd",
+        "value": "semantic",
+        "contexts": [
+          "job-monitor"
+        ]
+      },
+      "COIN_CONFIG_FILE": {
+        "name": "COIN_CONFIG_FILE",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "validate_btc_config"
         ]
       },
       "SCRAPE_CONFIGS_3_STATIC_CONFIGS_0_LABELS_COIN": {
@@ -17717,11 +17746,29 @@
           "prometheus"
         ]
       },
+      "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_10_STATIC_CONFIGS_0_LABELS_COIN",
+        "type": "string",
+        "source": "yaml",
+        "value": "BTC-USDT",
+        "contexts": [
+          "prometheus"
+        ]
+      },
+      "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_COIN": {
+        "name": "SCRAPE_CONFIGS_11_STATIC_CONFIGS_0_LABELS_COIN",
+        "type": "string",
+        "source": "yaml",
+        "value": "ETH-USDT",
+        "contexts": [
+          "prometheus"
+        ]
+      },
       "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_COIN": {
         "name": "SCRAPE_CONFIGS_12_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
-        "value": "BTC-USDT",
+        "value": "ETH-USDT",
         "contexts": [
           "prometheus"
         ]
@@ -17739,7 +17786,7 @@
         "name": "SCRAPE_CONFIGS_14_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
-        "value": "ETH-USDT",
+        "value": "SOL-USDT",
         "contexts": [
           "prometheus"
         ]
@@ -17748,7 +17795,7 @@
         "name": "SCRAPE_CONFIGS_15_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
-        "value": "ETH-USDT",
+        "value": "SOL-USDT",
         "contexts": [
           "prometheus"
         ]
@@ -17766,7 +17813,7 @@
         "name": "SCRAPE_CONFIGS_17_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
-        "value": "SOL-USDT",
+        "value": "DOGE-USDT",
         "contexts": [
           "prometheus"
         ]
@@ -17775,31 +17822,13 @@
         "name": "SCRAPE_CONFIGS_18_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
-        "value": "SOL-USDT",
+        "value": "DOGE-USDT",
         "contexts": [
           "prometheus"
         ]
       },
       "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_COIN": {
         "name": "SCRAPE_CONFIGS_19_STATIC_CONFIGS_0_LABELS_COIN",
-        "type": "string",
-        "source": "yaml",
-        "value": "DOGE-USDT",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_COIN": {
-        "name": "SCRAPE_CONFIGS_20_STATIC_CONFIGS_0_LABELS_COIN",
-        "type": "string",
-        "source": "yaml",
-        "value": "DOGE-USDT",
-        "contexts": [
-          "prometheus"
-        ]
-      },
-      "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_COIN": {
-        "name": "SCRAPE_CONFIGS_21_STATIC_CONFIGS_0_LABELS_COIN",
         "type": "string",
         "source": "yaml",
         "value": "DOGE-USDT",
@@ -17943,160 +17972,6 @@
         ]
       }
     },
-    "integrations": {
-      "GOOGLE_SDM_PROJECT": {
-        "name": "GOOGLE_SDM_PROJECT",
-        "type": "string",
-        "source": ".env",
-        "value": "projects/your_project_id",
-        "locations": [
-          {
-            "file": ".env.consolidated",
-            "line": 17
-          }
-        ],
-        "contexts": []
-      },
-      "GOOGLE_SDM_PROJECT_NUMBER": {
-        "name": "GOOGLE_SDM_PROJECT_NUMBER",
-        "type": "string",
-        "source": ".env",
-        "value": "your_project_number",
-        "locations": [
-          {
-            "file": ".env.consolidated",
-            "line": 18
-          }
-        ],
-        "contexts": []
-      },
-      "GOOGLE_SDM_PROJECT_ID": {
-        "name": "GOOGLE_SDM_PROJECT_ID",
-        "type": "string",
-        "source": ".env",
-        "value": "your_project_id",
-        "locations": [
-          {
-            "file": ".env.consolidated",
-            "line": 19
-          }
-        ],
-        "contexts": []
-      },
-      "TELEGRAM_CHAT_ID": {
-        "name": "TELEGRAM_CHAT_ID",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
-      },
-      "KWAI_TELEGRAM_NOTIFY": {
-        "name": "KWAI_TELEGRAM_NOTIFY",
-        "type": "boolean",
-        "source": ".env",
-        "value": "1",
-        "locations": [
-          {
-            "file": "config/kwai-viewer.homelab.env",
-            "line": 8
-          }
-        ],
-        "contexts": []
-      },
-      "WEBHOOKS_ENABLED": {
-        "name": "WEBHOOKS_ENABLED",
-        "type": "boolean",
-        "source": "docker-compose",
-        "value": "***REDACTED***",
-        "contexts": [
-          "netbox",
-          "netbox-worker"
-        ]
-      },
-      "GITHUB_AGENT_URL": {
-        "name": "GITHUB_AGENT_URL",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "config"
-        ]
-      },
-      "AGENDA_TELEGRAM_CHAT_ID": {
-        "name": "AGENDA_TELEGRAM_CHAT_ID",
-        "type": "string",
-        "source": "python-config",
-        "value": null,
-        "contexts": [
-          "daily_agenda_config"
-        ]
-      },
-      "GLOBAL_TELEGRAM_API_URL": {
-        "name": "GLOBAL_TELEGRAM_API_URL",
-        "type": "url",
-        "source": "yaml",
-        "value": "https://api.telegram.org/bot",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "RECEIVERS_1_WEBHOOK_CONFIGS_0_URL": {
-        "name": "RECEIVERS_1_WEBHOOK_CONFIGS_0_URL",
-        "type": "url",
-        "source": "yaml",
-        "value": "***REDACTED***",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "RECEIVERS_1_WEBHOOK_CONFIGS_0_SEND_RESOLVED": {
-        "name": "RECEIVERS_1_WEBHOOK_CONFIGS_0_SEND_RESOLVED",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "***REDACTED***",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "RECEIVERS_1_WEBHOOK_CONFIGS_0_HEADERS_X-ALERT-TYPE": {
-        "name": "RECEIVERS_1_WEBHOOK_CONFIGS_0_HEADERS_X-ALERT-TYPE",
-        "type": "string",
-        "source": "yaml",
-        "value": "***REDACTED***",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "RECEIVERS_2_WEBHOOK_CONFIGS_0_URL": {
-        "name": "RECEIVERS_2_WEBHOOK_CONFIGS_0_URL",
-        "type": "url",
-        "source": "yaml",
-        "value": "***REDACTED***",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "RECEIVERS_2_WEBHOOK_CONFIGS_0_SEND_RESOLVED": {
-        "name": "RECEIVERS_2_WEBHOOK_CONFIGS_0_SEND_RESOLVED",
-        "type": "boolean",
-        "source": "yaml",
-        "value": "***REDACTED***",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      },
-      "RECEIVERS_2_WEBHOOK_CONFIGS_0_HEADERS_X-ALERT-TYPE": {
-        "name": "RECEIVERS_2_WEBHOOK_CONFIGS_0_HEADERS_X-ALERT-TYPE",
-        "type": "string",
-        "source": "yaml",
-        "value": "***REDACTED***",
-        "contexts": [
-          "alertmanager_telegram"
-        ]
-      }
-    },
     "infrastructure": {
       "LTFS_MOUNT_POINT": {
         "name": "LTFS_MOUNT_POINT",
@@ -18111,15 +17986,6 @@
         ],
         "contexts": []
       },
-      "REQUIRE_MOUNTPOINT": {
-        "name": "REQUIRE_MOUNTPOINT",
-        "type": "path",
-        "source": "systemd",
-        "value": "/mnt/tape_sg1",
-        "contexts": [
-          "homelab-tape-log-drain-sg1"
-        ]
-      },
       "LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW": {
         "name": "LTFS_ALLOW_UNMOUNTED_OUTSIDE_WINDOW",
         "type": "boolean",
@@ -18127,6 +17993,15 @@
         "value": "false",
         "contexts": [
           "ltfs-lto6-selfheal-escalator"
+        ]
+      },
+      "REQUIRE_MOUNTPOINT": {
+        "name": "REQUIRE_MOUNTPOINT",
+        "type": "path",
+        "source": "systemd",
+        "value": "/mnt/tape_sg1",
+        "contexts": [
+          "homelab-tape-log-drain-sg1"
         ]
       },
       "AGENT_NETWORK_EXPORTER_PORT": {
@@ -18149,27 +18024,14 @@
       }
     },
     "monitoring": {
-      "KWAI_GRAFANA_DASHBOARD_URL": {
-        "name": "KWAI_GRAFANA_DASHBOARD_URL",
-        "type": "url",
-        "source": ".env",
-        "value": "https://grafana.rpa4all.com/d/kwai-viewer/kwai-viewer-monitor",
-        "locations": [
-          {
-            "file": "config/kwai-viewer.homelab.env",
-            "line": 9
-          }
-        ],
-        "contexts": []
-      },
       "GRAFANA_URL": {
         "name": "GRAFANA_URL",
         "type": "url",
         "source": "systemd",
-        "value": "http://localhost:3002",
+        "value": "http://localhost:3002/grafana",
         "contexts": [
-          "tape-quality-ollama-narrator",
-          "grafana-selfheal"
+          "grafana-selfheal",
+          "tape-quality-ollama-narrator"
         ]
       },
       "GRAFANA_CONTAINER": {
@@ -18189,8 +18051,8 @@
         "contexts": [
           "selfhealing_rules",
           "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
-          "alert_rules"
+          "alert_rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_0_RULES_1_ALERT": {
@@ -18201,8 +18063,8 @@
         "contexts": [
           "selfhealing_rules",
           "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
-          "alert_rules"
+          "alert_rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_0_RULES_2_ALERT": {
@@ -18213,8 +18075,8 @@
         "contexts": [
           "selfhealing_rules",
           "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
-          "alert_rules"
+          "alert_rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_0_RULES_3_ALERT": {
@@ -18224,8 +18086,8 @@
         "value": "RPA4AllSnapshotFailureRate",
         "contexts": [
           "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts",
-          "alert_rules"
+          "alert_rules",
+          "rpa4all-snapshot-alerts"
         ]
       },
       "GROUPS_0_RULES_4_ALERT": {
@@ -18338,167 +18200,163 @@
   "metadata": {
     "totalVariables": 1926,
     "sourceFiles": [
-      ".env",
       ".env.openai-compatible.example",
+      ".env.example.wiki",
       ".env.example",
       ".env.consolidated",
-      ".env.example.wiki",
       "deploy/cmdb/.env.example",
-      ".env",
-      "btc_trading_agent/BTC_USDT_shadow.env",
       "systemd/ltfs-lto6-sg1.env",
       "deploy/production_autonomous.env",
-      "config/kwai-viewer.homelab.env",
+      "btc_trading_agent/BTC_USDT_shadow.env",
       "tools/authentik_management/configs/openwebui.env",
       "tools/authentik_management/configs/grafana.env",
-      "docker/docker-compose.gdrive.yml",
+      "docker/docker-compose.wikijs.yml",
       "docker/docker-compose.simple-mail.yml",
+      "docker/docker-compose.opensearch.yml",
+      "docker/docker-compose.ntopng.yml",
       "docker/docker-compose.mailu.yml",
       "docker/docker-compose.grafana.yml",
-      "docker/docker-compose.opensearch.yml",
-      "docker/docker-compose-exporters.yml",
-      "docker/docker-compose.wikijs.yml",
+      "docker/docker-compose.gdrive.yml",
       "docker/docker-compose.email-simple.yml",
-      "docker/docker-compose.kwai-browser.yml",
-      "docker/docker-compose.freecash-browser.yml",
-      "docker/docker-compose.ntopng.yml",
+      "docker/docker-compose-exporters.yml",
+      "deploy/printshare/docker-compose.yml",
+      "deploy/cmdb/docker-compose.yml",
       "tools/vaultwarden/docker-compose.yml",
       "tools/authentik_management/configs/docker-compose.override.yml",
-      "deploy/cmdb/docker-compose.yml",
-      "deploy/printshare/docker-compose.yml",
-      "systemd/homelab-vault-close.service",
-      "systemd/marketing-x-posts.service",
-      "systemd/coordinator.service",
-      "systemd/ollama-gpu-coordinator.service",
-      "systemd/marketing-email-drip.service",
-      "systemd/rag-reindex.service",
-      "systemd/ltfs-lto6.service",
-      "systemd/candle-collector.service",
+      "systemd/tuya-token-selfheal.service",
       "systemd/workstation-win11l-rdp@.service",
-      "systemd/tape-component-quality-exporter.service",
-      "systemd/ltfs-lto6-sg1.service",
-      "systemd/diretor.service",
-      "systemd/dhcp-selfheal.service",
-      "systemd/daily-agenda-broadcast.service",
-      "systemd/trading-analyst-weekly-retrain.service",
-      "systemd/clear-agent@.service",
-      "systemd/akash-sweep.service",
-      "systemd/ltfs-backup-catalog.service",
-      "systemd/pandaplus-telegram-bridge.service",
-      "systemd/homelab-tape-log-drain-sg1.service",
-      "systemd/clear-trading-agent.service",
-      "systemd/eddie-whatsapp-bot.service",
-      "systemd/specialized_agents-dashboard.service",
-      "systemd/storj-host-shim.service",
-      "systemd/github-agent.service",
-      "systemd/grafana-selfheal.service",
-      "systemd/banking-metrics-exporter.service",
-      "systemd/lto6-selfheal.service",
-      "systemd/notebook-power-agent.service",
-      "systemd/check_projects.service",
-      "systemd/ltfs-deep-recovery.service",
-      "systemd/llm-log-panel.service",
-      "systemd/crypto-agent@.service",
-      "systemd/rpa4all-validation.service",
-      "systemd/daily-agenda-panel.service",
-      "systemd/ollama-warmup.service",
-      "systemd/bn-acervo-agent.service",
-      "systemd/trading-daily-report.service",
-      "systemd/ltfs-lto6b.service",
-      "systemd/job-monitor.service",
-      "systemd/rss-sentiment-exporter.service",
-      "systemd/homelab-vault-backup.service",
-      "systemd/journal-ingestor.service",
-      "systemd/tuya-token-renewer.service",
-      "systemd/ollama-finetune.service",
-      "systemd/homelab-tape-logrotate.service",
-      "systemd/eddie-expurgo.service",
-      "systemd/ltfs-button-watch.service",
-      "systemd/python-training.service",
       "systemd/workstation-win11l-http@.service",
-      "systemd/approval-gateway.service",
-      "systemd/ltfs-window-enforcer.service",
+      "systemd/tuya-token-renewer.service",
+      "systemd/trading-daily-report.service",
+      "systemd/trading-analyst-weekly-retrain.service",
+      "systemd/tape-safe-eject.service",
       "systemd/tape-quality-ollama-narrator.service",
-      "systemd/kwai-viewer.service",
-      "systemd/ipv6-proxy.service",
-      "systemd/monitoring-containers-bootstrap.service",
-      "systemd/iot-vpn-bypass-watchdog.service",
-      "systemd/homelab-dashboard.service",
-      "systemd/meeting-translator.service",
-      "systemd/eddie_central_extended_metrics.service",
+      "systemd/tape-component-quality-exporter.service",
+      "systemd/storj-macvlan-watchdog.service",
       "systemd/storj-macvlan-network.service",
-      "systemd/eddie-telegram-bot.service",
-      "systemd/disk-clean.service",
-      "systemd/cloudflared-vpn-routes.service",
-      "systemd/chromecast-ambilight.service",
-      "systemd/ollama-gpu1.service",
-      "systemd/lto6-checkpoint-drain.service",
-      "systemd/homelab-tape-log-drain-nextcloud.service",
-      "systemd/lto6-drain-backups.service",
-      "systemd/kucoin-postgres-sync.service",
-      "systemd/cloudflared-tunnel-guardian.service",
+      "systemd/storj-host-shim.service",
+      "systemd/specialized_agents-dashboard.service",
+      "systemd/rss-sentiment-exporter.service",
+      "systemd/rpa4all-validation.service",
+      "systemd/rag-reindex.service",
+      "systemd/python-training.service",
       "systemd/protonvpn-boot-selfheal.service",
+      "systemd/post-boot-check.service",
+      "systemd/pihole-ipv6-dns-fix.service",
+      "systemd/pandaplus-telegram-bridge.service",
+      "systemd/ollama-warmup.service",
+      "systemd/ollama-gpu1.service",
+      "systemd/ollama-gpu-coordinator.service",
+      "systemd/ollama-finetune.service",
+      "systemd/notebook-power-agent.service",
+      "systemd/monitoring-containers-bootstrap.service",
+      "systemd/meeting-translator.service",
+      "systemd/marketing-x-posts.service",
+      "systemd/marketing-email-drip.service",
+      "systemd/marketing-daily-report.service",
+      "systemd/marketing-api.service",
+      "systemd/lto6-selfheal.service",
+      "systemd/lto6-drain-backups.service",
+      "systemd/lto6-checkpoint-recover.service",
+      "systemd/lto6-checkpoint-drain.service",
+      "systemd/ltfs-window-enforcer.service",
+      "systemd/ltfs-lto6b.service",
+      "systemd/ltfs-lto6.service",
+      "systemd/ltfs-lto6-sg1.service",
       "systemd/ltfs-lto6-selfheal-escalator.service",
       "systemd/ltfs-log-rotation.service",
-      "systemd/lto6-checkpoint-recover.service",
-      "systemd/pihole-ipv6-dns-fix.service",
-      "systemd/storj-macvlan-watchdog.service",
-      "systemd/marketing-daily-report.service",
-      "systemd/tape-safe-eject.service",
-      "systemd/post-boot-check.service",
-      "systemd/marketing-api.service",
-      "systemd/agent-network-exporter.service",
-      "systemd/kwai-viewer-homelab.service",
+      "systemd/ltfs-deep-recovery.service",
+      "systemd/ltfs-button-watch.service",
       "systemd/ltfs-boot-reconcile.service",
+      "systemd/ltfs-backup-catalog.service",
+      "systemd/llm-log-panel.service",
+      "systemd/kucoin-usdt-rebalance.service",
+      "systemd/kucoin-postgres-sync.service",
+      "systemd/journal-ingestor.service",
+      "systemd/job-monitor.service",
+      "systemd/ipv6-proxy.service",
+      "systemd/iot-vpn-bypass-watchdog.service",
+      "systemd/homelab-vault-close.service",
+      "systemd/homelab-vault-backup.service",
+      "systemd/homelab-tape-logrotate.service",
+      "systemd/homelab-tape-log-drain-sg1.service",
+      "systemd/homelab-tape-log-drain-nextcloud.service",
+      "systemd/homelab-dashboard.service",
+      "systemd/grafana-selfheal.service",
+      "systemd/github-agent.service",
+      "systemd/eddie_central_extended_metrics.service",
+      "systemd/eddie-whatsapp-bot.service",
+      "systemd/eddie-telegram-bot.service",
+      "systemd/eddie-expurgo.service",
       "systemd/eddie-calendar.service",
-      "tests/test_authentik_openwebui_config_consistency.py",
-      "tests/test_validate_btc_config.py",
-      "tests/test_configure_authentik_nextcloud_oidc.py",
-      "tests/_variables_catalog_config.py",
-      "tests/test_authentik_os_strict_config.py",
-      "tests/test_wikijs_configure.py",
-      "tests/test_render_wireguard_client_config.py",
-      "specialized_agents/config.py",
-      ".variables-catalog/config.py",
-      "systemd/validate_btc_config.py",
-      "dev_agent/config.py",
-      "scripts/router_network_config.py",
-      "scripts/generate_profile_configs.py",
-      "scripts/render_wireguard_client_config.py",
-      "scripts/wikijs_configure.py",
+      "systemd/disk-clean.service",
+      "systemd/diretor.service",
+      "systemd/dhcp-selfheal.service",
+      "systemd/daily-agenda-panel.service",
+      "systemd/daily-agenda-broadcast.service",
+      "systemd/crypto-agent@.service",
+      "systemd/coordinator.service",
+      "systemd/clear-trading-agent.service",
+      "systemd/clear-agent@.service",
+      "systemd/chromecast-ambilight.service",
+      "systemd/check_projects.service",
+      "systemd/candle-collector.service",
+      "systemd/bn-acervo-agent.service",
+      "systemd/banking-metrics-exporter.service",
+      "systemd/approval-gateway.service",
+      "systemd/akash-sweep.service",
+      "systemd/agent-network-exporter.service",
       "tools/daily_agenda_config.py",
+      "tests/test_wikijs_configure.py",
+      "tests/test_validate_btc_config.py",
+      "tests/test_render_wireguard_client_config.py",
+      "tests/test_configure_authentik_nextcloud_oidc.py",
+      "tests/test_authentik_os_strict_config.py",
+      "tests/test_authentik_openwebui_config_consistency.py",
+      "tests/_variables_catalog_config.py",
+      "systemd/validate_btc_config.py",
+      "specialized_agents/config.py",
+      "scripts/wikijs_configure.py",
+      "scripts/router_network_config.py",
+      "scripts/render_wireguard_client_config.py",
+      "scripts/generate_profile_configs.py",
+      "dev_agent/config.py",
       "dashboard/config.py",
-      "tools/pandaplus_bridge/config.py",
-      "tools/authentik_management/configure_authentik_nas_ldap.py",
-      "tools/authentik_management/configure_authentik_nextcloud_oidc.py",
-      "tools/authentik_management/configure_authentik_os_strict.py",
+      "content_automation/config.py",
+      ".variables-catalog/config.py",
       "scripts/misc/configure_diretor_model.py",
-      "tests/copilot_hooks/test_hook_configs.py",
       "tests/unit/test_trading_profile_config.py",
+      "tests/copilot_hooks/test_hook_configs.py",
+      "tools/pandaplus_bridge/config.py",
+      "tools/authentik_management/configure_authentik_os_strict.py",
+      "tools/authentik_management/configure_authentik_nextcloud_oidc.py",
+      "tools/authentik_management/configure_authentik_nas_ldap.py",
       "rpa4all-snapshot-alerts.yml",
-      "docker/deploy_selfhealing.yml",
       "monitoring/prometheus.yml",
       "monitoring/grafana_gpu_alert_rules.yml",
       "monitoring/alert_rules.yml",
+      "docker/deploy_selfhealing.yml",
       "config/prometheus-config.yml",
       "config/inventory_homelab.yml",
-      "tools/alerting/alertmanager_telegram.yml",
       "monitoring/prometheus/selfhealing_rules.yml",
       "monitoring/prometheus/ltfs-selfheal-rules.yml",
       "monitoring/grafana/provisioning/datasources.yml",
-      "monitoring/grafana/provisioning/alerting/policies.yml",
-      "monitoring/grafana/provisioning/alerting/rules.yml",
-      "monitoring/grafana/provisioning/alerting/contactpoints.yml",
-      "monitoring/grafana/provisioning/dashboards/dashboards.yml",
       "monitoring/grafana/provisioning/datasources/datasources.yml",
+      "monitoring/grafana/provisioning/dashboards/dashboards.yml",
+      "monitoring/grafana/provisioning/alerting/rules.yml",
+      "monitoring/grafana/provisioning/alerting/policies.yml",
+      "monitoring/grafana/provisioning/alerting/contactpoints.yml",
       "site/deploy/cloudflared-rpa4all-ide.yml",
+      "tools/alerting/alertmanager_telegram.yml",
       "docs/openapi.yaml",
       "docs/openapi.generated.yaml",
-      ".venv/lib/python3.13/site-packages/markdown_it/port.yaml",
+      "content_automation/settings.yaml",
       ".continue/mcpServers/new-mcp-server.yaml",
       ".continue/mcpServers/homelab.yaml",
-      "grafana/provisioning/datasources/authentik-http.yaml",
-      "philco10b_raspios/.venv/lib/python3.13/site-packages/markdown_it/port.yaml"
+      "content_automation/data/prompts/viral_trends.yaml",
+      "content_automation/data/prompts/curiosidades.yaml",
+      "content_automation/data/prompts/cripto.yaml",
+      "grafana/provisioning/datasources/authentik-http.yaml"
     ],
     "serviceCount": 0
   }

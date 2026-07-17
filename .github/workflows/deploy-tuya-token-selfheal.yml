@@ -1,0 +1,52 @@
+name: Deploy Tuya Token Selfheal
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/homelab/tuya_token_selfheal.py'
+      - 'systemd/tuya-token-selfheal.service'
+      - 'systemd/tuya-token-selfheal.timer'
+      - '.github/workflows/deploy-tuya-token-selfheal.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    # Self-hosted runner no homelab — acessa /etc/systemd e docker diretamente
+    runs-on: [self-hosted, linux, homelab]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar script e units
+        run: |
+          set -euo pipefail
+
+          python3 -m py_compile tools/homelab/tuya_token_selfheal.py
+
+          sudo install -D -m 0755 tools/homelab/tuya_token_selfheal.py /usr/local/bin/tuya_token_selfheal.py
+          sudo install -D -m 0644 systemd/tuya-token-selfheal.service /etc/systemd/system/tuya-token-selfheal.service
+          sudo install -D -m 0644 systemd/tuya-token-selfheal.timer /etc/systemd/system/tuya-token-selfheal.timer
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable tuya-token-selfheal.timer
+          sudo systemctl restart tuya-token-selfheal.timer
+
+          echo "✅ Units instaladas"
+          systemctl status tuya-token-selfheal.timer --no-pager | grep -E "Active|Trigger"
+
+      - name: Smoke test (execução única + métricas)
+        run: |
+          set -euo pipefail
+
+          # rc=1 é legítimo quando a integração está indisponível e o heal
+          # não se aplica; o smoke valida execução e métricas, não a saúde.
+          sudo systemctl start tuya-token-selfheal.service || true
+          sudo journalctl -u tuya-token-selfheal -n 10 --no-pager
+
+          test -f /var/lib/prometheus/node-exporter/tuya_token_selfheal.prom
+          grep -q "tuya_selfheal_runs_total" /var/lib/prometheus/node-exporter/tuya_token_selfheal.prom
+          echo "✅ Métricas publicadas:"
+          cat /var/lib/prometheus/node-exporter/tuya_token_selfheal.prom

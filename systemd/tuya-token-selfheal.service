@@ -1,0 +1,26 @@
+[Unit]
+Description=Self-heal do token Tuya no HA (injeta token do pandaplus-bridge quando o refresh token morre)
+Documentation=https://github.com/eddiejdi/eddie-auto-dev
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/tuya_token_selfheal.py
+TimeoutStartSec=600
+
+Environment=HA_CONTAINER=homeassistant
+Environment=HA_CONFIG_ENTRIES=/home/homelab/homeassistant/config/.storage/core.config_entries
+Environment=BRIDGE_RUNTIME_TOKENS=/var/lib/pandaplus-bridge/tuya_tokens_runtime.json
+Environment=STATE_FILE=/var/lib/tuya-selfheal/state.json
+Environment=PROM_FILE=/var/lib/prometheus/node-exporter/tuya_token_selfheal.prom
+Environment=MAX_HEALS_24H=3
+Environment=HA_BOOT_WAIT_S=300
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tuya-token-selfheal
+
+[Install]
+WantedBy=multi-user.target
