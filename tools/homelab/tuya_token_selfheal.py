@@ -194,7 +194,6 @@ def ha_tuya_status() -> dict:
             for eid in entity_ids
             if states.get(eid) not in (None, "unavailable", "unknown")
         )
-        _ = st_script  # mantido só para documentar a origem da técnica
     else:
         status["entities_total"] = 0
         status["entities_active"] = 0
