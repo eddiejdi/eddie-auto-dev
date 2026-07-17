@@ -1,0 +1,12 @@
+[Unit]
+Description=Roda o self-heal do token Tuya a cada 15 minutos
+After=network-online.target
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=15min
+Persistent=true
+Unit=tuya-token-selfheal.service
+
+[Install]
+WantedBy=timers.target
