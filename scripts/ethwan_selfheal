@@ -1,0 +1,129 @@
+#!/bin/bash
+# eth-wan Selfheal + Prometheus Metrics (textfile collector)
+# Monitora o link WAN (USB RTL8153) e recupera com escada de ações,
+# cada uma com rate limit — projetado após a semana 11–17/07/2026
+# (EEE flap, USB reset loop, carrier flaps crônicos).
+#
+# Escada de recuperação (só executa com link DOWN confirmado):
+#   1. re-aplica ethtool (EEE off) + bounce ip link       (max 6/h)
+#   2. eth-wan-bringup.sh (bringup completo já existente)  (max 4/h)
+#   3. USB unbind/bind do adaptador                        (max 2/h)
+# Link UP = nunca mexe. Falha de leitura de estado = só métrica.
+
+set -uo pipefail
+
+IFACE="${IFACE:-eth-wan}"
+CHECK_INTERVAL="${CHECK_INTERVAL:-30}"
+LINK_DOWN_GRACE="${LINK_DOWN_GRACE:-20}"
+BRINGUP_SCRIPT="${BRINGUP_SCRIPT:-/usr/local/bin/eth-wan-bringup.sh}"
+USB_PORT="${USB_PORT:-2-2}"
+PROM_FILE="${PROM_FILE:-/var/lib/prometheus/node-exporter/ethwan_selfheal.prom}"
+HEAL_COOLDOWN="${HEAL_COOLDOWN:-120}"
+
+declare -A MAX_PER_HOUR=([1]=6 [2]=4 [3]=2)
+declare -A hour_count=([1]=0 [2]=0 [3]=0)
+declare -A total_count=([1]=0 [2]=0 [3]=0)
+hour_start=$(date +%s)
+last_heal=0
+down_since=0
+escalation=1
+
+log() { echo "[$(date '+%F %T')] $*"; }
+
+write_metrics() {
+  local link_up="$1" carrier_changes="$2"
+  local tmp="${PROM_FILE}.tmp"
+  mkdir -p "$(dirname "$PROM_FILE")" 2>/dev/null || return 0
+  cat > "$tmp" <<EOF
+# HELP ethwan_link_up Link físico do ${IFACE} (1=up)
+# TYPE ethwan_link_up gauge
+ethwan_link_up ${link_up}
+# HELP ethwan_carrier_changes_total Mudanças de carrier desde a criação da interface
+# TYPE ethwan_carrier_changes_total counter
+ethwan_carrier_changes_total ${carrier_changes}
+# HELP ethwan_selfheal_heals_total Ações de heal por nível da escada
+# TYPE ethwan_selfheal_heals_total counter
+ethwan_selfheal_heals_total{level="1_bounce"} ${total_count[1]}
+ethwan_selfheal_heals_total{level="2_bringup"} ${total_count[2]}
+ethwan_selfheal_heals_total{level="3_usb_rebind"} ${total_count[3]}
+# HELP ethwan_selfheal_last_check_timestamp Unix time da última verificação
+# TYPE ethwan_selfheal_last_check_timestamp gauge
+ethwan_selfheal_last_check_timestamp $(date +%s)
+EOF
+  mv "$tmp" "$PROM_FILE" 2>/dev/null || true
+}
+
+rate_ok() {
+  local level="$1" now
+  now=$(date +%s)
+  if (( now - hour_start > 3600 )); then
+    hour_start=$now
+    hour_count=([1]=0 [2]=0 [3]=0)
+  fi
+  (( hour_count[$level] < MAX_PER_HOUR[$level] ))
+}
+
+heal() {
+  local level="$1" now
+  now=$(date +%s)
+  (( now - last_heal < HEAL_COOLDOWN )) && return 1
+  rate_ok "$level" || { log "rate limit nível $level atingido — não agindo"; return 1; }
+  case "$level" in
+    1)
+      log "HEAL 1: ethtool EEE off + bounce do link"
+      ethtool --set-eee "$IFACE" eee off 2>/dev/null || true
+      ip link set "$IFACE" down 2>/dev/null; sleep 2
+      ip link set "$IFACE" up 2>/dev/null
+      ;;
+    2)
+      log "HEAL 2: bringup completo ($BRINGUP_SCRIPT)"
+      [[ -x "$BRINGUP_SCRIPT" ]] && "$BRINGUP_SCRIPT" || log "bringup script ausente"
+      ;;
+    3)
+      log "HEAL 3: USB rebind $USB_PORT"
+      if [[ -e "/sys/bus/usb/drivers/usb/$USB_PORT" ]]; then
+        echo -n "$USB_PORT" > /sys/bus/usb/drivers/usb/unbind 2>/dev/null
+        sleep 3
+        echo -n "$USB_PORT" > /sys/bus/usb/drivers/usb/bind 2>/dev/null
+      else
+        log "porta USB $USB_PORT não encontrada — pulando rebind"
+        return 1
+      fi
+      ;;
+  esac
+  hour_count[$level]=$(( hour_count[$level] + 1 ))
+  total_count[$level]=$(( total_count[$level] + 1 ))
+  last_heal=$now
+  return 0
+}
+
+log "ethwan_selfheal iniciado (iface=$IFACE, intervalo=${CHECK_INTERVAL}s)"
+
+while true; do
+  carrier=$(cat "/sys/class/net/$IFACE/carrier" 2>/dev/null || echo "err")
+  changes=$(cat "/sys/class/net/$IFACE/carrier_changes" 2>/dev/null || echo 0)
+
+  if [[ "$carrier" == "err" ]]; then
+    # interface sumiu (re-enumeração USB em andamento) — trata como down
+    carrier=0
+  fi
+
+  now=$(date +%s)
+  if [[ "$carrier" == "1" ]]; then
+    if (( down_since > 0 )); then
+      log "link recuperado após $(( now - down_since ))s (nível atual era $escalation)"
+    fi
+    down_since=0
+    escalation=1
+    write_metrics 1 "$changes"
+  else
+    (( down_since == 0 )) && down_since=$now && log "link DOWN detectado"
+    write_metrics 0 "$changes"
+    if (( now - down_since >= LINK_DOWN_GRACE )); then
+      if heal "$escalation"; then
+        (( escalation < 3 )) && escalation=$(( escalation + 1 ))
+      fi
+    fi
+  fi
+  sleep "$CHECK_INTERVAL"
+done

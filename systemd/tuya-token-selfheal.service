@@ -16,7 +16,7 @@ Environment=HA_CONFIG_ENTRIES=/home/homelab/homeassistant/config/.storage/core.c
 Environment=BRIDGE_RUNTIME_TOKENS=/var/lib/pandaplus-bridge/tuya_tokens_runtime.json
 Environment=STATE_FILE=/var/lib/tuya-selfheal/state.json
 Environment=PROM_FILE=/var/lib/prometheus/node-exporter/tuya_token_selfheal.prom
-Environment=MAX_HEALS_24H=3
+Environment=MAX_HEALS_24H=6
 Environment=HA_BOOT_WAIT_S=300
 StandardOutput=journal
 StandardError=journal

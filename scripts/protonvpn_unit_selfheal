@@ -1,0 +1,101 @@
+#!/bin/bash
+# Reconcilia a unit wg-quick@protonvpn com o estado real do kernel.
+# Incidente 15/07/2026: unit ficou "failed" por 1,5 dia com o túnel
+# perfeitamente vivo no kernel (handshake ativo) — estado cosmético
+# que confunde monitoração e bloqueia dependências.
+#
+# Regras (conservadoras):
+#   - unit ok                        → nada
+#   - unit failed + handshake fresco → systemctl reset-failed (cosmético, zero risco)
+#   - handshake velho + WAN com internet → restart real (max 1/h; o dispatcher
+#     51-protonvpn-policy-routing reaplica as regras de rota no ifup)
+#   - WAN sem internet → não age (restart seria inútil e mascararia a causa)
+
+set -uo pipefail
+
+UNIT="${UNIT:-wg-quick@protonvpn.service}"
+WG_IFACE="${WG_IFACE:-protonvpn}"
+WAN_IFACE="${WAN_IFACE:-eth-wan}"
+HANDSHAKE_MAX_AGE="${HANDSHAKE_MAX_AGE:-600}"
+STATE_DIR="${STATE_DIR:-/var/lib/protonvpn-unit-selfheal}"
+PROM_FILE="${PROM_FILE:-/var/lib/prometheus/node-exporter/protonvpn_unit_selfheal.prom}"
+
+mkdir -p "$STATE_DIR"
+log() { echo "[$(date '+%F %T')] $*"; }
+
+handshake_age() {
+  local hs
+  hs=$(wg show "$WG_IFACE" latest-handshakes 2>/dev/null | awk '{print $2}' | sort -rn | head -1)
+  [[ -n "$hs" && "$hs" != "0" ]] || { echo 999999; return; }
+  echo $(( $(date +%s) - hs ))
+}
+
+wan_has_internet() {
+  curl -s -o /dev/null --interface "$WAN_IFACE" -m 8 https://1.1.1.1 2>/dev/null
+}
+
+restart_rate_ok() {
+  local last
+  last=$(cat "$STATE_DIR/last_restart" 2>/dev/null || echo 0)
+  (( $(date +%s) - last > 3600 ))
+}
+
+unit_state=$(systemctl is-active "$UNIT" 2>/dev/null || true)
+failed=$(systemctl is-failed "$UNIT" >/dev/null 2>&1 && echo 1 || echo 0)
+age=$(handshake_age)
+action="none"
+tunnel_ok=0
+(( age < HANDSHAKE_MAX_AGE )) && tunnel_ok=1
+
+if [[ "$unit_state" == "active" && "$tunnel_ok" == "1" ]]; then
+  action="none"
+elif [[ "$failed" == "1" && "$tunnel_ok" == "1" ]]; then
+  log "unit failed mas túnel vivo (handshake ${age}s) — reset-failed cosmético"
+  systemctl reset-failed "$UNIT" && action="reset_failed"
+elif [[ "$tunnel_ok" == "0" ]]; then
+  if wan_has_internet; then
+    if restart_rate_ok; then
+      log "túnel morto (handshake ${age}s) e WAN ok — reiniciando $UNIT"
+      if systemctl restart "$UNIT"; then
+        date +%s > "$STATE_DIR/last_restart"
+        action="restart"
+      else
+        action="restart_failed"
+      fi
+    else
+      log "túnel morto mas restart em rate limit (1/h) — aguardando"
+      action="rate_limited"
+    fi
+  else
+    log "túnel morto e WAN sem internet — causa upstream, não agindo"
+    action="wan_down_skip"
+  fi
+fi
+
+restarts=$(cat "$STATE_DIR/restarts_total" 2>/dev/null || echo 0)
+resets=$(cat "$STATE_DIR/resets_total" 2>/dev/null || echo 0)
+[[ "$action" == "restart" ]] && restarts=$((restarts+1)) && echo "$restarts" > "$STATE_DIR/restarts_total"
+[[ "$action" == "reset_failed" ]] && resets=$((resets+1)) && echo "$resets" > "$STATE_DIR/resets_total"
+
+mkdir -p "$(dirname "$PROM_FILE")" 2>/dev/null
+cat > "${PROM_FILE}.tmp" <<EOF
+# HELP protonvpn_tunnel_ok Handshake WireGuard fresco (<${HANDSHAKE_MAX_AGE}s)
+# TYPE protonvpn_tunnel_ok gauge
+protonvpn_tunnel_ok ${tunnel_ok}
+# HELP protonvpn_handshake_age_seconds Idade do último handshake
+# TYPE protonvpn_handshake_age_seconds gauge
+protonvpn_handshake_age_seconds ${age}
+# HELP protonvpn_unit_selfheal_restarts_total Restarts reais aplicados
+# TYPE protonvpn_unit_selfheal_restarts_total counter
+protonvpn_unit_selfheal_restarts_total ${restarts}
+# HELP protonvpn_unit_selfheal_resets_total reset-failed cosméticos aplicados
+# TYPE protonvpn_unit_selfheal_resets_total counter
+protonvpn_unit_selfheal_resets_total ${resets}
+# HELP protonvpn_unit_selfheal_last_run_timestamp Unix time da última execução
+# TYPE protonvpn_unit_selfheal_last_run_timestamp gauge
+protonvpn_unit_selfheal_last_run_timestamp $(date +%s)
+EOF
+mv "${PROM_FILE}.tmp" "$PROM_FILE" 2>/dev/null || true
+
+log "estado: unit=$unit_state handshake=${age}s ação=$action"
+exit 0

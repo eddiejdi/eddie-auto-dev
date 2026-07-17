@@ -1,6 +1,6 @@
 {
   "catalogVersion": "1.0.0",
-  "generatedAt": "2026-07-16T22:02:16.706426",
+  "generatedAt": "2026-07-17T09:28:59.137891",
   "environment": "production",
   "categories": {
     "services": {
@@ -201,9 +201,9 @@
         "contexts": [
           "mailu-backend",
           "mailu-roundcube",
-          "mailu-postfix",
           "mailu-frontend",
-          "mailu-dovecot"
+          "mailu-dovecot",
+          "mailu-postfix"
         ]
       },
       "ADMIN_EMAIL": {
@@ -1421,10 +1421,10 @@
         "source": "docker-compose",
         "value": "America/Sao_Paulo",
         "contexts": [
-          "netbox-postgres",
-          "grafana",
           "glpi",
-          "glpi-db"
+          "glpi-db",
+          "netbox-postgres",
+          "grafana"
         ]
       },
       "GF_DEFAULT_TIMEZONE": {
@@ -1700,7 +1700,7 @@
         "name": "MAX_HEALS_24H",
         "type": "integer",
         "source": "systemd",
-        "value": "3",
+        "value": "6",
         "contexts": [
           "tuya-token-selfheal"
         ]
@@ -1714,39 +1714,150 @@
           "tuya-token-selfheal"
         ]
       },
+      "BYPASS_CONF": {
+        "name": "BYPASS_CONF",
+        "type": "path",
+        "source": "systemd",
+        "value": "/etc/iot-vpn-bypass.conf",
+        "contexts": [
+          "iot-presence-watchdog"
+        ]
+      },
+      "LEASES_FILE": {
+        "name": "LEASES_FILE",
+        "type": "path",
+        "source": "systemd",
+        "value": "/var/lib/misc/dnsmasq.leases",
+        "contexts": [
+          "iot-presence-watchdog",
+          "dhcp-selfheal"
+        ]
+      },
+      "UNIT": {
+        "name": "UNIT",
+        "type": "string",
+        "source": "systemd",
+        "value": "wg-quick@protonvpn.service",
+        "contexts": [
+          "protonvpn-unit-selfheal"
+        ]
+      },
+      "WG_IFACE": {
+        "name": "WG_IFACE",
+        "type": "string",
+        "source": "systemd",
+        "value": "protonvpn",
+        "contexts": [
+          "protonvpn-unit-selfheal"
+        ]
+      },
+      "WAN_IFACE": {
+        "name": "WAN_IFACE",
+        "type": "string",
+        "source": "systemd",
+        "value": "eth-wan",
+        "contexts": [
+          "protonvpn-unit-selfheal"
+        ]
+      },
+      "HANDSHAKE_MAX_AGE": {
+        "name": "HANDSHAKE_MAX_AGE",
+        "type": "integer",
+        "source": "systemd",
+        "value": "600",
+        "contexts": [
+          "protonvpn-unit-selfheal"
+        ]
+      },
+      "IFACE": {
+        "name": "IFACE",
+        "type": "string",
+        "source": "systemd",
+        "value": "eth-wan",
+        "contexts": [
+          "ethwan-selfheal"
+        ]
+      },
+      "CHECK_INTERVAL": {
+        "name": "CHECK_INTERVAL",
+        "type": "integer",
+        "source": "systemd",
+        "value": "30",
+        "contexts": [
+          "grafana-selfheal",
+          "ethwan-selfheal",
+          "dhcp-selfheal"
+        ]
+      },
+      "LINK_DOWN_GRACE": {
+        "name": "LINK_DOWN_GRACE",
+        "type": "integer",
+        "source": "systemd",
+        "value": "20",
+        "contexts": [
+          "ethwan-selfheal"
+        ]
+      },
+      "BRINGUP_SCRIPT": {
+        "name": "BRINGUP_SCRIPT",
+        "type": "path",
+        "source": "systemd",
+        "value": "/usr/local/bin/eth-wan-bringup.sh",
+        "contexts": [
+          "ethwan-selfheal"
+        ]
+      },
+      "USB_PORT": {
+        "name": "USB_PORT",
+        "type": "string",
+        "source": "systemd",
+        "value": "2-2",
+        "contexts": [
+          "ethwan-selfheal"
+        ]
+      },
+      "HEAL_COOLDOWN": {
+        "name": "HEAL_COOLDOWN",
+        "type": "integer",
+        "source": "systemd",
+        "value": "120",
+        "contexts": [
+          "ethwan-selfheal"
+        ]
+      },
       "PYTHONUNBUFFERED": {
         "name": "PYTHONUNBUFFERED",
         "type": "boolean",
         "source": "systemd",
         "value": "1",
         "contexts": [
-          "marketing-x-posts",
-          "eddie-expurgo",
           "eddie-calendar",
-          "coordinator",
-          "crypto-agent@",
-          "approval-gateway",
-          "eddie-telegram-bot",
-          "marketing-email-drip",
-          "daily-agenda-panel",
-          "tape-component-quality-exporter",
-          "clear-trading-agent",
           "bn-acervo-agent",
-          "marketing-api",
-          "marketing-daily-report",
-          "ollama-gpu-coordinator",
-          "banking-metrics-exporter",
-          "candle-collector",
-          "diretor",
-          "kucoin-usdt-rebalance",
-          "notebook-power-agent",
-          "trading-analyst-weekly-retrain",
-          "trading-daily-report",
-          "meeting-translator",
+          "crypto-agent@",
+          "kucoin-postgres-sync",
           "daily-agenda-broadcast",
+          "tape-component-quality-exporter",
+          "diretor",
           "rss-sentiment-exporter",
+          "trading-analyst-weekly-retrain",
+          "meeting-translator",
+          "daily-agenda-panel",
+          "ollama-gpu-coordinator",
+          "notebook-power-agent",
+          "eddie-expurgo",
+          "kucoin-usdt-rebalance",
+          "marketing-x-posts",
+          "marketing-email-drip",
           "agent-network-exporter",
-          "kucoin-postgres-sync"
+          "eddie-telegram-bot",
+          "coordinator",
+          "candle-collector",
+          "clear-trading-agent",
+          "banking-metrics-exporter",
+          "marketing-api",
+          "trading-daily-report",
+          "marketing-daily-report",
+          "approval-gateway"
         ]
       },
       "NARRATOR_STATE_FILE": {
@@ -1764,16 +1875,16 @@
         "source": "systemd",
         "value": "/var/db/ltfs-tools/libs",
         "contexts": [
-          "tape-component-quality-exporter",
+          "llm-log-panel",
           "marketing-x-posts",
-          "marketing-daily-report",
-          "ollama-finetune",
-          "clear-trading-agent",
           "rss-sentiment-exporter",
           "marketing-api",
-          "llm-log-panel",
           "marketing-email-drip",
-          "candle-collector"
+          "clear-trading-agent",
+          "candle-collector",
+          "marketing-daily-report",
+          "tape-component-quality-exporter",
+          "ollama-finetune"
         ]
       },
       "PATH": {
@@ -1782,16 +1893,16 @@
         "source": "systemd",
         "value": "/var/db/ltfs-patched/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
         "contexts": [
-          "tape-component-quality-exporter",
-          "kucoin-postgres-sync",
           "kucoin-usdt-rebalance",
           "github-agent",
           "specialized_agents-dashboard",
-          "homelab-dashboard",
-          "crypto-agent@",
           "job-monitor",
           "eddie-whatsapp-bot",
-          "rpa4all-validation"
+          "homelab-dashboard",
+          "rpa4all-validation",
+          "kucoin-postgres-sync",
+          "crypto-agent@",
+          "tape-component-quality-exporter"
         ]
       },
       "OLLAMA_SENTIMENT_MODEL": {
@@ -1848,11 +1959,11 @@
         "source": "systemd",
         "value": "/apps/crypto-trader",
         "contexts": [
-          "crypto-agent@",
-          "rss-sentiment-exporter",
           "llm-log-panel",
-          "ollama-finetune",
-          "candle-collector"
+          "rss-sentiment-exporter",
+          "crypto-agent@",
+          "candle-collector",
+          "ollama-finetune"
         ]
       },
       "WAIT_SECONDS": {
@@ -2209,16 +2320,6 @@
           "homelab-tape-log-drain-sg1"
         ]
       },
-      "CHECK_INTERVAL": {
-        "name": "CHECK_INTERVAL",
-        "type": "integer",
-        "source": "systemd",
-        "value": "30",
-        "contexts": [
-          "dhcp-selfheal",
-          "grafana-selfheal"
-        ]
-      },
       "FAIL_THRESHOLD": {
         "name": "FAIL_THRESHOLD",
         "type": "integer",
@@ -2234,8 +2335,8 @@
         "source": "systemd",
         "value": "3",
         "contexts": [
-          "dhcp-selfheal",
-          "grafana-selfheal"
+          "grafana-selfheal",
+          "dhcp-selfheal"
         ]
       },
       "TEXTFILE_DIR": {
@@ -2280,8 +2381,8 @@
         "source": "systemd",
         "value": "http://localhost:3004",
         "contexts": [
-          "eddie-whatsapp-bot",
-          "eddie-expurgo"
+          "eddie-expurgo",
+          "eddie-whatsapp-bot"
         ]
       },
       "ADMIN_NUMBERS": {
@@ -2308,8 +2409,8 @@
         "source": "systemd",
         "value": "948686300",
         "contexts": [
-          "eddie-expurgo",
-          "eddie-calendar"
+          "eddie-calendar",
+          "eddie-expurgo"
         ]
       },
       "ADMIN_PHONE": {
@@ -2353,15 +2454,6 @@
         "type": "string",
         "source": "systemd",
         "value": "homelab-lan-dhcp.service",
-        "contexts": [
-          "dhcp-selfheal"
-        ]
-      },
-      "LEASES_FILE": {
-        "name": "LEASES_FILE",
-        "type": "path",
-        "source": "systemd",
-        "value": "/var/lib/misc/dnsmasq.leases",
         "contexts": [
           "dhcp-selfheal"
         ]
@@ -2563,8 +2655,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "config",
-          "configure_authentik_nextcloud_oidc"
+          "configure_authentik_nextcloud_oidc",
+          "config"
         ]
       },
       "NEXTCLOUD_ADMIN_USER": {
@@ -2627,8 +2719,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "config",
-          "configure_diretor_model"
+          "configure_diretor_model",
+          "config"
         ]
       },
       "HOMELAB_USER": {
@@ -2781,11 +2873,11 @@
         "source": "yaml",
         "value": "rpa4all_snapshot_alerts",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_INTERVAL": {
@@ -2794,11 +2886,11 @@
         "source": "yaml",
         "value": "30s",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_EXPR": {
@@ -2808,9 +2900,9 @@
         "value": "rpa4all_snapshot_service_up == 0",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_FOR": {
@@ -2819,11 +2911,11 @@
         "source": "yaml",
         "value": "5m",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_LABELS_SEVERITY": {
@@ -2832,11 +2924,11 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_LABELS_COMPONENT": {
@@ -2854,11 +2946,11 @@
         "source": "yaml",
         "value": "\ud83d\udd34 RPA4All Snapshot Service DOWN",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_ANNOTATIONS_DESCRIPTION": {
@@ -2867,11 +2959,11 @@
         "source": "yaml",
         "value": "O servi\u00e7o rpa4all-snapshot.service n\u00e3o est\u00e1 rodando por mais de 5 minutos",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_ANNOTATIONS_DASHBOARD": {
@@ -2899,9 +2991,9 @@
         "value": "rpa4all_snapshot_hung == 1",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_FOR": {
@@ -2910,11 +3002,11 @@
         "source": "yaml",
         "value": "3m",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_LABELS_SEVERITY": {
@@ -2923,11 +3015,11 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_LABELS_COMPONENT": {
@@ -2945,11 +3037,11 @@
         "source": "yaml",
         "value": "\u23f8\ufe0f RPA4All Snapshot HUNG (Travado)",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_ANNOTATIONS_DESCRIPTION": {
@@ -2958,11 +3050,11 @@
         "source": "yaml",
         "value": "Lock file com idade {{ $value | humanizeDuration }}. Snapshot pode estar travado em I/O ou rede",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_ANNOTATIONS_ACTION": {
@@ -2990,9 +3082,9 @@
         "value": "(time() - rpa4all_snapshot_last_run_timestamp) > 86400",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_FOR": {
@@ -3001,11 +3093,11 @@
         "source": "yaml",
         "value": "1m",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_LABELS_SEVERITY": {
@@ -3014,11 +3106,11 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_LABELS_COMPONENT": {
@@ -3036,11 +3128,11 @@
         "source": "yaml",
         "value": "\u23f3 RPA4All Snapshot \u2014 \u00daltima execu\u00e7\u00e3o > 24h",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_ANNOTATIONS_DESCRIPTION": {
@@ -3049,11 +3141,11 @@
         "source": "yaml",
         "value": "\u00daltima execu\u00e7\u00e3o bem-sucedida h\u00e1 {{ $value | humanizeDuration }}. Timer pode estar desabilitado",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "rpa4all-snapshot-alerts",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_ANNOTATIONS_DASHBOARD": {
@@ -3072,9 +3164,9 @@
         "value": "increase(rpa4all_snapshot_failed_total[1h]) > 3",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_FOR": {
@@ -3083,10 +3175,10 @@
         "source": "yaml",
         "value": "5m",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "alert_rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_LABELS_SEVERITY": {
@@ -3095,10 +3187,10 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "alert_rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_LABELS_COMPONENT": {
@@ -3116,10 +3208,10 @@
         "source": "yaml",
         "value": "\u26a0\ufe0f RPA4All Snapshot \u2014 Taxa de Falha Elevada",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "alert_rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_ANNOTATIONS_DESCRIPTION": {
@@ -3128,10 +3220,10 @@
         "source": "yaml",
         "value": "{{ $value }} falhas de snapshot na \u00faltima hora",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "alert_rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_ANNOTATIONS_DASHBOARD": {
@@ -3150,8 +3242,8 @@
         "value": "rpa4all_snapshot_backup_size_bytes > 500000000000",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_FOR": {
@@ -3160,9 +3252,9 @@
         "source": "yaml",
         "value": "10m",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_LABELS_SEVERITY": {
@@ -3171,9 +3263,9 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_LABELS_COMPONENT": {
@@ -3191,9 +3283,9 @@
         "source": "yaml",
         "value": "\u26a0\ufe0f RPA4All Backup \u2014 Tamanho Anormal",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_ANNOTATIONS_DESCRIPTION": {
@@ -3202,9 +3294,9 @@
         "source": "yaml",
         "value": "\u00daltimo backup com {{ $value | humanize1024 }}B. Poss\u00edvel duplica\u00e7\u00e3o ou bloat",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_ANNOTATIONS_DASHBOARD": {
@@ -3222,8 +3314,8 @@
         "source": "yaml",
         "value": "increase(rpa4all_snapshot_recovery_triggered_total[1h]) > 0",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_FOR": {
@@ -3232,9 +3324,9 @@
         "source": "yaml",
         "value": "1m",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_LABELS_SEVERITY": {
@@ -3243,9 +3335,9 @@
         "source": "yaml",
         "value": "info",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_LABELS_COMPONENT": {
@@ -3263,9 +3355,9 @@
         "source": "yaml",
         "value": "\u2139\ufe0f RPA4All Snapshot \u2014 Recupera\u00e7\u00e3o Acionada",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_ANNOTATIONS_DESCRIPTION": {
@@ -3274,9 +3366,9 @@
         "source": "yaml",
         "value": "{{ $value }} recupera\u00e7\u00f5es autom\u00e1ticas acionadas na \u00faltima hora",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rules",
           "rpa4all-snapshot-alerts",
-          "rules"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_ANNOTATIONS_DASHBOARD": {
@@ -4322,9 +4414,9 @@
         "source": "yaml",
         "value": "trading_agent_alerts",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_INTERVAL": {
@@ -4333,9 +4425,9 @@
         "source": "yaml",
         "value": "15s",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_EXPR": {
@@ -4344,8 +4436,8 @@
         "source": "yaml",
         "value": "trading_agent_up == 0",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_FOR": {
@@ -4354,9 +4446,9 @@
         "source": "yaml",
         "value": "3m",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_LABELS_SEVERITY": {
@@ -4365,9 +4457,9 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_LABELS_COMPONENT": {
@@ -4385,9 +4477,9 @@
         "source": "yaml",
         "value": "\ud83d\udd34 Trading Agent {{ $labels.symbol }} DOWN",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_ANNOTATIONS_DESCRIPTION": {
@@ -4396,9 +4488,9 @@
         "source": "yaml",
         "value": "Agent {{ $labels.symbol }} \u00e9 est\u00e1 inativo por mais de 3 minutos. Systemd unit pode estar crashed.",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_ANNOTATIONS_DASHBOARD": {
@@ -4416,8 +4508,8 @@
         "source": "yaml",
         "value": "trading_agent_stalled == 1",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_FOR": {
@@ -4426,9 +4518,9 @@
         "source": "yaml",
         "value": "5m",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_LABELS_SEVERITY": {
@@ -4437,9 +4529,9 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_LABELS_COMPONENT": {
@@ -4457,9 +4549,9 @@
         "source": "yaml",
         "value": "\u23f8\ufe0f Trading Agent {{ $labels.symbol }} STALLED",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_ANNOTATIONS_DESCRIPTION": {
@@ -4468,9 +4560,9 @@
         "source": "yaml",
         "value": "Agent {{ $labels.symbol }} n\u00e3o gerou decis\u00f5es por mais de 5 minutos. Poss\u00edvel deadlock na DB ou timeout na API KuCoin.",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_ANNOTATIONS_DASHBOARD": {
@@ -4488,8 +4580,8 @@
         "source": "yaml",
         "value": "trading_agent_last_decision_age_seconds > 900",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_2_FOR": {
@@ -4498,9 +4590,9 @@
         "source": "yaml",
         "value": "3m",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_2_LABELS_SEVERITY": {
@@ -4509,9 +4601,9 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_2_LABELS_COMPONENT": {
@@ -4529,9 +4621,9 @@
         "source": "yaml",
         "value": "\u23f3 Trading Agent {{ $labels.symbol }} \u2014 Decisions Gap 15+ min",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_2_ANNOTATIONS_DESCRIPTION": {
@@ -4540,9 +4632,9 @@
         "source": "yaml",
         "value": "Agent {{ $labels.symbol }} n\u00e3o gerou decis\u00e3o h\u00e1 {{ $value | humanizeDuration }}. Self-heal pode executar restart.",
         "contexts": [
-          "selfhealing_rules",
           "rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_EXPR": {
@@ -4551,8 +4643,8 @@
         "source": "yaml",
         "value": "trading_agent_consecutive_failures > 6",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_FOR": {
@@ -4561,8 +4653,8 @@
         "source": "yaml",
         "value": "2m",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_LABELS_SEVERITY": {
@@ -4571,8 +4663,8 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_LABELS_COMPONENT": {
@@ -4590,8 +4682,8 @@
         "source": "yaml",
         "value": "\ud83d\udea8 Trading Agent {{ $labels.symbol }} \u2014 Self-Heal FAILED",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_ANNOTATIONS_DESCRIPTION": {
@@ -4600,8 +4692,8 @@
         "source": "yaml",
         "value": "Agent {{ $labels.symbol }} failed health checks {{ $value | humanize }} times. Auto-restart n\u00e3o conseguiu recuperar. Interven\u00e7\u00e3o manual necess\u00e1ria.",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_ANNOTATIONS_DASHBOARD": {
@@ -4628,8 +4720,8 @@
         "source": "yaml",
         "value": "up{job=\"crypto-exporters\"} == 0",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_4_FOR": {
@@ -4692,8 +4784,8 @@
         "source": "yaml",
         "value": "increase(trading_selfheal_actions_total{action=\"ollama_error\"}[1h]) > 5",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_5_FOR": {
@@ -4756,8 +4848,8 @@
         "source": "yaml",
         "value": "rate(trading_agent_restart_total[1h]) > 3",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_6_FOR": {
@@ -5108,8 +5200,8 @@
         "source": "yaml",
         "value": "ltfs",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_LABELS_CATEGORY": {
@@ -5118,8 +5210,8 @@
         "source": "yaml",
         "value": "ltfs",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_LABELS_CATEGORY": {
@@ -5128,8 +5220,8 @@
         "source": "yaml",
         "value": "ltfs",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_LABELS_CATEGORY": {
@@ -5138,8 +5230,8 @@
         "source": "yaml",
         "value": "ltfs",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_LABELS_CATEGORY": {
@@ -5148,8 +5240,8 @@
         "source": "yaml",
         "value": "ltfs",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_LABELS_CATEGORY": {
@@ -5158,8 +5250,8 @@
         "source": "yaml",
         "value": "infrastructure",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_6_EXPR": {
@@ -5177,8 +5269,8 @@
         "source": "yaml",
         "value": "2m",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_6_LABELS_SEVERITY": {
@@ -5187,8 +5279,8 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_6_LABELS_CATEGORY": {
@@ -5197,8 +5289,8 @@
         "source": "yaml",
         "value": "infrastructure",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_6_ANNOTATIONS_SUMMARY": {
@@ -5207,8 +5299,8 @@
         "source": "yaml",
         "value": "NAS offline no Prometheus: rpa4all-nas-001",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_6_ANNOTATIONS_DESCRIPTION": {
@@ -5217,8 +5309,8 @@
         "source": "yaml",
         "value": "Prometheus n\u00e3o consegue coletar m\u00e9tricas da NAS 192.168.15.4 h\u00e1 mais de 2 minutos. Verificar energia, boot loop, rede e exporter.",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "APIVERSION": {
@@ -5227,12 +5319,12 @@
         "source": "yaml",
         "value": "1",
         "contexts": [
-          "contactpoints",
-          "dashboards",
           "datasources",
           "policies",
-          "authentik-http",
-          "rules"
+          "contactpoints",
+          "rules",
+          "dashboards",
+          "authentik-http"
         ]
       },
       "DELETEDATASOURCES_0_NAME": {
@@ -15527,8 +15619,8 @@
         "source": "yaml",
         "value": "Homelab MCP Server",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "VERSION": {
@@ -15537,8 +15629,8 @@
         "source": "yaml",
         "value": "0.0.1",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "SCHEMA": {
@@ -15547,8 +15639,8 @@
         "source": "yaml",
         "value": "v1",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "MCPSERVERS_0_NAME": {
@@ -15557,8 +15649,8 @@
         "source": "yaml",
         "value": "homelab",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "MCPSERVERS_0_COMMAND": {
@@ -15567,8 +15659,8 @@
         "source": "yaml",
         "value": "/home/edenilson/shared-auto-dev/.venv/bin/python",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "MCPSERVERS_0_ENV_HOMELAB_URL": {
@@ -15577,8 +15669,8 @@
         "source": "yaml",
         "value": "http://192.168.15.2:8503",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "MCPSERVERS_0_ENV_API_BASE_URL": {
@@ -15587,8 +15679,8 @@
         "source": "yaml",
         "value": "http://192.168.15.2:3000",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "TOPIC": {
@@ -15597,8 +15689,8 @@
         "source": "yaml",
         "value": "viral_trends",
         "contexts": [
-          "curiosidades",
           "viral_trends",
+          "curiosidades",
           "cripto"
         ]
       },
@@ -15608,8 +15700,8 @@
         "source": "yaml",
         "value": "Trend alert: {trend_title}",
         "contexts": [
-          "curiosidades",
           "viral_trends",
+          "curiosidades",
           "cripto"
         ]
       },
@@ -15619,8 +15711,8 @@
         "source": "yaml",
         "value": "Hook: Essa trend est\u00e1 com score {score} agora.\nPasso 1: Use o gancho nos primeiros 2 segundos.\nPasso 2: Entregue valor r\u00e1pido sobre {trend_title}.\nPasso 3: CTA claro no final para aumentar reten\u00e7\u00e3o.\nTags: {tags}.\n",
         "contexts": [
-          "curiosidades",
           "viral_trends",
+          "curiosidades",
           "cripto"
         ]
       },
@@ -15630,8 +15722,8 @@
         "source": "yaml",
         "value": "Marca algu\u00e9m que precisa surfar essa trend hoje!",
         "contexts": [
-          "curiosidades",
           "viral_trends",
+          "curiosidades",
           "cripto"
         ]
       },
@@ -15764,9 +15856,9 @@
         "contexts": [
           "mailu-backend",
           "mailu-roundcube",
-          "mailu-postfix",
           "mailu-frontend",
-          "mailu-dovecot"
+          "mailu-dovecot",
+          "mailu-postfix"
         ]
       },
       "MAILU_DB_PASSWORD": {
@@ -16252,10 +16344,10 @@
         "value": "***REDACTED***",
         "contexts": [
           "mailu-db",
-          "wikijs-db",
-          "netbox-postgres",
+          "postgres",
           "mail-db",
-          "postgres"
+          "wikijs-db",
+          "netbox-postgres"
         ]
       },
       "OIDC_CLIENT_SECRET": {
@@ -16391,10 +16483,10 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-redis-cache",
           "netbox",
-          "netbox-redis",
-          "netbox-worker"
+          "netbox-redis-cache",
+          "netbox-worker",
+          "netbox-redis"
         ]
       },
       "REMOTE_AUTH_AUTO_CREATE_USER": {
@@ -16928,8 +17020,8 @@
         "source": "yaml",
         "value": "***REDACTED***",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       }
     },
@@ -17108,8 +17200,8 @@
         "value": "wikijs-db",
         "contexts": [
           "netbox",
-          "wikijs",
-          "netbox-worker"
+          "netbox-worker",
+          "wikijs"
         ]
       },
       "DB_PORT": {
@@ -17128,8 +17220,8 @@
         "value": "wikijs",
         "contexts": [
           "netbox",
-          "wikijs",
-          "netbox-worker"
+          "netbox-worker",
+          "wikijs"
         ]
       },
       "DB_NAME": {
@@ -17139,8 +17231,8 @@
         "value": "wikijs",
         "contexts": [
           "netbox",
-          "wikijs",
-          "netbox-worker"
+          "netbox-worker",
+          "wikijs"
         ]
       },
       "DATABASE_URL": {
@@ -17281,10 +17373,10 @@
         "value": "wikijs",
         "contexts": [
           "mailu-db",
-          "wikijs-db",
-          "netbox-postgres",
+          "postgres",
           "mail-db",
-          "postgres"
+          "wikijs-db",
+          "netbox-postgres"
         ]
       },
       "POSTGRES_USER": {
@@ -17294,10 +17386,10 @@
         "value": "wikijs",
         "contexts": [
           "mailu-db",
-          "wikijs-db",
-          "netbox-postgres",
+          "postgres",
           "mail-db",
-          "postgres"
+          "wikijs-db",
+          "netbox-postgres"
         ]
       },
       "DB_TYPE": {
@@ -17563,8 +17655,8 @@
         "source": "yaml",
         "value": "***REDACTED***",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       }
     },
@@ -17697,8 +17789,8 @@
         "source": "systemd",
         "value": "/apps/crypto-trader/trading/btc_trading_agent",
         "contexts": [
-          "kucoin-postgres-sync",
-          "kucoin-usdt-rebalance"
+          "kucoin-usdt-rebalance",
+          "kucoin-postgres-sync"
         ]
       },
       "COMPATIBILITY_METHOD": {
@@ -18024,6 +18116,15 @@
       }
     },
     "monitoring": {
+      "ABSENT_ALERT_MIN": {
+        "name": "ABSENT_ALERT_MIN",
+        "type": "integer",
+        "source": "systemd",
+        "value": "30",
+        "contexts": [
+          "iot-presence-watchdog"
+        ]
+      },
       "GRAFANA_URL": {
         "name": "GRAFANA_URL",
         "type": "url",
@@ -18050,9 +18151,9 @@
         "value": "RPA4AllSnapshotServiceDown",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_ALERT": {
@@ -18062,9 +18163,9 @@
         "value": "RPA4AllSnapshotHung",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_ALERT": {
@@ -18074,9 +18175,9 @@
         "value": "RPA4AllSnapshotLastRunTooOld",
         "contexts": [
           "selfhealing_rules",
-          "ltfs-selfheal-rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_ALERT": {
@@ -18085,9 +18186,9 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotFailureRate",
         "contexts": [
-          "ltfs-selfheal-rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_ALERT": {
@@ -18096,8 +18197,8 @@
         "source": "yaml",
         "value": "RPA4AllBackupSizeUnusual",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_ALERT": {
@@ -18106,8 +18207,8 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotRecoveryTriggered",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_1_RULES_0_ALERT": {
@@ -18116,8 +18217,8 @@
         "source": "yaml",
         "value": "TradingAgentDown",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_ALERT": {
@@ -18126,8 +18227,8 @@
         "source": "yaml",
         "value": "TradingAgentStalled",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_2_ALERT": {
@@ -18136,8 +18237,8 @@
         "source": "yaml",
         "value": "TradingDecisionsGap",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_ALERT": {
@@ -18146,8 +18247,8 @@
         "source": "yaml",
         "value": "TradingSelfHealExhausted",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_4_ALERT": {
@@ -18198,7 +18299,7 @@
     }
   },
   "metadata": {
-    "totalVariables": 1926,
+    "totalVariables": 1937,
     "sourceFiles": [
       ".env.openai-compatible.example",
       ".env.example.wiki",
@@ -18224,6 +18325,9 @@
       "tools/vaultwarden/docker-compose.yml",
       "tools/authentik_management/configs/docker-compose.override.yml",
       "systemd/tuya-token-selfheal.service",
+      "systemd/iot-presence-watchdog.service",
+      "systemd/protonvpn-unit-selfheal.service",
+      "systemd/ethwan-selfheal.service",
       "systemd/workstation-win11l-rdp@.service",
       "systemd/workstation-win11l-http@.service",
       "systemd/tuya-token-renewer.service",
@@ -18296,6 +18400,7 @@
       "systemd/daily-agenda-broadcast.service",
       "systemd/crypto-agent@.service",
       "systemd/coordinator.service",
+      "systemd/cloudflared-tunnel-guardian.service",
       "systemd/clear-trading-agent.service",
       "systemd/clear-agent@.service",
       "systemd/chromecast-ambilight.service",

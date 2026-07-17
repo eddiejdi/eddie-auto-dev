@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-07-17T10:58:22.115228+00:00",
-  "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/ba6e0dc2-8033-402c-aa0b-e458fb4b91b1/scratchpad/cf-guardian",
+  "generated_at": "2026-07-17T12:29:23.755081+00:00",
+  "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/ba6e0dc2-8033-402c-aa0b-e458fb4b91b1/scratchpad/net-selfheal",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 174,
+    "repo_services": 179,
     "trading_instances": 12,
-    "critical_services": 68,
+    "critical_services": 70,
     "domains": {
       "identity": 4,
       "monitoring": 14,
-      "network": 18,
-      "operations": 95,
+      "network": 20,
+      "operations": 98,
       "storage": 32,
       "trading": 11
     }
@@ -462,6 +462,22 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "protonvpn-unit-selfheal.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/protonvpn-unit-selfheal.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "protonvpn-unit-selfheal.timer",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/protonvpn-unit-selfheal.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "rpa4all-ddns-server.service",
       "domain": "network",
       "kind": "systemd",
@@ -862,6 +878,14 @@
       "candidate_system": "GLPI review"
     },
     {
+      "name": "ethwan-selfheal.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/ethwan-selfheal.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
       "name": "final-boot-status-agent.service",
       "domain": "operations",
       "kind": "systemd",
@@ -890,6 +914,22 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/homelab-dashboard.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "iot-presence-watchdog.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/iot-presence-watchdog.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "iot-presence-watchdog.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/iot-presence-watchdog.timer",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -2058,6 +2098,20 @@
         "name": "protonvpn-routing-watchdog.service",
         "domain": "network",
         "source": "deploy/vpn/protonvpn-routing-watchdog.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "protonvpn-unit-selfheal.service",
+        "domain": "network",
+        "source": "systemd/protonvpn-unit-selfheal.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "protonvpn-unit-selfheal.timer",
+        "domain": "network",
+        "source": "systemd/protonvpn-unit-selfheal.timer",
         "kind": "systemd",
         "critical": true
       },
