@@ -110,6 +110,7 @@ def render_prom(metrics: dict[str, float | int]) -> str:
         "tuya_selfheal_runs_total": ("counter", "Execuções do selfheal"),
         "tuya_selfheal_heals_total": ("counter", "Heals aplicados com sucesso"),
         "tuya_selfheal_heal_failures_total": ("counter", "Heals que falharam"),
+        "tuya_selfheal_check_failures_total": ("counter", "Rodadas em que a checagem do HA falhou"),
         "tuya_selfheal_last_run_timestamp": ("gauge", "Unix time da última execução"),
         "tuya_selfheal_last_heal_timestamp": ("gauge", "Unix time do último heal"),
         "tuya_selfheal_healthy": ("gauge", "1=integração Tuya saudável no HA"),
@@ -187,7 +188,7 @@ def ha_tuya_status() -> dict:
             "st=json.load(urllib.request.urlopen(req,timeout=30))\n"
             "print(json.dumps({s['entity_id']:s['state'] for s in st}))\n"
         )
-        states = json.loads(docker_py(jwt_script))
+        states = json.loads(docker_py(jwt_script, timeout=180))
         status["entities_total"] = len(entity_ids)
         status["entities_active"] = sum(
             1
@@ -198,6 +199,22 @@ def ha_tuya_status() -> dict:
         status["entities_total"] = 0
         status["entities_active"] = 0
     return status
+
+
+def ha_tuya_status_with_retry(attempts: int = 3, backoff_s: int = 30) -> dict | None:
+    """ha_tuya_status com retries; None quando a checagem falhou.
+
+    Sob load alto o docker exec pode estourar timeout — falha de
+    monitoramento não pode virar crash da unit nem disparar heal.
+    """
+    for attempt in range(1, attempts + 1):
+        try:
+            return ha_tuya_status()
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Checagem HA falhou (%d/%d): %s", attempt, attempts, exc)
+            if attempt < attempts:
+                time.sleep(backoff_s)
+    return None
 
 
 def load_runtime_token() -> dict | None:
@@ -272,8 +289,27 @@ def main() -> int:
     state["runs_total"] += 1
     state["heal_history"] = prune_heal_history(state.get("heal_history", []))
 
-    status = ha_tuya_status()
+    status = ha_tuya_status_with_retry()
     runtime_token = load_runtime_token()
+
+    if status is None:
+        state["check_failures_total"] = state.get("check_failures_total", 0) + 1
+        save_state(state)
+        write_prom({
+            "tuya_selfheal_runs_total": state["runs_total"],
+            "tuya_selfheal_heals_total": state["heals_total"],
+            "tuya_selfheal_heal_failures_total": state["heal_failures_total"],
+            "tuya_selfheal_check_failures_total": state["check_failures_total"],
+            "tuya_selfheal_last_run_timestamp": int(time.time()),
+            "tuya_selfheal_last_heal_timestamp": state["last_heal_timestamp"],
+            "tuya_selfheal_healthy": 0,
+            "tuya_bridge_token_remaining_minutes": round(
+                token_remaining_minutes(runtime_token) if runtime_token else -1, 1
+            ),
+        })
+        log.error("Checagem do HA indisponível; heal não avaliado nesta rodada")
+        return 1
+
     ha_token = status.get("token_info") or {}
 
     heal, reason = should_heal(
@@ -293,7 +329,7 @@ def main() -> int:
                 state["heals_total"] += 1
                 state["last_heal_timestamp"] = int(time.time())
                 state["heal_history"].append(time.time())
-                status = ha_tuya_status()
+                status = ha_tuya_status_with_retry() or status
                 ha_token = status.get("token_info") or {}
                 log.info("Heal OK: %s entidades ativas", active)
             else:
@@ -309,6 +345,7 @@ def main() -> int:
         "tuya_selfheal_runs_total": state["runs_total"],
         "tuya_selfheal_heals_total": state["heals_total"],
         "tuya_selfheal_heal_failures_total": state["heal_failures_total"],
+        "tuya_selfheal_check_failures_total": state.get("check_failures_total", 0),
         "tuya_selfheal_last_run_timestamp": int(time.time()),
         "tuya_selfheal_last_heal_timestamp": state["last_heal_timestamp"],
         "tuya_selfheal_healthy": healthy,

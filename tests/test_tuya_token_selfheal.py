@@ -101,6 +101,35 @@ def test_render_prom_format() -> None:
     assert out.endswith("\n")
 
 
+def test_ha_status_with_retry_returns_none_on_persistent_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = {"n": 0}
+
+    def boom() -> dict:
+        calls["n"] += 1
+        raise TimeoutError("docker exec lento")
+
+    monkeypatch.setattr(selfheal, "ha_tuya_status", boom)
+    assert selfheal.ha_tuya_status_with_retry(attempts=3, backoff_s=0) is None
+    assert calls["n"] == 3
+
+
+def test_ha_status_with_retry_recovers(monkeypatch: pytest.MonkeyPatch) -> None:
+    results = [TimeoutError("lento"), {"entities_active": 5}]
+
+    def flaky() -> dict:
+        r = results.pop(0)
+        if isinstance(r, Exception):
+            raise r
+        return r
+
+    monkeypatch.setattr(selfheal, "ha_tuya_status", flaky)
+    assert selfheal.ha_tuya_status_with_retry(attempts=2, backoff_s=0) == {
+        "entities_active": 5
+    }
+
+
 def test_prune_heal_history() -> None:
     now = 1_784_000_000.0
     history = [now - 90_000, now - 3_600, now - 10]
