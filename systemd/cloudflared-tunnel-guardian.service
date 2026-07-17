@@ -1,0 +1,14 @@
+[Unit]
+Description=Cloudflare Tunnel + Grafana guardian (routes, tunnel, origin)
+After=network-online.target docker.service cloudflared-rpa4all.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/cloudflared-tunnel-guardian.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cf-tunnel-guardian
+
+[Install]
+WantedBy=multi-user.target
