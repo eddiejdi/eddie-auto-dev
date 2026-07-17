@@ -54,7 +54,7 @@
       "tunnel_type": "docker",
       "systemd_unit": "pihole.service",
       "docker_container": "pihole",
-      "health_url": "http://127.0.0.1:8053/admin/",
+      "health_url": "http://127.0.0.1:8089/admin/",
       "health_port": 53,
       "enabled": true
     }
