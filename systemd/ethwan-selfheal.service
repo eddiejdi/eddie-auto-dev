@@ -1,0 +1,26 @@
+[Unit]
+Description=eth-wan Selfheal — escada de recuperação do link WAN (RTL8153) com rate limit
+Documentation=https://github.com/eddiejdi/eddie-auto-dev
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/ethwan_selfheal
+Restart=on-failure
+RestartSec=30
+
+Environment=IFACE=eth-wan
+Environment=CHECK_INTERVAL=30
+Environment=LINK_DOWN_GRACE=20
+Environment=BRINGUP_SCRIPT=/usr/local/bin/eth-wan-bringup.sh
+Environment=USB_PORT=2-2
+Environment=HEAL_COOLDOWN=120
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=ethwan-selfheal
+
+[Install]
+WantedBy=multi-user.target

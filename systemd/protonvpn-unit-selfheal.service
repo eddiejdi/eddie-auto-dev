@@ -1,0 +1,19 @@
+[Unit]
+Description=Reconcilia wg-quick@protonvpn (unit) com o estado real do túnel no kernel
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/protonvpn_unit_selfheal
+Environment=UNIT=wg-quick@protonvpn.service
+Environment=WG_IFACE=protonvpn
+Environment=WAN_IFACE=eth-wan
+Environment=HANDSHAKE_MAX_AGE=600
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=protonvpn-unit-selfheal
+
+[Install]
+WantedBy=multi-user.target

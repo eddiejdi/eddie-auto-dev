@@ -1,0 +1,19 @@
+[Unit]
+Description=IoT Presence Watchdog — observa MACs da allowlist e alerta via Telegram (nunca age)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+EnvironmentFile=-/etc/default/eddie-common
+ExecStart=/usr/local/bin/iot_presence_watchdog.py
+Environment=BYPASS_CONF=/etc/iot-vpn-bypass.conf
+Environment=LEASES_FILE=/var/lib/misc/dnsmasq.leases
+Environment=ABSENT_ALERT_MIN=30
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=iot-presence-watchdog
+
+[Install]
+WantedBy=multi-user.target

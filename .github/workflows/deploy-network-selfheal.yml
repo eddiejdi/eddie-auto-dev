@@ -1,0 +1,76 @@
+name: Deploy Network Selfheal Suite
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/ethwan_selfheal'
+      - 'scripts/protonvpn_unit_selfheal'
+      - 'tools/homelab/iot_presence_watchdog.py'
+      - 'systemd/ethwan-selfheal.service'
+      - 'systemd/protonvpn-unit-selfheal.*'
+      - 'systemd/iot-presence-watchdog.*'
+      - 'systemd/tuya-token-selfheal.service'
+      - '.github/workflows/deploy-network-selfheal.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    # Self-hosted runner no homelab — instala direto com sudo
+    runs-on: [self-hosted, linux, homelab]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validar sintaxe
+        run: |
+          set -euo pipefail
+          bash -n scripts/ethwan_selfheal
+          bash -n scripts/protonvpn_unit_selfheal
+          python3 -m py_compile tools/homelab/iot_presence_watchdog.py
+
+      - name: Instalar scripts e units
+        run: |
+          set -euo pipefail
+          sudo install -D -m 0755 scripts/ethwan_selfheal /usr/local/bin/ethwan_selfheal
+          sudo install -D -m 0755 scripts/protonvpn_unit_selfheal /usr/local/bin/protonvpn_unit_selfheal
+          sudo install -D -m 0755 tools/homelab/iot_presence_watchdog.py /usr/local/bin/iot_presence_watchdog.py
+
+          sudo install -D -m 0644 systemd/ethwan-selfheal.service /etc/systemd/system/ethwan-selfheal.service
+          sudo install -D -m 0644 systemd/protonvpn-unit-selfheal.service /etc/systemd/system/protonvpn-unit-selfheal.service
+          sudo install -D -m 0644 systemd/protonvpn-unit-selfheal.timer /etc/systemd/system/protonvpn-unit-selfheal.timer
+          sudo install -D -m 0644 systemd/iot-presence-watchdog.service /etc/systemd/system/iot-presence-watchdog.service
+          sudo install -D -m 0644 systemd/iot-presence-watchdog.timer /etc/systemd/system/iot-presence-watchdog.timer
+          sudo install -D -m 0644 systemd/tuya-token-selfheal.service /etc/systemd/system/tuya-token-selfheal.service
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable --now ethwan-selfheal.service
+          sudo systemctl enable --now protonvpn-unit-selfheal.timer
+          sudo systemctl enable --now iot-presence-watchdog.timer
+          sudo systemctl restart tuya-token-selfheal.timer
+          echo "✅ Units instaladas e habilitadas"
+
+      - name: Smoke test
+        run: |
+          set -euo pipefail
+          sleep 5
+          systemctl is-active ethwan-selfheal.service
+
+          sudo systemctl start protonvpn-unit-selfheal.service
+          test -f /var/lib/prometheus/node-exporter/protonvpn_unit_selfheal.prom
+          grep -q "protonvpn_tunnel_ok" /var/lib/prometheus/node-exporter/protonvpn_unit_selfheal.prom
+
+          sudo systemctl start iot-presence-watchdog.service
+          test -f /var/lib/prometheus/node-exporter/iot_presence.prom
+          grep -q "iot_devices_present_count" /var/lib/prometheus/node-exporter/iot_presence.prom
+
+          test -f /var/lib/prometheus/node-exporter/ethwan_selfheal.prom
+          grep -q "ethwan_link_up" /var/lib/prometheus/node-exporter/ethwan_selfheal.prom
+
+          echo "✅ Métricas das 3 suítes publicadas:"
+          grep -hE "^(ethwan_link_up|protonvpn_tunnel_ok|iot_devices_present_count)" \
+            /var/lib/prometheus/node-exporter/ethwan_selfheal.prom \
+            /var/lib/prometheus/node-exporter/protonvpn_unit_selfheal.prom \
+            /var/lib/prometheus/node-exporter/iot_presence.prom

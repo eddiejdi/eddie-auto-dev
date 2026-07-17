@@ -1,10 +1,10 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-17T10:58:22.115228+00:00`
+- Generated at: `2026-07-17T12:29:23.755081+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `174`
-- Critical services flagged for MVP: `68`
+- Repo services discovered: `179`
+- Critical services flagged for MVP: `70`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
@@ -12,8 +12,8 @@
 
 - `identity`: 4
 - `monitoring`: 14
-- `network`: 18
-- `operations`: 95
+- `network`: 20
+- `operations`: 98
 - `storage`: 32
 - `trading`: 11
 
@@ -71,13 +71,13 @@
 - `protonvpn-boot-selfheal.service` (network, systemd) from `systemd/protonvpn-boot-selfheal.service`
 - `protonvpn-routing-watchdog-fix.service` (network, systemd) from `deploy/vpn/protonvpn-routing-watchdog-fix.service`
 - `protonvpn-routing-watchdog.service` (network, systemd) from `deploy/vpn/protonvpn-routing-watchdog.service`
+- `protonvpn-unit-selfheal.service` (network, systemd) from `systemd/protonvpn-unit-selfheal.service`
+- `protonvpn-unit-selfheal.timer` (network, systemd) from `systemd/protonvpn-unit-selfheal.timer`
 - `rpa4all-ddns-server.service` (network, systemd) from `deploy/vpn/rpa4all-ddns-server.service`
 - `rpa4all-vpn-ddns.service` (network, systemd) from `deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service`
 - `wireguard-nat.service` (network, systemd) from `deploy/vpn/wireguard-nat.service`
 - `disk-clean.service` (storage, systemd) from `systemd/disk-clean.service`
 - `disk-clean.timer` (storage, systemd) from `systemd/disk-clean.timer`
-- `disk-spindown.service` (storage, systemd) from `tools/homelab/disk-spindown.service`
-- `homelab-disk-backup.service` (storage, systemd) from `tools/backup/homelab-disk-backup.service`
 
 ## Serviços anotados manualmente
 
