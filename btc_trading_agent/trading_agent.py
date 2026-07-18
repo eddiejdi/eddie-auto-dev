@@ -283,10 +283,27 @@ class OllamaTradeWindowSuggestion:
     raw: str
 
 # ====================== AGENTE PRINCIPAL ======================
-class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMixin):
+try:
+    from conversion_mixin import ConversionMixin
+except ImportError:  # pragma: no cover
+    class ConversionMixin:  # type: ignore
+        def _conversion_enabled(self) -> bool:
+            return False
+
+        def _conversion_transfer_currencies(self):
+            return []
+
+        def _maybe_run_conversions(self, cycle: int) -> None:
+            return None
+
+
+class BitcoinTradingAgent(
+    ConversionMixin, SellTargetMixin, RiskGuardianMixin, PositionManagerMixin
+):
     """Agente de trading de Bitcoin 24/7.
 
     Lógica organizada em mixins:
+    - ConversionMixin      → conversão intermoedas (owner USDT_BRL)
     - SellTargetMixin      → target_sell_price (previsão IA + cap por regime)
     - RiskGuardianMixin    → guardrail config, estimativa de PnL, low-profit sell
     - PositionManagerMixin → tracking de slots, per-slot exits, max_hold_hours
@@ -1462,7 +1479,17 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
         quote_currency = self.symbol.split("-")[1]  # USDT
         transferred_any = False
 
-        for currency in [base_currency, quote_currency]:
+        currencies = [base_currency, quote_currency]
+        # Owner de conversão: transferir whitelist (ETH/BTC/SOL/DOGE etc.) MAIN→TRADE
+        try:
+            extra = list(self._conversion_transfer_currencies() or [])
+        except Exception:
+            extra = []
+        for cur in extra:
+            if cur and cur not in currencies:
+                currencies.append(cur)
+
+        for currency in currencies:
             try:
                 main_balances = get_balances(account_type="main")
                 main_bal = 0.0
@@ -5789,6 +5816,12 @@ class BitcoinTradingAgent(SellTargetMixin, RiskGuardianMixin, PositionManagerMix
                             self._detect_external_deposits()
                     except Exception as e:
                         logger.debug(f"Main→trade sync error: {e}")
+
+                # Conversão intermoedas (owner USDT_BRL) — fila + on-ramp BRL
+                try:
+                    self._maybe_run_conversions(cycle)
+                except Exception as e:
+                    logger.debug(f"Conversion cycle error: {e}")
                 
                 # Coletar estado do mercado
                 market_state = self._get_market_state()

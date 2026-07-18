@@ -6475,6 +6475,555 @@
       ],
       "title": "🔧 Agente — Saúde, Última Hora & Multiposição",
       "type": "row"
+    },
+    {
+      "id": 211,
+      "type": "row",
+      "title": "🔀 Intermoedas / Conversão (USDT-BRL)",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 126
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "id": 212,
+      "type": "stat",
+      "title": "Conversion enabled",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 0,
+        "y": 127
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(btc_conversion_enabled{coin=\"USDT-BRL\",profile=~\"$profile\"} or btc_conversion_enabled{exported_coin=\"USDT-BRL\",exported_profile=~\"$profile\"} or vector(0))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 213,
+      "type": "stat",
+      "title": "Dry-run",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 4,
+        "y": 127
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(btc_conversion_dry_run{coin=\"USDT-BRL\",profile=~\"$profile\"} or btc_conversion_dry_run{exported_coin=\"USDT-BRL\",exported_profile=~\"$profile\"} or vector(0))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 214,
+      "type": "stat",
+      "title": "Lock held",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 8,
+        "y": 127
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(btc_conversion_lock_held{coin=\"USDT-BRL\",profile=~\"$profile\"} or btc_conversion_lock_held{exported_coin=\"USDT-BRL\",exported_profile=~\"$profile\"} or vector(0))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 215,
+      "type": "stat",
+      "title": "Last route cost",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 12,
+        "y": 127
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(btc_conversion_route_cost_pct{coin=\"USDT-BRL\",profile=~\"$profile\"} or btc_conversion_route_cost_pct{exported_coin=\"USDT-BRL\",exported_profile=~\"$profile\"} or vector(0))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 216,
+      "type": "stat",
+      "title": "Last hops",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 16,
+        "y": 127
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(btc_conversion_route_hops{coin=\"USDT-BRL\",profile=~\"$profile\"} or btc_conversion_route_hops{exported_coin=\"USDT-BRL\",exported_profile=~\"$profile\"} or vector(0))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 217,
+      "type": "stat",
+      "title": "Savings vs USDT (bps)",
+      "gridPos": {
+        "h": 4,
+        "w": 4,
+        "x": 20,
+        "y": 127
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(btc_conversion_savings_vs_usdt_bps{coin=\"USDT-BRL\",profile=~\"$profile\"} or btc_conversion_savings_vs_usdt_bps{exported_coin=\"USDT-BRL\",exported_profile=~\"$profile\"} or vector(0))",
+          "legendFormat": "",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          }
+        }
+      ],
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 218,
+      "type": "timeseries",
+      "title": "Conversion requests by status",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 131
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(btc_conversion_requests_total{coin=\"USDT-BRL\",status=\"done\"} or btc_conversion_requests_total{exported_coin=\"USDT-BRL\",status=\"done\"} or vector(0))",
+          "legendFormat": "done",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          }
+        },
+        {
+          "refId": "B",
+          "expr": "sum(btc_conversion_requests_total{coin=\"USDT-BRL\",status=\"failed\"} or btc_conversion_requests_total{exported_coin=\"USDT-BRL\",status=\"failed\"} or vector(0))",
+          "legendFormat": "failed",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          }
+        },
+        {
+          "refId": "C",
+          "expr": "sum(btc_conversion_requests_total{coin=\"USDT-BRL\",status=\"partial\"} or btc_conversion_requests_total{exported_coin=\"USDT-BRL\",status=\"partial\"} or vector(0))",
+          "legendFormat": "partial",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          }
+        },
+        {
+          "refId": "D",
+          "expr": "sum(btc_conversion_requests_total{coin=\"USDT-BRL\",status=\"pending\"} or btc_conversion_requests_total{exported_coin=\"USDT-BRL\",status=\"pending\"} or vector(0))",
+          "legendFormat": "pending",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 219,
+      "type": "timeseries",
+      "title": "Last success timestamp",
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 131
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "dfc0w4yioe4u8e"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(btc_conversion_last_success_timestamp{coin=\"USDT-BRL\",profile=~\"$profile\"} or btc_conversion_last_success_timestamp{exported_coin=\"USDT-BRL\",exported_profile=~\"$profile\"} or vector(0))",
+          "legendFormat": "last_success",
+          "datasource": {
+            "type": "prometheus",
+            "uid": "dfc0w4yioe4u8e"
+          }
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "drawStyle": "line",
+            "lineWidth": 1,
+            "fillOpacity": 10,
+            "showPoints": "never"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 220,
+      "type": "table",
+      "title": "Últimas conversões (btc.conversion_requests)",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 139
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT id, created_at, asset_in, asset_out, amount_in, status, dry_run, profile,\n                        plan_json->>'via' AS via,\n                        plan_json->>'hops' AS hops,\n                        plan_json->>'total_cost_pct' AS cost_pct,\n                        plan_json->>'savings_vs_usdt_bps' AS savings_bps\n                 FROM btc.conversion_requests\n                 ORDER BY id DESC\n                 LIMIT 30",
+          "format": "table",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
+    },
+    {
+      "id": 221,
+      "type": "table",
+      "title": "Últimas pernas (btc.conversion_legs)",
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 147
+      },
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "rawSql": "SELECT l.id, l.request_id, l.leg_index, l.symbol, l.side, l.amount_in, l.amount_out,\n                        l.fee, l.order_id, l.status, l.created_at\n                 FROM btc.conversion_legs l\n                 ORDER BY l.id DESC\n                 LIMIT 50",
+          "format": "table",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          }
+        }
+      ],
+      "options": {
+        "showHeader": true
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      }
     }
   ],
   "preload": false,
@@ -6484,7 +7033,8 @@
     "trading",
     "autocoinbot",
     "agent",
-    "multi-coin"
+    "multi-coin",
+    "intercoin"
   ],
   "templating": {
     "list": [
@@ -6511,7 +7061,7 @@
         "label": "Moeda",
         "name": "coin",
         "options": [],
-        "query": "BTC-USDT,ETH-USDT,XRP-USDT,SOL-USDT,DOGE-USDT,ADA-USDT",
+        "query": "BTC-USDT,ETH-USDT,XRP-USDT,SOL-USDT,DOGE-USDT,ADA-USDT,USDT-BRL",
         "type": "custom",
         "valuesFormat": "csv"
       },
@@ -6547,6 +7097,6 @@
   "timezone": "browser",
   "title": "🤖 Trading Agent Monitor",
   "uid": "btc-trading-monitor",
-  "version": 5,
+  "version": 7,
   "weekStart": ""
 }

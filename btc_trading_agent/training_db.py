@@ -369,6 +369,52 @@ class TrainingDatabase:
             # com "profile"; manter isso aqui evita depender de migration manual.
             cur.execute(PROFILE_MIGRATION_SQL)
 
+            # Conversão intermoedas (owner USDT_BRL)
+            cur.execute(f"""
+                CREATE TABLE IF NOT EXISTS {SCHEMA}.conversion_requests (
+                    id SERIAL PRIMARY KEY,
+                    created_at TIMESTAMPTZ DEFAULT NOW(),
+                    requested_by TEXT,
+                    asset_in TEXT NOT NULL,
+                    asset_out TEXT NOT NULL,
+                    amount_in DOUBLE PRECISION NOT NULL,
+                    min_out DOUBLE PRECISION,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    plan_json JSONB,
+                    result_json JSONB,
+                    dry_run BOOLEAN DEFAULT TRUE,
+                    profile TEXT DEFAULT 'conservative',
+                    symbol_owner TEXT DEFAULT 'USDT-BRL'
+                )
+            """)
+            cur.execute(f"""
+                CREATE TABLE IF NOT EXISTS {SCHEMA}.conversion_legs (
+                    id SERIAL PRIMARY KEY,
+                    request_id INTEGER REFERENCES {SCHEMA}.conversion_requests(id),
+                    leg_index INTEGER NOT NULL,
+                    symbol TEXT NOT NULL,
+                    side TEXT NOT NULL,
+                    amount_in DOUBLE PRECISION,
+                    amount_out DOUBLE PRECISION,
+                    fee DOUBLE PRECISION,
+                    order_id TEXT,
+                    status TEXT,
+                    created_at TIMESTAMPTZ DEFAULT NOW()
+                )
+            """)
+            cur.execute(f"""
+                CREATE TABLE IF NOT EXISTS {SCHEMA}.conversion_lock (
+                    id INTEGER PRIMARY KEY DEFAULT 1,
+                    owner TEXT,
+                    held_at TIMESTAMPTZ,
+                    CONSTRAINT conversion_lock_singleton CHECK (id = 1)
+                )
+            """)
+            cur.execute(f"""
+                INSERT INTO {SCHEMA}.conversion_lock (id) VALUES (1)
+                ON CONFLICT (id) DO NOTHING
+            """)
+
             # Índices
             indices = [
                 f"CREATE INDEX IF NOT EXISTS idx_btc_trades_symbol ON {SCHEMA}.trades(symbol)",
@@ -388,6 +434,9 @@ class TrainingDatabase:
                 f"CREATE INDEX IF NOT EXISTS idx_btc_ai_trade_windows_symbol_profile_ts ON {SCHEMA}.ai_trade_windows(symbol, profile, timestamp DESC)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_llm_calls_type_symbol_profile_ts ON {SCHEMA}.llm_calls(call_type, symbol, profile, timestamp DESC)",
                 f"CREATE INDEX IF NOT EXISTS idx_btc_llm_calls_timestamp ON {SCHEMA}.llm_calls(timestamp)",
+                f"CREATE INDEX IF NOT EXISTS idx_btc_conversion_requests_status ON {SCHEMA}.conversion_requests(status)",
+                f"CREATE INDEX IF NOT EXISTS idx_btc_conversion_requests_assets ON {SCHEMA}.conversion_requests(asset_in, asset_out)",
+                f"CREATE INDEX IF NOT EXISTS idx_btc_conversion_legs_request ON {SCHEMA}.conversion_legs(request_id)",
             ]
             for idx in indices:
                 cur.execute(idx)
@@ -1093,6 +1142,209 @@ class TrainingDatabase:
                 stats["total_trades"], stats["winning_trades"],
                 stats["total_pnl"], stats["win_rate"], stats["avg_pnl"]
             ))
+
+    # ====================== CONVERSION (intermoedas) ======================
+    def enqueue_conversion(
+        self,
+        asset_in: str,
+        asset_out: str,
+        amount_in: float,
+        *,
+        requested_by: str = "manual",
+        min_out: float = None,
+        dry_run: bool = True,
+        profile: str = "conservative",
+        symbol_owner: str = "USDT-BRL",
+    ) -> int:
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                INSERT INTO {SCHEMA}.conversion_requests
+                    (requested_by, asset_in, asset_out, amount_in, min_out,
+                     status, dry_run, profile, symbol_owner)
+                VALUES (%s, %s, %s, %s, %s, 'pending', %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    requested_by,
+                    asset_in.upper(),
+                    asset_out.upper(),
+                    float(amount_in),
+                    min_out,
+                    bool(dry_run),
+                    profile,
+                    symbol_owner,
+                ),
+            )
+            return int(cur.fetchone()[0])
+
+    def has_pending_conversion(self, asset_in: str, asset_out: str) -> bool:
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                SELECT 1 FROM {SCHEMA}.conversion_requests
+                WHERE asset_in=%s AND asset_out=%s
+                  AND status IN ('pending', 'planned')
+                LIMIT 1
+                """,
+                (asset_in.upper(), asset_out.upper()),
+            )
+            return cur.fetchone() is not None
+
+    def list_pending_conversions(self, limit: int = 10) -> List[Dict]:
+        with self._get_conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                f"""
+                SELECT * FROM {SCHEMA}.conversion_requests
+                WHERE status = 'pending'
+                ORDER BY id ASC
+                LIMIT %s
+                """,
+                (int(limit),),
+            )
+            return [dict(row) for row in cur.fetchall()]
+
+    def update_conversion_request(
+        self,
+        request_id: int,
+        *,
+        status: str,
+        plan_json: Dict = None,
+        result_json: Dict = None,
+    ) -> None:
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                UPDATE {SCHEMA}.conversion_requests
+                SET status=%s,
+                    plan_json=COALESCE(%s::jsonb, plan_json),
+                    result_json=COALESCE(%s::jsonb, result_json)
+                WHERE id=%s
+                """,
+                (
+                    status,
+                    json.dumps(plan_json) if plan_json is not None else None,
+                    json.dumps(result_json) if result_json is not None else None,
+                    int(request_id),
+                ),
+            )
+
+    def insert_conversion_leg(
+        self,
+        request_id: int,
+        leg_index: int,
+        symbol: str,
+        side: str,
+        amount_in: float,
+        amount_out: float,
+        fee: float = 0.0,
+        order_id: str = None,
+        status: str = "ok",
+    ) -> int:
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                INSERT INTO {SCHEMA}.conversion_legs
+                    (request_id, leg_index, symbol, side, amount_in, amount_out,
+                     fee, order_id, status)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (
+                    int(request_id),
+                    int(leg_index),
+                    symbol,
+                    side,
+                    amount_in,
+                    amount_out,
+                    fee,
+                    order_id,
+                    status,
+                ),
+            )
+            return int(cur.fetchone()[0])
+
+    def try_acquire_conversion_lock(self, owner: str, stale_seconds: int = 300) -> bool:
+        """Lock simples via linha singleton; libera se stale."""
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                UPDATE {SCHEMA}.conversion_lock
+                SET owner=%s, held_at=NOW()
+                WHERE id=1
+                  AND (
+                    owner IS NULL
+                    OR owner = %s
+                    OR held_at IS NULL
+                    OR held_at < NOW() - (%s || ' seconds')::interval
+                  )
+                RETURNING id
+                """,
+                (owner, owner, str(int(stale_seconds))),
+            )
+            return cur.fetchone() is not None
+
+    def release_conversion_lock(self, owner: str) -> None:
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                UPDATE {SCHEMA}.conversion_lock
+                SET owner=NULL, held_at=NULL
+                WHERE id=1 AND (owner=%s OR owner IS NULL)
+                """,
+                (owner,),
+            )
+
+    def conversion_metrics_snapshot(self, profile: str = None) -> Dict[str, Any]:
+        """Agrega contadores para o prometheus exporter."""
+        with self._get_conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                f"""
+                SELECT status, COUNT(*) AS n
+                FROM {SCHEMA}.conversion_requests
+                GROUP BY status
+                """
+            )
+            by_status = {row["status"]: int(row["n"]) for row in cur.fetchall()}
+            cur.execute(
+                f"""
+                SELECT plan_json, EXTRACT(EPOCH FROM created_at) AS ts
+                FROM {SCHEMA}.conversion_requests
+                WHERE status IN ('done', 'simulated')
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            )
+            last = cur.fetchone()
+            last_plan = last["plan_json"] if last else None
+            if isinstance(last_plan, str):
+                try:
+                    last_plan = json.loads(last_plan)
+                except Exception:
+                    last_plan = {}
+            last_plan = last_plan or {}
+            cur.execute(
+                f"SELECT owner IS NOT NULL AS held FROM {SCHEMA}.conversion_lock WHERE id=1"
+            )
+            lock_row = cur.fetchone()
+            return {
+                "by_status": by_status,
+                "last_cost_pct": float(last_plan.get("total_cost_pct") or 0),
+                "last_hops": float(last_plan.get("hops") or 0),
+                "last_savings_bps": float(last_plan.get("savings_vs_usdt_bps") or 0)
+                if last_plan.get("savings_vs_usdt_bps") is not None
+                else 0.0,
+                "last_success_ts": float(last["ts"]) if last else 0.0,
+                "lock_held": 1 if lock_row and lock_row.get("held") else 0,
+            }
 
     # ====================== CLEANUP ======================
     def cleanup_old_data(self, days: int = 30):

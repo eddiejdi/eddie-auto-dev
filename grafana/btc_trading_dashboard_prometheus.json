@@ -4384,7 +4384,7 @@
             "selected": false
           }
         ],
-        "query": "BTC-USDT,ETH-USDT,XRP-USDT,SOL-USDT,DOGE-USDT,ADA-USDT",
+        "query": "BTC-USDT,ETH-USDT,XRP-USDT,SOL-USDT,DOGE-USDT,ADA-USDT,USDT-BRL",
         "includeAll": false,
         "multi": false,
         "refresh": 0
