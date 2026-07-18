@@ -1,22 +1,51 @@
 #!/bin/bash
 # Post-commit hook — (1) Indexar commit na memória; (2) Publicar .md na Wiki RPA4All
 #
-# CMDB baseline foi movido para pre-commit (.githooks/pre-commit check 9)
-# para evitar commits órfãos chore(cmdb) separados do trabalho real.
+# Política: NUNCA erros silenciosos. Falhas de wiki-sync/memory geram incidente
+# visível (stderr + .git/hook_incidents.log + artifact). Wiki-sync roda em
+# foreground por arquivo para capturar exit code (sem & com engolir).
 
 set -euo pipefail
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+emit_incident() {
+    local source="$1"
+    local summary="$2"
+    local details="${3:-}"
+    local severity="${4:-error}"
+    if [ -f "tools/hooks/incident_notify.py" ]; then
+        python3 tools/hooks/incident_notify.py \
+            --source "$source" \
+            --summary "$summary" \
+            --details "$details" \
+            --severity "$severity" || true
+    else
+        echo "❌ INCIDENTE [$source] $summary" >&2
+        [ -n "$details" ] && echo "$details" >&2
+    fi
+}
 
 # ─── Memory ingestor (git → Chroma) ───────────────────────────────────────────
 INGESTOR="tools/memory_ingestors/git_ingestor.py"
 if [ -f "$INGESTOR" ]; then
     PY_MEM="$(dirname "$0")/../.venv/bin/python"
     [ -x "$PY_MEM" ] || PY_MEM="python3"
-    "$PY_MEM" "$INGESTOR" >/dev/null 2>&1 || true
+    set +e
+    MEM_OUT="$("$PY_MEM" "$INGESTOR" 2>&1)"
+    MEM_RC=$?
+    set -e
+    if [ "$MEM_RC" -ne 0 ]; then
+        emit_incident \
+            "post-commit/memory_ingestor" \
+            "falha ao indexar commit na memória (rc=$MEM_RC)" \
+            "$MEM_OUT" \
+            "warn"
+    fi
 fi
 
-# ─── Wiki sync (publicação automática) ────────────────────────────────────────
+# ─── Wiki sync (publicação automática — foreground, com incidente em falha) ──
 SKIP_PATTERNS=(
   "^wiki_"
   "CONVERSAS_"
@@ -58,9 +87,43 @@ done
 PY_BIN="$(dirname "$0")/../.venv/bin/python"
 [ -x "$PY_BIN" ] || PY_BIN="python3"
 WIKI_SYNC="$(dirname "$0")/../tools/hooks/wiki_sync.py"
+LOG="$REPO_ROOT/.git/wiki_sync.log"
+FAILED=0
+FAILED_FILES=""
 
 for f in $TO_SEND; do
-    "$PY_BIN" "$WIKI_SYNC" "$f" >>"$REPO_ROOT/.git/wiki_sync.log" 2>&1 &
+    set +e
+    OUT="$("$PY_BIN" "$WIKI_SYNC" "$f" 2>&1)"
+    RC=$?
+    set -e
+    printf '%s\n' "$OUT" | tee -a "$LOG"
+    if [ "$RC" -ne 0 ]; then
+        FAILED=1
+        FAILED_FILES="$FAILED_FILES $f"
+        emit_incident \
+            "post-commit/wiki_sync" \
+            "falha ao publicar $f na Wiki RPA4All (rc=$RC)" \
+            "$OUT" \
+            "error"
+    elif echo "$OUT" | grep -qE "WARN \[wiki-sync\]|ERRO "; then
+        # wiki_sync pode retornar 0 mas logar WARN — ainda é incidente
+        FAILED=1
+        FAILED_FILES="$FAILED_FILES $f"
+        emit_incident \
+            "post-commit/wiki_sync" \
+            "wiki-sync reportou erro/WARN ao publicar $f" \
+            "$OUT" \
+            "error"
+    fi
 done
+
+if [ "$FAILED" -ne 0 ]; then
+    echo "" >&2
+    echo "❌ [wiki-sync] INCIDENTE: publicação incompleta:$FAILED_FILES" >&2
+    echo "   Log: $LOG" >&2
+    echo "   Retry: python3 tools/hooks/wiki_sync.py <arquivo.md>" >&2
+    # post-commit não desfaz o commit, mas NÃO silencia a falha
+    exit 0
+fi
 
 exit 0

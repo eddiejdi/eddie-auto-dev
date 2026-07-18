@@ -93,8 +93,10 @@ def load_auth() -> str:
         )
         if r.returncode == 0:
             return json.loads(r.stdout).get("value", "")
-    except Exception:
-        pass
+    except Exception as exc:
+        # Token ainda pode vir de env/.env — registra falha do secrets endpoint.
+        print(f"[wiki-sync] secrets endpoint indisponivel: {exc}", file=sys.stderr)
+        log(f"WARN secrets endpoint: {exc}")
     return ""
 
 
@@ -216,23 +218,62 @@ def log(msg: str) -> None:
         f.write(f"[{ts}] {msg}\n")
 
 
-def main() -> None:
+def _emit_incident(summary: str, details: str = "", severity: str = "error") -> None:
+    """Comunica incidente — nunca silencioso."""
+    try:
+        from tools.hooks.incident_notify import emit_incident
+
+        emit_incident(
+            "wiki_sync",
+            summary,
+            severity=severity,
+            details=details,
+        )
+    except Exception as exc:  # último recurso: stderr obrigatório
+        print(f"❌ INCIDENTE [wiki_sync] {summary} (notify falhou: {exc})", file=sys.stderr)
+        if details:
+            print(details, file=sys.stderr)
+
+
+def main() -> int:
+    """Retorna 0 se tudo OK; 1 se houve falha de publish (incidente emitido)."""
     files = sys.argv[1:]
     if not files:
-        return
+        return 0
 
     bearer = load_auth()
     if not bearer:
-        log("ERRO: WIKI_TOKEN nao encontrado — sync ignorado")
-        print("  [wiki-sync] sem token — ignorado", file=sys.stderr)
-        return
+        msg = "WIKI_TOKEN nao encontrado — sync abortado (nao silencioso)"
+        log(f"ERRO: {msg}")
+        print(f"  [wiki-sync] {msg}", file=sys.stderr)
+        _emit_incident(msg, severity="error")
+        return 1
 
+    failed = 0
     for filepath in files:
         full = REPO_ROOT / filepath
         if not full.exists():
             log(f"SKIP {filepath} — nao existe")
+            print(f"  WARN [wiki-sync] SKIP {filepath} — nao existe", file=sys.stderr)
+            _emit_incident(
+                f"arquivo staged/commitado nao encontrado: {filepath}",
+                severity="warn",
+            )
+            failed += 1
             continue
-        result = publish_file(bearer, str(full))
+        try:
+            result = publish_file(bearer, str(full))
+        except Exception as exc:
+            log(f"ERRO {filepath}: exception {exc}")
+            print(f"  ERRO [wiki-sync] {filepath}: {exc}", file=sys.stderr)
+            _emit_incident(
+                f"excecao ao publicar {filepath}",
+                details=repr(exc),
+                severity="error",
+            )
+            failed += 1
+            continue
+
         if result["ok"]:
             msg = f"OK [{result['op']}] {filepath} -> wiki/{result['path']} (ID:{result['id']})"
             log(msg)
@@ -247,14 +288,36 @@ def main() -> None:
                 )
                 log(info)
                 print(f"   {info}")
+                _emit_incident(
+                    f"falhas parciais de indices ao publicar {filepath}",
+                    details=info,
+                    severity="warn",
+                )
             if not result["tree_ok"]:
-                warn = f"WARN [wiki-sync] árvore incompleta após publish: {', '.join(result['tree_missing'])}"
+                warn = (
+                    "WARN [wiki-sync] árvore incompleta após publish: "
+                    + ", ".join(result["tree_missing"])
+                )
                 log(warn)
                 print(f"  {warn}", file=sys.stderr)
+                _emit_incident(
+                    f"arvore wiki incompleta apos publish de {filepath}",
+                    details=warn,
+                    severity="warn",
+                )
+                failed += 1
         else:
             log(f"ERRO {filepath}: {result['msg']}")
-            print(f"  WARN [wiki-sync] {filepath}: {result['msg']}", file=sys.stderr)
+            print(f"  ERRO [wiki-sync] {filepath}: {result['msg']}", file=sys.stderr)
+            _emit_incident(
+                f"falha ao publicar {filepath} na Wiki RPA4All",
+                details=str(result.get("msg") or ""),
+                severity="error",
+            )
+            failed += 1
+
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
