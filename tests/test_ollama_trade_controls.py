@@ -51,7 +51,8 @@ def rag(monkeypatch):
 
 
 def test_profile_uses_isolated_adjustments_file(rag):
-    assert rag.adjustments_file.name == "regime_adjustments_aggressive.json"
+    # Isolamento por símbolo+perfil (evita contaminação BTC/ETH/SOL/DOGE)
+    assert rag.adjustments_file.name == "regime_adjustments_BTC-USDT_aggressive.json"
 
 
 def test_shadow_mode_preserves_baseline(rag):
@@ -120,6 +121,69 @@ def test_apply_mode_allows_ai_to_raise_max_positions_above_baseline(rag):
     assert adj.baseline_max_positions == 4
     assert adj.ollama_suggested_max_positions == 9
     assert adj.applied_max_positions == 9
+
+
+def test_aggressive_ai_authority_full_blend_applies_suggestion(rag):
+    """Perfil aggressive em teste: blend=1.0 → applied == suggested (clamped)."""
+    rag.set_trading_context(
+        avg_entry_price=0.0,
+        position_count=0,
+        usdt_balance=1000.0,
+        max_position_pct=0.30,
+        max_positions=4,
+        profile="aggressive",
+        guardrails_min_sell_pnl_pct=0.003,
+        ai_trade_controls={
+            "enabled": True,
+            "mode": "apply",
+            "apply_blend_confidence": 1.0,
+            "apply_blend_interval": 1.0,
+            "apply_blend_sell_pnl": 1.0,
+            "min_confidence_delta": 0.15,
+            "min_confidence_floor": 0.45,
+            "min_confidence_ceiling": 0.80,
+            "min_sell_pnl_pct_floor": 0.002,
+            "min_sell_pnl_pct_ceiling": 0.008,
+            "test_label": "aggressive_ai_authority_test",
+        },
+    )
+
+    adj = rag.set_ollama_trade_controls(
+        {
+            "min_confidence": 0.48,
+            "min_trade_interval": 90,
+            "max_position_pct": 0.20,
+            "max_positions": 6,
+            "min_sell_pnl_pct": 0.002,
+            "rationale": "more turnover",
+        },
+        mode="apply",
+        trigger="periodic",
+        model="trading-analyst",
+    )
+
+    # baseline conf 0.64, delta 0.15 → floor max(0.45, 0.49)=0.49
+    assert adj.ollama_suggested_min_confidence == pytest.approx(0.49, abs=1e-3)
+    assert adj.applied_min_confidence == pytest.approx(adj.ollama_suggested_min_confidence, abs=1e-3)
+    assert adj.applied_min_trade_interval == adj.ollama_suggested_min_trade_interval
+    assert adj.applied_min_sell_pnl_pct == pytest.approx(0.002, abs=1e-6)
+    assert "ai_authority:aggressive_ai_authority_test" in (adj.ollama_reason or "")
+
+
+def test_default_policy_keeps_historical_blend_without_config(rag):
+    """Sem bloco ai_trade_controls: mantém blend histórico 35%/50%."""
+    rag.set_trading_context(
+        avg_entry_price=0.0,
+        position_count=0,
+        usdt_balance=1000.0,
+        max_position_pct=0.30,
+        max_positions=4,
+        profile="conservative",
+    )
+    policy = rag._resolve_ai_trade_control_policy()
+    assert policy["enabled"] is False
+    assert policy["apply_blend_confidence"] == pytest.approx(0.35)
+    assert policy["apply_blend_sell_pnl"] == pytest.approx(0.50)
 
 
 def test_recalibrate_reapplies_last_ollama_controls(rag, monkeypatch):

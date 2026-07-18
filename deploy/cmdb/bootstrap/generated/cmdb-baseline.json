@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-17T12:29:23.755081+00:00",
-  "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/ba6e0dc2-8033-402c-aa0b-e458fb4b91b1/scratchpad/net-selfheal",
+  "generated_at": "2026-07-18T12:46:32.110511+00:00",
+  "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",

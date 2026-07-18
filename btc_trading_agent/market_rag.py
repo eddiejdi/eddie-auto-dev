@@ -1357,8 +1357,11 @@ class MarketRAG:
         self.profile = profile or "default"
         self.recalibrate_interval = recalibrate_interval
         self.snapshot_interval = snapshot_interval
+        # Isolamento por símbolo+perfil: arquivos legados só por profile eram
+        # sobrescritos entre BTC/ETH/SOL/DOGE e contaminavam buy_target / janelas.
+        safe_symbol = str(self.symbol or "BTC-USDT").replace("/", "-")
         suffix = "" if self.profile == "default" else f"_{self.profile}"
-        self.adjustments_file = RAG_DIR / f"regime_adjustments{suffix}.json"
+        self.adjustments_file = RAG_DIR / f"regime_adjustments_{safe_symbol}{suffix}.json"
         # Índice per-symbol: o index.pkl legado era compartilhado por todos os
         # agentes (BTC/ETH/SOL/...), contaminando os cálculos de buy target
         # com preços de outros símbolos.
@@ -1455,6 +1458,8 @@ class MarketRAG:
         max_position_pct: float = 0.5,
         max_positions: int = 3,
         profile: str = "default",
+        guardrails_min_sell_pnl_pct: Optional[float] = None,
+        ai_trade_controls: Optional[Dict] = None,
     ) -> None:
         """Atualiza contexto de trading para cálculo de position sizing pela IA.
 
@@ -1468,8 +1473,11 @@ class MarketRAG:
             max_position_pct: Cap hard de exposição total permitido pelo perfil.
             max_positions: Cap hard de entradas simultâneas permitido pelo perfil.
             profile: Perfil lógico da instância.
+            guardrails_min_sell_pnl_pct: Baseline do guardrail de SELL (do config vivo).
+            ai_trade_controls: Overrides de autoridade/blend/floors do bloco de config
+                ``ai_trade_controls`` (usado no teste de perfil aggressive).
         """
-        self._trading_context = {
+        ctx = {
             "avg_entry_price": avg_entry_price,
             "position_count": position_count,
             "usdt_balance": usdt_balance,
@@ -1477,6 +1485,69 @@ class MarketRAG:
             "max_positions": max(1, int(max_positions or 3)),
             "profile": str(profile or "default"),
         }
+        if guardrails_min_sell_pnl_pct is not None:
+            ctx["guardrails_min_sell_pnl_pct"] = max(
+                0.0, float(guardrails_min_sell_pnl_pct or 0.0)
+            )
+        if isinstance(ai_trade_controls, dict) and ai_trade_controls:
+            ctx["ai_trade_controls"] = dict(ai_trade_controls)
+        self._trading_context = ctx
+
+    def _resolve_ai_trade_control_policy(self) -> Dict:
+        """Resolve política de clamp/blend dos controles Ollama (config por perfil).
+
+        Defaults preservam o comportamento histórico (blend 35%/50%/50%).
+        Perfis com ``ai_trade_controls`` no config (ex.: aggressive em teste)
+        podem elevar a autoridade da IA até blend=1.0 e alargar floors/ceilings.
+        """
+        ctx = self._trading_context or {}
+        raw = ctx.get("ai_trade_controls") if isinstance(ctx.get("ai_trade_controls"), dict) else {}
+        enabled = bool(raw.get("enabled", False)) if raw else False
+
+        # Defaults históricos
+        policy = {
+            "enabled": enabled,
+            "mode": str(raw.get("mode") or "apply").strip().lower() if raw else "apply",
+            "apply_blend_confidence": 0.35,
+            "apply_blend_interval": 0.50,
+            "apply_blend_sell_pnl": 0.50,
+            "min_confidence_delta": 0.10,
+            "min_confidence_floor": 0.40,
+            "min_confidence_ceiling": 0.92,
+            "interval_scale_low": 0.50,
+            "interval_scale_high": 1.80,
+            "min_sell_pnl_pct_floor": 0.002,
+            "min_sell_pnl_pct_ceiling": None,  # resolvido a partir do baseline
+            "test_label": str(raw.get("test_label") or "") if raw else "",
+        }
+        if not enabled or not raw:
+            return policy
+
+        def _f(key: str, default: float, lo: float, hi: float) -> float:
+            try:
+                return float(np.clip(float(raw.get(key, default)), lo, hi))
+            except (TypeError, ValueError):
+                return default
+
+        policy["apply_blend_confidence"] = _f("apply_blend_confidence", 1.0, 0.0, 1.0)
+        policy["apply_blend_interval"] = _f("apply_blend_interval", 1.0, 0.0, 1.0)
+        policy["apply_blend_sell_pnl"] = _f("apply_blend_sell_pnl", 1.0, 0.0, 1.0)
+        policy["min_confidence_delta"] = _f("min_confidence_delta", 0.15, 0.05, 0.40)
+        policy["min_confidence_floor"] = _f("min_confidence_floor", 0.45, 0.30, 0.80)
+        policy["min_confidence_ceiling"] = _f("min_confidence_ceiling", 0.85, 0.50, 0.95)
+        if policy["min_confidence_floor"] > policy["min_confidence_ceiling"]:
+            policy["min_confidence_floor"], policy["min_confidence_ceiling"] = (
+                policy["min_confidence_ceiling"],
+                policy["min_confidence_floor"],
+            )
+        policy["interval_scale_low"] = _f("interval_scale_low", 0.40, 0.20, 1.0)
+        policy["interval_scale_high"] = _f("interval_scale_high", 2.0, 1.0, 3.0)
+        policy["min_sell_pnl_pct_floor"] = _f("min_sell_pnl_pct_floor", 0.002, 0.002, 0.01)
+        if raw.get("min_sell_pnl_pct_ceiling") is not None:
+            policy["min_sell_pnl_pct_ceiling"] = _f(
+                "min_sell_pnl_pct_ceiling", 0.008, 0.002, 0.02
+            )
+        return policy
 
     def feed_snapshot(
         self,
@@ -1592,9 +1663,13 @@ class MarketRAG:
         if not suggestion:
             return
 
+        policy = self._resolve_ai_trade_control_policy()
+
         mode = str(suggestion.get("mode") or "shadow").strip().lower()
         if mode not in {"shadow", "apply"}:
             mode = "shadow"
+        # Se o config do perfil força apply (teste aggressive), honra o mode da sugestão
+        # apenas quando já é apply/shadow válido; policy.mode é informativo.
 
         baseline_conf = float(adjustment.baseline_min_confidence or adjustment.ai_min_confidence or 0.60)
         baseline_interval = int(adjustment.baseline_min_trade_interval or adjustment.ai_min_trade_interval or 180)
@@ -1605,10 +1680,19 @@ class MarketRAG:
             min(24, int(adjustment.ai_max_entries or baseline_max_positions)),
         )
 
-        conf_floor = max(0.40, baseline_conf - 0.10)
-        conf_ceiling = min(0.92, baseline_conf + 0.10)
-        interval_floor = max(30, int(round(baseline_interval * 0.50)))
-        interval_ceiling = min(900, int(round(baseline_interval * 1.80)))
+        conf_floor = max(
+            float(policy["min_confidence_floor"]),
+            baseline_conf - float(policy["min_confidence_delta"]),
+        )
+        conf_ceiling = min(
+            float(policy["min_confidence_ceiling"]),
+            baseline_conf + float(policy["min_confidence_delta"]),
+        )
+        if conf_floor > conf_ceiling:
+            conf_floor, conf_ceiling = conf_ceiling, conf_floor
+
+        interval_floor = max(30, int(round(baseline_interval * float(policy["interval_scale_low"]))))
+        interval_ceiling = min(900, int(round(baseline_interval * float(policy["interval_scale_high"]))))
         cap_pct_floor = max(0.01, baseline_cap_pct * 0.25)
 
         suggested_conf = float(np.clip(
@@ -1633,9 +1717,15 @@ class MarketRAG:
         ))
 
         baseline_min_sell_pnl = float(adjustment.baseline_min_sell_pnl_pct or 0.003)
-        # floor = taxa KuCoin round-trip (0.2%); ceiling = baseline + 0.5%
-        sell_pnl_floor   = 0.002
-        sell_pnl_ceiling = min(0.010, baseline_min_sell_pnl + 0.005)
+        # floor mínimo = taxa KuCoin round-trip (0.2%)
+        sell_pnl_floor = max(0.002, float(policy["min_sell_pnl_pct_floor"]))
+        if policy.get("min_sell_pnl_pct_ceiling") is not None:
+            sell_pnl_ceiling = min(0.020, float(policy["min_sell_pnl_pct_ceiling"]))
+        else:
+            sell_pnl_ceiling = min(0.010, baseline_min_sell_pnl + 0.005)
+        if sell_pnl_floor > sell_pnl_ceiling:
+            sell_pnl_floor, sell_pnl_ceiling = sell_pnl_ceiling, sell_pnl_floor
+
         suggested_min_sell_pnl = float(np.clip(
             float(suggestion.get("min_sell_pnl_pct") or baseline_min_sell_pnl),
             sell_pnl_floor,
@@ -1646,29 +1736,37 @@ class MarketRAG:
         adjustment.ollama_last_update = float(suggestion.get("timestamp") or time.time())
         adjustment.ollama_trigger = str(suggestion.get("trigger") or "")
         adjustment.ollama_model = str(suggestion.get("model") or "")
-        adjustment.ollama_reason = str(suggestion.get("rationale") or "")[:500]
+        reason = str(suggestion.get("rationale") or "")[:500]
+        if policy.get("enabled") and policy.get("test_label"):
+            tag = f"[ai_authority:{policy['test_label']}]"
+            reason = f"{tag} {reason}".strip()[:500]
+        adjustment.ollama_reason = reason
         adjustment.ollama_suggested_min_confidence = suggested_conf
         adjustment.ollama_suggested_min_trade_interval = suggested_interval
         adjustment.ollama_suggested_max_position_pct = suggested_cap_pct
         adjustment.ollama_suggested_max_positions = suggested_max_positions
         adjustment.ollama_suggested_min_sell_pnl_pct = suggested_min_sell_pnl
 
+        blend_conf = float(policy["apply_blend_confidence"])
+        blend_interval = float(policy["apply_blend_interval"])
+        blend_sell = float(policy["apply_blend_sell_pnl"])
+
         if mode == "apply":
             adjustment.applied_min_confidence = float(np.clip(
-                baseline_conf + (suggested_conf - baseline_conf) * 0.35,
-                0.40,
-                0.92,
+                baseline_conf + (suggested_conf - baseline_conf) * blend_conf,
+                float(policy["min_confidence_floor"]),
+                float(policy["min_confidence_ceiling"]),
             ))
             adjustment.applied_min_trade_interval = int(np.clip(
-                round(baseline_interval + (suggested_interval - baseline_interval) * 0.50),
+                round(baseline_interval + (suggested_interval - baseline_interval) * blend_interval),
                 30,
                 900,
             ))
             adjustment.applied_max_position_pct = min(baseline_cap_pct, suggested_cap_pct)
             adjustment.applied_max_positions = max(1, min(max_positions_ceiling, suggested_max_positions))
-            # min_sell_pnl: blend 50% — Ollama pode ajustar mas não controla sozinho
+            # min_sell_pnl: blend configurável (1.0 = IA define sozinha dentro dos floors)
             adjustment.applied_min_sell_pnl_pct = float(np.clip(
-                baseline_min_sell_pnl + (suggested_min_sell_pnl - baseline_min_sell_pnl) * 0.50,
+                baseline_min_sell_pnl + (suggested_min_sell_pnl - baseline_min_sell_pnl) * blend_sell,
                 sell_pnl_floor,
                 sell_pnl_ceiling,
             ))
