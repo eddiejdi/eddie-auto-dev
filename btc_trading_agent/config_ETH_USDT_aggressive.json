@@ -4,8 +4,8 @@
   "symbol": "ETH-USDT",
   "poll_interval": 5,
   "min_trade_interval": 600,
-  "min_confidence": 0.55,
-  "min_trade_amount": 15,
+  "min_confidence": 0.5,
+  "min_trade_amount": 10,
   "max_position_pct": 1.0,
   "dca_valley_bounce_pct": 0.003,
   "stop_loss_pct": 0.05,
@@ -70,14 +70,9 @@
   },
   "profile": "aggressive",
   "guardrails_active": true,
-  "guardrails_min_sell_pnl_pct": 0.003,
+  "guardrails_min_sell_pnl_pct": 0.002,
   "guardrails_positive_only_sells": true,
-  "rebuy_lock_enabled": true,
-  "rebuy_envelope": {
-    "grace_hours": 2,
-    "decay_pct_per_hour": 0.25,
-    "max_premium_pct": 5.0
-  },
+  "rebuy_lock_enabled": false,
   "_eth_live_notes": {
     "origem": "clonado de config_BTC_USDT_aggressive.json em 2026-07-04",
     "conta": "subconta sub:ETHAgressive via KUCOIN_SECRET_NAMES",
@@ -94,5 +89,20 @@
     "streak_cap": 4,
     "cache_ttl_sec": 30,
     "pnl_scale_usd": 5.0
+  },
+  "ai_trade_controls": {
+    "enabled": true,
+    "mode": "apply",
+    "apply_blend_confidence": 1.0,
+    "apply_blend_interval": 1.0,
+    "apply_blend_sell_pnl": 1.0,
+    "min_confidence_delta": 0.15,
+    "min_confidence_floor": 0.45,
+    "min_confidence_ceiling": 0.8,
+    "interval_scale_low": 0.4,
+    "interval_scale_high": 2.0,
+    "min_sell_pnl_pct_floor": 0.002,
+    "min_sell_pnl_pct_ceiling": 0.008,
+    "test_label": "aggressive_ai_authority_2026-07-18"
   }
 }

@@ -157,17 +157,23 @@ fi
 # Rejeita commit com marcadores de alto sinal de trabalho incompleto nas linhas staged.
 # Cobre qualquer ferramenta (Copilot, Codex, Claude Code, edição manual) — todas commitam.
 # Escape: ALLOW_INCOMPLETE=1, `# stub-ok` na linha, ou git commit --no-verify.
-echo "  [8/9] Checking for incomplete tasks (stubs / NotImplementedError)..."
+echo "  [8/11] Checking for incomplete tasks (stubs / NotImplementedError)..."
 if [ -z "$ALLOW_INCOMPLETE" ]; then
     if [ -f "tools/hooks/incomplete_markers.py" ]; then
-        # Código 2 = incompletude → bloqueia. Qualquer outro código != 0 é erro
-        # interno do detector → não-bloqueante (fail-open), para nunca travar commits.
+        # Código 2 = incompletude → bloqueia.
+        # Código !=0 e !=2 = bug do detector → INCIDENTE obrigatório (não silencioso).
         rc=0
         python3 tools/hooks/incomplete_markers.py --staged || rc=$?
         if [ "$rc" -eq 2 ]; then
             exit 1
         elif [ "$rc" -ne 0 ]; then
-            echo "     ⚠️ detector de incompletude retornou código $rc (não-bloqueante)"
+            echo "     ⚠️ INCIDENTE: detector de incompletude retornou código $rc"
+            if [ -f "tools/hooks/incident_notify.py" ]; then
+                python3 tools/hooks/incident_notify.py \
+                    --source "pre-commit/incomplete_markers" \
+                    --summary "detector de incompletude falhou com código $rc" \
+                    --severity warn || true
+            fi
         fi
     fi
 else
@@ -175,7 +181,7 @@ else
 fi
 
 # ─── Check 9: CMDB baseline + trading overrides (mesmo commit, sem post-commit orphan) ──
-echo "  [9/9] Regenerating CMDB baseline and trading overrides..."
+echo "  [9/11] Regenerating CMDB baseline and trading overrides..."
 if [ -z "${SKIP_CMDB_HOOK:-}" ] && [ -f "scripts/cmdb/generate_cmdb_baseline.py" ]; then
     PY_CMDB="$(dirname "$0")/../.venv/bin/python"
     [ -x "$PY_CMDB" ] || PY_CMDB="python3"
@@ -196,11 +202,36 @@ fi
 # ─── Check 10: Taxonomia de variáveis — bloqueia duplicatas ──────────────────
 # Consulta .variables-catalog/catalog.json antes de aceitar variável nova.
 # Cobre qualquer ferramenta (Copilot, Codex, Claude Code, edição manual).
-echo "  [10/10] Checking variable taxonomy (duplicates)..."
+echo "  [10/11] Checking variable taxonomy (duplicates)..."
 if [ -f "tools/hooks/variable_registry_validate.py" ]; then
     if ! python3 tools/hooks/variable_registry_validate.py --staged; then
         exit 1
     fi
+fi
+
+# ─── Check 11: Proibição global de erro silencioso / fallback sem incidente ──
+# Nunca permitir except:pass, engolir Exception sem log, || true em paths críticos.
+# Escape: ALLOW_SILENT_FAILURE=1, ou `# silent-ok` / `# incident-ok` na linha.
+echo "  [11/11] Checking silent failures / unreported fallbacks..."
+if [ -z "${ALLOW_SILENT_FAILURE:-}" ]; then
+    if [ -f "tools/hooks/no_silent_failure.py" ]; then
+        rc=0
+        python3 tools/hooks/no_silent_failure.py --staged || rc=$?
+        if [ "$rc" -eq 2 ]; then
+            exit 1
+        elif [ "$rc" -ne 0 ]; then
+            echo "❌ BLOQUEADO: detector no_silent_failure falhou (código $rc) — não fail-open"
+            if [ -f "tools/hooks/incident_notify.py" ]; then
+                python3 tools/hooks/incident_notify.py \
+                    --source "pre-commit/no_silent_failure" \
+                    --summary "detector retornou código $rc" \
+                    --severity error || true
+            fi
+            exit 1
+        fi
+    fi
+else
+    echo "     (ALLOW_SILENT_FAILURE set — pulando checagem de erro silencioso)"
 fi
 
 echo ""

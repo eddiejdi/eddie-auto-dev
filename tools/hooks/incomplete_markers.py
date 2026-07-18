@@ -14,7 +14,7 @@ Princípios de design (calibrado para ALTO SINAL — baixo falso-positivo):
   - Análise AST para Python: distingue stub real de método abstrato/Protocol legítimo.
   - Allowlist: arquivos .pyi, testes de hook e o próprio detector são ignorados.
   - Escape inline: uma linha com `# stub-ok` ou `# noqa: incomplete` é ignorada.
-  - Fail-open: qualquer erro interno NUNCA bloqueia — só emite aviso em stderr.
+  - Erro interno do detector: emite INCIDENTE (stderr + incident_notify) e exit 1.
 
 Uso como CLI (modo pre-commit):
     python3 tools/hooks/incomplete_markers.py --staged
@@ -325,7 +325,8 @@ def _git(args: list[str]) -> str:
         return subprocess.check_output(
             ["git", *args], text=True, stderr=subprocess.DEVNULL
         )
-    except Exception:
+    except Exception as exc:
+        print(f"[incomplete_markers] git {' '.join(args)} falhou: {exc}", file=sys.stderr)
         return ""
 
 
@@ -347,16 +348,16 @@ def read_worktree_file(path: str) -> str | None:
     try:
         with open(path, encoding="utf-8", errors="replace") as fh:
             return fh.read()
-    except OSError:
+    except OSError as exc:
+        print(f"[incomplete_markers] leitura {path} falhou: {exc}", file=sys.stderr)
         return None
 
 
 def _cli_staged() -> int:
     """Modo pre-commit: escaneia o diff staged.
 
-    Códigos de saída: 0 = limpo, 2 = incompletude detectada (bloquear commit).
-    Erros internos saem 0 via fail-open no __main__. O pre-commit trata qualquer
-    código != 2 como não-bloqueante, para que um bug no detector nunca trave commits.
+    Códigos de saída: 0 = limpo, 2 = incompletude detectada (bloquear commit),
+    1 = erro interno do detector (incidente obrigatório; pre-commit notifica).
     """
     findings = find_incomplete(staged_diff(), read_staged_file)
     if not findings:
@@ -386,7 +387,25 @@ if __name__ == "__main__":
         raise SystemExit(main(sys.argv[1:]))
     except SystemExit:
         raise
-    except Exception as exc:  # fail-open: nunca travar por bug interno do detector.
-        print(f"[incomplete_markers] aviso: detector falhou, liberando ({exc})",
-              file=sys.stderr)
-        raise SystemExit(0)
+    except Exception as exc:
+        # Bug do detector: NÃO silencioso — comunica incidente.
+        # Exit 1 (não 0): pre-commit trata como incidente (warn + notify).
+        print(
+            f"[incomplete_markers] INCIDENTE: detector falhou ({exc})",
+            file=sys.stderr,
+        )
+        try:
+            from tools.hooks.incident_notify import emit_incident
+
+            emit_incident(
+                "incomplete_markers",
+                f"detector falhou: {exc}",
+                severity="warn",
+                details=repr(exc),
+            )
+        except Exception as nested:
+            print(
+                f"[incomplete_markers] notify também falhou: {nested}",
+                file=sys.stderr,
+            )
+        raise SystemExit(1)
