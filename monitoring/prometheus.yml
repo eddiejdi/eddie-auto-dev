@@ -205,6 +205,30 @@ scrape_configs:
           profile: 'aggressive'
           servidor: 'homelab'
 
+  # USDT-BRL (on-ramp FX + intercoin conversion owner) — ports 9115/9116
+  # (DOGE keeps 9112-9114; do not reuse those for USDT_BRL)
+  - job_name: 'crypto-exporter-usdt_brl_conservative'
+    scrape_interval: 30s
+    scrape_timeout: 25s
+    static_configs:
+      - targets: ['172.17.0.1:9115']
+        labels:
+          coin: 'USDT-BRL'
+          instance: 'usdt_brl_conservative'
+          profile: 'conservative'
+          servidor: 'homelab'
+
+  - job_name: 'crypto-exporter-usdt_brl_aggressive'
+    scrape_interval: 30s
+    scrape_timeout: 25s
+    static_configs:
+      - targets: ['172.17.0.1:9116']
+        labels:
+          coin: 'USDT-BRL'
+          instance: 'usdt_brl_aggressive'
+          profile: 'aggressive'
+          servidor: 'homelab'
+
   # ---------------------------------------------------------------------------
   # ollama-metrics — proxy Prometheus para os 3 endpoints Ollama do cluster GPU
   # Métricas: tokens, latência, modelos carregados, uso de VRAM por GPU

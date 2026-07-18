@@ -80,5 +80,33 @@
     "streak_cap": 4,
     "cache_ttl_sec": 30,
     "pnl_scale_usd": 2.0
+  },
+  "conversion": {
+    "enabled": true,
+    "role": "owner",
+    "dry_run": true,
+    "max_hops": 2,
+    "hubs": ["USDT", "BTC", "ETH"],
+    "allow_exotic_hubs": false,
+    "prefer_direct_slack_bps": 5,
+    "min_pair_vol_usd": 50000,
+    "max_spread_bps": 30,
+    "max_route_cost_pct": 0.004,
+    "slippage_buffer_pct": 0.0005,
+    "min_notional_usdt": 15,
+    "min_brl_onramp": 50,
+    "poll_conversions_every_cycles": 12,
+    "use_live_fees": true,
+    "assets_whitelist": ["BRL", "USDT", "BTC", "ETH", "SOL", "DOGE"],
+    "targets": {
+      "on_brl_deposit": "USDT",
+      "dust_to": "USDT",
+      "rebalance_enabled": false
+    },
+    "jobs": [
+      {"type": "deposit_onramp", "enabled": true},
+      {"type": "manual_queue", "enabled": true},
+      {"type": "dust_sweep", "enabled": false}
+    ]
   }
 }

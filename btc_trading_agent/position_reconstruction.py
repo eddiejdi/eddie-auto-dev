@@ -38,7 +38,9 @@ def _is_excluded_buy(trade: dict[str, Any], *, exclude_external_deposits: bool) 
         return False
     if not exclude_external_deposits:
         return False
-    return str(trade.get("metadata", {}).get("source") or "") == "external_deposit"
+    source = str(trade.get("metadata", {}).get("source") or "")
+    # Depósitos e fills de conversão intermoedas não contam como entries de swing
+    return source in ("external_deposit", "conversion")
 
 
 def _reconstruct_recent_buy_streak(

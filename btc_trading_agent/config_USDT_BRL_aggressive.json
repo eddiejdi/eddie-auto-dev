@@ -80,5 +80,10 @@
     "streak_cap": 4,
     "cache_ttl_sec": 30,
     "pnl_scale_usd": 5.0
+  },
+  "conversion": {
+    "enabled": false,
+    "role": "none",
+    "dry_run": true
   }
 }

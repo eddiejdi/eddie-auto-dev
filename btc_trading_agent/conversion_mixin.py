@@ -1,0 +1,200 @@
+"""Mixin: owner de conversão intermoedas (perfil USDT_BRL_conservative)."""
+
+from __future__ import annotations
+
+import json
+import logging
+import time
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
+
+
+def _conversion_cfg(config: Dict[str, Any]) -> Dict[str, Any]:
+    raw = config.get("conversion") or {}
+    return raw if isinstance(raw, dict) else {}
+
+
+class ConversionMixin:
+    """Processa fila de conversão e on-ramp BRL com rota de menor custo.
+
+    Ativado quando config.conversion.enabled e role=owner.
+    """
+
+    def _conversion_enabled(self) -> bool:
+        cfg = _conversion_cfg(getattr(self, "config", {}) or {})
+        return bool(cfg.get("enabled")) and str(cfg.get("role") or "").lower() == "owner"
+
+    def _conversion_options(self):
+        from route_graph import RouteOptions
+
+        cfg = _conversion_cfg(self.config)
+        return RouteOptions(
+            max_hops=int(cfg.get("max_hops", 2)),
+            hubs=tuple(cfg.get("hubs") or ["USDT", "BTC", "ETH"]),
+            allow_exotic_hubs=bool(cfg.get("allow_exotic_hubs", False)),
+            prefer_direct_slack_bps=float(cfg.get("prefer_direct_slack_bps", 5)),
+            min_pair_vol_usd=float(cfg.get("min_pair_vol_usd", 50_000)),
+            max_spread_bps=float(cfg.get("max_spread_bps", 30)),
+            max_route_cost_pct=float(cfg.get("max_route_cost_pct", 0.004)),
+            slip_buffer_pct=float(cfg.get("slippage_buffer_pct", 0.0005)),
+            use_live_fees=bool(cfg.get("use_live_fees", True)),
+        )
+
+    def _conversion_dry_run(self) -> bool:
+        cfg = _conversion_cfg(self.config)
+        if "dry_run" in cfg:
+            return bool(cfg.get("dry_run"))
+        return bool(getattr(self.state, "dry_run", True))
+
+    def _conversion_whitelist(self) -> List[str]:
+        cfg = _conversion_cfg(self.config)
+        raw = cfg.get("assets_whitelist") or ["BRL", "USDT", "BTC", "ETH", "SOL", "DOGE"]
+        return [str(x).upper() for x in raw]
+
+    def _conversion_transfer_currencies(self) -> List[str]:
+        """Moedas para MAIN→TRADE além de base/quote do par."""
+        if not self._conversion_enabled():
+            return []
+        return self._conversion_whitelist()
+
+    def _maybe_run_conversions(self, cycle: int) -> None:
+        if not self._conversion_enabled():
+            return
+        cfg = _conversion_cfg(self.config)
+        every = max(1, int(cfg.get("poll_conversions_every_cycles", 12)))
+        if cycle % every != 0:
+            return
+        try:
+            self._process_conversion_queue()
+        except Exception as exc:
+            logger.warning("⚠️ conversion queue error: %s", exc)
+        try:
+            jobs = cfg.get("jobs") or []
+            for job in jobs:
+                if not isinstance(job, dict) or not job.get("enabled"):
+                    continue
+                if job.get("type") == "deposit_onramp":
+                    self._maybe_enqueue_brl_onramp()
+        except Exception as exc:
+            logger.warning("⚠️ conversion jobs error: %s", exc)
+
+    def _maybe_enqueue_brl_onramp(self) -> None:
+        """Se há BRL livre acima do mínimo, enfileira BRL→USDT (target on_brl_deposit)."""
+        cfg = _conversion_cfg(self.config)
+        targets = cfg.get("targets") or {}
+        asset_out = str(targets.get("on_brl_deposit") or "USDT").upper()
+        min_notional = float(cfg.get("min_notional_usdt", 15))
+        # BRL threshold ~ min_notional * rough FX; use min_notional as BRL floor too
+        min_brl = float(cfg.get("min_brl_onramp", min_notional))
+
+        try:
+            from kucoin_api import get_balance
+
+            brl = float(get_balance("BRL") or 0.0)
+        except Exception as exc:
+            logger.debug("brl balance read failed: %s", exc)
+            return
+        if brl < min_brl:
+            return
+
+        # Avoid double-queue: check pending BRL→USDT
+        if self.db.has_pending_conversion("BRL", asset_out):
+            return
+
+        req_id = self.db.enqueue_conversion(
+            asset_in="BRL",
+            asset_out=asset_out,
+            amount_in=brl,
+            requested_by="deposit_onramp",
+            dry_run=self._conversion_dry_run(),
+            profile=getattr(self.state, "profile", "conservative"),
+            symbol_owner=self.symbol,
+        )
+        logger.info("📥 Enqueued BRL onramp conversion id=%s amount=%.4f → %s", req_id, brl, asset_out)
+
+    def _process_conversion_queue(self) -> None:
+        pending = self.db.list_pending_conversions(limit=5)
+        if not pending:
+            return
+
+        from hop_executor import execute
+        from route_graph import compare_routes, find_best_route, savings_vs_usdt_bps
+
+        opts = self._conversion_options()
+        dry = self._conversion_dry_run()
+
+        for req in pending:
+            req_id = req["id"]
+            asset_in = str(req["asset_in"]).upper()
+            asset_out = str(req["asset_out"]).upper()
+            amount_in = float(req["amount_in"])
+
+            if not self.db.try_acquire_conversion_lock(owner=f"{self.symbol}:{self.state.profile}"):
+                logger.info("🔒 conversion lock held — skip queue")
+                return
+
+            try:
+                candidates = compare_routes(asset_in, asset_out, amount_in, opts=opts)
+                plan = find_best_route(asset_in, asset_out, amount_in, opts=opts)
+                if plan is None:
+                    self.db.update_conversion_request(
+                        req_id,
+                        status="failed",
+                        plan_json=None,
+                        result_json={"error": "no_route"},
+                    )
+                    logger.warning("❌ conversion %s: no route %s→%s", req_id, asset_in, asset_out)
+                    continue
+
+                sav = savings_vs_usdt_bps(plan, candidates)
+                plan_dict = plan.to_dict()
+                plan_dict["savings_vs_usdt_bps"] = sav
+                self.db.update_conversion_request(
+                    req_id,
+                    status="planned",
+                    plan_json=plan_dict,
+                )
+
+                result = execute(plan, dry_run=dry)
+                status = result.status if result.success or result.status == "simulated" else result.status
+                if result.status == "simulated":
+                    final_status = "done" if dry else "done"
+                    # dry_run still marks done for observability of the plan
+                    final_status = "done"
+                elif result.success:
+                    final_status = "done"
+                else:
+                    final_status = result.status  # partial | failed
+
+                self.db.update_conversion_request(
+                    req_id,
+                    status=final_status,
+                    plan_json=plan_dict,
+                    result_json=result.to_dict(),
+                )
+                for leg in result.legs:
+                    self.db.insert_conversion_leg(
+                        request_id=req_id,
+                        leg_index=leg.leg_index,
+                        symbol=leg.symbol,
+                        side=leg.side,
+                        amount_in=leg.amount_in,
+                        amount_out=leg.amount_out,
+                        fee=leg.fee,
+                        order_id=leg.order_id or None,
+                        status=leg.status,
+                    )
+                logger.info(
+                    "🔀 conversion %s %s→%s status=%s hops=%s cost=%.2fbps out=%.8f dry=%s",
+                    req_id,
+                    asset_in,
+                    asset_out,
+                    final_status,
+                    plan.hops,
+                    plan.total_cost_pct * 10000,
+                    result.amount_out,
+                    dry,
+                )
+            finally:
+                self.db.release_conversion_lock(owner=f"{self.symbol}:{self.state.profile}")

@@ -1340,6 +1340,64 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 output.append(f'{prom_name}{{{_cl}}} {fmt.format(v=v)}')
                 output.append("")
 
+            # ═══════════════ INTERCOIN CONVERSION (USDT-BRL owner) ═══════════════
+            try:
+                conv_cfg = load_config().get("conversion") or {}
+                conv_enabled = 1 if conv_cfg.get("enabled") and str(conv_cfg.get("role") or "").lower() == "owner" else 0
+                conv_dry = 1 if conv_cfg.get("dry_run", True) else 0
+                snap = {
+                    "by_status": {},
+                    "last_cost_pct": 0.0,
+                    "last_hops": 0.0,
+                    "last_savings_bps": 0.0,
+                    "last_success_ts": 0.0,
+                    "lock_held": 0,
+                }
+                try:
+                    from training_db import TrainingDatabase
+
+                    snap = TrainingDatabase().conversion_metrics_snapshot(profile=_profile) or snap
+                except Exception:
+                    pass
+                output.append("# HELP btc_conversion_enabled Conversion owner enabled (1=yes)")
+                output.append("# TYPE btc_conversion_enabled gauge")
+                output.append(f'btc_conversion_enabled{{{_cl}}} {conv_enabled}')
+                output.append("")
+                output.append("# HELP btc_conversion_dry_run Conversion dry-run mode (1=yes)")
+                output.append("# TYPE btc_conversion_dry_run gauge")
+                output.append(f'btc_conversion_dry_run{{{_cl}}} {conv_dry}')
+                output.append("")
+                output.append("# HELP btc_conversion_lock_held Global conversion lock held")
+                output.append("# TYPE btc_conversion_lock_held gauge")
+                output.append(f'btc_conversion_lock_held{{{_cl}}} {int(snap.get("lock_held") or 0)}')
+                output.append("")
+                output.append("# HELP btc_conversion_route_cost_pct Last planned route total cost fraction")
+                output.append("# TYPE btc_conversion_route_cost_pct gauge")
+                output.append(f'btc_conversion_route_cost_pct{{{_cl}}} {float(snap.get("last_cost_pct") or 0):.6f}')
+                output.append("")
+                output.append("# HELP btc_conversion_route_hops Last planned route hop count")
+                output.append("# TYPE btc_conversion_route_hops gauge")
+                output.append(f'btc_conversion_route_hops{{{_cl}}} {float(snap.get("last_hops") or 0):.0f}')
+                output.append("")
+                output.append("# HELP btc_conversion_savings_vs_usdt_bps Savings vs USDT route in bps")
+                output.append("# TYPE btc_conversion_savings_vs_usdt_bps gauge")
+                output.append(f'btc_conversion_savings_vs_usdt_bps{{{_cl}}} {float(snap.get("last_savings_bps") or 0):.4f}')
+                output.append("")
+                output.append("# HELP btc_conversion_last_success_timestamp Last successful conversion unix ts")
+                output.append("# TYPE btc_conversion_last_success_timestamp gauge")
+                output.append(f'btc_conversion_last_success_timestamp{{{_cl}}} {float(snap.get("last_success_ts") or 0):.0f}')
+                output.append("")
+                output.append("# HELP btc_conversion_requests_total Conversion requests by status")
+                output.append("# TYPE btc_conversion_requests_total gauge")
+                for status, n in (snap.get("by_status") or {}).items():
+                    safe_status = str(status or "unknown").replace('"', "")
+                    output.append(
+                        f'btc_conversion_requests_total{{status="{safe_status}",{_cl}}} {int(n)}'
+                    )
+                output.append("")
+            except Exception:
+                pass
+
             # ═══════════════ AGENT STATUS ═══════════════
             output.append("# HELP btc_trading_agent_running Agent running (1=yes, 0=no)")
             output.append("# TYPE btc_trading_agent_running gauge")

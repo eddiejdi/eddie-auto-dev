@@ -983,7 +983,8 @@ def place_market_order(symbol: str, side: str, funds: float = None,
 
     increments = get_symbol_increments(symbol)
     if funds is not None:
-        payload["funds"] = str(round(float(funds), 2))
+        # Respeita quoteIncrement do par (BRL/BTC/ETH etc.); round(..., 2) quebrava quotes crypto.
+        payload["funds"] = _floor_to_increment(float(funds), increments["quoteIncrement"])
     elif size is not None:
         payload["size"] = _floor_to_increment(float(size), increments["baseIncrement"])
     else:
