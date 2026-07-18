@@ -329,7 +329,7 @@ class TestLoadCredentials:
             ),
             patch("kucoin_api._send_telegram_alert") as mock_tg,
         ):
-            creds = kucoin_api._load_credentials()
+            creds = kucoin_api._load_credentials(max_attempts=1)
 
         assert creds == ("key123456", "secret789", "pass")
         mock_tg.assert_not_called()
@@ -342,10 +342,64 @@ class TestLoadCredentials:
             ),
             patch("kucoin_api._send_telegram_alert") as mock_tg,
         ):
-            creds = kucoin_api._load_credentials()
+            creds = kucoin_api._load_credentials(max_attempts=1)
 
         assert creds == ("key123456", "secret789", "pass")
         mock_tg.assert_called_once()
+        msg = mock_tg.call_args.args[0]
+        assert "Fallback de Credenciais" in msg
+        assert "BTC Trading Agent —" not in msg  # título genérico BTC removido
+
+    def test_retry_antes_de_alertar_critico(self) -> None:
+        calls = {"n": 0}
+
+        def _side_effect():
+            calls["n"] += 1
+            if calls["n"] < 3:
+                return ("", "", "", "none")
+            return ("key123456", "secret789", "pass", "agent-secrets:kucoin/homelab")
+
+        with (
+            patch(
+                "secrets_helper.get_kucoin_credentials_with_source",
+                side_effect=_side_effect,
+            ),
+            patch("secrets_helper.clear_secret_cache") as mock_clear,
+            patch("kucoin_api._send_telegram_alert") as mock_tg,
+        ):
+            creds = kucoin_api._load_credentials(
+                max_attempts=4,
+                base_delay_sec=0.01,
+                sleep_fn=lambda _s: None,
+            )
+
+        assert creds == ("key123456", "secret789", "pass")
+        assert calls["n"] == 3
+        assert mock_clear.call_count >= 1
+        mock_tg.assert_not_called()
+
+    def test_alerta_critico_inclui_identity_do_agent(self, monkeypatch) -> None:
+        monkeypatch.setenv("COIN_CONFIG_FILE", "config_ETH_USDT_conservative.json")
+        with (
+            patch(
+                "secrets_helper.get_kucoin_credentials_with_source",
+                return_value=("", "", "", "none"),
+            ),
+            patch("kucoin_api._send_telegram_alert") as mock_tg,
+        ):
+            creds = kucoin_api._load_credentials(
+                max_attempts=2,
+                base_delay_sec=0.01,
+                sleep_fn=lambda _s: None,
+            )
+
+        assert creds == ("", "", "")
+        mock_tg.assert_called_once()
+        msg = mock_tg.call_args.args[0]
+        assert "ETH_USDT_conservative" in msg or "ETH-USDT" in msg
+        assert "conservative" in msg
+        assert "crypto-agent@ETH_USDT_conservative" in msg
+        assert "BTC Trading Agent — ERRO CRÍTICO" not in msg
 
 
 # ========================= get_price =========================

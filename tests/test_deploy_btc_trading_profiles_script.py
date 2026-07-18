@@ -61,6 +61,18 @@ def test_script_restarts_all_crypto_exporters_using_shared_exporter_code() -> No
         assert unit in content
 
 
+def test_script_staggers_agent_and_exporter_restarts() -> None:
+    """Restart em massa sobrecarrega Secrets Agent; deploy deve escalonar."""
+    content = _load_script()
+    assert "AGENT_RESTART_STAGGER_SEC" in content
+    assert "EXPORTER_RESTART_STAGGER_SEC" in content
+    assert 'for svc in "${AGENT_SERVICES[@]}"; do' in content
+    assert 'sudo systemctl restart "${svc}"' in content
+    # Não deve mais reiniciar o array inteiro de uma vez
+    assert 'sudo systemctl restart "${AGENT_SERVICES[@]}"' not in content
+    assert 'sudo systemctl restart "${EXPORTER_SERVICES[@]}"' not in content
+
+
 def test_script_restarts_all_crypto_agents_that_share_runtime_code() -> None:
     """Todos os perfis que rodam o trading_agent.py compartilhado devem ser
     reiniciados no deploy — senão ficam com código antigo em memória (foi o que
