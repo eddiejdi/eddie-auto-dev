@@ -227,36 +227,159 @@ def _format_market_order_notification(
     return "\n".join(lines)
 
 
-def _load_credentials():
-    """Carrega credenciais KuCoin com prioridade: Agent Secrets > env vars."""
-    try:
-        from secrets_helper import get_kucoin_credentials_with_source
+def _agent_identity() -> dict[str, str]:
+    """Identidade do processo (symbol/profile/unit) para alertas e logs."""
+    config_name = (
+        os.getenv("COIN_CONFIG_FILE")
+        or os.getenv("BTC_CONFIG_FILE")
+        or ""
+    ).strip()
+    unit = ""
+    if config_name:
+        stem = Path(config_name).name
+        if stem.startswith("config_") and stem.endswith(".json"):
+            unit = stem[len("config_") : -len(".json")]
+        else:
+            unit = Path(stem).stem
 
-        api_key, api_secret, api_passphrase, source = get_kucoin_credentials_with_source()
-    except ImportError:
-        api_key = os.getenv("KUCOIN_API_KEY", "") or os.getenv("API_KEY", "")
-        api_secret = os.getenv("KUCOIN_API_SECRET", "") or os.getenv("API_SECRET", "")
-        api_passphrase = os.getenv("KUCOIN_API_PASSPHRASE", "") or os.getenv("API_PASSPHRASE", "")
-        source = "env"
+    symbol = (os.getenv("COIN_SYMBOL") or "").strip().upper()
+    profile = (os.getenv("TRADING_PROFILE") or "").strip().lower()
+    if unit and ("_" in unit):
+        # ETH_USDT_conservative → symbol=ETH-USDT, profile=conservative
+        parts = unit.rsplit("_", 1)
+        if len(parts) == 2 and parts[1] in {"conservative", "aggressive", "shadow", "default"}:
+            if not profile:
+                profile = parts[1]
+            if not symbol:
+                symbol = parts[0].replace("_", "-")
 
-    if api_key and api_secret and api_passphrase:
-        logger.info(f"🔑 KuCoin credentials loaded from {source} (key: {api_key[:8]}...{api_key[-4:]})")
-        if not source.startswith("agent-secrets"):
-            _send_telegram_alert(
-                f"🚨 *BTC Trading Agent — Fallback de Credenciais*\n\n"
-                f"As credenciais KuCoin foram carregadas com fallback.\n"
-                f"*Origem:* {source}\n"
-                f"*Ação:* Verificar a integração do Agent Secrets no homelab."
+    if not symbol and "-" in unit:
+        symbol = unit
+    label = unit or symbol or profile or "unknown"
+    return {
+        "unit": unit or label,
+        "symbol": symbol or "?",
+        "profile": profile or "?",
+        "label": label,
+        "systemd": f"crypto-agent@{unit}" if unit else "crypto-agent",
+    }
+
+
+def _load_credentials(
+    *,
+    max_attempts: int = 4,
+    base_delay_sec: float = 0.75,
+    sleep_fn=time.sleep,
+):
+    """Carrega credenciais KuCoin com prioridade: Agent Secrets > env vars.
+
+    Em restart em massa o Secrets Agent pode falhar transitóriamente — retenta
+    com backoff antes de alertar no Telegram. O título do alerta inclui o
+    agent real (não "BTC" genérico).
+    """
+    identity = _agent_identity()
+    agent_label = identity["label"]
+    symbol = identity["symbol"]
+    profile = identity["profile"]
+    unit_name = identity["systemd"]
+
+    api_key = api_secret = api_passphrase = ""
+    source = "none"
+    last_error: Exception | None = None
+
+    for attempt in range(1, max(1, int(max_attempts)) + 1):
+        try:
+            from secrets_helper import clear_secret_cache, get_kucoin_credentials_with_source
+
+            # Evita reusar cache parcial/vazio de tentativas anteriores sob race.
+            if attempt > 1:
+                clear_secret_cache()
+            api_key, api_secret, api_passphrase, source = get_kucoin_credentials_with_source()
+        except ImportError:
+            api_key = os.getenv("KUCOIN_API_KEY", "") or os.getenv("API_KEY", "")
+            api_secret = os.getenv("KUCOIN_API_SECRET", "") or os.getenv("API_SECRET", "")
+            api_passphrase = os.getenv("KUCOIN_API_PASSPHRASE", "") or os.getenv("API_PASSPHRASE", "")
+            source = "env"
+        except Exception as exc:
+            last_error = exc
+            logger.warning(
+                "⚠️ Credenciais KuCoin tentativa %s/%s falhou (%s/%s): %s",
+                attempt,
+                max_attempts,
+                symbol,
+                profile,
+                exc,
             )
-    else:
-        logger.error("❌ Nenhuma credencial KuCoin encontrada (Agent Secrets nem env vars)")
-        _send_telegram_alert(
-            "🔴 *BTC Trading Agent — ERRO CRÍTICO*\n\n"
-            "Nenhuma credencial KuCoin disponível!\n"
-            "Nem o Agent Secrets nem as env vars possuem as chaves.\n"
-            "*O agente NÃO conseguirá operar.*"
-        )
+            api_key = api_secret = api_passphrase = ""
+            source = f"error:{type(exc).__name__}"
 
+        if api_key and api_secret and api_passphrase:
+            if attempt > 1:
+                logger.info(
+                    "🔑 KuCoin credentials loaded from %s after %s attempt(s) "
+                    "(%s / %s) (key: %s...%s)",
+                    source,
+                    attempt,
+                    symbol,
+                    profile,
+                    api_key[:8],
+                    api_key[-4:],
+                )
+            else:
+                logger.info(
+                    "🔑 KuCoin credentials loaded from %s (%s / %s) (key: %s...%s)",
+                    source,
+                    symbol,
+                    profile,
+                    api_key[:8],
+                    api_key[-4:],
+                )
+            if not str(source).startswith("agent-secrets"):
+                _send_telegram_alert(
+                    f"🚨 *Trading Agent — Fallback de Credenciais*\n\n"
+                    f"• Agent: `{agent_label}`\n"
+                    f"• Par: `{symbol}`\n"
+                    f"• Profile: `{profile}`\n"
+                    f"• Unit: `{unit_name}`\n"
+                    f"• Origem: `{source}`\n"
+                    f"• Ação: verificar Secrets Agent / env no homelab."
+                )
+            return api_key, api_secret, api_passphrase
+
+        if attempt < max_attempts:
+            delay = float(base_delay_sec) * attempt
+            logger.warning(
+                "⚠️ Credenciais KuCoin incompletas tentativa %s/%s (%s / %s, source=%s) "
+                "— retry em %.1fs",
+                attempt,
+                max_attempts,
+                symbol,
+                profile,
+                source,
+                delay,
+            )
+            sleep_fn(delay)
+
+    logger.error(
+        "❌ Nenhuma credencial KuCoin encontrada após %s tentativas "
+        "(%s / %s, unit=%s, last_error=%s)",
+        max_attempts,
+        symbol,
+        profile,
+        unit_name,
+        last_error,
+    )
+    _send_telegram_alert(
+        "🔴 *Trading Agent — ERRO CRÍTICO*\n\n"
+        "Nenhuma credencial KuCoin disponível após retries.\n"
+        f"• Agent: `{agent_label}`\n"
+        f"• Par: `{symbol}`\n"
+        f"• Profile: `{profile}`\n"
+        f"• Unit: `{unit_name}`\n"
+        f"• Tentativas: `{max_attempts}`\n"
+        "Nem o Agent Secrets nem as env vars devolveram as 3 chaves.\n"
+        "*Este processo NÃO conseguirá operar em live.*"
+    )
     return api_key, api_secret, api_passphrase
 
 

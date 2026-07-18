@@ -28,6 +28,11 @@ _cache: dict[str, str] = {}
 _sa_client: Optional[object] = None
 
 
+def clear_secret_cache() -> None:
+    """Limpa cache de secrets (útil em retry após race no Secrets Agent)."""
+    _cache.clear()
+
+
 def _iter_kucoin_secret_names() -> tuple[str, ...]:
     """Retorna os nomes de secret aceitos para as credenciais KuCoin."""
     custom = os.getenv("KUCOIN_SECRET_NAMES", "").strip()

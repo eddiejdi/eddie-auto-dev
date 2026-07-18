@@ -564,7 +564,22 @@ sudo systemctl enable rss-sentiment-exporter.service 2>/dev/null || true
 sudo systemctl try-restart rss-sentiment-exporter.service 2>/dev/null || true
 
 sudo systemctl daemon-reload
-sudo systemctl restart "${AGENT_SERVICES[@]}"
+
+# Restart escalonado: restart em massa sobrecarrega o Secrets Agent e gera
+# falsos "Nenhuma credencial KuCoin" (ex.: ETH_USDT_conservative no deploy #225).
+AGENT_RESTART_STAGGER_SEC="${AGENT_RESTART_STAGGER_SEC:-2}"
+echo "♻️ Reiniciando agents com stagger ${AGENT_RESTART_STAGGER_SEC}s..."
+idx=0
+for svc in "${AGENT_SERVICES[@]}"; do
+  idx=$((idx + 1))
+  echo "  [${idx}/${#AGENT_SERVICES[@]}] restart ${svc}"
+  sudo systemctl restart "${svc}" || {
+    echo "⚠️  falha ao reiniciar ${svc} — seguindo" >&2
+  }
+  if [[ "${idx}" -lt "${#AGENT_SERVICES[@]}" ]]; then
+    sleep "${AGENT_RESTART_STAGGER_SEC}"
+  fi
+done
 
 if systemctl is-active --quiet "${LEGACY_EXPORTER_SERVICES[@]}"; then
   echo "ℹ️ Legacy BTC exporter detectado; desativando autocoinbot-exporter para evitar drift de métricas"
@@ -573,7 +588,19 @@ sudo systemctl stop "${LEGACY_EXPORTER_SERVICES[@]}" 2>/dev/null || true
 sudo systemctl disable "${LEGACY_EXPORTER_SERVICES[@]}" 2>/dev/null || true
 sudo systemctl reset-failed "${LEGACY_EXPORTER_SERVICES[@]}" 2>/dev/null || true
 
-sudo systemctl restart "${EXPORTER_SERVICES[@]}"
+EXPORTER_RESTART_STAGGER_SEC="${EXPORTER_RESTART_STAGGER_SEC:-1}"
+echo "♻️ Reiniciando exporters com stagger ${EXPORTER_RESTART_STAGGER_SEC}s..."
+eidx=0
+for svc in "${EXPORTER_SERVICES[@]}"; do
+  eidx=$((eidx + 1))
+  echo "  [${eidx}/${#EXPORTER_SERVICES[@]}] restart ${svc}"
+  sudo systemctl restart "${svc}" || {
+    echo "⚠️  falha ao reiniciar ${svc} — seguindo" >&2
+  }
+  if [[ "${eidx}" -lt "${#EXPORTER_SERVICES[@]}" ]]; then
+    sleep "${EXPORTER_RESTART_STAGGER_SEC}"
+  fi
+done
 EXPORTER_STATUS_SERVICES=("${EXPORTER_SERVICES[@]}")
 
 sleep 5
