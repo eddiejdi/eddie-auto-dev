@@ -74,6 +74,14 @@ def _get_database_url_safe() -> str:
 DATABASE_URL = _get_database_url_safe()
 SCHEMA = "btc"
 
+# Bump when PROFILE_MIGRATION_SQL / table DDL in _ensure_schema changes.
+# Hot-path callers (exporters) must not re-run ALTER TABLE every scrape.
+SCHEMA_VERSION = 1
+
+# Process-local cache: after a successful ensure for a DSN, skip entirely.
+# Prevents ~1s of DDL + AccessExclusiveLock on btc.decisions per scrape.
+_SCHEMA_ENSURED_DSNS: set = set()
+
 
 PROFILE_MIGRATION_SQL = f"""
 CREATE TABLE IF NOT EXISTS {SCHEMA}.ai_plans (
@@ -185,12 +193,13 @@ ALTER TABLE {SCHEMA}.ai_plans
 class TrainingDatabase:
     """Gerenciador do banco de dados de treinamento (PostgreSQL)"""
 
-    def __init__(self, dsn: str = None):
+    def __init__(self, dsn: str = None, ensure_schema: bool = True):
         self.dsn = dsn or DATABASE_URL
         self._pool = psycopg2.pool.ThreadedConnectionPool(
             minconn=1, maxconn=5, dsn=self.dsn
         )
-        self._ensure_schema()
+        if ensure_schema:
+            self._ensure_schema()
 
     def close(self):
         """Fecha pool de conexões"""
@@ -211,238 +220,301 @@ class TrainingDatabase:
         finally:
             self._pool.putconn(conn)
 
+    def _mark_schema_ensured(self) -> None:
+        dsn_key = self.dsn or ""
+        if dsn_key:
+            _SCHEMA_ENSURED_DSNS.add(dsn_key)
+
     def _ensure_schema(self):
-        """Garante que o schema e tabelas existem"""
+        """Garante que o schema e tabelas existem.
+
+        Fast-path:
+        1. Process-local cache — zero DB after first success in this process.
+        2. btc.schema_meta.version — skip ALTER/CREATE INDEX when already applied.
+        Without these, Prometheus exporters were re-running PROFILE_MIGRATION_SQL
+        (AccessExclusiveLock on btc.decisions ~3.8GB) every scrape → deadlocks.
+        """
+        dsn_key = self.dsn or ""
+        if dsn_key and dsn_key in _SCHEMA_ENSURED_DSNS:
+            return
+
+        # Only mark process cache after the connection context commits successfully.
+        ready = False
         with self._get_conn() as conn:
             cur = conn.cursor()
             # Serializa a migração entre agentes que sobem simultaneamente
             # (deploy reinicia os 3 profiles juntos → DeadlockDetected nos
             # ALTER TABLE concorrentes). Lock liberado no commit/rollback.
             cur.execute("SELECT pg_advisory_xact_lock(hashtext('btc_ensure_schema'))")
+
+            # Another thread in this process may have finished while we waited.
+            if dsn_key and dsn_key in _SCHEMA_ENSURED_DSNS:
+                return
+
             cur.execute(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}")
 
+            # Version gate (cheap). Must exist before we can skip heavy DDL.
             cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {SCHEMA}.trades (
-                    id SERIAL PRIMARY KEY,
-                    timestamp DOUBLE PRECISION NOT NULL,
-                    symbol TEXT NOT NULL,
-                    side TEXT NOT NULL,
-                    price DOUBLE PRECISION NOT NULL,
-                    size DOUBLE PRECISION,
-                    funds DOUBLE PRECISION,
-                    order_id TEXT,
-                    status TEXT DEFAULT 'executed',
-                    pnl DOUBLE PRECISION,
-                    pnl_pct DOUBLE PRECISION,
-                    dry_run BOOLEAN DEFAULT FALSE,
-                    metadata JSONB,
-                    created_at TIMESTAMPTZ DEFAULT NOW()
-                )
-            """)
-
-            cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {SCHEMA}.decisions (
-                    id SERIAL PRIMARY KEY,
-                    timestamp DOUBLE PRECISION NOT NULL,
-                    symbol TEXT NOT NULL,
-                    action TEXT NOT NULL,
-                    confidence DOUBLE PRECISION NOT NULL,
-                    price DOUBLE PRECISION NOT NULL,
-                    reason TEXT,
-                    executed BOOLEAN DEFAULT FALSE,
-                    trade_id INTEGER REFERENCES {SCHEMA}.trades(id),
-                    features JSONB
-                )
-            """)
-
-            cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {SCHEMA}.market_states (
-                    id SERIAL PRIMARY KEY,
-                    timestamp DOUBLE PRECISION NOT NULL,
-                    symbol TEXT NOT NULL,
-                    price DOUBLE PRECISION NOT NULL,
-                    bid DOUBLE PRECISION,
-                    ask DOUBLE PRECISION,
-                    spread DOUBLE PRECISION,
-                    orderbook_imbalance DOUBLE PRECISION,
-                    trade_flow DOUBLE PRECISION,
-                    rsi DOUBLE PRECISION,
-                    momentum DOUBLE PRECISION,
-                    volatility DOUBLE PRECISION,
-                    trend DOUBLE PRECISION,
-                    volume DOUBLE PRECISION
-                )
-            """)
-
-            cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {SCHEMA}.learning_rewards (
-                    id SERIAL PRIMARY KEY,
-                    timestamp DOUBLE PRECISION NOT NULL,
-                    symbol TEXT NOT NULL,
-                    state_hash TEXT NOT NULL,
-                    action INTEGER NOT NULL,
-                    reward DOUBLE PRECISION NOT NULL,
-                    next_state_hash TEXT,
-                    episode INTEGER DEFAULT 0
-                )
-            """)
-
-            cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {SCHEMA}.performance_stats (
-                    id SERIAL PRIMARY KEY,
-                    timestamp DOUBLE PRECISION NOT NULL,
-                    symbol TEXT NOT NULL,
-                    period TEXT NOT NULL,
-                    total_trades INTEGER DEFAULT 0,
-                    winning_trades INTEGER DEFAULT 0,
-                    total_pnl DOUBLE PRECISION DEFAULT 0,
-                    max_drawdown DOUBLE PRECISION DEFAULT 0,
-                    sharpe_ratio DOUBLE PRECISION,
-                    win_rate DOUBLE PRECISION,
-                    avg_trade_pnl DOUBLE PRECISION,
-                    metadata JSONB
-                )
-            """)
-
-            cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {SCHEMA}.candles (
-                    id SERIAL PRIMARY KEY,
-                    timestamp BIGINT NOT NULL,
-                    symbol TEXT NOT NULL,
-                    ktype TEXT NOT NULL,
-                    open DOUBLE PRECISION NOT NULL,
-                    high DOUBLE PRECISION NOT NULL,
-                    low DOUBLE PRECISION NOT NULL,
-                    close DOUBLE PRECISION NOT NULL,
-                    volume DOUBLE PRECISION NOT NULL,
-                    UNIQUE(timestamp, symbol, ktype)
-                )
-            """)
-
-            # Log bruto das chamadas ao LLM (prompt + resposta) para servir de
-            # dataset de fine-tuning. As tabelas ai_trade_controls/ai_trade_windows/
-            # ai_plans guardam a saída já parseada, mas NÃO o prompt/CONTEXT exato
-            # enviado ao Ollama nem o texto livre do plano — que é o que o SFT precisa.
-            cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {SCHEMA}.llm_calls (
-                    id SERIAL PRIMARY KEY,
-                    timestamp DOUBLE PRECISION NOT NULL,
-                    call_type TEXT NOT NULL,
-                    symbol TEXT NOT NULL,
-                    profile TEXT NOT NULL DEFAULT 'default',
-                    trigger TEXT,
-                    model TEXT,
-                    host TEXT,
-                    prompt TEXT NOT NULL,
-                    response_text TEXT,
-                    response_json JSONB,
-                    latency_ms DOUBLE PRECISION,
-                    metadata JSONB,
-                    servidor TEXT NOT NULL DEFAULT 'homelab',
-                    created_at TIMESTAMPTZ DEFAULT NOW()
-                )
-            """)
-
-            # Config de runtime do log de LLM, controlada pelo painel (ligar/desligar
-            # e parametrizar). Linha única (id=1). Os agentes leem com cache curto.
-            cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {SCHEMA}.llm_log_config (
+                CREATE TABLE IF NOT EXISTS {SCHEMA}.schema_meta (
                     id INTEGER PRIMARY KEY DEFAULT 1,
-                    enabled BOOLEAN NOT NULL DEFAULT TRUE,
-                    log_controls BOOLEAN NOT NULL DEFAULT TRUE,
-                    log_window BOOLEAN NOT NULL DEFAULT TRUE,
-                    log_plan BOOLEAN NOT NULL DEFAULT TRUE,
-                    sample_rate DOUBLE PRECISION NOT NULL DEFAULT 1.0,
-                    max_prompt_chars INTEGER NOT NULL DEFAULT 0,
-                    prune_days INTEGER NOT NULL DEFAULT 90,
+                    version INTEGER NOT NULL DEFAULT 0,
                     updated_at TIMESTAMPTZ DEFAULT NOW(),
-                    updated_by TEXT,
-                    CONSTRAINT llm_log_config_singleton CHECK (id = 1)
+                    CONSTRAINT schema_meta_singleton CHECK (id = 1)
                 )
             """)
-            cur.execute(f"""
-                INSERT INTO {SCHEMA}.llm_log_config (id) VALUES (1)
-                ON CONFLICT (id) DO NOTHING
-            """)
-
-            # Compatibilidade: releases recentes passaram a usar colunas/tabelas
-            # com "profile"; manter isso aqui evita depender de migration manual.
-            cur.execute(PROFILE_MIGRATION_SQL)
-
-            # Conversão intermoedas (owner USDT_BRL)
-            cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {SCHEMA}.conversion_requests (
-                    id SERIAL PRIMARY KEY,
-                    created_at TIMESTAMPTZ DEFAULT NOW(),
-                    requested_by TEXT,
-                    asset_in TEXT NOT NULL,
-                    asset_out TEXT NOT NULL,
-                    amount_in DOUBLE PRECISION NOT NULL,
-                    min_out DOUBLE PRECISION,
-                    status TEXT NOT NULL DEFAULT 'pending',
-                    plan_json JSONB,
-                    result_json JSONB,
-                    dry_run BOOLEAN DEFAULT TRUE,
-                    profile TEXT DEFAULT 'conservative',
-                    symbol_owner TEXT DEFAULT 'USDT-BRL'
+            cur.execute(
+                f"INSERT INTO {SCHEMA}.schema_meta (id, version) VALUES (1, 0) "
+                f"ON CONFLICT (id) DO NOTHING"
+            )
+            cur.execute(f"SELECT version FROM {SCHEMA}.schema_meta WHERE id = 1")
+            row = cur.fetchone()
+            current_version = int(row[0]) if row else 0
+            if current_version >= SCHEMA_VERSION:
+                ready = True
+                logger.debug(
+                    "PostgreSQL schema btc.* already at version %s — skip migration",
+                    current_version,
                 )
-            """)
-            cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {SCHEMA}.conversion_legs (
-                    id SERIAL PRIMARY KEY,
-                    request_id INTEGER REFERENCES {SCHEMA}.conversion_requests(id),
-                    leg_index INTEGER NOT NULL,
-                    symbol TEXT NOT NULL,
-                    side TEXT NOT NULL,
-                    amount_in DOUBLE PRECISION,
-                    amount_out DOUBLE PRECISION,
-                    fee DOUBLE PRECISION,
-                    order_id TEXT,
-                    status TEXT,
-                    created_at TIMESTAMPTZ DEFAULT NOW()
+            else:
+                self._apply_schema_migration(cur)
+                ready = True
+                logger.info(
+                    "✅ PostgreSQL schema btc.* initialized (version %s)",
+                    SCHEMA_VERSION,
                 )
-            """)
-            cur.execute(f"""
-                CREATE TABLE IF NOT EXISTS {SCHEMA}.conversion_lock (
-                    id INTEGER PRIMARY KEY DEFAULT 1,
-                    owner TEXT,
-                    held_at TIMESTAMPTZ,
-                    CONSTRAINT conversion_lock_singleton CHECK (id = 1)
-                )
-            """)
-            cur.execute(f"""
-                INSERT INTO {SCHEMA}.conversion_lock (id) VALUES (1)
-                ON CONFLICT (id) DO NOTHING
-            """)
 
-            # Índices
-            indices = [
-                f"CREATE INDEX IF NOT EXISTS idx_btc_trades_symbol ON {SCHEMA}.trades(symbol)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_trades_symbol_profile ON {SCHEMA}.trades(symbol, profile)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_trades_timestamp ON {SCHEMA}.trades(timestamp)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_trades_dry_run ON {SCHEMA}.trades(dry_run)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_decisions_timestamp ON {SCHEMA}.decisions(timestamp)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_decisions_symbol ON {SCHEMA}.decisions(symbol)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_decisions_symbol_profile ON {SCHEMA}.decisions(symbol, profile)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_market_states_timestamp ON {SCHEMA}.market_states(timestamp)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_market_states_symbol ON {SCHEMA}.market_states(symbol, timestamp)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_candles_lookup ON {SCHEMA}.candles(symbol, ktype, timestamp)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_learning_rewards_symbol ON {SCHEMA}.learning_rewards(symbol)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_ai_plans_symbol_profile_ts ON {SCHEMA}.ai_plans(symbol, profile, timestamp DESC)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_profile_allocations_symbol_ts ON {SCHEMA}.profile_allocations(symbol, timestamp DESC)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_ai_trade_controls_symbol_profile_ts ON {SCHEMA}.ai_trade_controls(symbol, profile, timestamp DESC)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_ai_trade_windows_symbol_profile_ts ON {SCHEMA}.ai_trade_windows(symbol, profile, timestamp DESC)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_llm_calls_type_symbol_profile_ts ON {SCHEMA}.llm_calls(call_type, symbol, profile, timestamp DESC)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_llm_calls_timestamp ON {SCHEMA}.llm_calls(timestamp)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_conversion_requests_status ON {SCHEMA}.conversion_requests(status)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_conversion_requests_assets ON {SCHEMA}.conversion_requests(asset_in, asset_out)",
-                f"CREATE INDEX IF NOT EXISTS idx_btc_conversion_legs_request ON {SCHEMA}.conversion_legs(request_id)",
-            ]
-            for idx in indices:
-                cur.execute(idx)
+        if ready:
+            self._mark_schema_ensured()
 
-            conn.commit()
-            logger.info("✅ PostgreSQL schema btc.* initialized")
+    def _apply_schema_migration(self, cur) -> None:
+        """Heavy DDL — only when schema_meta.version < SCHEMA_VERSION."""
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.trades (
+                id SERIAL PRIMARY KEY,
+                timestamp DOUBLE PRECISION NOT NULL,
+                symbol TEXT NOT NULL,
+                side TEXT NOT NULL,
+                price DOUBLE PRECISION NOT NULL,
+                size DOUBLE PRECISION,
+                funds DOUBLE PRECISION,
+                order_id TEXT,
+                status TEXT DEFAULT 'executed',
+                pnl DOUBLE PRECISION,
+                pnl_pct DOUBLE PRECISION,
+                dry_run BOOLEAN DEFAULT FALSE,
+                metadata JSONB,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.decisions (
+                id SERIAL PRIMARY KEY,
+                timestamp DOUBLE PRECISION NOT NULL,
+                symbol TEXT NOT NULL,
+                action TEXT NOT NULL,
+                confidence DOUBLE PRECISION NOT NULL,
+                price DOUBLE PRECISION NOT NULL,
+                reason TEXT,
+                executed BOOLEAN DEFAULT FALSE,
+                trade_id INTEGER REFERENCES {SCHEMA}.trades(id),
+                features JSONB
+            )
+        """)
+
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.market_states (
+                id SERIAL PRIMARY KEY,
+                timestamp DOUBLE PRECISION NOT NULL,
+                symbol TEXT NOT NULL,
+                price DOUBLE PRECISION NOT NULL,
+                bid DOUBLE PRECISION,
+                ask DOUBLE PRECISION,
+                spread DOUBLE PRECISION,
+                orderbook_imbalance DOUBLE PRECISION,
+                trade_flow DOUBLE PRECISION,
+                rsi DOUBLE PRECISION,
+                momentum DOUBLE PRECISION,
+                volatility DOUBLE PRECISION,
+                trend DOUBLE PRECISION,
+                volume DOUBLE PRECISION
+            )
+        """)
+
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.learning_rewards (
+                id SERIAL PRIMARY KEY,
+                timestamp DOUBLE PRECISION NOT NULL,
+                symbol TEXT NOT NULL,
+                state_hash TEXT NOT NULL,
+                action INTEGER NOT NULL,
+                reward DOUBLE PRECISION NOT NULL,
+                next_state_hash TEXT,
+                episode INTEGER DEFAULT 0
+            )
+        """)
+
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.performance_stats (
+                id SERIAL PRIMARY KEY,
+                timestamp DOUBLE PRECISION NOT NULL,
+                symbol TEXT NOT NULL,
+                period TEXT NOT NULL,
+                total_trades INTEGER DEFAULT 0,
+                winning_trades INTEGER DEFAULT 0,
+                total_pnl DOUBLE PRECISION DEFAULT 0,
+                max_drawdown DOUBLE PRECISION DEFAULT 0,
+                sharpe_ratio DOUBLE PRECISION,
+                win_rate DOUBLE PRECISION,
+                avg_trade_pnl DOUBLE PRECISION,
+                metadata JSONB
+            )
+        """)
+
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.candles (
+                id SERIAL PRIMARY KEY,
+                timestamp BIGINT NOT NULL,
+                symbol TEXT NOT NULL,
+                ktype TEXT NOT NULL,
+                open DOUBLE PRECISION NOT NULL,
+                high DOUBLE PRECISION NOT NULL,
+                low DOUBLE PRECISION NOT NULL,
+                close DOUBLE PRECISION NOT NULL,
+                volume DOUBLE PRECISION NOT NULL,
+                UNIQUE(timestamp, symbol, ktype)
+            )
+        """)
+
+        # Log bruto das chamadas ao LLM (prompt + resposta) para servir de
+        # dataset de fine-tuning. As tabelas ai_trade_controls/ai_trade_windows/
+        # ai_plans guardam a saída já parseada, mas NÃO o prompt/CONTEXT exato
+        # enviado ao Ollama nem o texto livre do plano — que é o que o SFT precisa.
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.llm_calls (
+                id SERIAL PRIMARY KEY,
+                timestamp DOUBLE PRECISION NOT NULL,
+                call_type TEXT NOT NULL,
+                symbol TEXT NOT NULL,
+                profile TEXT NOT NULL DEFAULT 'default',
+                trigger TEXT,
+                model TEXT,
+                host TEXT,
+                prompt TEXT NOT NULL,
+                response_text TEXT,
+                response_json JSONB,
+                latency_ms DOUBLE PRECISION,
+                metadata JSONB,
+                servidor TEXT NOT NULL DEFAULT 'homelab',
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+
+        # Config de runtime do log de LLM, controlada pelo painel (ligar/desligar
+        # e parametrizar). Linha única (id=1). Os agentes leem com cache curto.
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.llm_log_config (
+                id INTEGER PRIMARY KEY DEFAULT 1,
+                enabled BOOLEAN NOT NULL DEFAULT TRUE,
+                log_controls BOOLEAN NOT NULL DEFAULT TRUE,
+                log_window BOOLEAN NOT NULL DEFAULT TRUE,
+                log_plan BOOLEAN NOT NULL DEFAULT TRUE,
+                sample_rate DOUBLE PRECISION NOT NULL DEFAULT 1.0,
+                max_prompt_chars INTEGER NOT NULL DEFAULT 0,
+                prune_days INTEGER NOT NULL DEFAULT 90,
+                updated_at TIMESTAMPTZ DEFAULT NOW(),
+                updated_by TEXT,
+                CONSTRAINT llm_log_config_singleton CHECK (id = 1)
+            )
+        """)
+        cur.execute(f"""
+            INSERT INTO {SCHEMA}.llm_log_config (id) VALUES (1)
+            ON CONFLICT (id) DO NOTHING
+        """)
+
+        # Compatibilidade: releases recentes passaram a usar colunas/tabelas
+        # com "profile"; manter isso aqui evita depender de migration manual.
+        cur.execute(PROFILE_MIGRATION_SQL)
+
+        # Conversão intermoedas (owner USDT_BRL)
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.conversion_requests (
+                id SERIAL PRIMARY KEY,
+                created_at TIMESTAMPTZ DEFAULT NOW(),
+                requested_by TEXT,
+                asset_in TEXT NOT NULL,
+                asset_out TEXT NOT NULL,
+                amount_in DOUBLE PRECISION NOT NULL,
+                min_out DOUBLE PRECISION,
+                status TEXT NOT NULL DEFAULT 'pending',
+                plan_json JSONB,
+                result_json JSONB,
+                dry_run BOOLEAN DEFAULT TRUE,
+                profile TEXT DEFAULT 'conservative',
+                symbol_owner TEXT DEFAULT 'USDT-BRL'
+            )
+        """)
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.conversion_legs (
+                id SERIAL PRIMARY KEY,
+                request_id INTEGER REFERENCES {SCHEMA}.conversion_requests(id),
+                leg_index INTEGER NOT NULL,
+                symbol TEXT NOT NULL,
+                side TEXT NOT NULL,
+                amount_in DOUBLE PRECISION,
+                amount_out DOUBLE PRECISION,
+                fee DOUBLE PRECISION,
+                order_id TEXT,
+                status TEXT,
+                created_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.conversion_lock (
+                id INTEGER PRIMARY KEY DEFAULT 1,
+                owner TEXT,
+                held_at TIMESTAMPTZ,
+                CONSTRAINT conversion_lock_singleton CHECK (id = 1)
+            )
+        """)
+        cur.execute(f"""
+            INSERT INTO {SCHEMA}.conversion_lock (id) VALUES (1)
+            ON CONFLICT (id) DO NOTHING
+        """)
+
+        indices = [
+            f"CREATE INDEX IF NOT EXISTS idx_btc_trades_symbol ON {SCHEMA}.trades(symbol)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_trades_symbol_profile ON {SCHEMA}.trades(symbol, profile)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_trades_timestamp ON {SCHEMA}.trades(timestamp)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_trades_dry_run ON {SCHEMA}.trades(dry_run)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_decisions_timestamp ON {SCHEMA}.decisions(timestamp)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_decisions_symbol ON {SCHEMA}.decisions(symbol)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_decisions_symbol_profile ON {SCHEMA}.decisions(symbol, profile)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_market_states_timestamp ON {SCHEMA}.market_states(timestamp)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_market_states_symbol ON {SCHEMA}.market_states(symbol, timestamp)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_candles_lookup ON {SCHEMA}.candles(symbol, ktype, timestamp)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_learning_rewards_symbol ON {SCHEMA}.learning_rewards(symbol)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_ai_plans_symbol_profile_ts ON {SCHEMA}.ai_plans(symbol, profile, timestamp DESC)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_profile_allocations_symbol_ts ON {SCHEMA}.profile_allocations(symbol, timestamp DESC)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_ai_trade_controls_symbol_profile_ts ON {SCHEMA}.ai_trade_controls(symbol, profile, timestamp DESC)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_ai_trade_windows_symbol_profile_ts ON {SCHEMA}.ai_trade_windows(symbol, profile, timestamp DESC)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_llm_calls_type_symbol_profile_ts ON {SCHEMA}.llm_calls(call_type, symbol, profile, timestamp DESC)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_llm_calls_timestamp ON {SCHEMA}.llm_calls(timestamp)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_conversion_requests_status ON {SCHEMA}.conversion_requests(status)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_conversion_requests_assets ON {SCHEMA}.conversion_requests(asset_in, asset_out)",
+            f"CREATE INDEX IF NOT EXISTS idx_btc_conversion_legs_request ON {SCHEMA}.conversion_legs(request_id)",
+        ]
+        for idx in indices:
+            cur.execute(idx)
+
+        cur.execute(
+            f"""
+            UPDATE {SCHEMA}.schema_meta
+            SET version = %s, updated_at = NOW()
+            WHERE id = 1
+            """,
+            (SCHEMA_VERSION,),
+        )
 
     # ====================== TRADES ======================
     def record_trade(self, symbol: str, side: str, price: float,

@@ -72,6 +72,64 @@ class MetricsCollector:
         cur.close()
         return conn
 
+    def conversion_metrics_snapshot(self) -> Dict:
+        """Métricas de conversão intermoedas — sem TrainingDatabase()/DDL.
+
+        Importante: NÃO instanciar TrainingDatabase aqui. O construtor antigo
+        reexecutava ALTER TABLE em btc.decisions a cada scrape do Prometheus
+        e gerava deadlocks com os agents (AccessExclusiveLock vs RowShareLock).
+        """
+        snap = {
+            "by_status": {},
+            "last_cost_pct": 0.0,
+            "last_hops": 0.0,
+            "last_savings_bps": 0.0,
+            "last_success_ts": 0.0,
+            "lock_held": 0,
+        }
+        conn = self._get_conn()
+        try:
+            cur = conn.cursor()
+            cur.execute(
+                """
+                SELECT status, COUNT(*) AS n
+                FROM conversion_requests
+                GROUP BY status
+                """
+            )
+            snap["by_status"] = {row[0]: int(row[1]) for row in cur.fetchall()}
+            cur.execute(
+                """
+                SELECT plan_json, EXTRACT(EPOCH FROM created_at) AS ts
+                FROM conversion_requests
+                WHERE status IN ('done', 'simulated')
+                ORDER BY id DESC
+                LIMIT 1
+                """
+            )
+            last = cur.fetchone()
+            last_plan = last[0] if last else None
+            if isinstance(last_plan, str):
+                try:
+                    last_plan = json.loads(last_plan)
+                except Exception:
+                    last_plan = {}
+            last_plan = last_plan or {}
+            snap["last_cost_pct"] = float(last_plan.get("total_cost_pct") or 0)
+            snap["last_hops"] = float(last_plan.get("hops") or 0)
+            if last_plan.get("savings_vs_usdt_bps") is not None:
+                snap["last_savings_bps"] = float(last_plan.get("savings_vs_usdt_bps") or 0)
+            snap["last_success_ts"] = float(last[1]) if last else 0.0
+            cur.execute(
+                "SELECT owner IS NOT NULL AS held FROM conversion_lock WHERE id=1"
+            )
+            lock_row = cur.fetchone()
+            snap["lock_held"] = 1 if lock_row and lock_row[0] else 0
+            cur.close()
+        finally:
+            conn.close()
+        return snap
+
     def _has_shared_profile_ambiguity(self, cursor, mode_val: bool) -> bool:
         """Detecta quando mais de um profile LIVE compartilha a mesma posição do símbolo."""
         if mode_val:
@@ -1354,9 +1412,9 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                     "lock_held": 0,
                 }
                 try:
-                    from training_db import TrainingDatabase
-
-                    snap = TrainingDatabase().conversion_metrics_snapshot(profile=_profile) or snap
+                    # Use MetricsCollector connection only — never TrainingDatabase()
+                    # on the scrape hot path (DDL/deadlocks).
+                    snap = self.get_collector().conversion_metrics_snapshot() or snap
                 except Exception:
                     pass
                 output.append("# HELP btc_conversion_enabled Conversion owner enabled (1=yes)")

@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-18T23:19:39.944977+00:00",
+  "generated_at": "2026-07-19T13:56:23.357329+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
