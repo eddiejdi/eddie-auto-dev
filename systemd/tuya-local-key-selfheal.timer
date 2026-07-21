@@ -1,0 +1,10 @@
+[Unit]
+Description=Roda o self-heal de local_key Tuya Local a cada 15 minutos
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=15min
+Unit=tuya-local-key-selfheal.service
+
+[Install]
+WantedBy=timers.target

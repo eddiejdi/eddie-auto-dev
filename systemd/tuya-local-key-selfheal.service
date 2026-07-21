@@ -1,0 +1,9 @@
+[Unit]
+Description=Self-heal de local_key Tuya Local (Cena Quarto)
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=homelab
+ExecStart=/home/homelab/myClaude/.venv/bin/python3 /usr/local/bin/tuya_local_key_selfheal.py
