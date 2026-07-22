@@ -7,14 +7,17 @@ validado em 2026-07-21.
 ## Contexto / pedido original
 
 Objetivo: uma cena onde o clique físico no interruptor de 1 canal do
-quarto controla um ciclo de 3 estados:
+quarto controla um ciclo de 5 estados (4 cliques):
 
 1. Tudo desligado → clique → liga Fita + Spot
-2. Clique → desliga só o Spot (Fita continua ligada)
-3. Clique → desliga a Fita também (volta ao estado 1)
+2. Clique → desliga só o Spot (fica só a Fita ligada)
+3. Clique → desliga a Fita e liga o Spot (fica só o Spot ligado)
+4. Clique → desliga o Spot também (volta ao estado 1, tudo desligado)
 
 O interruptor funciona apenas como gatilho (não tem carga própria na cena;
-seu próprio relé é ignorado, só usamos a mudança de estado dele).
+seu próprio relé é ignorado, só usamos a mudança de estado dele). O
+estado "só spot" (item 3) foi adicionado depois da primeira validação —
+o pedido original tinha esquecido essa opção.
 
 ## Investigação e causas encontradas
 
@@ -153,6 +156,9 @@ Arquivo: `automations.yaml` do Home Assistant (`homeassistant` container,
       - condition: state
         entity_id: switch.spot_quarto
         state: 'on'
+      - condition: state
+        entity_id: switch.luz_fita_quarto
+        state: 'on'
       sequence:
       - action: switch.turn_off
         target:
@@ -161,21 +167,44 @@ Arquivo: `automations.yaml` do Home Assistant (`homeassistant` container,
       - action: switch.turn_off
         target:
           entity_id: switch.spot_quarto
+    - conditions:
+      - condition: state
+        entity_id: switch.spot_quarto
+        state: 'off'
+      - condition: state
+        entity_id: switch.luz_fita_quarto
+        state: 'on'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.luz_fita_quarto
+      - action: switch.turn_on
+        target:
+          entity_id: switch.spot_quarto
+      - delay: 00:00:01
+      - action: switch.turn_off
+        target:
+          entity_id: switch.luz_fita_quarto
+      - action: switch.turn_on
+        target:
+          entity_id: switch.spot_quarto
     default:
     - action: switch.turn_off
       target:
-        entity_id: switch.luz_fita_quarto
+        entity_id: switch.spot_quarto
     - delay: 00:00:01
     - action: switch.turn_off
       target:
-        entity_id: switch.luz_fita_quarto
+        entity_id: switch.spot_quarto
   mode: single
 ```
 
 Notas de design:
 
 - O estado (fita+spot ligados/desligados) **é a própria memória do
-  ciclo** — não precisa de `counter`/`input_number` auxiliar.
+  ciclo** — não precisa de `counter`/`input_number` auxiliar. A ordem dos
+  4 ramos do `choose` cobre as 4 combinações on/off de spot+fita, uma
+  para cada transição do ciclo de 5 estados.
 - Cada ação de `turn_on`/`turn_off` é enviada **duas vezes** (com 1s de
   delay) para tolerar falhas intermitentes de escrita local observadas
   nos módulos "mini" Tuya — idempotente e inofensivo se a primeira já
@@ -217,7 +246,9 @@ Requer um token de longa duração do Home Assistant em
 
 ## Validação
 
-Ciclo completo testado fisicamente com sucesso em 2026-07-21 após:
-correção do bridge travado, migração dos 3 dispositivos para local,
-remoção do linkage nativo da Tuya, self-heal de `local_key` instalado, e
-debounce de 500ms no gatilho do interruptor.
+Ciclo de 4 cliques (tudo ligado → só fita → só spot → tudo apagado)
+testado com sucesso em 2026-07-21 (disparo direto da automação, 4
+rodadas seguidas sem falha) após: correção do bridge travado, migração
+dos 3 dispositivos para local, remoção do linkage nativo da Tuya,
+self-heal de `local_key` instalado, e debounce de 500ms no gatilho do
+interruptor. Teste físico do interruptor confirmado pelo usuário.
