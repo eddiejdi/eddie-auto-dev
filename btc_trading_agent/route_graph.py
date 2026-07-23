@@ -353,6 +353,68 @@ def compare_routes(
     return plans
 
 
+def diagnose_routes(
+    asset_in: str,
+    asset_out: str,
+    amount_in: float,
+    *,
+    opts: Optional[RouteOptions] = None,
+    graph: Optional[RouteGraph] = None,
+    estimate_leg_fn: Callable[..., LegEstimate] = estimate_leg,
+) -> List[Dict[str, Any]]:
+    """Lista caminhos avaliados com motivo de aceite/rejeição (diagnóstico no_route)."""
+    opts = opts or RouteOptions()
+    graph = graph or RouteGraph()
+    out: List[Dict[str, Any]] = []
+    paths = _candidate_paths(graph, asset_in, asset_out, opts)
+    if not paths:
+        out.append(
+            {
+                "path": [asset_in.upper(), asset_out.upper()],
+                "accepted": False,
+                "reason": "no_candidate_paths",
+                "cost_bps": None,
+                "spread_bps": None,
+            }
+        )
+        return out
+    for path in paths:
+        plan = _estimate_path(graph, path, amount_in, opts, estimate_leg_fn=estimate_leg_fn)
+        if plan.rejected:
+            out.append(
+                {
+                    "path": list(path),
+                    "accepted": False,
+                    "reason": plan.reject_reason or "rejected",
+                    "cost_bps": None,
+                    "spread_bps": [leg.spread_bps for leg in plan.legs] if plan.legs else None,
+                }
+            )
+            continue
+        if opts.max_route_cost_pct > 0 and plan.total_cost_pct > opts.max_route_cost_pct:
+            out.append(
+                {
+                    "path": list(path),
+                    "accepted": False,
+                    "reason": f"cost_pct={plan.total_cost_pct:.6f}>max={opts.max_route_cost_pct}",
+                    "cost_bps": round(plan.total_cost_pct * 10000, 2),
+                    "spread_bps": [leg.spread_bps for leg in plan.legs],
+                }
+            )
+            continue
+        out.append(
+            {
+                "path": list(path),
+                "accepted": True,
+                "reason": "ok",
+                "cost_bps": round(plan.total_cost_pct * 10000, 2),
+                "spread_bps": [leg.spread_bps for leg in plan.legs],
+                "via": plan.via,
+            }
+        )
+    return out
+
+
 def find_best_route(
     asset_in: str,
     asset_out: str,

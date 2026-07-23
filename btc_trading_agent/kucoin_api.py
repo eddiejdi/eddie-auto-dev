@@ -136,9 +136,29 @@ def _get_extra_telegram_chat_ids() -> list:
     return [c.strip() for c in raw.split(",") if c.strip()] if raw else []
 
 
-def _send_telegram_alert(message: str) -> None:
-    """Envia alerta via Telegram para o admin (best-effort, nunca lança exceção)."""
+# Debounce de alertas Telegram (evita flood em crash-loop de systemd Restart=always)
+_TELEGRAM_ALERT_COOLDOWN_SEC = int(os.getenv("KUCOIN_TELEGRAM_ALERT_COOLDOWN_SEC", "300"))
+_telegram_alert_last: Dict[str, float] = {}
+
+
+def _send_telegram_alert(message: str, *, dedupe_key: str | None = None) -> None:
+    """Envia alerta via Telegram para o admin (best-effort, nunca lança exceção).
+
+    dedupe_key: se fornecido, no máximo 1 alerta por chave a cada cooldown (default 5min).
+    """
     try:
+        key = dedupe_key or message[:120]
+        now = time.time()
+        last = _telegram_alert_last.get(key, 0.0)
+        if now - last < _TELEGRAM_ALERT_COOLDOWN_SEC:
+            logger.debug(
+                "Telegram alert suppressed (cooldown %.0fs, key=%s)",
+                _TELEGRAM_ALERT_COOLDOWN_SEC,
+                key[:40],
+            )
+            return
+        _telegram_alert_last[key] = now
+
         bot_token = _resolve_telegram_bot_token()
         chat_id = _resolve_telegram_chat_id()
         thread_id = _resolve_telegram_thread_id()
@@ -289,11 +309,26 @@ def _load_credentials(
 
     for attempt in range(1, max(1, int(max_attempts)) + 1):
         try:
-            from secrets_helper import clear_secret_cache, get_kucoin_credentials_with_source
+            try:
+                from secrets_helper import get_kucoin_credentials_with_source
+            except ImportError:
+                from btc_trading_agent.secrets_helper import (  # type: ignore
+                    get_kucoin_credentials_with_source,
+                )
+            # clear_secret_cache é opcional (nem todo secrets_helper de produção tem)
+            try:
+                from secrets_helper import clear_secret_cache as _clear_secret_cache
+            except ImportError:
+                try:
+                    from btc_trading_agent.secrets_helper import (  # type: ignore
+                        clear_secret_cache as _clear_secret_cache,
+                    )
+                except ImportError:
+                    _clear_secret_cache = None  # type: ignore
 
             # Evita reusar cache parcial/vazio de tentativas anteriores sob race.
-            if attempt > 1:
-                clear_secret_cache()
+            if attempt > 1 and callable(_clear_secret_cache):
+                _clear_secret_cache()
             api_key, api_secret, api_passphrase, source = get_kucoin_credentials_with_source()
         except ImportError:
             api_key = os.getenv("KUCOIN_API_KEY", "") or os.getenv("API_KEY", "")
@@ -342,7 +377,8 @@ def _load_credentials(
                     f"• Profile: `{profile}`\n"
                     f"• Unit: `{unit_name}`\n"
                     f"• Origem: `{source}`\n"
-                    f"• Ação: verificar Secrets Agent / env no homelab."
+                    f"• Ação: verificar Secrets Agent / env no homelab.",
+                    dedupe_key=f"kucoin_fallback:{unit_name}:{source}",
                 )
             return api_key, api_secret, api_passphrase
 
@@ -378,13 +414,17 @@ def _load_credentials(
         f"• Unit: `{unit_name}`\n"
         f"• Tentativas: `{max_attempts}`\n"
         "Nem o Agent Secrets nem as env vars devolveram as 3 chaves.\n"
-        "*Este processo NÃO conseguirá operar em live.*"
+        "*Este processo NÃO conseguirá operar em live.*",
+        dedupe_key=f"kucoin_missing:{unit_name}",
     )
     return api_key, api_secret, api_passphrase
 
 
 # ====================== CREDENCIAIS ======================
-API_KEY, API_SECRET, API_PASSPHRASE = _load_credentials()
+# Lazy load: evita capturar vazio no import (race Secrets Agent / cold start).
+API_KEY = ""
+API_SECRET = ""
+API_PASSPHRASE = ""
 API_KEY_VERSION = os.getenv("API_KEY_VERSION", "1")
 KUCOIN_BASE = os.getenv("KUCOIN_BASE", "https://api.kucoin.com").rstrip("/")
 _SERVER_TIME_OFFSET_MS = 0
@@ -395,6 +435,25 @@ _SYMBOLS_CACHE: Dict[str, Any] = {
     "expires_at": 0.0,
     "symbols": [],
 }
+_CREDENTIALS_LOADED = False
+
+
+def _ensure_credentials(*, force: bool = False) -> None:
+    """Garante API_KEY/SECRET/PASSPHRASE carregadas (re-tenta se vazias)."""
+    global API_KEY, API_SECRET, API_PASSPHRASE, _CREDENTIALS_LOADED
+    if not force and API_KEY and API_SECRET and API_PASSPHRASE:
+        _CREDENTIALS_LOADED = True
+        return
+    api_key, api_secret, api_passphrase = _load_credentials()
+    if api_key and api_secret and api_passphrase:
+        API_KEY, API_SECRET, API_PASSPHRASE = api_key, api_secret, api_passphrase
+        _CREDENTIALS_LOADED = True
+    else:
+        # Mantém o que tiver; próximo call pode retry
+        API_KEY = api_key or API_KEY
+        API_SECRET = api_secret or API_SECRET
+        API_PASSPHRASE = api_passphrase or API_PASSPHRASE
+        _CREDENTIALS_LOADED = bool(API_KEY and API_SECRET and API_PASSPHRASE)
 
 # ====================== RATE LIMITING ======================
 _last_request_time = 0
@@ -429,12 +488,19 @@ def retry_on_failure(max_retries: int = 3, delay: float = 0.5):
 
 # ====================== AUTH HELPERS ======================
 def _has_keys() -> bool:
-    """Verifica se credenciais estão configuradas"""
+    """Verifica se credenciais estão configuradas (tenta lazy-load uma vez)."""
+    if API_KEY and API_SECRET and API_PASSPHRASE:
+        return True
+    try:
+        _ensure_credentials(force=False)
+    except Exception:
+        pass
     return bool(API_KEY and API_SECRET and API_PASSPHRASE)
 
 def validate_credentials():
-    """Valida credenciais da API"""
-    if not _has_keys():
+    """Valida credenciais da API (com lazy reload se ainda vazias)."""
+    _ensure_credentials(force=not (API_KEY and API_SECRET and API_PASSPHRASE))
+    if not (API_KEY and API_SECRET and API_PASSPHRASE):
         raise RuntimeError(
             "❌ API credentials not configured. Set KUCOIN_API_KEY, "
             "KUCOIN_API_SECRET, and KUCOIN_API_PASSPHRASE"
@@ -953,6 +1019,56 @@ def get_total_balance(currency: str = "USDT") -> float:
             if b["currency"] == currency:
                 total += b["available"]
     return total
+
+
+# Mapa subconta KuCoin → profile de trading (grafia "Agressive" é a da exchange).
+SUBACCOUNT_PROFILE_MAP: Dict[str, str] = {
+    "BTCAgressive": "aggressive",
+    "BTCConservative": "conservative",
+    "ETHAgressive": "aggressive",
+    "ETHConservative": "conservative",
+}
+
+
+def infer_subaccount_name(symbol: str, profile: str) -> Optional[str]:
+    """Infere nome da subconta a partir de symbol+profile (ex.: BTC-USDT/aggressive → BTCAgressive)."""
+    profile = (profile or "").strip().lower()
+    if profile not in {"aggressive", "conservative"}:
+        return None
+    base = (symbol or "").split("-")[0].strip().upper()
+    if not base:
+        return None
+    if profile == "aggressive":
+        return f"{base}Agressive"
+    return f"{base}Conservative"
+
+
+def get_subaccount_balance(
+    sub_name: str,
+    currency: str = "USDT",
+    *,
+    account_type: str = "trade",
+) -> float:
+    """Saldo available de uma subconta específica (0.0 se não encontrada)."""
+    if not sub_name:
+        return 0.0
+    want_type = (account_type or "trade").lower()
+    for row in get_sub_account_balances() or []:
+        if str(row.get("sub_name") or "") != sub_name:
+            continue
+        if str(row.get("currency") or "") != currency:
+            continue
+        row_type = str(row.get("account_type") or "trade").lower()
+        if row_type != want_type:
+            continue
+        try:
+            avail = row.get("available")
+            if avail is None:
+                avail = row.get("balance") or 0.0
+            return float(avail)
+        except (TypeError, ValueError):
+            return 0.0
+    return 0.0
 
 
 def inner_transfer(currency: str, amount: float,

@@ -177,9 +177,15 @@ class VariablesCatalog:
         logger.info("🐍 Scanning Python configs...")
         python_vars = {}
         
-        # Look for config.py, settings.py, etc
-        config_files = list(self.root.rglob("*config*.py")) + \
-                      list(self.root.rglob("*settings*.py"))
+        # Look for config.py, settings.py, etc — plus the trading agent
+        # packages/scripts, cujos módulos não têm "config"/"settings" no nome
+        # mas concentram boa parte das variáveis de ambiente do repo.
+        config_files = set(self.root.rglob("*config*.py")) | \
+                      set(self.root.rglob("*settings*.py")) | \
+                      set((self.root / "btc_trading_agent").glob("*.py")) | \
+                      set((self.root / "clear_trading_agent").glob("*.py")) | \
+                      set((self.root / "scripts").glob("*.py"))
+        config_files = sorted(config_files)
         
         for config_file in config_files:
             if any(skip in str(config_file) for skip in ['.venv', '__pycache__', '.git']):
@@ -194,9 +200,9 @@ class VariablesCatalog:
                     
                     # Look for os.getenv() and os.environ patterns
                     patterns = [
-                        r"os\.getenv\(['\"]([A-Z_][A-Z0-9_]*)['\"]",
+                        r"os\.getenv\(\s*['\"]([A-Z_][A-Z0-9_]*)['\"]",
                         r"os\.environ\[['\"]([A-Z_][A-Z0-9_]*)['\"]",
-                        r"os\.environ\.get\(['\"]([A-Z_][A-Z0-9_]*)['\"]",
+                        r"os\.environ\.get\(\s*['\"]([A-Z_][A-Z0-9_]*)['\"]",
                     ]
                     
                     for pattern in patterns:

@@ -30,6 +30,68 @@ import httpx
 
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# Política global: SEMPRE logar erros (nunca engolir em debug/silêncio)
+# ---------------------------------------------------------------------------
+
+def log_error_always(
+    msg: str,
+    *args: Any,
+    exc: BaseException | None = None,
+    **extra: Any,
+) -> None:
+    """Loga em nível ERROR com extras; re-lança se pedirem via env (debug).
+
+    Hook global do projeto: falhas de LLM/API/infra não ficam só em debug.
+    """
+    if extra:
+        extras = " ".join(f"{k}={v!r}" for k, v in extra.items())
+        msg = f"{msg} | {extras}"
+    if exc is not None:
+        logger.error(msg, *args, exc_info=exc)
+    else:
+        logger.error(msg, *args)
+
+
+def _log_ollama_response_headers(
+    resp: httpx.Response,
+    *,
+    host: str,
+    model: str,
+    path: str,
+) -> None:
+    """Sempre registra erros HTTP e failovers do GPU coordinator."""
+    status = resp.status_code
+    ep = resp.headers.get("x-gpu-endpoint") or resp.headers.get("X-GPU-Endpoint") or "-"
+    tried = resp.headers.get("x-gpu-tried") or resp.headers.get("X-GPU-Tried") or ""
+    failover = (resp.headers.get("x-gpu-failover") or resp.headers.get("X-GPU-Failover") or "0").strip()
+    fail_n = resp.headers.get("x-gpu-failover-count") or resp.headers.get("X-GPU-Failover-Count") or "0"
+
+    if status >= 400:
+        body_snip = (resp.text or "")[:300].replace("\n", " ")
+        log_error_always(
+            "Ollama HTTP error status=%s path=%s host=%s model=%s endpoint=%s body=%s",
+            status,
+            path,
+            host,
+            model,
+            ep,
+            body_snip,
+        )
+    if failover in {"1", "true", "yes"}:
+        # Failover = erro no primeiro hop — log ERROR para não passar despercebido
+        log_error_always(
+            "Ollama GPU failover path=%s host=%s model=%s served_by=%s tried=%s failover_count=%s",
+            path,
+            host,
+            model,
+            ep,
+            tried or "-",
+            fail_n,
+        )
+
+
 # ---------------------------------------------------------------------------
 # Endpoint registry
 # ---------------------------------------------------------------------------
@@ -200,38 +262,62 @@ class LLMRouter:
             self.GATE_TIMEOUT_MIN_SEC,
             timeout * self.GATE_TIMEOUT_MULTIPLIER,
         )
+        path = "/api/chat" if use_chat else "/api/generate"
         with _host_gate(host, timeout=gate_timeout):
             with httpx.Client(timeout=float(timeout)) as client:
+                try:
+                    if use_chat:
+                        messages = []
+                        if system_prompt:
+                            messages.append({"role": "system", "content": system_prompt})
+                        messages.append({"role": "user", "content": prompt})
+                        resp = client.post(
+                            f"{host}{path}",
+                            json={
+                                "model": model,
+                                "messages": messages,
+                                "stream": False,
+                                "format": "json",
+                                "options": options,
+                            },
+                        )
+                    else:
+                        resp = client.post(
+                            f"{host}{path}",
+                            json={
+                                "model": model,
+                                "prompt": prompt,
+                                "stream": False,
+                                "format": "json",
+                                "options": options,
+                            },
+                        )
+                except Exception as exc:
+                    log_error_always(
+                        "Ollama request failed path=%s host=%s model=%s: %s",
+                        path,
+                        host,
+                        model,
+                        exc,
+                        exc=exc,
+                    )
+                    raise
+                _log_ollama_response_headers(resp, host=host, model=model, path=path)
+                try:
+                    resp.raise_for_status()
+                except Exception as exc:
+                    log_error_always(
+                        "Ollama raise_for_status path=%s host=%s model=%s status=%s",
+                        path,
+                        host,
+                        model,
+                        resp.status_code,
+                        exc=exc,
+                    )
+                    raise
                 if use_chat:
-                    messages = []
-                    if system_prompt:
-                        messages.append({"role": "system", "content": system_prompt})
-                    messages.append({"role": "user", "content": prompt})
-                    resp = client.post(
-                        f"{host}/api/chat",
-                        json={
-                            "model": model,
-                            "messages": messages,
-                            "stream": False,
-                            "format": "json",
-                            "options": options,
-                        },
-                    )
-                    resp.raise_for_status()
                     return (resp.json().get("message") or {}).get("content", "").strip()
-                else:
-                    resp = client.post(
-                        f"{host}/api/generate",
-                        json={
-                            "model": model,
-                            "prompt": prompt,
-                            "stream": False,
-                            "format": "json",
-                            "options": options,
-                        },
-                    )
-                    resp.raise_for_status()
-                    return resp.json().get("response", "").strip()
+                return resp.json().get("response", "").strip()
 
     def _do_chat(
         self,
@@ -245,19 +331,41 @@ class LLMRouter:
             self.GATE_TIMEOUT_MIN_SEC,
             timeout * self.GATE_TIMEOUT_MULTIPLIER,
         )
+        path = "/api/chat"
         with _host_gate(host, timeout=gate_timeout):
             with httpx.Client(timeout=float(timeout)) as client:
-                resp = client.post(
-                    f"{host}/api/chat",
-                    json={
-                        "model": model,
-                        "messages": messages,
-                        "stream": False,
-                        "format": "json",
-                        "options": options,
-                    },
-                )
-                resp.raise_for_status()
+                try:
+                    resp = client.post(
+                        f"{host}{path}",
+                        json={
+                            "model": model,
+                            "messages": messages,
+                            "stream": False,
+                            "format": "json",
+                            "options": options,
+                        },
+                    )
+                except Exception as exc:
+                    log_error_always(
+                        "Ollama chat request failed host=%s model=%s: %s",
+                        host,
+                        model,
+                        exc,
+                        exc=exc,
+                    )
+                    raise
+                _log_ollama_response_headers(resp, host=host, model=model, path=path)
+                try:
+                    resp.raise_for_status()
+                except Exception as exc:
+                    log_error_always(
+                        "Ollama chat raise_for_status host=%s model=%s status=%s",
+                        host,
+                        model,
+                        resp.status_code,
+                        exc=exc,
+                    )
+                    raise
                 return (resp.json().get("message") or {}).get("content", "").strip()
 
     # ------------------------------------------------------------------
@@ -313,7 +421,14 @@ class LLMRouter:
             except Exception as exc:
                 ep.invalidate_health()
                 errors.append(f"{ep.name}/{model}: {type(exc).__name__}: {exc}")
-                logger.warning("LLM falhou em %s: %s", ep.name, exc)
+                log_error_always(
+                    "LLM falhou em %s/%s host=%s: %s",
+                    ep.name,
+                    model,
+                    ep.host,
+                    exc,
+                    exc=exc,
+                )
 
         raise RuntimeError(
             f"LLMRouter.generate({model!r}) falhou em {len(order)} endpoints: "
@@ -359,7 +474,14 @@ class LLMRouter:
             except Exception as exc:
                 ep.invalidate_health()
                 errors.append(f"{ep.name}/{model}: {type(exc).__name__}: {exc}")
-                logger.warning("LLM chat falhou em %s: %s", ep.name, exc)
+                log_error_always(
+                    "LLM chat falhou em %s/%s host=%s: %s",
+                    ep.name,
+                    model,
+                    ep.host,
+                    exc,
+                    exc=exc,
+                )
 
         raise RuntimeError(
             f"LLMRouter.chat({model!r}) falhou em {len(order)} endpoints: "
@@ -470,8 +592,16 @@ class LLMRouter:
                     "fallback_used": target_index > 1,
                 }
             except Exception as exc:
-                errors.append(f"{model}@{host}#{attempt_no}: {type(exc).__name__}: {exc}")
+                err = f"{model}@{host}#{attempt_no}: {type(exc).__name__}: {exc}"
+                errors.append(err)
+                log_error_always("LLM %s attempt failed: %s", label, err, exc=exc)
 
+        log_error_always(
+            "LLM %s exhausted %s attempts: %s",
+            label,
+            len(all_attempts),
+            " | ".join(errors[:4]),
+        )
         raise RuntimeError(
             f"{label} failed after {len(all_attempts)} attempts: " + " | ".join(errors[:4])
         )

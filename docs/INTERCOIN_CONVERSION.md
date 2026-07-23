@@ -23,7 +23,10 @@ Converter entre moedas da frota pelo **caminho de menor custo efetivo** (fee + s
 
 `btc_trading_agent/config_USDT_BRL_conservative.json` → bloco `conversion`:
 
-- `dry_run: true` (default) — só planeja e grava; sem ordens reais
+- `dry_run: false` (live BRL→USDT on-ramp no owner conservative; fila manual também)
+- `max_route_cost_pct: 0.008` (80 bps — USDT-BRL costuma ~30–50 bps)
+- `max_spread_bps: 50`
+- `onramp_cooldown_seconds: 21600` + `onramp_balance_delta_pct: 5` — evita re-fila a cada ciclo
 - `hubs: [USDT, BTC, ETH]`
 - `allow_exotic_hubs: false` (bloqueia USD1/KCS como hub)
 - `max_hops: 2`

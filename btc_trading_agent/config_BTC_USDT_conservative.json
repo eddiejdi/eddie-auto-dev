@@ -95,5 +95,6 @@
     "streak_cap": 4,
     "cache_ttl_sec": 30,
     "pnl_scale_usd": 2.0
-  }
+  },
+  "kucoin_subaccount_name": "BTCConservative"
 }

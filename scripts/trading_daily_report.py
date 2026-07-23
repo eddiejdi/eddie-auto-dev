@@ -602,7 +602,7 @@ def main() -> None:
 
     logger.info("Iniciando relatório diário de trading (dry_run=%s, model=%s)", args.dry_run, args.model)
 
-    # 1. Coletar contexto do banco
+    # 1. Coletar contexto do banco — falha hard (nunca enviar relatório zerado)
     try:
         context = collect_context_data()
         logger.info(
@@ -612,21 +612,23 @@ def main() -> None:
             context["total_pnl_24h"],
         )
     except Exception:
-        logger.exception("Falha ao coletar contexto — usando contexto vazio")
-        context = {
-            "balance": {},
-            "symbols": {},
-            "total_trades_24h": 0,
-            "total_pnl_24h": 0.0,
-            "total_unrealized": 0.0,
-            "report_date": date.today().isoformat(),
-        }
+        logger.exception(
+            "Falha ao coletar contexto do PostgreSQL — abortando sem enviar "
+            "Telegram nem gravar relatório (evita zeros enganosos)"
+        )
+        sys.exit(1)
+
+    if not context.get("symbols"):
+        logger.error(
+            "Contexto sem símbolos — abortando. Verifique DATABASE_URL e btc.trades."
+        )
+        sys.exit(1)
 
     # 2. Coletar dados live (status agents)
     try:
         live_data = collect_live_data()
     except Exception:
-        logger.warning("Falha ao coletar dados live — usando valores padrão")
+        logger.exception("Falha ao coletar dados live — usando valores padrão")
         live_data = {"agents_status": {}}
 
     # 3. Gerar análise curta via Ollama (opcional)
@@ -679,7 +681,8 @@ def main() -> None:
             model_used=(args.model if analysis else "deterministic"),
         )
     except Exception:
-        logger.exception("Falha ao salvar relatório no banco")
+        logger.exception("Falha ao salvar relatório no banco — abortando envio Telegram")
+        sys.exit(1)
 
     # 6. Enviar Telegram
     asyncio.run(send_telegram_report(report_text))

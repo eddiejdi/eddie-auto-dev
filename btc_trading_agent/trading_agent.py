@@ -22,7 +22,7 @@ import fcntl
 import contextlib
 from pathlib import Path
 from datetime import datetime, timedelta, date
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 
 import httpx
@@ -154,6 +154,8 @@ def _resolve_process_dry_run(cli_live: bool, loaded_cfg: Optional[Dict[str, Any]
     - CLI em dry-run sempre prevalece (nunca forçamos live via config).
     - Se o serviço pedir live, o config ainda pode forçar dry-run com
       `dry_run=true` ou `live_mode=false`.
+    - Perfil shadow pode ser live se dry_run/live_mode permitirem (convive na
+      mesma sub com capital_share + clamp de inventário).
     """
     requested_dry_run = not cli_live
     if requested_dry_run:
@@ -330,6 +332,9 @@ class BitcoinTradingAgent(
         self.model.use_macd     = bool(self.config.get("use_macd", False))
         self.model.use_ma_cross = bool(self.config.get("use_ma_cross", False))
         self.db = TrainingDatabase()
+        # Reabilita persistência de rewards do Q-learning em btc.learning_rewards
+        # (parou de ser gravada ~2026-04-16; Q-table continuava só em .pkl).
+        self.model.set_reward_callback(self._persist_learning_reward)
         self._track_record = TrackRecordConfidence(self.db)
         self._last_track_record_snapshot = None
         
@@ -394,11 +399,19 @@ class BitcoinTradingAgent(
         # Expõe constantes do módulo para os mixins (sem importação circular)
         self._module_config = _config
         self._trading_fee_pct = TRADING_FEE_PCT
+        self._fee_rate_source = "default"
+        self._last_fee_refresh_cycle = 0
+        self._last_kcs_admin_cycle = 0
 
         self.state.start_time = time.time()
         logger.info(
             f"🤖 Agent initialized: {symbol} (dry_run={dry_run}, profile={self.state.profile}, config={self.config_name})"
         )
+        # Taxa live na subida (não bloqueia se API falhar)
+        try:
+            self._maybe_refresh_trading_fee(force=True)
+        except Exception as exc:
+            logger.debug("initial fee refresh skipped: %s", exc)
 
     def _load_live_config(self, strict: bool = False) -> Dict:
         """Carrega o config ativo da instância; cai para o config de import em caso de falha."""
@@ -1531,46 +1544,157 @@ class BitcoinTradingAgent(
 
         return transferred_any
 
-    def _detect_external_deposits(self):
-        """Detecta depósitos externos comparando saldo exchange vs posição DB.
+    def _resolve_profile_subaccount_name(self) -> Optional[str]:
+        """Nome da subconta KuCoin deste profile (config ou inferência symbol+profile)."""
+        try:
+            from kucoin_api import infer_subaccount_name
+        except ImportError:
+            from btc_trading_agent.kucoin_api import infer_subaccount_name  # type: ignore
+        cfg_name = str(self.config.get("kucoin_subaccount_name") or "").strip()
+        if cfg_name:
+            return cfg_name
+        return infer_subaccount_name(self.symbol, self._current_profile())
 
-        Se o saldo real na exchange for maior que a posição rastreada no DB,
-        registra a diferença como um trade de compra (depósito externo).
-        
-        Nota: usa get_total_balance() (MAIN + TRADE) para detectar depósitos
-        que ainda possam estar em MAIN e não transferidos para TRADE.
+    def _get_profile_open_position_size(self, *, cursor=None) -> float:
+        """Posição aberta reconstruída só deste profile (FIFO / recent streak)."""
+        profile = self._current_profile()
+        own_cursor = cursor is None
+        try:
+            if own_cursor:
+                with self.db._get_conn() as _conn:
+                    with _conn.cursor() as _cur:
+                        return self._get_profile_open_position_size(cursor=_cur)
+            cursor.execute(
+                """
+                SELECT id, side, size, price, timestamp, metadata, dry_run, profile
+                FROM btc.trades
+                WHERE symbol=%s AND dry_run=FALSE AND COALESCE(profile,'default')=%s
+                ORDER BY timestamp DESC
+                LIMIT 500
+                """,
+                (self.symbol, profile),
+            )
+            rows = [
+                dict(
+                    zip(
+                        ["id", "side", "size", "price", "timestamp", "metadata", "dry_run", "profile"],
+                        r,
+                    )
+                )
+                for r in cursor.fetchall()
+            ]
+            open_buys = reconstruct_open_buys(
+                rows,
+                shared_profile_ambiguous=False,
+                exclude_external_deposits=False,
+            )
+            net, _avg = summarize_open_buys(open_buys)
+            return float(net or 0.0)
+        except Exception as exc:
+            logger.debug("profile open position fallback to state.entries: %s", exc)
+            return float(sum(e.get("size", 0) for e in self.state.entries))
+
+    def _detect_external_deposits(self):
+        """Detecta depósitos / inventário não rastreado vs posição DB.
+
+        Preferência:
+        1. Subconta do profile (`kucoin_subaccount_name` ou inferida) —
+           comparação por profile, sem ambiguidade multi-profile.
+        2. Fallback MAIN+TRADE master via get_total_balance() (legado).
         """
         base_currency = self.symbol.split("-")[0]
 
         try:
-            from btc_trading_agent.kucoin_api import get_total_balance
+            try:
+                from kucoin_api import get_total_balance, get_subaccount_balance
+            except ImportError:
+                from btc_trading_agent.kucoin_api import (  # type: ignore
+                    get_total_balance,
+                    get_subaccount_balance,
+                )
             profile = self._current_profile()
-            real_balance = get_total_balance(base_currency)
-            if real_balance <= 0:
+            sub_name = self._resolve_profile_subaccount_name()
+            scoped_sub = bool(sub_name and profile in {"aggressive", "conservative", "shadow"})
+
+            if scoped_sub:
+                real_balance = float(get_subaccount_balance(sub_name, base_currency) or 0.0)
+            else:
+                real_balance = float(get_total_balance(base_currency) or 0.0)
+
+            if real_balance <= 0 and not scoped_sub:
                 return
 
-            # Serializa a reconciliação entre processos do mesmo símbolo para evitar
-            # que aggressive/conservative registrem o mesmo depósito em paralelo.
+            sharing = self._live_profiles_for_sub(sub_name) if scoped_sub else []
+            multi_share = scoped_sub and len(sharing) > 1
+
+            lock_key = f"{self.symbol}:{sub_name or 'master'}" if scoped_sub else self.symbol
             try:
                 with self.db._get_conn() as _conn:
                     with _conn.cursor() as _cur:
                         _cur.execute(
                             "SELECT pg_advisory_xact_lock(hashtext(%s), hashtext(%s))",
-                            ("external_deposit", self.symbol),
+                            ("external_deposit", lock_key),
                         )
-                        db_position = self._get_symbol_db_net_position(cursor=_cur)
-                        open_profiles = self._get_active_symbol_profiles(
-                            cursor=_cur,
-                            exclude_external_deposits=True,
-                        )
+                        if scoped_sub and multi_share:
+                            # Soma posições de TODOS os profiles na mesma sub —
+                            # evita que shadow e aggressive reivindiquem o mesmo gap.
+                            db_position = 0.0
+                            open_profiles = {}
+                            for prof in sharing:
+                                # temporarily resolve size for each profile
+                                _cur.execute(
+                                    """
+                                    SELECT id, side, size, price, timestamp, metadata, dry_run, profile
+                                    FROM btc.trades
+                                    WHERE symbol=%s AND dry_run=FALSE AND COALESCE(profile,'default')=%s
+                                    ORDER BY timestamp DESC
+                                    LIMIT 500
+                                    """,
+                                    (self.symbol, prof),
+                                )
+                                rows = [
+                                    dict(
+                                        zip(
+                                            [
+                                                "id",
+                                                "side",
+                                                "size",
+                                                "price",
+                                                "timestamp",
+                                                "metadata",
+                                                "dry_run",
+                                                "profile",
+                                            ],
+                                            r,
+                                        )
+                                    )
+                                    for r in _cur.fetchall()
+                                ]
+                                opens = reconstruct_open_buys(
+                                    rows,
+                                    shared_profile_ambiguous=True,
+                                    exclude_external_deposits=True,
+                                )
+                                net, _ = summarize_open_buys(opens)
+                                net_f = float(net or 0.0)
+                                if net_f > 0:
+                                    open_profiles[prof] = net_f
+                                    db_position += net_f
+                        elif scoped_sub:
+                            db_position = self._get_profile_open_position_size(cursor=_cur)
+                            open_profiles = {profile: db_position} if db_position > 0 else {}
+                        else:
+                            db_position = self._get_symbol_db_net_position(cursor=_cur)
+                            open_profiles = self._get_active_symbol_profiles(
+                                cursor=_cur,
+                                exclude_external_deposits=True,
+                            )
             except Exception as _e:
                 logger.warning(f"⚠️ _detect_external_deposits: DB total fallback para state.entries — {_e}")
                 db_position = sum(e.get("size", 0) for e in self.state.entries)
                 open_profiles = {profile: db_position} if db_position > 0 and profile != "default" else {}
 
-            # Em conta compartilhada com mais de um profile aberto, o saldo live é
-            # ambíguo: sintetizar BUY aqui duplica ledger e distorce PnL/posição.
-            if profile != "default" and len(open_profiles) > 1:
+            if not scoped_sub and profile != "default" and len(open_profiles) > 1:
                 profiles_csv = ",".join(sorted(open_profiles))
                 logger.warning(
                     "⚠️ External deposit skipped for profile=%s: shared %s balance is ambiguous across profiles %s",
@@ -1580,37 +1704,60 @@ class BitcoinTradingAgent(
                 )
                 return
 
-            # Tolerância de 0.1% para evitar falsos positivos por arredondamento
+            # Em sub compartilhada, só o profile "primary" (preferência aggressive)
+            # registra residual de inventário — evita double-claim.
+            if multi_share:
+                primary = "aggressive" if "aggressive" in sharing else sorted(sharing)[0]
+                if profile != primary:
+                    logger.debug(
+                        "inventory_reconcile skip profile=%s (primary=%s on sub=%s)",
+                        profile,
+                        primary,
+                        sub_name,
+                    )
+                    return
+
             diff = real_balance - db_position
             tolerance = max(real_balance * 0.001, 0.00000100)
 
             if diff <= tolerance:
                 return
 
-            # Em conta compartilhada, só atribuir saldo live ao perfil que já tem
-            # posição aberta no próprio ledger. Isso evita duplicar a mesma posição
-            # entre aggressive e conservative após restart.
-            if not self.state.entries and profile != "default":
+            if not scoped_sub and not self.state.entries and profile != "default":
                 logger.info(
                     f"⏭️ External deposit skipped for profile={profile}: "
                     "no profile-scoped open entries to attach live balance"
                 )
                 return
 
-            # Depósito externo detectado
-            price = get_price(self.symbol)
+            price = None
+            try:
+                if callable(get_price):
+                    price = get_price(self.symbol)
+            except Exception as price_err:
+                logger.debug("get_price failed: %s", price_err)
+            if not price or price <= 0:
+                try:
+                    from kucoin_api import get_price as _gp  # type: ignore
+                    price = _gp(self.symbol)
+                except Exception:
+                    try:
+                        from btc_trading_agent.kucoin_api import get_price as _gp  # type: ignore
+                        price = _gp(self.symbol)
+                    except Exception:
+                        price = None
             if not price or price <= 0:
                 logger.warning("⚠️ Cannot register deposit: price unavailable")
                 return
 
             deposit_usdt = diff * price
+            source = "inventory_reconcile" if scoped_sub else "external_deposit"
             logger.info(
-                f"📥 External deposit detected: {diff:.8f} {base_currency} "
+                f"📥 {source}: {diff:.8f} {base_currency} "
                 f"(~${deposit_usdt:.2f}) — exchange={real_balance:.8f}, "
-                f"DB={db_position:.8f}"
+                f"DB={db_position:.8f}, profile={profile}, sub={sub_name or 'master'}"
             )
 
-            # Registrar como trade de compra
             trade_id = self.db.record_trade(
                 symbol=self.symbol,
                 side="buy",
@@ -1618,7 +1765,13 @@ class BitcoinTradingAgent(
                 size=diff,
                 funds=deposit_usdt,
                 dry_run=False,
-                metadata={"source": "external_deposit", "auto_detected": True},
+                metadata={
+                    "source": source,
+                    "auto_detected": True,
+                    "subaccount": sub_name,
+                    "exchange_balance": real_balance,
+                    "db_open_before": db_position,
+                },
                 profile=profile,
             )
             logger.info(
@@ -1626,16 +1779,14 @@ class BitcoinTradingAgent(
                 f"{diff:.8f} {base_currency} @ ${price:,.2f}"
             )
 
-            # Atualizar estado interno
             new_entry = {"price": price, "size": diff, "ts": time.time()}
             self.state.entries.append(new_entry)
-            self.state.position = real_balance
+            self.state.position = real_balance if scoped_sub else (
+                sum(e.get("size", 0) for e in self.state.entries)
+            )
             self._sync_position_tracking()
 
-            # Recalcular preço médio ponderado
-            total_cost = sum(
-                e["price"] * e["size"] for e in self.state.entries
-            )
+            total_cost = sum(e["price"] * e["size"] for e in self.state.entries)
             total_size = sum(e["size"] for e in self.state.entries)
             if total_size > 0:
                 self.state.entry_price = total_cost / total_size
@@ -3235,6 +3386,31 @@ class BitcoinTradingAgent(
                                 },
                             )
                         client.close()
+                    # HOOK GLOBAL: sempre logar erros/failovers de Ollama (headers do coordinator)
+                    try:
+                        _ep = resp.headers.get("x-gpu-endpoint") or "-"
+                        _tried = resp.headers.get("x-gpu-tried") or ""
+                        _fo = (resp.headers.get("x-gpu-failover") or "0").strip()
+                        if resp.status_code >= 400:
+                            logger.error(
+                                "Ollama AI plan HTTP %s host=%s model=%s endpoint=%s tried=%s body=%s",
+                                resp.status_code,
+                                host,
+                                model,
+                                _ep,
+                                _tried or "-",
+                                (resp.text or "")[:300].replace("\n", " "),
+                            )
+                        if _fo in {"1", "true", "yes"}:
+                            logger.error(
+                                "Ollama AI plan GPU failover host=%s model=%s served_by=%s tried=%s",
+                                host,
+                                model,
+                                _ep,
+                                _tried or "-",
+                            )
+                    except Exception as _hdr_exc:
+                        logger.error("Ollama AI plan header log failed: %s", _hdr_exc)
                     if resp.status_code == 503:
                         # GPU ocupado: retry com backoff E gate para evitar thundering herd
                         _plan_503_retries = 3
@@ -4398,6 +4574,42 @@ class BitcoinTradingAgent(
 
     # _should_allow_low_net_profit_sell → RiskGuardianMixin
 
+    @staticmethod
+    def _feature_state_hash(features) -> str:
+        """Hash estável e curto de um vetor de features para learning_rewards."""
+        import hashlib
+        import numpy as np
+
+        arr = np.asarray(features, dtype=np.float32)
+        return hashlib.md5(arr.tobytes()).hexdigest()[:16]
+
+    def _persist_learning_reward(
+        self,
+        features,
+        action: int,
+        reward: float,
+        next_features,
+        episode: int,
+    ) -> None:
+        """Persiste reward de Q-learning em btc.learning_rewards.
+
+        Ignora reward ~0 (ruído de preço abaixo do limiar do fast_model) para
+        não saturar o banco; HOLD (-0.01) e BUY/SELL com edge real são gravados.
+        """
+        try:
+            if abs(float(reward)) < 1e-12:
+                return
+            self.db.record_reward(
+                symbol=self.symbol,
+                state_hash=self._feature_state_hash(features),
+                action=int(action),
+                reward=float(reward),
+                next_state_hash=self._feature_state_hash(next_features),
+                episode=int(episode or 0),
+            )
+        except Exception as exc:
+            logger.debug("⚠️ record_reward failed: %s", exc)
+
     def _auto_train(self):
         """Auto-treinamento batch do Q-learning usando market_states históricos.
         Complementa o treinamento online (tick-a-tick) com replay offline.
@@ -4467,6 +4679,14 @@ class BitcoinTradingAgent(
 
                 self.model.q_model.update(
                     features_arr, best_action, reward, next_features_arr
+                )
+                # Grava reward do batch (self-learning auditável no PG)
+                self._persist_learning_reward(
+                    features_arr,
+                    best_action,
+                    float(reward),
+                    next_features_arr,
+                    int(self.model.q_model.episodes),
                 )
                 total_reward += reward
                 trained += 1
@@ -4997,15 +5217,180 @@ class BitcoinTradingAgent(
         return True
     
 
+    def _config_capital_share(self) -> Optional[float]:
+        """Fração do cash da sub/conta reservada a este profile (config.capital_share)."""
+        raw = (self.config or {}).get("capital_share")
+        if raw is None:
+            return None
+        try:
+            return max(0.05, min(0.95, float(raw)))
+        except (TypeError, ValueError):
+            return None
+
+    def _live_profiles_for_sub(self, sub_name: str) -> List[str]:
+        """Profiles LIVE habilitados que apontam para a mesma subconta."""
+        want = (sub_name or "").strip()
+        if not want:
+            return []
+        found: List[str] = []
+        config_dir = Path(__file__).parent
+        for candidate in config_dir.glob("config_*.json"):
+            try:
+                payload = _read_json_config(candidate)
+            except Exception:
+                continue
+            if not bool(payload.get("enabled", True)):
+                continue
+            if payload.get("dry_run") is True:
+                continue
+            if "live_mode" in payload and not bool(payload.get("live_mode")):
+                continue
+            if str(payload.get("symbol") or "").upper() != str(self.symbol).upper():
+                continue
+            cand_sub = str(payload.get("kucoin_subaccount_name") or "").strip()
+            if not cand_sub:
+                try:
+                    try:
+                        from kucoin_api import infer_subaccount_name as _infer_sub
+                    except ImportError:
+                        from btc_trading_agent.kucoin_api import (  # type: ignore
+                            infer_subaccount_name as _infer_sub,
+                        )
+                    cand_sub = _infer_sub(
+                        self.symbol,
+                        str(payload.get("profile") or "default"),
+                    ) or ""
+                except Exception:
+                    cand_sub = ""
+            if cand_sub != want:
+                continue
+            try:
+                prof = validate_profile_for_symbol(
+                    self.symbol,
+                    payload.get("profile", "default"),
+                    config_name=candidate.name,
+                )
+            except ValueError:
+                continue
+            if prof not in found:
+                found.append(prof)
+        return found
+
+    def _peer_open_base_on_shared_sub(self) -> float:
+        """Soma posição DB aberta de *outros* profiles no mesmo símbolo+sub."""
+        my_sub = self._resolve_profile_subaccount_name()
+        if not my_sub:
+            return 0.0
+        peers = self._live_profiles_for_sub(my_sub)
+        me = self._current_profile()
+        total = 0.0
+        for prof in peers:
+            if prof == me:
+                continue
+            try:
+                with self.db._get_conn() as conn:
+                    with conn.cursor() as cur:
+                        cur.execute(
+                            """
+                            SELECT id, side, size, price, timestamp, metadata, dry_run, profile
+                            FROM btc.trades
+                            WHERE symbol=%s AND dry_run=FALSE AND COALESCE(profile,'default')=%s
+                            ORDER BY timestamp DESC
+                            LIMIT 500
+                            """,
+                            (self.symbol, prof),
+                        )
+                        rows = [
+                            dict(
+                                zip(
+                                    [
+                                        "id",
+                                        "side",
+                                        "size",
+                                        "price",
+                                        "timestamp",
+                                        "metadata",
+                                        "dry_run",
+                                        "profile",
+                                    ],
+                                    r,
+                                )
+                            )
+                            for r in cur.fetchall()
+                        ]
+                open_buys = reconstruct_open_buys(
+                    rows,
+                    shared_profile_ambiguous=True,
+                    exclude_external_deposits=True,
+                )
+                net, _ = summarize_open_buys(open_buys)
+                total += float(net or 0.0)
+            except Exception as exc:
+                logger.debug("peer open size for %s failed: %s", prof, exc)
+        return max(0.0, total)
+
+    def _clamp_sell_size_to_shared_inventory(self, size: float) -> float:
+        """Limita SELL ao BTC efetivamente disponível para este profile na sub compartilhada."""
+        size = float(size or 0.0)
+        if size <= 0 or self.state.dry_run:
+            return size
+        try:
+            base = self.symbol.split("-")[0]
+            real = float(get_balance(base) or 0.0)
+        except Exception as exc:
+            logger.debug("sell clamp: balance read failed: %s", exc)
+            return size
+
+        peers = self._peer_open_base_on_shared_sub()
+        mine_room = max(0.0, real - peers)
+        own = float(getattr(self.state, "position", 0.0) or 0.0)
+        capped = min(size, mine_room, own if own > 0 else size)
+
+        # Respeita baseIncrement se disponível
+        try:
+            from kucoin_api import get_symbol_increments, _floor_to_increment
+
+            inc_s = str((get_symbol_increments(self.symbol) or {}).get("baseIncrement") or "")
+            if inc_s and capped > 0:
+                capped = float(_floor_to_increment(capped, inc_s))
+        except Exception:
+            pass
+
+        if capped + 1e-12 < size:
+            logger.warning(
+                "📎 SELL size clamped for shared sub: requested=%.8f → %.8f "
+                "(exchange=%.8f peer_reserved=%.8f own=%.8f)",
+                size,
+                capped,
+                real,
+                peers,
+                own,
+            )
+        return max(0.0, capped)
+
     def _apply_profile_allocation(self, total_balance: float) -> float:
         """Aplica alocação de saldo baseada no perfil.
 
-        Lê a última alocação da tabela btc.profile_allocations.
-        Retorna o saldo alocado para o perfil deste agente.
+        Prioridade:
+        1. config.capital_share (ex.: aggressive 0.55 / shadow 0.45 na mesma sub)
+        2. tabela btc.profile_allocations (conservative/aggressive)
+        3. fallback 50/50 (shadow 45% se coexistem profiles no símbolo)
         """
         profile = self._current_profile()
         if profile == "default":
             return total_balance
+
+        share = self._config_capital_share()
+        if share is not None:
+            allocated = total_balance * share
+            logger.debug(
+                "Profile capital_share: %s gets %.0f%% of $%.2f = $%.2f",
+                profile,
+                share * 100,
+                total_balance,
+                allocated,
+            )
+            return allocated
 
         try:
             with self.db._get_conn() as conn:
@@ -5020,17 +5405,29 @@ class BitcoinTradingAgent(
                 row = cur.fetchone()
                 if row:
                     cons_pct, aggr_pct = row
-                    my_pct = cons_pct if profile == "conservative" else aggr_pct
-                    allocated = total_balance * my_pct
+                    if profile == "conservative":
+                        my_pct = cons_pct
+                    elif profile == "aggressive":
+                        my_pct = aggr_pct
+                    elif profile == "shadow":
+                        # shadow não está na tabela legada — sobra do aggressive
+                        my_pct = max(0.05, 1.0 - float(aggr_pct or 0.5))
+                    else:
+                        my_pct = 0.5
+                    allocated = total_balance * float(my_pct)
                     logger.debug(
                         f"Profile allocation: {profile} gets "
-                        f"{my_pct*100:.0f}% of ${total_balance:.2f} = ${allocated:.2f}"
+                        f"{float(my_pct)*100:.0f}% of ${total_balance:.2f} = ${allocated:.2f}"
                     )
                     return allocated
         except Exception as e:
             logger.warning(f"Profile allocation lookup failed: {e}")
 
-        # Fallback: split 50/50
+        # Fallback: shadow/agressive na mesma sub → 45/55; senão 50/50
+        if profile == "shadow":
+            return total_balance * 0.45
+        if profile == "aggressive" and self._has_shared_live_symbol_profiles():
+            return total_balance * 0.55
         return total_balance * 0.5
 
     def _calculate_trade_size(self, signal: Signal, price: float, force: bool = False) -> float:
@@ -5154,7 +5551,7 @@ class BitcoinTradingAgent(
                         f"({guardrail_sell['net_pnl_pct']*100:.2f}% >= {guardrail_sell['min_sell_pnl_pct']*100:.2f}%) "
                         f"(gross ${guardrail_sell['gross_pnl']:.4f}, fees ${guardrail_sell['total_fees']:.4f})"
                     )
-                    return self.state.position
+                    return self._clamp_sell_size_to_shared_inventory(self.state.position)
                 logger.info(
                     f"🛑 Guardrail rejected sub-threshold SELL execution: "
                     f"net ${guardrail_sell['net_profit']:.4f} "
@@ -5166,7 +5563,7 @@ class BitcoinTradingAgent(
 
             # Auto-exit (SL/TP) bypasses sell guards quando não há guardrail ativo.
             if force:
-                return self.state.position
+                return self._clamp_sell_size_to_shared_inventory(self.state.position)
 
             # Fee check: estimar taxas antes de enviar ordem de venda
             sell_outcome = self._estimate_sell_outcome(price)
@@ -5208,8 +5605,8 @@ class BitcoinTradingAgent(
                     )
                     return 0
 
-            # Vender posicao inteira
-            return self.state.position
+            # Vender posição do profile (clamp se sub compartilhada)
+            return self._clamp_sell_size_to_shared_inventory(self.state.position)
         
         return 0
     
@@ -5785,6 +6182,136 @@ class BitcoinTradingAgent(
 
         return False
 
+    def _maybe_refresh_trading_fee(self, cycle: int = 0, *, force: bool = False) -> None:
+        """Atualiza ``_trading_fee_pct`` a partir de trade-fees/base-fee da KuCoin."""
+        cfg = (self.config or {}).get("fee_refresh") or {}
+        if isinstance(cfg, dict) and cfg.get("enabled") is False:
+            return
+        every = 60
+        if isinstance(cfg, dict):
+            try:
+                every = max(1, int(cfg.get("every_cycles", 60)))
+            except (TypeError, ValueError):
+                every = 60
+        if not force and cycle and cycle % every != 0:
+            return
+        if not force and cycle and cycle == self._last_fee_refresh_cycle:
+            return
+
+        fallback = TRADING_FEE_PCT
+        if isinstance(cfg, dict) and cfg.get("fallback") is not None:
+            try:
+                fallback = float(cfg.get("fallback"))
+            except (TypeError, ValueError):
+                fallback = TRADING_FEE_PCT
+
+        try:
+            from fee_rate_sync import apply_fee_pct, resolve_live_fee_pct
+            from fee_spread_estimator import clear_fee_cache
+        except ImportError:
+            try:
+                from fee_rate_sync import apply_fee_pct, resolve_live_fee_pct  # type: ignore
+
+                clear_fee_cache = None  # type: ignore
+            except ImportError:
+                return
+
+        new_fee, source = resolve_live_fee_pct(self.symbol, fallback=fallback)
+        updated, changed = apply_fee_pct(self._trading_fee_pct, new_fee)
+        self._last_fee_refresh_cycle = cycle or self._last_fee_refresh_cycle
+        if not changed and source == self._fee_rate_source:
+            return
+        prev = self._trading_fee_pct
+        self._trading_fee_pct = updated
+        self._fee_rate_source = source
+        if clear_fee_cache is not None:
+            try:
+                clear_fee_cache()
+            except Exception:
+                pass
+        if changed:
+            logger.info(
+                "💸 Fee rate atualizada: %.4f%% → %.4f%% (source=%s, symbol=%s)",
+                prev * 100,
+                updated * 100,
+                source,
+                self.symbol,
+            )
+        else:
+            logger.debug(
+                "Fee rate confirmada: %.4f%% (source=%s)",
+                updated * 100,
+                source,
+            )
+
+    def _kcs_fee_admin_cfg(self) -> Dict[str, Any]:
+        raw = (self.config or {}).get("kcs_fee_admin") or {}
+        return raw if isinstance(raw, dict) else {}
+
+    def _kcs_fee_admin_enabled(self) -> bool:
+        cfg = self._kcs_fee_admin_cfg()
+        if not cfg.get("enabled"):
+            return False
+        role = str(cfg.get("role") or "owner").lower()
+        if role == "owner":
+            # Owner padrão: USDT-BRL conservative (master credentials + conversion owner)
+            if self.symbol.upper() != "USDT-BRL":
+                return False
+            if str(getattr(self.state, "profile", "")).lower() not in ("conservative", "default", "owner"):
+                return False
+        return True
+
+    def _maybe_run_kcs_fee_admin(self, cycle: int) -> None:
+        """Admin do buffer KCS (Pay Fees) — só no agent owner USDT_BRL."""
+        if not self._kcs_fee_admin_enabled():
+            return
+        cfg = self._kcs_fee_admin_cfg()
+        try:
+            every = max(1, int(cfg.get("every_cycles", 120)))
+        except (TypeError, ValueError):
+            every = 120
+        if cycle % every != 0:
+            return
+        if cycle == self._last_kcs_admin_cycle:
+            return
+        self._last_kcs_admin_cycle = cycle
+
+        dry = bool(cfg.get("dry_run", True))
+        if self.state.dry_run:
+            dry = True
+
+        try:
+            from kcs_fee_admin import run_kcs_fee_admin
+        except ImportError:
+            logger.warning("⚠️ kcs_fee_admin module missing — skip")
+            return
+
+        result = run_kcs_fee_admin(cfg, dry_run=dry)
+        snap = result.snapshot
+        if snap:
+            logger.info(
+                "🪙 KCS admin: trade=%.4f redeeming=%.4f earn=%s usdt=%.2f px=%.4f dry=%s",
+                snap.trade_kcs,
+                snap.redeeming_kcs,
+                snap.earn_status,
+                snap.trade_usdt,
+                snap.kcs_price,
+                dry,
+            )
+        for act in result.actions:
+            level = logging.INFO
+            if act.error:
+                level = logging.WARNING
+            elif act.kind in ("noop", "wait_redeem") and not act.executed:
+                level = logging.DEBUG if act.kind == "noop" else logging.INFO
+            logger.log(
+                level,
+                "🪙 KCS action %s: %s%s",
+                act.kind,
+                act.detail,
+                f" err={act.error}" if act.error else "",
+            )
+
     def _write_heartbeat(self):
         """Escreve arquivo de heartbeat para detecção de stall pelo self-healer"""
         try:
@@ -5821,7 +6348,19 @@ class BitcoinTradingAgent(
                 try:
                     self._maybe_run_conversions(cycle)
                 except Exception as e:
-                    logger.debug(f"Conversion cycle error: {e}")
+                    logger.error("Conversion cycle error: %s", e, exc_info=True)
+
+                # Taxa taker live (VIP / Pay Fees with KCS)
+                try:
+                    self._maybe_refresh_trading_fee(cycle=cycle)
+                except Exception as e:
+                    logger.debug(f"Fee refresh error: {e}")
+
+                # Buffer KCS (owner USDT_BRL) — compra/distribui para fees
+                try:
+                    self._maybe_run_kcs_fee_admin(cycle)
+                except Exception as e:
+                    logger.debug(f"KCS fee admin error: {e}")
                 
                 # Coletar estado do mercado
                 market_state = self._get_market_state()

@@ -114,6 +114,37 @@ def _ensure_tables(conn) -> None:
             CREATE INDEX IF NOT EXISTS idx_exchange_account_ledgers_lookup
             ON {SCHEMA}.exchange_account_ledgers (currency, account_type, created_at_ms DESC)
         """)
+        # Raw KuCoin fills (1 row per tradeId) — alimenta auditoria/self-learning.
+        # A tabela já existia em produção, mas o sync só gravava em btc.trades.
+        cur.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SCHEMA}.kucoin_fills (
+                id TEXT PRIMARY KEY,
+                symbol TEXT,
+                side TEXT,
+                orderid TEXT,
+                tradeid TEXT,
+                clientoid TEXT,
+                price DOUBLE PRECISION,
+                size DOUBLE PRECISION,
+                funds DOUBLE PRECISION,
+                fee DOUBLE PRECISION,
+                feerate DOUBLE PRECISION,
+                feecurrency TEXT,
+                stop TEXT,
+                type TEXT,
+                createdat BIGINT,
+                timestamp TIMESTAMPTZ DEFAULT NOW(),
+                sync_at TIMESTAMPTZ DEFAULT NOW()
+            )
+        """)
+        cur.execute(f"""
+            CREATE INDEX IF NOT EXISTS idx_kucoin_fills_symbol_created
+            ON {SCHEMA}.kucoin_fills (symbol, createdat DESC)
+        """)
+        cur.execute(f"""
+            CREATE INDEX IF NOT EXISTS idx_kucoin_fills_orderid
+            ON {SCHEMA}.kucoin_fills (orderid)
+        """)
     conn.commit()
 
 
@@ -867,19 +898,52 @@ def _reconcile_position_integrity(conn) -> Dict[str, Any]:
                 exchange_balances[key] = exchange_balances.get(key, 0.0) + balance
                 base_balance += balance
 
+            # exchange_sync/default não representam inventário em conta real —
+            # excluir do total para não distorcer o gap vs exchange.
+            _SYSTEM_PROFILES = frozenset({"exchange_sync", "default"})
             total_db_position = sum(
-                p["net_position"] for p in result["profiles"].values()
+                float(p.get("net_position") or 0.0)
+                for name, p in result["profiles"].items()
+                if str(name) not in _SYSTEM_PROFILES
             )
+            # Mapear subcontas → profile e medir gap por profile
+            try:
+                from kucoin_api import SUBACCOUNT_PROFILE_MAP  # type: ignore
+                if not isinstance(SUBACCOUNT_PROFILE_MAP, dict):
+                    raise TypeError("SUBACCOUNT_PROFILE_MAP must be a dict")
+            except Exception:
+                SUBACCOUNT_PROFILE_MAP = {
+                    "BTCAgressive": "aggressive",
+                    "BTCConservative": "conservative",
+                }
+            profile_exchange: Dict[str, float] = {}
+            for key, bal in exchange_balances.items():
+                if key == "trade":
+                    continue
+                if not str(key).startswith("sub:"):
+                    continue
+                sub_name = str(key)[4:]
+                mapped = SUBACCOUNT_PROFILE_MAP.get(sub_name)
+                if not mapped:
+                    continue
+                profile_exchange[mapped] = profile_exchange.get(mapped, 0.0) + float(bal or 0.0)
+            profile_gaps: Dict[str, float] = {}
+            for prof, ex_bal in profile_exchange.items():
+                db_net = float((result["profiles"].get(prof) or {}).get("net_position") or 0.0)
+                profile_gaps[prof] = float(ex_bal) - db_net
+
             diff = abs(total_db_position - base_balance)
             result["exchange_btc_balance"] = base_balance
             result["exchange_btc_balances"] = exchange_balances
             result["db_total_position"] = total_db_position
             result["position_diff"] = diff
+            result["profile_exchange_balances"] = profile_exchange
+            result["profile_balance_gaps"] = profile_gaps
 
             if diff > 0.00001:
                 LOG.warning(
-                    "Position mismatch: DB=%.10f vs Exchange=%.10f (diff=%.10f)",
-                    total_db_position, base_balance, diff,
+                    "Position mismatch: DB=%.10f vs Exchange=%.10f (diff=%.10f) gaps=%s",
+                    total_db_position, base_balance, diff, profile_gaps,
                 )
             else:
                 LOG.info(
@@ -1006,6 +1070,73 @@ def _match_open_buy_profile(
     return profile
 
 
+def _upsert_raw_kucoin_fills(cur, fills: Iterable[Dict[str, Any]]) -> int:
+    """Persiste fills brutos da KuCoin em btc.kucoin_fills (1 por tradeId).
+
+    Returns:
+        Número de linhas inseridas ou atualizadas.
+    """
+    upserted = 0
+    for fill in fills or []:
+        trade_id = str(fill.get("tradeId") or fill.get("trade_id") or "").strip()
+        if not trade_id:
+            continue
+        order_id = str(fill.get("orderId") or fill.get("order_id") or "").strip() or None
+        created_at = fill.get("createdAt") or fill.get("created_at") or fill.get("timestamp")
+        try:
+            created_at_ms = int(created_at) if created_at is not None else None
+        except (TypeError, ValueError):
+            created_at_ms = None
+        cur.execute(
+            f"""
+            INSERT INTO {SCHEMA}.kucoin_fills (
+                id, symbol, side, orderid, tradeid, clientoid,
+                price, size, funds, fee, feerate, feecurrency,
+                stop, type, createdat, timestamp, sync_at
+            ) VALUES (
+                %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, %s, %s, %s,
+                %s, %s, %s, NOW(), NOW()
+            )
+            ON CONFLICT (id) DO UPDATE SET
+                symbol = EXCLUDED.symbol,
+                side = EXCLUDED.side,
+                orderid = EXCLUDED.orderid,
+                tradeid = EXCLUDED.tradeid,
+                clientoid = EXCLUDED.clientoid,
+                price = EXCLUDED.price,
+                size = EXCLUDED.size,
+                funds = EXCLUDED.funds,
+                fee = EXCLUDED.fee,
+                feerate = EXCLUDED.feerate,
+                feecurrency = EXCLUDED.feecurrency,
+                stop = EXCLUDED.stop,
+                type = EXCLUDED.type,
+                createdat = EXCLUDED.createdat,
+                sync_at = NOW()
+            """,
+            (
+                trade_id,
+                fill.get("symbol"),
+                (fill.get("side") or "").lower() or None,
+                order_id,
+                trade_id,
+                fill.get("clientOid") or fill.get("clientoid"),
+                _safe_float(fill.get("price")) or None,
+                _safe_float(fill.get("size")) or None,
+                _safe_float(fill.get("funds")) or None,
+                _safe_float(fill.get("fee")) or None,
+                _safe_float(fill.get("feeRate") or fill.get("feerate")) or None,
+                fill.get("feeCurrency") or fill.get("feecurrency"),
+                fill.get("stop"),
+                fill.get("type"),
+                created_at_ms,
+            ),
+        )
+        upserted += 1
+    return upserted
+
+
 def _sync_fills(conn) -> int:
     """Sincroniza fills da KuCoin com o banco de dados.
 
@@ -1014,15 +1145,22 @@ def _sync_fills(conn) -> int:
     2. Senão, tenta vincular a um trade órfão do agent (sem order_id, timestamp próximo)
     2b. Para fills SELL sem orphan, detecta o profile com BUY aberto compatível
     3. Se nenhum match encontrado → insere como novo trade exchange_sync
+
+    Em paralelo, grava cada fill bruto em btc.kucoin_fills (por tradeId).
     """
     fills = get_fills(limit=200) or []
     grouped = _aggregate_fills(fills)
     inserted = 0
     matched_orphans = 0
     pnl_updated = 0
+    raw_upserted = 0
     has_profile = _trades_has_profile(conn)
 
     with conn.cursor(cursor_factory=REAL_DICT_CURSOR) as cur:
+        raw_upserted = _upsert_raw_kucoin_fills(cur, fills)
+        if raw_upserted:
+            LOG.info("Upserted %d raw fills into btc.kucoin_fills", raw_upserted)
+
         for order_id, row in sorted(grouped.items(), key=lambda item: str(item[1]["created_at"])):
             event_ts = _row_event_timestamp(row)
             metadata = {
@@ -1157,6 +1295,7 @@ def _sync_fills(conn) -> int:
                 "orders_inserted": inserted,
                 "orphans_matched": matched_orphans,
                 "pnl_updated": pnl_updated,
+                "raw_fills_upserted": raw_upserted,
             })),
         )
     conn.commit()
