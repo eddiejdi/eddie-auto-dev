@@ -209,12 +209,12 @@
       "pluginVersion": "12.4.0",
       "targets": [
         {
-          "expr": "max by(profile)((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or ((0 * max by(profile)((up{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (up{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"}))) unless on(profile) max by(profile)((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"})))",
+          "expr": "max by(profile)(((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"})) - ((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"} offset $__range) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"} offset $__range))) or ((0 * max by(profile)((up{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (up{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"}))) unless on(profile) max by(profile)(((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"})) - ((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"} offset $__range) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"} offset $__range))))",
           "legendFormat": "{{profile}}",
           "refId": "A"
         }
       ],
-      "title": "📈 PnL Total",
+      "title": "📈 PnL. No Período",
       "type": "stat"
     },
     {
