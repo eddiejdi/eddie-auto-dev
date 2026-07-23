@@ -221,6 +221,23 @@ class PositionManagerMixin:
                         entry_idx + 1, f"{size:.6f}", price, pnl, pnl_pct, reason,
                     )
                 else:
+                    # Sub compartilhada (aggressive+shadow): não vender o BTC do peer
+                    clamp = getattr(self, "_clamp_sell_size_to_shared_inventory", None)
+                    if callable(clamp):
+                        size = float(clamp(size) or 0.0)
+                        if size <= 0:
+                            logger.warning(
+                                "❌ Slot sell skipped: no shared inventory left for this profile"
+                            )
+                            return False
+                        # recalc fees/pnl after clamp
+                        gross_pnl = (price - entry_price) * size
+                        sell_fee = price * size * fee_pct
+                        buy_fee = entry_price * size * fee_pct
+                        pnl = gross_pnl - sell_fee - buy_fee
+                        pnl_pct = (
+                            (price * (1 - fee_pct)) / (entry_price * (1 + fee_pct)) - 1
+                        ) * 100
                     result = place_market_order(
                         self.symbol, "sell", size=size,
                         notify_extra={
@@ -544,19 +561,36 @@ class PositionManagerMixin:
 
         try:
             from kucoin_api import get_balance
-            real_balance = get_balance(base_currency)
+            real_balance = float(get_balance(base_currency) or 0.0)
         except Exception as exc:
             logger.warning("⚠️ Reconciliação: falha ao consultar saldo KuCoin — %s", exc)
             return 0
 
         db_position = sum(float(e.get("size", 0) or 0) for e in entries)
+        # Em sub compartilhada, o saldo exchange inclui BTC de peers — reserva o peer.
+        peer_reserved = 0.0
+        peer_fn = getattr(self, "_peer_open_base_on_shared_sub", None)
+        if callable(peer_fn):
+            try:
+                peer_reserved = float(peer_fn() or 0.0)
+            except Exception:
+                peer_reserved = 0.0
+        effective_mine = max(0.0, real_balance - peer_reserved)
+
         # Tolerância de 0.5% ou 1 satoshi — evita falsos positivos por arredondamento
         tolerance = max(db_position * 0.005, 0.000_000_01)
 
-        if real_balance >= db_position - tolerance:
+        if effective_mine >= db_position - tolerance:
             return 0  # consistente, nada a fazer
 
-        phantom_btc = db_position - real_balance
+        phantom_btc = db_position - effective_mine
+        logger.warning(
+            "⚠️ [reconcile] shared inventory: exchange=%.8f peer=%.8f effective_mine=%.8f db=%.8f",
+            real_balance,
+            peer_reserved,
+            effective_mine,
+            db_position,
+        )
         logger.warning(
             "⚠️ [reconcile] Divergência detectada: DB=%.8f %s | Exchange=%.8f %s | "
             "phantom=%.8f %s — fechando slots excedentes",

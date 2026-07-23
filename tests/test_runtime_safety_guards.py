@@ -20,21 +20,24 @@ sys.modules.setdefault(
 sys.modules.setdefault(
     "kucoin_api",
     types.SimpleNamespace(
-        get_price=None,
+        get_price=lambda _s: 0.0,
         get_price_fast=None,
         get_orderbook=None,
         get_candles=None,
         get_recent_trades=None,
         get_balances=None,
         get_balance=None,
+        get_total_balance=lambda _c: 0.0,
+        get_subaccount_balance=lambda *_a, **_k: 0.0,
+        infer_subaccount_name=lambda *_a, **_k: None,
         place_market_order=None,
         analyze_orderbook=None,
         analyze_trade_flow=None,
         inner_transfer=None,
         _has_keys=lambda: False,
         get_fills_for_order=lambda *a, **kw: {},
-    _resolve_telegram_bot_token=lambda: "",
-    _resolve_telegram_chat_id=lambda: "",
+        _resolve_telegram_bot_token=lambda: "",
+        _resolve_telegram_chat_id=lambda: "",
     ),
 )
 sys.modules.setdefault(
@@ -103,6 +106,7 @@ def test_load_live_config_non_strict_keeps_last_valid_config(tmp_path: Path) -> 
 def _agent_with_live_cfg(live_cfg):
     agent = BitcoinTradingAgent.__new__(BitcoinTradingAgent)
     agent.symbol = "BTC-USDT"
+    agent.config = dict(live_cfg)
     agent.state = SimpleNamespace(
         profile=live_cfg.get("profile", "aggressive"),
         last_trade_time=0.0,
@@ -361,7 +365,9 @@ def test_detect_external_deposits_skips_ambiguous_shared_balance() -> None:
     """Conta compartilhada com dois profiles abertos nao deve sintetizar BUY ambiguo."""
     from unittest.mock import MagicMock
 
+    # Sem subconta configurada → caminho legado MAIN+TRADE com ambiguidade
     agent = _agent_with_live_cfg({"profile": "conservative"})
+    agent.config.pop("kucoin_subaccount_name", None)
     agent.state.dry_run = False
     agent.state.entries = [{"price": 100.0, "size": 0.001, "ts": 1.0}]
     agent.symbol = "BTC-USDT"
@@ -389,8 +395,12 @@ def test_detect_external_deposits_skips_ambiguous_shared_balance() -> None:
     kucoin_stub = sys.modules["kucoin_api"]
     original_gtb = getattr(kucoin_stub, "get_total_balance", None)
     original_gp = getattr(kucoin_stub, "get_price", None)
+    original_infer = getattr(kucoin_stub, "infer_subaccount_name", None)
+    original_sub = getattr(kucoin_stub, "get_subaccount_balance", None)
     kucoin_stub.get_total_balance = lambda _currency: 0.002
     kucoin_stub.get_price = lambda _symbol: 80_000.0
+    kucoin_stub.infer_subaccount_name = lambda *_a, **_k: None  # força caminho legado
+    kucoin_stub.get_subaccount_balance = lambda *_a, **_k: 0.0
     try:
         agent._detect_external_deposits()
     finally:
@@ -402,8 +412,54 @@ def test_detect_external_deposits_skips_ambiguous_shared_balance() -> None:
             kucoin_stub.get_price = original_gp
         elif hasattr(kucoin_stub, "get_price"):
             delattr(kucoin_stub, "get_price")
+        if original_infer is not None:
+            kucoin_stub.infer_subaccount_name = original_infer
+        if original_sub is not None:
+            kucoin_stub.get_subaccount_balance = original_sub
 
     agent.db.record_trade.assert_not_called()
+
+
+def test_detect_external_deposits_reconciles_subaccount_gap() -> None:
+    """Com subconta mapeada, inventário extra vira inventory_reconcile no profile."""
+    from unittest.mock import MagicMock, patch
+
+    agent = _agent_with_live_cfg({
+        "profile": "conservative",
+        "kucoin_subaccount_name": "BTCConservative",
+    })
+    agent.state.dry_run = False
+    agent.state.entries = [{"price": 64000.0, "size": 0.0002, "ts": 1.0}]
+    agent.symbol = "BTC-USDT"
+    agent._current_profile = lambda: "conservative"
+    agent._sync_position_tracking = MagicMock()
+    agent._resolve_profile_subaccount_name = lambda: "BTCConservative"
+    agent._get_profile_open_position_size = lambda **_k: 0.0002
+
+    mock_db = MagicMock()
+    # Context manager no-op para advisory lock path
+    cm = MagicMock()
+    cm.__enter__ = MagicMock(return_value=MagicMock())
+    cm.__exit__ = MagicMock(return_value=False)
+    mock_db._get_conn.return_value = cm
+    mock_db.record_trade = MagicMock(return_value=99)
+    agent.db = mock_db
+
+    with patch("trading_agent.get_price", lambda _s: 64_000.0), patch(
+        "kucoin_api.get_subaccount_balance", lambda *_a, **_k: 0.0005
+    ), patch(
+        "kucoin_api.get_total_balance", lambda *_a, **_k: 0.0
+    ), patch(
+        "kucoin_api.get_price", lambda _s: 64_000.0
+    ):
+        agent._detect_external_deposits()
+
+    assert mock_db.record_trade.called, "expected inventory_reconcile trade"
+    kwargs = mock_db.record_trade.call_args.kwargs
+    assert kwargs.get("side") == "buy"
+    assert kwargs.get("size") == pytest.approx(0.0003, rel=1e-6)
+    assert kwargs.get("metadata", {}).get("source") == "inventory_reconcile"
+    assert kwargs.get("profile") == "conservative"
 
 
 # ---------------------------------------------------------------------------

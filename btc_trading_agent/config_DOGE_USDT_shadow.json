@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "dry_run": false,
+  "dry_run": true,
   "symbol": "DOGE-USDT",
   "profile": "shadow",
   "poll_interval": 5,
@@ -48,7 +48,7 @@
     "rsi_overbought": 65,
     "min_spread_bps": 3
   },
-  "live_mode": true,
+  "live_mode": false,
   "auto_stop_loss": {
     "enabled": false,
     "pct": 0.05
@@ -67,7 +67,7 @@
     "min_win_rate_24h": 0.35,
     "max_daily_loss_usd": 5
   },
-  "kucoin_require_dedicated_credentials": false,
+  "kucoin_require_dedicated_credentials": true,
   "guardrails_active": true,
   "guardrails_min_sell_pnl_pct": 0.01,
   "guardrails_positive_only_sells": true,
@@ -75,7 +75,7 @@
   "use_ma_cross": true,
   "_doge_live_notes": {
     "origem": "clonado de config_SOL_USDT_shadow.json em 2026-07-10",
-    "conta": "master TRADE (kucoin/homelab) — mesma conta do SOL",
+    "conta": "master TRADE (kucoin/homelab) \u2014 mesma conta do SOL",
     "capital_alvo": "$50 por perfil",
     "autorizacao": "usuario: live direto (2026-07-10)",
     "politica_saida": "guardrails positive-only"

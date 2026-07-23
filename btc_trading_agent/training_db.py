@@ -1193,6 +1193,42 @@ class TrainingDatabase:
             )
             return cur.fetchone() is not None
 
+    def get_recent_conversion(
+        self,
+        asset_in: str,
+        asset_out: str,
+        *,
+        within_seconds: int = 21600,
+        requested_by: Optional[str] = None,
+    ) -> Optional[Dict]:
+        """Última conversão do par dentro da janela (qualquer status terminal ou ativa).
+
+        Usado pelo on-ramp para cooldown e dedupe por saldo, evitando re-enfileirar
+        a cada ciclo em dry_run ou após falha no_route.
+        """
+        with self._get_conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            params: List[Any] = [asset_in.upper(), asset_out.upper(), int(within_seconds)]
+            by_clause = ""
+            if requested_by:
+                by_clause = " AND requested_by=%s"
+                params.append(str(requested_by))
+            cur.execute(
+                f"""
+                SELECT id, created_at, amount_in, status, dry_run, requested_by,
+                       result_json, plan_json
+                FROM {SCHEMA}.conversion_requests
+                WHERE asset_in=%s AND asset_out=%s
+                  AND created_at >= NOW() - (%s * INTERVAL '1 second')
+                  {by_clause}
+                ORDER BY id DESC
+                LIMIT 1
+                """,
+                tuple(params),
+            )
+            row = cur.fetchone()
+            return dict(row) if row else None
+
     def list_pending_conversions(self, limit: int = 10) -> List[Dict]:
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)

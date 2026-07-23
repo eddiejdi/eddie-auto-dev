@@ -87,8 +87,8 @@
   "_eth_live_notes": {
     "origem": "clonado de config_BTC_USDT_conservative.json em 2026-07-04",
     "conta": "subconta sub:ETHConservative ($50) via KUCOIN_SECRET_NAMES",
-    "autorizacao": "usuario pediu saída do dry run em 2026-07-04",
-    "politica_saida": "guardrails positive-only (nunca vender no prejuízo)"
+    "autorizacao": "usuario pediu sa\u00edda do dry run em 2026-07-04",
+    "politica_saida": "guardrails positive-only (nunca vender no preju\u00edzo)"
   },
   "track_record_confidence": {
     "enabled": true,
@@ -101,5 +101,6 @@
     "streak_cap": 4,
     "cache_ttl_sec": 30,
     "pnl_scale_usd": 2.0
-  }
+  },
+  "kucoin_subaccount_name": "ETHConservative"
 }

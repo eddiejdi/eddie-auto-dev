@@ -9,6 +9,7 @@
   "min_trade_amount": 10,
   "max_position_pct": 1.0,
   "max_positions": 4,
+  "capital_share": 0.45,
   "stop_loss_pct": 0.02,
   "take_profit_pct": 0.03,
   "max_daily_trades": 8,
@@ -68,7 +69,7 @@
     "max_daily_loss_usd": 5
   },
   "kucoin_subaccount_name": "BTCAgressive",
-  "kucoin_require_dedicated_credentials": false,
+  "kucoin_require_dedicated_credentials": true,
   "guardrails_active": true,
   "guardrails_min_sell_pnl_pct": 0.01,
   "guardrails_positive_only_sells": true,

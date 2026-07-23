@@ -11,10 +11,14 @@ import pickle
 import logging
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
+from typing import Any, Callable, List, Dict, Optional, Tuple
 from collections import deque
 
 logger = logging.getLogger(__name__)
+
+# Callback após cada update de Q-learning (online).
+# Assinatura: (features, action, reward, next_features, episode) -> None
+RewardCallback = Callable[[np.ndarray, int, float, np.ndarray, int], Any]
 
 # ====================== CONSTANTES ======================
 EPSILON = 1e-10
@@ -528,6 +532,8 @@ class FastTradingModel:
         self._last_state: Optional[MarketState] = None
         self._last_action: Optional[int] = None
         self._last_price: Optional[float] = None
+        # Persistência de rewards (ex.: TrainingDatabase.record_reward)
+        self._on_reward: Optional[RewardCallback] = None
         
         # Histórico de sinais para evitar flip-flopping
         self._signal_history = deque(maxlen=10)
@@ -900,11 +906,18 @@ class FastTradingModel:
                 reward = -0.01  # Penalidade fixa pequena (era -abs*10 que incentivava over-trading)
             
             # Update Q-learning
+            prev_features = self._last_state.to_features()
             self.q_model.update(
-                self._last_state.to_features(),
+                prev_features,
                 self._last_action,
                 reward,
                 features
+            )
+            self._emit_reward(
+                prev_features,
+                self._last_action,
+                reward,
+                features,
             )
         
         self._last_state = state
@@ -912,6 +925,32 @@ class FastTradingModel:
         self._last_price = state.price
         
         return signal
+
+    def set_reward_callback(self, callback: Optional[RewardCallback]) -> None:
+        """Registra callback invocado após cada update online do Q-learning."""
+        self._on_reward = callback
+
+    def _emit_reward(
+        self,
+        features: np.ndarray,
+        action: int,
+        reward: float,
+        next_features: np.ndarray,
+    ) -> None:
+        """Dispara callback de reward sem interromper o ciclo de decisão."""
+        cb = self._on_reward
+        if cb is None:
+            return
+        try:
+            cb(
+                features,
+                int(action),
+                float(reward),
+                next_features,
+                int(self.q_model.episodes),
+            )
+        except Exception as exc:
+            logger.debug("⚠️ reward callback error: %s", exc)
     
     def save(self):
         """Salva modelo"""

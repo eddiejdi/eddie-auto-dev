@@ -328,6 +328,41 @@ class TestSellNetPnl:
 # Tests: _sync_fills (integration-style com mocks)
 # ---------------------------------------------------------------------------
 
+class TestUpsertRawKucoinFills:
+    """Persistência de fills brutos em btc.kucoin_fills."""
+
+    def test_upsert_skips_fill_without_trade_id(self):
+        mock_cur = MagicMock()
+        n = sync._upsert_raw_kucoin_fills(mock_cur, [{"orderId": "o1", "symbol": "BTC-USDT"}])
+        assert n == 0
+        mock_cur.execute.assert_not_called()
+
+    def test_upsert_writes_fill_by_trade_id(self):
+        mock_cur = MagicMock()
+        fills = [{
+            "tradeId": "tid-1",
+            "orderId": "oid-1",
+            "symbol": "BTC-USDT",
+            "side": "buy",
+            "price": "70000",
+            "size": "0.001",
+            "funds": "70",
+            "fee": "0.07",
+            "feeRate": "0.001",
+            "feeCurrency": "USDT",
+            "type": "market",
+            "createdAt": 1784470000000,
+        }]
+        n = sync._upsert_raw_kucoin_fills(mock_cur, fills)
+        assert n == 1
+        mock_cur.execute.assert_called_once()
+        sql = mock_cur.execute.call_args[0][0]
+        assert "kucoin_fills" in sql
+        params = mock_cur.execute.call_args[0][1]
+        assert params[0] == "tid-1"
+        assert params[1] == "BTC-USDT"
+
+
 class TestSyncFills:
     """Testes de integração para _sync_fills com DB mockado."""
 

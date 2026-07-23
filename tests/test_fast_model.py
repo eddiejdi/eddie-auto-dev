@@ -298,6 +298,37 @@ class TestFastQLearning:
 class TestFastTradingModel:
     """Testes para FastTradingModel."""
 
+    def test_reward_callback_invocado_no_segundo_predict(
+        self, model: FastTradingModel, basic_state: MarketState
+    ) -> None:
+        """Segundo predict deve emitir reward do Q-learning via callback."""
+        seen: list = []
+
+        def _cb(features, action, reward, next_features, episode):
+            seen.append(
+                {
+                    "action": action,
+                    "reward": reward,
+                    "episode": episode,
+                }
+            )
+
+        model.set_reward_callback(_cb)
+        model.predict(basic_state, explore=False)
+        assert seen == []  # sem estado anterior ainda
+        next_state = MarketState(
+            price=basic_state.price * 1.01,
+            rsi=basic_state.rsi,
+            momentum=basic_state.momentum,
+            trend=basic_state.trend,
+            orderbook_imbalance=basic_state.orderbook_imbalance,
+            trade_flow=basic_state.trade_flow,
+        )
+        model.predict(next_state, explore=False)
+        assert len(seen) == 1
+        assert seen[0]["action"] in (0, 1, 2)
+        assert seen[0]["episode"] >= 1
+
     def test_predict_retorna_signal(self, model: FastTradingModel, basic_state: MarketState) -> None:
         signal = model.predict(basic_state, explore=False)
         assert isinstance(signal, Signal)
