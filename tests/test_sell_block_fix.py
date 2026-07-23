@@ -39,6 +39,9 @@ class _StubFastTradingModel:
     def save(self):
         return None
 
+    def set_reward_callback(self, callback):
+        pass
+
 
 class _StubMarketRAG:
     def __init__(self, *args, **kwargs):
