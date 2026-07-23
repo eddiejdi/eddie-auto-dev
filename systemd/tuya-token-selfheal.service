@@ -16,8 +16,12 @@ Environment=HA_CONFIG_ENTRIES=/home/homelab/homeassistant/config/.storage/core.c
 Environment=BRIDGE_RUNTIME_TOKENS=/var/lib/pandaplus-bridge/tuya_tokens_runtime.json
 Environment=STATE_FILE=/var/lib/tuya-selfheal/state.json
 Environment=PROM_FILE=/var/lib/prometheus/node-exporter/tuya_token_selfheal.prom
-Environment=MAX_HEALS_24H=6
+Environment=MAX_HEALS_24H=24
 Environment=HA_BOOT_WAIT_S=300
+Environment=TUYA_SELFHEAL_HOT_WAIT_S=90
+Environment=HEAL_SOFT_THRESHOLD_MIN=45
+Environment=TUYA_CLIENT_ID=HA_3y9q4ak7g4ephrvke
+Environment=TUYA_SHARING_SITE=/home/homelab/myClaude/.venv/lib/python3.12/site-packages
 StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=tuya-token-selfheal
