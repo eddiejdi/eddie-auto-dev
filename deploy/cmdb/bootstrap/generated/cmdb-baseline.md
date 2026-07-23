@@ -1,9 +1,9 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-23T13:30:46.666415+00:00`
+- Generated at: `2026-07-23T13:43:08.323211+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `181`
+- Repo services discovered: `183`
 - Critical services flagged for MVP: `70`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
@@ -13,7 +13,7 @@
 - `identity`: 4
 - `monitoring`: 14
 - `network`: 20
-- `operations`: 100
+- `operations`: 102
 - `storage`: 32
 - `trading`: 11
 
