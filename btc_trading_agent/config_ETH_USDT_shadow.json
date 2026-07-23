@@ -1,6 +1,6 @@
 {
   "enabled": true,
-  "dry_run": true,
+  "dry_run": false,
   "symbol": "ETH-USDT",
   "profile": "shadow",
   "poll_interval": 5,
@@ -48,7 +48,7 @@
     "rsi_overbought": 65,
     "min_spread_bps": 3
   },
-  "live_mode": false,
+  "live_mode": true,
   "auto_stop_loss": {
     "enabled": false,
     "pct": 0.05
