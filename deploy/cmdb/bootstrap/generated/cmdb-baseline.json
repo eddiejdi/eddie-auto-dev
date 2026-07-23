@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-07-18T23:19:39.944977+00:00",
-  "repo_root": "/workspace/eddie-auto-dev",
+  "generated_at": "2026-07-23T12:02:22.739624+00:00",
+  "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/d2d5545e-220c-41b3-908c-156c62e01a23/scratchpad/wt-pnlfix",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 179,
+    "repo_services": 181,
     "trading_instances": 12,
     "critical_services": 70,
     "domains": {
       "identity": 4,
       "monitoring": 14,
       "network": 20,
-      "operations": 98,
+      "operations": 100,
       "storage": 32,
       "trading": 11
     }
@@ -1226,6 +1226,22 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/specialized_agents-dashboard.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "tuya-local-key-selfheal.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/tuya-local-key-selfheal.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "tuya-local-key-selfheal.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/tuya-local-key-selfheal.timer",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
