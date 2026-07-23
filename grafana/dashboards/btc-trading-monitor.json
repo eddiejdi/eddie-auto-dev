@@ -2009,7 +2009,7 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "SELECT\n  TO_CHAR(to_timestamp(\"timestamp\") AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  COALESCE(profile, 'default') AS profile,\n  action,\n  ROUND(confidence::numeric, 3) AS conf_adj,\n  ROUND(NULLIF(features->>'raw_confidence', '')::numeric, 3) AS conf_raw,\n  ROUND(NULLIF(features->>'track_record_boost', '')::numeric, 3) AS boost,\n  ROUND(NULLIF(features->>'track_record_trs', '')::numeric, 3) AS trs,\n  price,\n  LEFT(reason, 80) AS reason,\n  executed\nFROM btc.decisions\nWHERE symbol = '$coin'\nAND profile ~* '^(${profile:pipe})$'\nAND (\n  ('${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}')\n)\nAND to_timestamp(\"timestamp\") BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY \"timestamp\" DESC\nLIMIT 50",
+          "rawSql": "SELECT\n  TO_CHAR(to_timestamp(\"timestamp\") AT TIME ZONE 'America/Sao_Paulo', 'DD/MM HH24:MI') AS \"Data/Hora\",\n  COALESCE(profile, 'default') AS profile,\n  action,\n  ROUND(confidence::numeric, 3) AS conf_adj,\n  ROUND(NULLIF(features->>'raw_confidence', '')::numeric, 3) AS conf_raw,\n  ROUND(NULLIF(features->>'track_record_boost', '')::numeric, 3) AS boost,\n  ROUND(NULLIF(features->>'track_record_trs', '')::numeric, 3) AS trs,\n  price,\n  LEFT(reason, 80) AS reason,\n  executed\nFROM btc.decisions\nWHERE symbol = '$coin'\nAND profile ~* '^(${profile:pipe})$'\nAND (\n  ('${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}')\n)\nAND \"timestamp\" BETWEEN $__unixEpochFrom() AND $__unixEpochTo()\nORDER BY \"timestamp\" DESC\nLIMIT 50",
           "refId": "A"
         }
       ],
