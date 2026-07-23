@@ -209,7 +209,7 @@
       "pluginVersion": "12.4.0",
       "targets": [
         {
-          "expr": "max by(profile)((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"}))",
+          "expr": "max by(profile)((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"})) or ((0 * max by(profile)((up{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (up{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"}))) unless on(profile) max by(profile)((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"})))",
           "legendFormat": "{{profile}}",
           "refId": "A"
         }
