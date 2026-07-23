@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-23T13:43:08.323211+00:00",
-  "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/d2d5545e-220c-41b3-908c-156c62e01a23/scratchpad/wt-pnlfix",
+  "generated_at": "2026-07-23T13:55:47.335922+00:00",
+  "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
