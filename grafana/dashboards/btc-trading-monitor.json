@@ -151,8 +151,8 @@
     },
     {
       "datasource": {
-        "type": "prometheus",
-        "uid": "dfc0w4yioe4u8e"
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
       },
       "fieldConfig": {
         "defaults": {
@@ -209,9 +209,37 @@
       "pluginVersion": "12.4.0",
       "targets": [
         {
-          "expr": "max by(profile)(((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"})) - ((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"} offset $__range) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"} offset $__range))) or ((0 * max by(profile)((up{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (up{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"}))) unless on(profile) max by(profile)(((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"}) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"})) - ((btc_trading_total_pnl{servidor=~\"$servidor\",coin=\"$coin\",profile=~\"$profile\"} offset $__range) or (btc_trading_total_pnl{servidor=~\"$servidor\",exported_coin=\"$coin\",exported_profile=~\"$profile\"} offset $__range))))",
-          "legendFormat": "{{profile}}",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT now() AS \"time\", COALESCE(SUM(pnl), 0)::numeric(12,4) AS \"conservative\" FROM btc.trades WHERE symbol = '$coin' AND dry_run = false AND profile = 'conservative' AND 'conservative' IN (${profile:sqlstring}) AND (('${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}')) AND timestamp BETWEEN $__unixEpochFrom() AND $__unixEpochTo()",
           "refId": "A"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT now() AS \"time\", COALESCE(SUM(pnl), 0)::numeric(12,4) AS \"aggressive\" FROM btc.trades WHERE symbol = '$coin' AND dry_run = false AND profile = 'aggressive' AND 'aggressive' IN (${profile:sqlstring}) AND (('${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}')) AND timestamp BETWEEN $__unixEpochFrom() AND $__unixEpochTo()",
+          "refId": "B"
+        },
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT now() AS \"time\", COALESCE(SUM(pnl), 0)::numeric(12,4) AS \"shadow\" FROM btc.trades WHERE symbol = '$coin' AND dry_run = false AND profile = 'shadow' AND 'shadow' IN (${profile:sqlstring}) AND (('${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}')) AND timestamp BETWEEN $__unixEpochFrom() AND $__unixEpochTo()",
+          "refId": "C"
         }
       ],
       "title": "📈 PnL. No Período",
