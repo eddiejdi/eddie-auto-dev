@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-07-23T13:30:46.666415+00:00",
+  "generated_at": "2026-07-23T13:43:08.323211+00:00",
   "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/d2d5545e-220c-41b3-908c-156c62e01a23/scratchpad/wt-pnlfix",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 181,
+    "repo_services": 183,
     "trading_instances": 12,
     "critical_services": 70,
     "domains": {
       "identity": 4,
       "monitoring": 14,
       "network": 20,
-      "operations": 100,
+      "operations": 102,
       "storage": 32,
       "trading": 11
     }
@@ -826,6 +826,22 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/daily-agenda-panel.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "decisions-track-record-rollup.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/decisions-track-record-rollup.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "decisions-track-record-rollup.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/decisions-track-record-rollup.timer",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },

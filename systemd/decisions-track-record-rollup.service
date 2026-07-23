@@ -1,0 +1,26 @@
+[Unit]
+Description=Rollup horário de track_record_trs/track_record_boost → PostgreSQL
+After=network.target postgresql.service
+
+[Service]
+Type=oneshot
+User=btc-trading
+Group=btc-trading
+WorkingDirectory=/apps/crypto-trader/trading
+EnvironmentFile=-/apps/crypto-trader/envfiles/trading-database.env
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=HOME=/apps/crypto-trader
+Environment=PYTHONPATH=/apps/crypto-trader/trading
+
+ExecStart=/apps/crypto-trader/.venv/bin/python /apps/crypto-trader/trading/scripts/decisions_track_record_rollup.py --hours-back 3
+
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=decisions-track-record-rollup
+
+TimeoutStartSec=300
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
