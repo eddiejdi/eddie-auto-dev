@@ -35,6 +35,7 @@ MIGRATION_SQL = """
 CREATE SCHEMA IF NOT EXISTS marketing;
 
 -- Tabela de leads
+-- taxonomy: owner=marketing; status=active
 CREATE TABLE IF NOT EXISTS marketing.leads (
     id              SERIAL PRIMARY KEY,
     nome            VARCHAR(200)    NOT NULL,

@@ -346,6 +346,7 @@ async def health_check():
     )
 
 
+# taxonomy: tables=clear.trades,btc.trades; owner=mt5_bridge
 @app.post("/order", response_model=OrderResponse, dependencies=[Depends(verify_api_key)])
 async def place_order(req: OrderRequest):
     """Envia ordem de compra ou venda ao MT5."""
@@ -412,6 +413,7 @@ async def place_order(req: OrderRequest):
     )
 
 
+# taxonomy: tables=clear.trades,btc.trades
 @app.get("/positions", response_model=list[PositionInfo], dependencies=[Depends(verify_api_key)])
 async def get_positions(symbol: Optional[str] = None):
     """Retorna posições abertas (opcionalmente filtradas por símbolo)."""
@@ -442,6 +444,7 @@ async def get_positions(symbol: Optional[str] = None):
     ]
 
 
+# taxonomy: tables=clear.performance_stats,btc.performance_stats,clear.trades
 @app.get("/account", response_model=AccountInfo, dependencies=[Depends(verify_api_key)])
 async def get_account():
     """Retorna informações da conta Clear."""
@@ -491,6 +494,7 @@ async def get_tick(symbol: str):
     )
 
 
+# taxonomy: tables=clear.candles,btc.candles,clear.market_states
 @app.get(
     "/symbol/{symbol}/rates",
     response_model=list[CandleInfo],
@@ -546,6 +550,7 @@ async def get_rates(
     ]
 
 
+# taxonomy: tables=clear.trades,btc.trades
 @app.get("/orders", response_model=list[OrderInfo], dependencies=[Depends(verify_api_key)])
 async def get_orders(symbol: Optional[str] = None):
     """Retorna ordens ativas/pendentes."""
@@ -576,6 +581,7 @@ async def get_orders(symbol: Optional[str] = None):
     ]
 
 
+# taxonomy: tables=clear.trades,btc.trades,clear.decisions,btc.decisions
 @app.get(
     "/history/deals",
     response_model=list[DealInfo],

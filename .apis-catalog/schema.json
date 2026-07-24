@@ -1,0 +1,97 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "APIs Catalog Schema",
+  "description": "Taxonomy for HTTP API endpoints discovered in the homelab codebase",
+  "type": "object",
+  "required": ["catalogVersion", "domain", "categories"],
+  "properties": {
+    "catalogVersion": { "type": "string" },
+    "domain": { "const": "apis" },
+    "generatedAt": { "type": "string" },
+    "environment": {
+      "type": "string",
+      "enum": ["development", "staging", "production"]
+    },
+    "categories": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "$ref": "#/definitions/endpoint" }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "totalEndpoints": { "type": "integer" },
+        "sourceFiles": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "serviceCount": { "type": "integer" }
+      }
+    }
+  },
+  "definitions": {
+    "endpoint": {
+      "type": "object",
+      "required": ["operationKey", "method", "path", "source"],
+      "properties": {
+        "operationKey": {
+          "type": "string",
+          "description": "Canonical METHOD /path key"
+        },
+        "method": {
+          "type": "string",
+          "enum": ["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"]
+        },
+        "path": { "type": "string" },
+        "source": {
+          "type": "string",
+          "enum": ["fastapi", "flask", "openapi", "manual"]
+        },
+        "service": { "type": "string" },
+        "summary": { "type": "string" },
+        "operationId": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "category": { "type": "string" },
+        "sensitive": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if path/category suggests auth or secrets"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "deprecated", "unused", "experimental"],
+          "default": "active"
+        },
+        "owner": { "type": "string" },
+        "team": { "type": "string" },
+        "relatedTables": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "FQNs of tables linked via annotations or OpenAPI x-tables"
+        },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "file": { "type": "string" },
+              "line": { "type": "integer" },
+              "service": { "type": "string" }
+            }
+          }
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "deprecated", "unused", "experimental"],
+          "default": "active"
+        },
+        "owner": { "type": "string" }
+      }
+    }
+  }
+}

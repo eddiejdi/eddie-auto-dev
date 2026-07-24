@@ -1,0 +1,13 @@
+{
+  "linkedTables": 33,
+  "linkedApis": 53,
+  "unusedTables": 31,
+  "newlyUnused": 31,
+  "orphanApis": 112,
+  "ownershipGaps": {
+    "tables_unknown_owner": 0,
+    "tables_unassigned_team": 11,
+    "apis_unknown_owner": 0,
+    "apis_unassigned_team": 23
+  }
+}

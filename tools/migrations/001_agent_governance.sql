@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 );
 
 -- ── Tabela principal de intenções e ações dos agentes ────────────────────
+-- taxonomy: owner=platform; team=platform; status=active
 CREATE TABLE IF NOT EXISTS agent_actions (
     id                   SERIAL PRIMARY KEY,
     intent_id            TEXT UNIQUE NOT NULL,

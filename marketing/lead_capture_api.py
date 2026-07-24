@@ -321,6 +321,7 @@ async def _startup():
     logger.info("Marketing schema pronto")
 
 
+# taxonomy: tables=marketing.leads,marketing.daily_metrics,marketing.email_log; owner=marketing
 @router.post("/leads", response_model=LeadResponse)
 async def capture_lead(lead: LeadCreate, request: Request):
     """Captura novo lead do formulário da landing page."""
@@ -351,6 +352,7 @@ async def capture_lead(lead: LeadCreate, request: Request):
     )
 
 
+# taxonomy: tables=marketing.leads,marketing.daily_metrics
 @router.get("/leads/stats", response_model=LeadStats)
 async def get_lead_stats():
     """Retorna estatísticas de leads."""
