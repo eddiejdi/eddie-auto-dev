@@ -1,0 +1,75 @@
+# Snapshot da config REAL de produção: /etc/alertmanager/alertmanager.yml (homelab).
+# Difere de alertmanager_telegram.yml (que usa webhook-only e está defasada).
+# Roteamento por LABEL: category=trading|ollama -> receiver `telegram` (nativo).
+# 2026-07-24: rota `category: ollama -> telegram` adicionada (incidente 503-storm)
+# para que os alertas do GPU coordinator cheguem ao Telegram.
+# TOKEN REDIGIDO — o valor real vive em /etc/alertmanager/ e no secrets agent.
+global:
+  resolve_timeout: 5m
+route:
+  receiver: default
+  group_by:
+  - alertname
+  - instance
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+  routes:
+  - match:
+      category: ollama
+    receiver: telegram
+    continue: true
+  - match_re:
+      alertname: RPA4AllSnapshot.*
+    receiver: telegram-webhook
+    group_wait: 30s
+    group_interval: 5m
+    repeat_interval: 1h
+  - match:
+      category: ltfs
+    receiver: telegram-webhook
+    continue: true
+  - match:
+      category: trading
+    receiver: telegram
+    continue: true
+  - match:
+      category: trading
+    receiver: server-alerts
+    continue: false
+  - match:
+      category: infrastructure
+    receiver: server-alerts
+    continue: true
+  - match:
+      service: homelab-advisor
+    receiver: estou-aqui
+    continue: true
+  - match:
+      service: homelab-advisor
+    receiver: telegram
+    continue: true
+receivers:
+- name: default
+  webhook_configs:
+  - url: http://127.0.0.1:8503/alerts
+    send_resolved: true
+- name: estou-aqui
+  webhook_configs:
+  - url: http://127.0.0.1:3456/api/alerts/webhook
+    send_resolved: true
+- name: telegram
+  telegram_configs:
+  - bot_token: ${TELEGRAM_BOT_TOKEN}
+    chat_id: 948686300
+    message: '[{{ .Status | toUpper }}] {{ .CommonLabels.alertname }} - {{ range .Alerts }}{{ .Annotations.summary }} {{ end }}'
+    send_resolved: true
+- name: telegram-webhook
+  webhook_configs:
+  - url: http://127.0.0.1:5000/alerts
+    send_resolved: true
+- name: server-alerts
+  webhook_configs:
+  - url: http://127.0.0.1:5002/alert
+    send_resolved: true
+inhibit_rules: []
