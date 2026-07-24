@@ -13,6 +13,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import secrets
 import signal
 import time
@@ -31,6 +32,26 @@ logger = logging.getLogger(__name__)
 TUYA_RETRY_SECONDS = 30
 TUYA_HEALTHCHECK_SECONDS = 120
 TUYA_POLL_SECONDS = 5
+
+# Watchdog: se a sessão Tuya ficar travada em erro (ex.: "sign invalid") além
+# deste limite, o processo encerra com falha para o systemd (Restart=on-failure)
+# reiniciar de verdade — o _tuya_supervisor_loop sozinho só faz retry interno
+# infinito e nunca deixa o processo morrer (ver incidente 2026-07-22/23).
+TUYA_UNHEALTHY_RESTART_SECONDS = int(
+    os.environ.get("PANDAPLUS_BRIDGE_TUYA_MAX_UNHEALTHY_SECONDS", "600")
+)
+
+PROM_FILE = Path(
+    os.environ.get(
+        "PANDAPLUS_BRIDGE_PROM_FILE",
+        "/var/lib/prometheus/node-exporter/pandaplus_bridge.prom",
+    )
+)
+
+
+class TuyaSessionStuckError(RuntimeError):
+    """Sessão Tuya ficou indisponível por mais que TUYA_UNHEALTHY_RESTART_SECONDS."""
+
 
 # DPs que disparam notificação. unlock_request > 0 indica pedido ativo.
 RELEVANT_CODES = frozenset({"unlock_request", "alarm_lock"})
@@ -103,6 +124,9 @@ class PandaplusBridge:
         )
         # deduplicação: (code, str(value)) → timestamp do último disparo
         self._last_event_seen: dict[tuple[str, str], float] = {}
+        # watchdog da sessão Tuya
+        self._tuya_last_healthy_ts: float = time.time()
+        self._tuya_consecutive_failures: int = 0
 
     async def start(self) -> None:
         """Inicia bridge: Tuya MQ, HTTP server, Telegram sender e consumer."""
@@ -135,8 +159,21 @@ class PandaplusBridge:
         except Exception:  # noqa: BLE001
             logger.exception("falha ao enviar mensagem inicial Telegram")
 
-        # Consumer loop
-        await self._consumer_loop()
+        # Consumer loop — roda concorrente ao supervisor. Se o supervisor
+        # levantar TuyaSessionStuckError (watchdog), propaga para encerrar
+        # o processo com falha e o systemd reiniciar (Restart=on-failure).
+        consumer_task = asyncio.create_task(self._consumer_loop())
+        done, pending = await asyncio.wait(
+            {self._tuya_supervisor_task, consumer_task},
+            return_when=asyncio.FIRST_COMPLETED,
+        )
+        for task in pending:
+            task.cancel()
+            await asyncio.gather(task, return_exceptions=True)
+        for task in done:
+            exc = task.exception()
+            if exc is not None:
+                raise exc
 
     async def stop(self) -> None:
         """Encerra bridge limpando recursos."""
@@ -155,7 +192,13 @@ class PandaplusBridge:
         logger.info("Bridge encerrado")
 
     async def _tuya_supervisor_loop(self) -> None:
-        """Mantém conexão Tuya ativa com retry automático quando houver falhas."""
+        """Mantém conexão Tuya ativa com retry automático quando houver falhas.
+
+        Levanta ``TuyaSessionStuckError`` se a sessão ficar indisponível por
+        mais que ``TUYA_UNHEALTHY_RESTART_SECONDS`` — o retry interno sozinho
+        nunca deixa o processo morrer, então sem esse watchdog o bridge pode
+        ficar preso em loop de erro (ex.: `sign invalid`) indefinidamente.
+        """
         while not self._stop_event.is_set():
             if self._tuya is None:
                 try:
@@ -167,6 +210,7 @@ class PandaplusBridge:
                         exc,
                         TUYA_RETRY_SECONDS,
                     )
+                    self._record_tuya_failure()
                     await self._sleep_or_stop(TUYA_RETRY_SECONDS)
                     continue
 
@@ -176,10 +220,62 @@ class PandaplusBridge:
             except Exception as exc:  # noqa: BLE001
                 logger.warning("Sessão Tuya inválida: %s", exc)
                 await self._disconnect_tuya()
+                self._record_tuya_failure()
                 await self._sleep_or_stop(TUYA_RETRY_SECONDS)
                 continue
 
+            self._record_tuya_success()
             await self._sleep_or_stop(TUYA_HEALTHCHECK_SECONDS)
+
+    def _record_tuya_success(self) -> None:
+        """Marca a sessão Tuya como saudável agora e exporta métricas."""
+        self._tuya_last_healthy_ts = time.time()
+        self._tuya_consecutive_failures = 0
+        self._write_prom_metrics(healthy=True)
+
+    def _record_tuya_failure(self) -> None:
+        """Registra falha da sessão Tuya; levanta watchdog se preso há tempo demais."""
+        self._tuya_consecutive_failures += 1
+        self._write_prom_metrics(healthy=False)
+        unhealthy_for = time.time() - self._tuya_last_healthy_ts
+        if unhealthy_for > TUYA_UNHEALTHY_RESTART_SECONDS:
+            raise TuyaSessionStuckError(
+                f"Sessão Tuya presa há {unhealthy_for:.0f}s "
+                f"(> {TUYA_UNHEALTHY_RESTART_SECONDS}s) — "
+                f"{self._tuya_consecutive_failures} falhas consecutivas. "
+                "Encerrando processo para systemd reiniciar."
+            )
+
+    def _write_prom_metrics(self, *, healthy: bool) -> None:
+        """Exporta métricas de saúde da sessão Tuya via textfile collector."""
+        now = int(time.time())
+        lines = [
+            "# HELP pandaplus_bridge_tuya_session_healthy "
+            "1=sessão Tuya saudável no último check, 0=falha",
+            "# TYPE pandaplus_bridge_tuya_session_healthy gauge",
+            f"pandaplus_bridge_tuya_session_healthy {1 if healthy else 0}",
+            "# HELP pandaplus_bridge_tuya_last_success_timestamp "
+            "Unix time do último connect/session_check bem-sucedido",
+            "# TYPE pandaplus_bridge_tuya_last_success_timestamp gauge",
+            "pandaplus_bridge_tuya_last_success_timestamp "
+            f"{int(self._tuya_last_healthy_ts)}",
+            "# HELP pandaplus_bridge_tuya_consecutive_failures "
+            "Falhas consecutivas desde o último sucesso",
+            "# TYPE pandaplus_bridge_tuya_consecutive_failures gauge",
+            "pandaplus_bridge_tuya_consecutive_failures "
+            f"{self._tuya_consecutive_failures}",
+            "# HELP pandaplus_bridge_last_check_timestamp "
+            "Unix time da última avaliação do supervisor (detecta processo morto)",
+            "# TYPE pandaplus_bridge_last_check_timestamp gauge",
+            f"pandaplus_bridge_last_check_timestamp {now}",
+        ]
+        try:
+            PROM_FILE.parent.mkdir(parents=True, exist_ok=True)
+            tmp = PROM_FILE.with_suffix(".prom.tmp")
+            tmp.write_text("\n".join(lines) + "\n", encoding="utf-8")
+            tmp.replace(PROM_FILE)
+        except OSError:
+            logger.exception("falha ao escrever métricas do bridge")
 
     async def _connect_tuya(self) -> None:
         """Cria cliente Tuya e inicia subscrição MQ."""

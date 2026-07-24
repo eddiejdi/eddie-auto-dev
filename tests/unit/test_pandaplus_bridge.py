@@ -19,6 +19,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from tools.pandaplus_bridge import bridge as bridge_module
 from tools.pandaplus_bridge.bridge import (
     DOOR_ALARM_VALUES,
     RELEVANT_CODES,
@@ -687,3 +688,62 @@ def test_coerce_int() -> None:
     assert PandaplusBridge._coerce_int("17") == 17
     assert PandaplusBridge._coerce_int("nope") == 0
     assert PandaplusBridge._coerce_int(None) == 0
+
+
+def test_record_tuya_success_resets_failure_state(
+    mock_bridge: PandaplusBridge, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(bridge_module, "PROM_FILE", tmp_path / "bridge.prom")
+    mock_bridge._tuya_consecutive_failures = 3
+    mock_bridge._tuya_last_healthy_ts = 0.0
+
+    mock_bridge._record_tuya_success()
+
+    assert mock_bridge._tuya_consecutive_failures == 0
+    assert mock_bridge._tuya_last_healthy_ts > 0
+    prom_content = (tmp_path / "bridge.prom").read_text(encoding="utf-8")
+    assert "pandaplus_bridge_tuya_session_healthy 1" in prom_content
+
+
+def test_record_tuya_failure_below_threshold_does_not_raise(
+    mock_bridge: PandaplusBridge, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(bridge_module, "PROM_FILE", tmp_path / "bridge.prom")
+    mock_bridge._tuya_last_healthy_ts = time.time()
+
+    mock_bridge._record_tuya_failure()  # não deve levantar
+
+    assert mock_bridge._tuya_consecutive_failures == 1
+    prom_content = (tmp_path / "bridge.prom").read_text(encoding="utf-8")
+    assert "pandaplus_bridge_tuya_session_healthy 0" in prom_content
+
+
+def test_record_tuya_failure_above_threshold_raises_stuck_error(
+    mock_bridge: PandaplusBridge, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(bridge_module, "PROM_FILE", tmp_path / "bridge.prom")
+    # sessão saudável pela última vez bem além do limite configurado
+    mock_bridge._tuya_last_healthy_ts = (
+        time.time() - bridge_module.TUYA_UNHEALTHY_RESTART_SECONDS - 1
+    )
+
+    with pytest.raises(bridge_module.TuyaSessionStuckError):
+        mock_bridge._record_tuya_failure()
+
+
+@pytest.mark.asyncio
+async def test_tuya_supervisor_loop_propagates_stuck_error(
+    mock_bridge: PandaplusBridge, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O loop supervisor deve deixar TuyaSessionStuckError escapar (não engolir)."""
+    monkeypatch.setattr(bridge_module, "PROM_FILE", tmp_path / "bridge.prom")
+    mock_bridge._tuya = MagicMock()
+    mock_bridge._tuya.session_check = MagicMock(
+        side_effect=Exception("network error:(-9999999) sign invalid")
+    )
+    mock_bridge._tuya_last_healthy_ts = (
+        time.time() - bridge_module.TUYA_UNHEALTHY_RESTART_SECONDS - 1
+    )
+
+    with pytest.raises(bridge_module.TuyaSessionStuckError):
+        await mock_bridge._tuya_supervisor_loop()
