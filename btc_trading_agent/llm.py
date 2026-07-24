@@ -561,13 +561,19 @@ class LLMRouter:
             for _ in range(max(1, int(retries_per_target))):
                 explicit_pairs.append((host, model, t))
 
-        # Terceiro tier: endpoints do router não incluídos acima
+        # Terceiro tier: endpoints do router não incluídos acima.
+        # Modelos pinados a uma GPU (:gpuN/:nas) só existem no endpoint pinado —
+        # fan-out para outros hosts gera model_not_found garantido (ex.:
+        # lfm2.5-fast:gpu1 no NAS, que nem tem o modelo) e infla o retry-storm.
+        # Só faz fan-out de modelos NÃO-pinados.
         tried_hosts = {h for h, _, _ in explicit_pairs}
         extra_pairs: list[tuple[str, str, float]] = []
         extra_model = (fallback_model or primary_model).strip()
-        for ep in self._endpoints:
-            if ep.host not in tried_hosts and ep.is_healthy(probe_timeout=2.0):
-                extra_pairs.append((ep.host, extra_model, fallback_timeout_sec))
+        extra_is_pinned = bool(re.search(r":(gpu\d+|nas)$", extra_model))
+        if not extra_is_pinned:
+            for ep in self._endpoints:
+                if ep.host not in tried_hosts and ep.is_healthy(probe_timeout=2.0):
+                    extra_pairs.append((ep.host, extra_model, fallback_timeout_sec))
 
         all_attempts = explicit_pairs + extra_pairs
         errors: list[str] = []
@@ -595,6 +601,11 @@ class LLMRouter:
                 err = f"{model}@{host}#{attempt_no}: {type(exc).__name__}: {exc}"
                 errors.append(err)
                 log_error_always("LLM %s attempt failed: %s", label, err, exc=exc)
+                # Backoff com jitter entre tentativas: evita martelar o GPU
+                # coordinator em rajada quando os 14 agentes falham juntos
+                # (amplificação de 503). Jitter desincroniza os ciclos.
+                if attempt_no < len(all_attempts):
+                    time.sleep(min(0.25 * attempt_no, 1.0) + random.uniform(0.0, 0.15))
 
         log_error_always(
             "LLM %s exhausted %s attempts: %s",
