@@ -1,0 +1,31 @@
+# Prometheus rule: GPU coordinator failovers (visíveis mesmo se request final = 200)
+groups:
+  - name: ollama-gpu-coordinator-failovers
+    interval: 30s
+    rules:
+      - alert: OllamaGPUCoordFailoverSpike
+        expr: sum(increase(gpu_coord_failovers_total[15m])) > 5
+        for: 0m
+        labels:
+          severity: warning
+          category: ollama
+          component: gpu-coordinator
+        annotations:
+          summary: "Spike de failovers no GPU coordinator (15m)"
+          description: >-
+            Failovers parciais (model_not_found, connect, exhausted) nos últimos 15 min.
+            O agente de trading pode ter recebido 200 após retry — o evento NÃO é mascarado
+            nesta métrica. Ver /metrics e journalctl -u ollama-gpu-coordinator.
+
+      - alert: OllamaGPUCoordModelNotFoundFailover
+        expr: sum by (endpoint, model) (increase(gpu_coord_failovers_total{reason="model_not_found"}[15m])) > 3
+        for: 0m
+        labels:
+          severity: warning
+          category: ollama
+          component: gpu-coordinator
+        annotations:
+          summary: "404 model_not_found com failover ({{ $labels.endpoint }} / {{ $labels.model }})"
+          description: >-
+            Endpoint {{ $labels.endpoint }} respondeu 404 para {{ $labels.model }} e o
+            coordinator tentou outro host. Checar inventário (tags) e warm/pull.

@@ -1,0 +1,52 @@
+# Prometheus rule: storm de ERRO FINAL do GPU coordinator (Ollama).
+#
+# Gap descoberto no incidente 2026-07-24: 14 agentes crypto saturaram o
+# coordinator (NUM_PARALLEL=1/QUEUE=4) por horas, gerando milhares de 503
+# finais. Os agentes caíram silenciosamente para a "janela de trade estática"
+# (sem IA) e NINGUÉM foi alertado — o único alerta existente
+# (gpu_coord_failover_rules.yml) cobre failovers parciais (que podem terminar
+# em 200) e usa category=ollama, que não roteia para o Telegram.
+#
+# Estas regras usam category=trading para rotear ao receiver `telegram`
+# (ver /etc/alertmanager/alertmanager.yml). Métrica: gpu_coord_request_errors_total
+# = "requisições com erro final (após failovers)".
+groups:
+  - name: ollama-gpu-coordinator-errors
+    interval: 30s
+    rules:
+      # Storm de 503 (incidente 2026-07-24): taxa foi ~2.3/s (~140/min).
+      # Threshold 1.0/s = storm claro, com folga acima do resíduo conhecido
+      # (~0.27/s do fallback quebrado gemma3-fast:gpu1, que exige fix do
+      # /etc/crypto-agent/models.env -> lfm2.5-fast:gpu1 + restart dos agentes).
+      - alert: OllamaGPUCoordErrorStorm
+        expr: sum(rate(gpu_coord_request_errors_total[5m])) > 1.0
+        for: 5m
+        labels:
+          severity: critical
+          category: ollama
+          component: gpu-coordinator
+        annotations:
+          summary: "Storm de erro final no GPU coordinator — agentes de trading sem IA"
+          description: >-
+            gpu_coord_request_errors_total subindo a {{ $value | printf "%.2f" }}/s
+            (baseline ~0.05/s). Os agentes crypto provavelmente estão caindo para a
+            janela de trade ESTÁTICA (sem análise de IA). Causa provável: saturação
+            da fila do Ollama (NUM_PARALLEL/MAX_QUEUE) ou fallback quebrado
+            (model_not_found). Checar: journalctl -u ollama-gpu-coordinator,
+            curl :11437/metrics, nvidia-smi.
+
+      # Degradação sustentada acima do resíduo conhecido (~0.27/s), abaixo de storm.
+      # Threshold 0.5/s evita nag com o resíduo do fallback e ainda pega piora real.
+      - alert: OllamaGPUCoordErrorElevated
+        expr: sum(rate(gpu_coord_request_errors_total[5m])) > 0.5
+        for: 15m
+        labels:
+          severity: warning
+          category: ollama
+          component: gpu-coordinator
+        annotations:
+          summary: "Erro final do GPU coordinator elevado (pré-storm)"
+          description: >-
+            Taxa de erro final {{ $value | printf "%.2f" }}/s sustentada por 15min,
+            acima do resíduo esperado (~0.27/s). Investigar capacidade/roteamento do
+            Ollama (fila, fallback model_not_found) antes de escalar.

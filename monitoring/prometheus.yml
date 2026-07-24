@@ -5,6 +5,7 @@ global:
 rule_files:
   - 'prometheus/ltfs-selfheal-rules.yml'
   - 'prometheus/gpu_coord_failover_rules.yml'
+  - 'prometheus/ollama_coord_error_rules.yml'
   - 'prometheus/pandaplus_bridge_rules.yml'
 # selfhealing_rules.yml e alerts.yml desabilitados: contêm PromQL inválido (for: dentro de expr)
 
