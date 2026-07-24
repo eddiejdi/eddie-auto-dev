@@ -1,0 +1,31 @@
+groups:
+  - name: pandaplus_bridge_tuya
+    interval: 30s
+    rules:
+      # Sessão Tuya do bridge presa em erro (ex.: "sign invalid") há muito
+      # tempo. O watchdog interno do bridge.py derruba o processo em 600s
+      # (default) para o systemd reiniciar sozinho — este alerta serve para
+      # avisar bem antes disso, e para detectar se o watchdog também travou
+      # (métrica parada de atualizar).
+      - alert: PandaplusBridgeTuyaSessionUnhealthy
+        expr: pandaplus_bridge_tuya_session_healthy == 0
+        for: 5m
+        labels:
+          severity: warning
+          action: notify
+          service: pandaplus-bridge
+        annotations:
+          summary: "Sessão Tuya do pandaplus-bridge indisponível há > 5min"
+          description: "Sessão Tuya do bridge sem sucesso há mais de 5min. Watchdog interno reinicia o processo automaticamente em até 10min; se persistir, checar journalctl -u pandaplus-telegram-bridge.service."
+
+      # Métrica parou de atualizar — processo morreu e não voltou.
+      - alert: PandaplusBridgeMetricsStale
+        expr: (time() - pandaplus_bridge_last_check_timestamp) > 300
+        for: 2m
+        labels:
+          severity: critical
+          action: escalate
+          service: pandaplus-bridge
+        annotations:
+          summary: "pandaplus-bridge sem heartbeat há > 5min"
+          description: "Métricas do bridge pararam de atualizar — processo pode estar morto sem o systemd ter reiniciado. Verificar systemctl status pandaplus-telegram-bridge.service."
