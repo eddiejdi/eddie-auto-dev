@@ -16,7 +16,9 @@ SCRIPTS_DIR="${RUNTIME_ROOT}/scripts"
 TOOLS_DIR="/apps/crypto-trader/tools"
 SYSTEMD_HELPERS_DIR="${RUNTIME_ROOT}/systemd"
 GRAFANA_PROVISIONING_DIR="${GRAFANA_PROVISIONING_DIR:-/home/homelab/monitoring/grafana/provisioning/dashboards}"
-GRAFANA_DASHBOARD_BACKUP_DIR="${GRAFANA_DASHBOARD_BACKUP_DIR:-/home/homelab/monitoring/grafana/provisioning/dashboard_backups}"
+# Fora de GRAFANA_PROVISIONING_DIR de propósito: backup dentro do path do provider
+# vira duplicata de uid e congela o provisionamento (ver quarantine_dashboard_uid_duplicates).
+GRAFANA_DASHBOARD_BACKUP_DIR="${GRAFANA_DASHBOARD_BACKUP_DIR:-/home/homelab/monitoring/grafana/dashboard_quarantine}"
 PROMETHEUS_CONFIG="${PROMETHEUS_CONFIG:-/home/homelab/monitoring/prometheus.yml}"
 MYCLAUDE_SCRIPTS_DIR="${MYCLAUDE_SCRIPTS_DIR:-/home/homelab/myClaude/scripts}"
 
@@ -171,6 +173,18 @@ backup_if_present() {
   fi
 }
 
+# Backup de dashboard NUNCA fica ao lado do original: o provider do Grafana varre
+# ${GRAFANA_PROVISIONING_DIR} recursivamente e qualquer .json ali dentro com uid
+# repetido congela o provisionamento inteiro. Vai para a quarentena, fora do path.
+backup_dashboard_if_present() {
+  local path="$1"
+  if [[ -f "${path}" ]]; then
+    sudo install -d -m 0755 "${GRAFANA_DASHBOARD_BACKUP_DIR}"
+    sudo cp "${path}" \
+      "${GRAFANA_DASHBOARD_BACKUP_DIR}/$(basename "${path}").bak.$(date +%Y%m%d_%H%M%S)"
+  fi
+}
+
 validate_ollama_models() {
   local models_env="${1:-/etc/crypto-agent/models.env}"
   local ollama_host="${OLLAMA_PLAN_HOST:-http://192.168.15.2:11434}"
@@ -241,10 +255,85 @@ cleanup_btc_dashboard_duplicates() {
   done
 }
 
+# Os nomes legados acima não cobrem tudo: o repo homelab-grafana-dashboards deploya
+# em subpastas por categoria (trading/, infrastructure/, …) do MESMO path do provider,
+# então uma cópia de btc-trading-monitor pode reaparecer em qualquer caminho. O que
+# importa para o Grafana é o uid, não o nome do arquivo — dois arquivos com o mesmo uid
+# fazem o provider recusar gravar e congelar o provisionamento de TODOS os dashboards,
+# silenciosamente (deploy vai pro disco, API segue servindo a versão antiga).
+quarantine_dashboard_uid_duplicates() {
+  local keep="$1"
+  local uid="$2"
+  local timestamp
+  local found=""
+
+  timestamp="$(date +%Y%m%d_%H%M%S)"
+
+  # Mesma semântica de varredura do Grafana: recursiva, só *.json, ignora diretórios
+  # cujo nome começa com ponto.
+  while IFS= read -r found; do
+    [[ -n "${found}" ]] || continue
+    [[ "${found}" != "${keep}" ]] || continue
+    echo "  ⚠️  uid '${uid}' duplicado em ${found} — movendo para quarentena"
+    sudo install -d -m 0755 "${GRAFANA_DASHBOARD_BACKUP_DIR}"
+    sudo mv "${found}" \
+      "${GRAFANA_DASHBOARD_BACKUP_DIR}/$(basename "${found}").duplicate.${timestamp}"
+  done < <(
+    sudo find "${GRAFANA_PROVISIONING_DIR}" -name '.*' -prune -o -name '*.json' -type f -print \
+      | sort \
+      | while IFS= read -r candidate; do
+          sudo python3 -c "
+import json, sys
+try:
+    if json.load(open(sys.argv[1])).get('uid') == sys.argv[2]:
+        print(sys.argv[1])
+except Exception:
+    pass
+" "${candidate}" "${uid}"
+        done
+  )
+}
+
+assert_no_duplicate_dashboard_uids() {
+  local report
+  report="$(
+    sudo find "${GRAFANA_PROVISIONING_DIR}" -name '.*' -prune -o -name '*.json' -type f -print \
+      | sudo python3 -c "
+import json, sys
+from collections import defaultdict
+
+by_uid = defaultdict(list)
+for line in sys.stdin.read().splitlines():
+    if not line:
+        continue
+    try:
+        uid = json.load(open(line)).get('uid')
+    except Exception:
+        continue
+    if uid:
+        by_uid[uid].append(line)
+
+for uid, paths in sorted(by_uid.items()):
+    if len(paths) > 1:
+        print(f\"{uid}: {' | '.join(paths)}\")
+"
+  )"
+
+  if [[ -n "${report}" ]]; then
+    echo "❌ uid duplicado sob ${GRAFANA_PROVISIONING_DIR} — provisionamento vai congelar:" >&2
+    printf '   %s\n' "${report}" >&2
+    echo "   Eleja uma fonte de verdade e mova a outra cópia para ${GRAFANA_DASHBOARD_BACKUP_DIR}" >&2
+    exit 1
+  fi
+  echo "  ✅ Nenhum uid duplicado sob o path do provider"
+}
+
 sync_btc_grafana_dashboard() {
-  backup_if_present "${BTC_DASHBOARD_DST}"
+  backup_dashboard_if_present "${BTC_DASHBOARD_DST}"
   sync_grafana_dashboard_file "${BTC_DASHBOARD_SRC}" "${BTC_DASHBOARD_DST}"
   cleanup_btc_dashboard_duplicates
+  quarantine_dashboard_uid_duplicates "${BTC_DASHBOARD_DST}" "btc-trading-monitor"
+  assert_no_duplicate_dashboard_uids
 }
 
 sync_multi_coin_configs() {

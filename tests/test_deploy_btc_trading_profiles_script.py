@@ -23,9 +23,52 @@ def test_script_archives_duplicate_btc_dashboard_files_before_grafana_restart() 
     content = _load_script()
     assert '"${GRAFANA_PROVISIONING_DIR}/btc_trading_monitor.json"' in content
     assert '"${GRAFANA_PROVISIONING_DIR}/btc_trading_dashboard_v3_prometheus.json"' in content
-    assert "dashboard_backups" in content
     assert "cleanup_btc_dashboard_duplicates" in content
     assert content.index("cleanup_btc_dashboard_duplicates") < content.index("restart_grafana_if_present")
+
+
+def test_dashboard_backups_never_land_inside_the_provider_path() -> None:
+    """Um .json de backup ao lado do original é duplicata de uid permanente.
+
+    O provider `eddie-dashboards` varre GRAFANA_PROVISIONING_DIR recursivamente;
+    dois arquivos com o mesmo uid fazem o Grafana recusar gravar e congelar o
+    provisionamento de todos os dashboards, sem erro visível no deploy.
+    """
+    content = _load_script()
+    assert (
+        'GRAFANA_DASHBOARD_BACKUP_DIR="${GRAFANA_DASHBOARD_BACKUP_DIR:-'
+        '/home/homelab/monitoring/grafana/dashboard_quarantine}"' in content
+    )
+    assert "backup_dashboard_if_present" in content
+    # o backup do dashboard vai para a quarentena, não para "${path}.bak.TIMESTAMP"
+    assert 'backup_dashboard_if_present "${BTC_DASHBOARD_DST}"' in content
+    assert 'backup_if_present "${BTC_DASHBOARD_DST}"' not in content
+
+
+def test_script_quarantines_uid_duplicates_not_just_legacy_filenames() -> None:
+    """O repo homelab-grafana-dashboards deploya em subpastas do MESMO provider.
+
+    Uma cópia de btc-trading-monitor pode reaparecer em qualquer caminho sob o
+    provider (ex.: trading/btc-trading-monitor.json), então a limpeza por nome de
+    arquivo legado não basta — o que colide para o Grafana é o uid.
+    """
+    content = _load_script()
+    assert "quarantine_dashboard_uid_duplicates" in content
+    assert 'quarantine_dashboard_uid_duplicates "${BTC_DASHBOARD_DST}" "btc-trading-monitor"' in content
+    # varredura com a mesma semântica do Grafana: ignora diretórios iniciados por ponto
+    assert "-name '.*' -prune -o -name '*.json' -type f -print" in content
+
+
+def test_script_fails_deploy_when_provider_path_has_duplicate_uids() -> None:
+    content = _load_script()
+    assert "assert_no_duplicate_dashboard_uids" in content
+    assert (
+        content.index("quarantine_dashboard_uid_duplicates \"${BTC_DASHBOARD_DST}\"")
+        < content.index("assert_no_duplicate_dashboard_uids\n}")
+    )
+    assert content.index("assert_no_duplicate_dashboard_uids") < content.index(
+        "restart_grafana_if_present"
+    )
 
 
 def test_script_defaults_to_live_crypto_agent_service_user() -> None:
