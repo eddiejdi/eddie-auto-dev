@@ -747,3 +747,46 @@ async def test_tuya_supervisor_loop_propagates_stuck_error(
 
     with pytest.raises(bridge_module.TuyaSessionStuckError):
         await mock_bridge._tuya_supervisor_loop()
+
+
+@pytest.mark.asyncio
+async def test_stop_is_idempotent(mock_bridge: PandaplusBridge) -> None:
+    """stop() pode ser chamado 2x (signal handler + finally do main()) sem
+    re-executar cleanup — regressão do AttributeError em _http_runner.cleanup()
+    quando chamado 2x (o runner já limpo tem _server=None)."""
+    mock_bridge._tuya_supervisor_task = None
+    runner = MagicMock()
+    runner.cleanup = AsyncMock()
+    mock_bridge._http_runner = runner
+
+    await mock_bridge.stop()
+    await mock_bridge.stop()
+
+    runner.cleanup.assert_awaited_once()
+    assert mock_bridge._http_runner is None
+    assert mock_bridge._telegram is None
+
+
+@pytest.mark.asyncio
+async def test_start_ignores_cancelled_supervisor_task(
+    mock_bridge: PandaplusBridge, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cancelamento do supervisor (stop() externo, ex. SIGTERM) durante
+    start() não deve virar exceção fatal propagada para main()."""
+
+    async def fake_supervisor() -> None:
+        await asyncio.Event().wait()  # nunca completa sozinho
+
+    async def fake_consumer() -> None:
+        await asyncio.sleep(0.01)
+        assert mock_bridge._tuya_supervisor_task is not None
+        mock_bridge._tuya_supervisor_task.cancel()
+        await asyncio.sleep(0.01)
+
+    monkeypatch.setattr(mock_bridge, "_tuya_supervisor_loop", fake_supervisor)
+    monkeypatch.setattr(mock_bridge, "_consumer_loop", fake_consumer)
+    monkeypatch.setattr(
+        bridge_module.TelegramSender, "__aenter__", AsyncMock(return_value=mock_bridge._telegram)
+    )
+
+    await mock_bridge.start()  # não deve levantar CancelledError

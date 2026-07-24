@@ -162,6 +162,8 @@ class PandaplusBridge:
         # Consumer loop — roda concorrente ao supervisor. Se o supervisor
         # levantar TuyaSessionStuckError (watchdog), propaga para encerrar
         # o processo com falha e o systemd reiniciar (Restart=on-failure).
+        # Cancelamento (SIGTERM/stop() externo) não é propagado como erro:
+        # é o desligamento normal, não um watchdog disparando.
         consumer_task = asyncio.create_task(self._consumer_loop())
         done, pending = await asyncio.wait(
             {self._tuya_supervisor_task, consumer_task},
@@ -171,12 +173,18 @@ class PandaplusBridge:
             task.cancel()
             await asyncio.gather(task, return_exceptions=True)
         for task in done:
+            if task.cancelled():
+                continue
             exc = task.exception()
             if exc is not None:
                 raise exc
 
     async def stop(self) -> None:
-        """Encerra bridge limpando recursos."""
+        """Encerra bridge limpando recursos.
+
+        Idempotente: pode ser chamado mais de uma vez (ex.: signal handler +
+        `finally` do main()) sem re-executar cleanup já feito.
+        """
         self._stop_event.set()
         if self._tuya_supervisor_task is not None:
             self._tuya_supervisor_task.cancel()
@@ -187,8 +195,10 @@ class PandaplusBridge:
             self._tuya = None
         if self._http_runner is not None:
             await self._http_runner.cleanup()
+            self._http_runner = None
         if self._telegram is not None:
             await self._telegram.__aexit__(None, None, None)
+            self._telegram = None
         logger.info("Bridge encerrado")
 
     async def _tuya_supervisor_loop(self) -> None:
