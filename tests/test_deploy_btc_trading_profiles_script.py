@@ -126,9 +126,10 @@ def test_script_verifies_deploy_completeness_after_restart() -> None:
     # E é efetivamente invocada no fluxo do deploy (não só definida).
     invocations = content.count("verify_agents_running_current_code")
     assert invocations >= 2, "função definida mas não chamada no fluxo"
-    # Roda depois de reiniciar os agents.
+    # Roda depois de reiniciar os agents. O restart é escalonado (loop por svc,
+    # não em massa — ver asserts acima), então o marcador é o restart do loop.
     assert content.rindex("verify_agents_running_current_code") > content.index(
-        'systemctl restart "${AGENT_SERVICES[@]}"'
+        'sudo systemctl restart "${svc}"'
     )
 
 
