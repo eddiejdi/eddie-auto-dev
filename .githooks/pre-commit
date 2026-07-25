@@ -95,6 +95,13 @@ fi
 # ─── Check 6: OLLAMA_HOST coordinator port — bloqueia porta direta de GPU ─────
 # OLLAMA_HOST deve sempre apontar para o coordinator (:11437).
 # Portas diretas de GPU (:11434, :11435) são permitidas APENAS em OLLAMA_HOST_GPU*.
+#
+# Exceção (2026-07-25): linhas ExecStart*= apontando para 127.0.0.1/localhost.
+# Ali o OLLAMA_HOST é prefixo inline de um `ollama run` que o PRÓPRIO servidor
+# executa para aquecer a si mesmo (ollama.service.d/zz-disable-warmup.conf,
+# zzz-dual-model.conf) — não é config de cliente, e mandá-lo ao coordenador
+# criaria um laço serviço → coordenador → serviço no boot. A regra continua
+# valendo integralmente para qualquer `Environment=OLLAMA_HOST=`.
 echo "  [6/6] Validating OLLAMA_HOST coordinator port in systemd files..."
 
 SYSTEMD_FILES=$(git diff --cached --name-only | grep -E "\.(service|conf)$" || true)
@@ -103,8 +110,10 @@ if [ -n "$SYSTEMD_FILES" ]; then
     WRONG_PORT=0
     for f in $SYSTEMD_FILES; do
         # Detecta Environment="OLLAMA_HOST=...:(11434|11435)" excluindo OLLAMA_HOST_GPU*
+        # e o auto-warmup local em ExecStart*=.
         if git show ":$f" 2>/dev/null \
             | grep -E '"?OLLAMA_HOST=http://[^"]*:(11434|11435)' \
+            | grep -vE '^[[:space:]]*ExecStart(Pre|Post)?=.*OLLAMA_HOST=http://(127\.0\.0\.1|localhost):' \
             | grep -qv 'OLLAMA_HOST_GPU'; then
             echo "❌ BLOCKED: $f define OLLAMA_HOST apontando para porta de GPU direto (:11434 ou :11435)"
             echo "   OLLAMA_HOST deve usar o coordinator proxy em :11437"

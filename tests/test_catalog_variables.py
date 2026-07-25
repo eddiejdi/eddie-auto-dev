@@ -367,3 +367,55 @@ class TestServiceDefinitions:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v", "--cov=tools.catalog_variables", "--cov-report=html"])
+
+
+class TestSystemdDropInScanning:
+    """O scanner só lia systemd/*.service — os Environment= dos drop-ins
+    (systemd/<unit>.service.d/*.conf) ficavam fora do catálogo, e o hook de
+    taxonomia então os tratava como variáveis novas a cada commit."""
+
+    @pytest.fixture
+    def workspace(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+            (tmppath / "systemd" / "ollama.service.d").mkdir(parents=True)
+            (tmppath / "systemd" / "demo.timer.d").mkdir(parents=True)
+            yield tmppath
+
+    def test_scans_service_dropin_conf_files(self, workspace):
+        (workspace / "systemd" / "ollama.service").write_text(
+            "[Service]\nEnvironment=OLLAMA_HOST=0.0.0.0:11434\n", encoding="utf-8"
+        )
+        (workspace / "systemd" / "ollama.service.d" / "zz-perf-containment.conf").write_text(
+            "[Service]\nEnvironment=OLLAMA_NUM_PARALLEL=4\n"
+            "Environment=MKL_NUM_THREADS=4\n",
+            encoding="utf-8",
+        )
+        found = VariablesCatalog(root_path=str(workspace)).scan_systemd_services()
+
+        assert "OLLAMA_HOST" in found, "unit inteira deixou de ser lida"
+        assert "OLLAMA_NUM_PARALLEL" in found
+        assert "MKL_NUM_THREADS" in found
+
+    def test_dropin_source_names_the_unit_and_file(self, workspace):
+        (workspace / "systemd" / "ollama.service.d" / "zz-x.conf").write_text(
+            "[Service]\nEnvironment=FOO_BAR=1\n", encoding="utf-8"
+        )
+        found = VariablesCatalog(root_path=str(workspace)).scan_systemd_services()
+        contexts = str(found["FOO_BAR"])
+        assert "ollama" in contexts and "zz-x.conf" in contexts
+
+    def test_scans_timer_dropins_too(self, workspace):
+        (workspace / "systemd" / "demo.timer.d" / "20-x.conf").write_text(
+            "[Service]\nEnvironment=TIMER_VAR=7\n", encoding="utf-8"
+        )
+        found = VariablesCatalog(root_path=str(workspace)).scan_systemd_services()
+        assert "TIMER_VAR" in found
+
+    def test_default_root_is_the_repo_this_file_lives_in(self):
+        """Antes o default era fixo em /workspace/eddie-auto-dev, então rodar o
+        scanner de um worktree regravava o catálogo do repo principal."""
+        import tools.catalog_variables as catalog_variables_module
+
+        expected = Path(catalog_variables_module.__file__).resolve().parent.parent
+        assert VariablesCatalog().root == expected

@@ -1,8 +1,9 @@
 """Invariantes de paridade dos drop-ins systemd entre repo e homelab.
 
 Contexto: o deploy versionava `systemd/**/*.service.d/*.conf` mas nunca os
-instalava, então repo e produção divergiam em silêncio (PR #246 corrigiu o
-`OLLAMA_PLAN_MODEL` da GPU1 no git e produção seguiu com o modelo errado).
+instalava, então repo e produção divergiam em silêncio — e nos dois sentidos.
+Na captura de 2026-07-25 havia 25 drop-ins vivos fora do git e casos em que o
+**host** estava à frente do repo. Ver docs/systemd/DROPIN_DEPLOY_PARITY.md.
 """
 
 from __future__ import annotations
@@ -223,13 +224,13 @@ def test_checker_reports_host_only_without_counting_as_drift(tmp_path: Path) -> 
     repo, host = _fixture(
         tmp_path,
         {"a.conf": "[Service]\nX=1\n"},
-        {"a.conf": "[Service]\nX=1\n", "zz-perf-containment.conf": "[Service]\nZ=3\n"},
+        {"a.conf": "[Service]\nX=1\n", "zz-so-no-host.conf": "[Service]\nZ=3\n"},
     )
     report = checker.compare(repo, host)
     assert report["drift"] == 0
     assert report["host_only"] == 1
     host_only = [f for f in report["findings"] if f["status"] == checker.STATUS_HOST_ONLY]
-    assert host_only[0]["path"] == "demo.service.d/zz-perf-containment.conf"
+    assert host_only[0]["path"] == "demo.service.d/zz-so-no-host.conf"
 
 
 def test_checker_ignores_backup_files_on_host(tmp_path: Path) -> None:
@@ -278,7 +279,7 @@ def test_sync_systemd_dropins_installs_repo_confs_into_fake_system_dir(tmp_path:
     # Drop-in vivo que só existe no host: precisa sobreviver ao sync.
     host_only_dir = fake_etc / "ollama.service.d"
     host_only_dir.mkdir()
-    (host_only_dir / "zz-perf-containment.conf").write_text(
+    (host_only_dir / "zz-so-no-host.conf").write_text(
         "[Service]\nEnvironment=OLLAMA_NUM_PARALLEL=4\n", encoding="utf-8"
     )
 
@@ -306,8 +307,8 @@ def test_sync_systemd_dropins_installs_repo_confs_into_fake_system_dir(tmp_path:
     assert not (fake_etc / "crypto-agent@.service.d" / "common.conf").exists()
 
     # Drop-in exclusivo do host preservado e reportado.
-    assert (host_only_dir / "zz-perf-containment.conf").is_file()
-    assert "zz-perf-containment.conf" in proc.stdout
+    assert (host_only_dir / "zz-so-no-host.conf").is_file()
+    assert "zz-so-no-host.conf" in proc.stdout
 
     # Units afetadas foram registradas para restart.
     assert "ollama-gpu1.service" in proc.stdout
@@ -354,8 +355,13 @@ def test_managed_dropins_only_reference_models_declared_in_models_env() -> None:
     apontava para um modelo que não está na GPU1 desde 2026-07-10, e nada
     comparava o drop-in com deploy/crypto-agent/models.env."""
     models_env = (REPO_ROOT / "deploy" / "crypto-agent" / "models.env").read_text(encoding="utf-8")
+    def _norm(model: str) -> str:
+        """`trading-analyst` e `trading-analyst:latest` sao o mesmo modelo."""
+        model = model.strip()
+        return model[: -len(":latest")] if model.endswith(":latest") else model
+
     known = {
-        line.split("=", 1)[1].strip()
+        _norm(line.split("=", 1)[1])
         for line in models_env.splitlines()
         if line.strip() and not line.startswith("#") and "=" in line
     }
@@ -369,7 +375,7 @@ def test_managed_dropins_only_reference_models_declared_in_models_env() -> None:
                 conf.read_text(encoding="utf-8"),
                 flags=re.MULTILINE,
             ):
-                if value.strip() not in known:
+                if _norm(value) not in known:
                     offenders.append(f"{rel_dir}/{conf.name}: {name}={value.strip()}")
 
     assert not offenders, (

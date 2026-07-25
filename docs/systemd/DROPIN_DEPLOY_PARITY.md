@@ -52,18 +52,55 @@ para script inexistente derruba o start da unit.
 
 ### 1. Cópia aditiva — nunca `rsync --delete`
 
-O host tem drop-ins vivos que **não estão no git**. Apagá-los quebraria
-produção. Exemplos conhecidos:
+O host tem drop-ins vivos que **não estavam no git**. Apagá-los quebraria
+produção. O deploy **preserva** esses arquivos e os lista como `host_only` a
+cada execução; o verificador também os reporta (sem contar como drift, a menos
+que se passe `--fail-on-host-only`).
 
-| Arquivo | Onde | Por que importa |
-|---|---|---|
-| `ollama.service.d/zz-perf-containment.conf` | GPU0 | É o drop-in que **vence** por ordem alfabética em `OLLAMA_NUM_PARALLEL`/`OLLAMA_MAX_QUEUE` — ajustado no incidente 503-storm de 2026-07-24. Documentado em [`../variables-taxonomy/OLLAMA_PERF_CONTAINMENT.md`](../variables-taxonomy/OLLAMA_PERF_CONTAINMENT.md). |
-| `ollama-gpu1.service.d/zz-gpu1-visible-device.conf` | GPU1 | Fixa a GPU visível da segunda instância. |
-| `crypto-agent@*.service.d/zz-trading-preload.conf` | agents | Preload de modelo por perfil. |
+**Inventário capturado em 2026-07-25** (via `rsync` do host, LAN pelo WiFi):
+25 arquivos existiam só no homelab e agora estão versionados — 14 em
+`ollama.service.d`, 5 em `ollama-gpu1.service.d`, 3 em
+`ollama-gpu-coordinator.service.d`, 2 em `crypto-agent@.service.d`, 1 em
+`crypto-agent@BTC_USDT_aggressive.service.d`. Nenhum continha credencial.
 
-O deploy **preserva** esses arquivos e os lista como `host_only` a cada
-execução. O verificador também os reporta (sem contar como drift, a menos que
-se passe `--fail-on-host-only`).
+Dois deles eram, na verdade, arquivos soltos do repo instalados sob **outro
+nome**, o que escondia a relação:
+
+| No host | Origem no repo |
+|---|---|
+| `crypto-agent@.service.d/validate.conf` | `systemd/btc-trading-agent-validate.conf` |
+| `ollama.service.d/gpu-boot-order.conf` | `systemd/ollama-gpu-boot-order.conf` |
+
+E `ollama.service.d/ollama-optimized.conf` (host) divergia bastante do
+`systemd/ollama-optimized.conf` (repo) — o do repo descreve uma RTX 3060 12GB e
+`CPUAffinity=3-15`; o vivo diz RTX 2060 SUPER 8GB e `CPUAffinity=6,7`. As cópias
+soltas na raiz de `systemd/` são **snapshots velhos**; a verdade é a que está em
+`systemd/ollama.service.d/`.
+
+### Cuidado com a ordem alfabética
+
+O valor efetivo de cada variável é o do **último** drop-in em ordem
+lexicográfica que a define. No `ollama.service` e no `ollama-gpu1.service`,
+`zzzzz-idle-power-final.conf` (host-only, agora versionado) faz:
+
+```
+Environment=OLLAMA_KEEP_ALIVE=10m
+Environment=OLLAMA_MAX_LOADED_MODELS=1
+ExecStartPost=
+```
+
+Ou seja: **zera todo `ExecStartPost=`**. Consequência prática — o warmup
+corrigido no PR #246 (`zzzz-warmup-curl.conf`) **nunca roda em produção**, e o
+`OLLAMA_MAX_LOADED_MODELS=3` do `zzzz-warmup-curl.conf` do host é sobrescrito
+para `1`. Confirmado no host:
+
+```
+$ systemctl show ollama.service -p ExecStartPost --value
+(vazio)
+```
+
+Antes de concluir que um drop-in "consertou" algo, confirme com
+`systemctl show <unit> -p Environment` / `-p ExecStartPost`.
 
 ### 2. Templates com placeholder não são instalados
 
@@ -136,11 +173,31 @@ sudo systemctl show crypto-agent@BTC_USDT_aggressive -p Environment | tr ' ' '\n
 Ambos precisam mostrar `lfm2.5-fast:gpu1` — o segundo confirma que o drop-in
 venceu o `EnvironmentFile=/etc/crypto-agent/models.env`.
 
-## Pendência conhecida
+## Estado da paridade (2026-07-25)
 
-Os três drop-ins host-only da tabela acima **ainda não estão versionados**: a
-LAN 192.168.15.x está inacessível (enp0s31f6 em NO-CARRIER) e não foi possível
-lê-los. O caminho é rodar `scripts/export_host_systemd_dropins.sh --apply` no
-homelab (direto ou via runner self-hosted `homelab`) e commitar o resultado.
-Até lá vale o risco descrito em `feedback_git_not_enough`: `ExecStart=` fora do
-git é irrecuperável.
+Após a captura, `check_systemd_dropin_drift.py` contra o host dá:
+
+```
+Σ ok=36 missing=1 differs=2 redacted=1 host_only=0
+```
+
+As três divergências restantes são **decisões pendentes**, não drift acidental —
+o deploy vai impor o lado do repo em cada uma:
+
+| Arquivo | Host | Repo | Efeito de deployar |
+|---|---|---|---|
+| `crypto-agent@BTC_USDT_aggressive.service.d/zz-direct-ollama.conf` | `OLLAMA_PLAN_MODEL=trading-analyst` | `lfm2.5-fast:gpu1` | **Muda o modelo de plano do perfil agressivo** de GPU0 (trading-analyst, 12GB) para GPU1 (lfm2.5, 2GB). Ambos estão quentes hoje (`/api/ps`), então nenhum dos dois causa 503 — é escolha de comportamento, com dinheiro real. |
+| `crypto-agent@.service.d/ollama-timeout.conf` | comentário cita `gemma3-fast` | comentário cita `lfm2.5-fast` | Só comentário; nenhum `Environment=` muda. |
+| `crypto-agent@.service.d/cpuaffinity.conf` | não existe | `CPUAffinity=2-15` | Instala o arquivo. Inerte na prática: `zz-proxy-protect.conf` vem depois na ordem alfabética e faz `CPUAffinity=` + `14-15`. |
+
+> ⚠️ A premissa original — "produção segue com `gemma3-fast:gpu1` depois do
+> PR #246" — **não se confirmou**. O host está com `trading-analyst`, um
+> terceiro valor, alterado ao vivo. O drift era bidirecional: em
+> `zz-dual-gpu-routing.conf` e `zzzz-warmup-curl.conf` era o **host** que
+> estava à frente (o repo teria removido `OLLAMA_NAS_HOST` e
+> `GPU_COORD_POLL_INTERVAL_SEC` do coordenador). Por isso a captura veio antes
+> do deploy.
+
+Nota: `OLLAMA_NAS_HOST=http://192.168.15.4:11436` está configurado no
+coordenador mas **não responde** (curl → `000`). Backend morto, a limpar em
+mudança própria.
