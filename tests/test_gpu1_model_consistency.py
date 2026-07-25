@@ -53,19 +53,40 @@ def test_fallbacks_do_models_env_usam_o_modelo_da_gpu1(modelo_gpu1: str) -> None
     )
 
 
-def test_dropins_systemd_nao_contradizem_models_env(modelo_gpu1: str) -> None:
-    """Nenhum drop-in pode fixar um modelo :gpu1 diferente do canônico."""
+def _modelos_do_models_env() -> dict[str, str]:
+    """Todas as chaves *_MODEL declaradas em models.env."""
+    texto = MODELS_ENV.read_text(encoding="utf-8")
+    return dict(re.findall(r"^(\w*_MODEL)=(\S+)\s*$", texto, re.MULTILINE))
+
+
+def test_dropins_systemd_nao_contradizem_models_env() -> None:
+    """Drop-in não pode fixar um *_MODEL com valor diferente do models.env.
+
+    Verifica a chave INTEIRA, não só valores ':gpu1'. Uma versão anterior deste
+    teste só comparava sufixo ':gpu1' e por isso deixou passar um drop-in que
+    mandava OLLAMA_PLAN_MODEL para a GPU1 enquanto o models.env (e a produção)
+    diziam 'trading-analyst' — trocava a GPU de destino do plano sem ninguém ver.
+    """
+    canonico = _modelos_do_models_env()
+    assert canonico, "nenhuma chave *_MODEL encontrada em models.env"
+
     ofensores: list[str] = []
     for conf in (RAIZ / "systemd").rglob("*.conf"):
         for linha_num, linha in enumerate(conf.read_text(encoding="utf-8").splitlines(), 1):
             if linha.lstrip().startswith("#"):
                 continue
-            # [^=\s]* para casar só o valor após o ÚLTIMO '=' (Environment=CHAVE=valor)
-            for valor in re.findall(r"=([^=\s]*:gpu1)\b", linha):
-                if valor != modelo_gpu1:
-                    ofensores.append(f"{conf.relative_to(RAIZ)}:{linha_num} → {valor}")
+            match = re.match(r"\s*Environment=(\w*_MODEL)=(\S+)\s*$", linha)
+            if not match:
+                continue
+            chave, valor = match.groups()
+            esperado = canonico.get(chave)
+            if esperado is not None and valor != esperado:
+                ofensores.append(
+                    f"{conf.relative_to(RAIZ)}:{linha_num} → {chave}={valor} "
+                    f"(models.env diz {esperado})"
+                )
     assert not ofensores, (
-        f"drop-in systemd aponta para modelo de GPU1 diferente de {modelo_gpu1!r}:\n  "
+        "drop-in systemd contradiz deploy/crypto-agent/models.env:\n  "
         + "\n  ".join(ofensores)
     )
 
