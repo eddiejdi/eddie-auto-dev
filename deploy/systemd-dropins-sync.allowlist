@@ -40,13 +40,20 @@
 # systemd/akash-sweep.service.d/secrets.conf
 #   SECRETS_AGENT_API_KEY como placeholder. Ausente no host.
 #
-# systemd/ollama-gpu-coordinator.service.d/zz-dual-gpu-routing.conf
-#   Repo ATRÁS do host: faltam OLLAMA_NAS_HOST (192.168.15.4:11436) e
-#   GPU_COORD_POLL_INTERVAL_SEC=10. Sincronizar removeria o terceiro endpoint
-#   do coordinator. Reconciliar com o host antes de listar aqui.
+# (RECONCILIADOS em 2026-07-25 e agora listados abaixo)
+#   zz-dual-gpu-routing.conf e ollama.service.d/zzzz-warmup-curl.conf tiveram a
+#   versão do host trazida para o repo — o host estava à frente. Idem
+#   crypto-agent@.service.d/ollama-timeout.conf (comentário citando gemma3-fast).
 #
-# systemd/ollama.service.d/zzzz-warmup-curl.conf
-#   Diverge do host em 1 linha Environment=. Reconciliar antes de listar.
+# systemd/crypto-agent@.service.d/cpuaffinity.conf
+#   Não existe no host, e o efetivo é 14-15 (zz-proxy-protect.conf vem depois na
+#   ordem alfabética e reseta). Instalar seria inerte; fora da lista para não
+#   introduzir arquivo novo em produção sem motivo.
+#
+# Drop-ins capturados do host em 2026-07-25 (25 arquivos, ver
+# docs/systemd/DROPIN_DEPLOY_PARITY.md) ficam FORA da lista por ora: já estão
+# idênticos ao host e versioná-los era o objetivo. Entram aqui um a um, quando
+# houver mudança a empurrar. O verificador os reporta como "not_synced".
 #
 # Drop-ins de LTFS/fita (ltfs-*, lto6-*, nextcloud-tape-*, nvme-tape-*)
 #   Ausentes no homelab por design — o hardware de fita vive na NAS.
@@ -62,3 +69,5 @@ systemd/crypto-agent@BTC_USDT_conservative.service.d/zz-direct-ollama.conf
 systemd/ollama-gpu1.service.d/memory-limit.conf
 systemd/ollama-gpu1.service.d/zzzz-warmup-curl.conf
 systemd/ollama.service.d/zz-gpu0-visible-device.conf
+systemd/ollama-gpu-coordinator.service.d/zz-dual-gpu-routing.conf
+systemd/ollama.service.d/zzzz-warmup-curl.conf

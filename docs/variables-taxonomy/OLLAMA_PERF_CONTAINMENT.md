@@ -1,7 +1,13 @@
 # Ollama — Perf Containment / Concurrency (drop-in systemd)
 
 Drop-in `zz-perf-containment.conf` do `ollama.service` (homelab, 192.168.15.2).
-Snapshot versionado em `systemd/ollama.service.d/zz-perf-containment.conf`.
+
+> ⚠️ **Ainda NÃO versionado.** Existe só no host — `systemd/ollama.service.d/`
+> não tem esse arquivo. O deploy o preserva (cópia aditiva, nunca `--delete`) e
+> o reporta como `host_only`. Para trazê-lo ao git rode, no homelab,
+> `scripts/export_host_systemd_dropins.sh --apply`. Contexto e política:
+> [`../systemd/DROPIN_DEPLOY_PARITY.md`](../systemd/DROPIN_DEPLOY_PARITY.md).
+
 Contém limites de CPU/threads e a concorrência efetiva do Ollama (é o drop-in
 que VENCE por ordem alfabética entre os que definem `OLLAMA_NUM_PARALLEL`).
 

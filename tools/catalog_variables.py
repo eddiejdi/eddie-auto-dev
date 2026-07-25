@@ -28,8 +28,13 @@ logger = logging.getLogger(__name__)
 class VariablesCatalog:
     """Main catalog generator."""
     
-    def __init__(self, root_path: str = "/workspace/eddie-auto-dev"):
-        self.root = Path(root_path)
+    # Raiz do repo a que ESTE arquivo pertence. Antes era fixa em
+    # "/workspace/eddie-auto-dev": rodar o scanner de um worktree regravava o
+    # catálogo do repo principal.
+    DEFAULT_ROOT = Path(__file__).resolve().parent.parent
+
+    def __init__(self, root_path: str | Path | None = None):
+        self.root = Path(root_path) if root_path else self.DEFAULT_ROOT
         self.catalog = {
             "catalogVersion": "1.0.0",
             "generatedAt": datetime.now().isoformat(),
@@ -145,13 +150,27 @@ class VariablesCatalog:
             logger.info("  └─ No systemd directory found")
             return systemd_vars
         
-        for service_file in systemd_path.glob("*.service"):
+        # Units + drop-ins. Os *.service.d/*.conf carregam Environment= que so
+        # existiam no host (ex.: OLLAMA_NUM_PARALLEL de zz-perf-containment.conf)
+        # e por isso ficavam fora do catalogo — o hook de taxonomia entao os
+        # tratava como variaveis novas/duplicadas a cada commit.
+        unit_files = sorted(
+            set(systemd_path.glob("*.service"))
+            | set(systemd_path.glob("*.timer"))
+            | set(systemd_path.glob("*.service.d/*.conf"))
+            | set(systemd_path.glob("*.timer.d/*.conf"))
+        )
+        for service_file in unit_files:
             logger.info(f"  └─ {service_file.relative_to(self.root)}")
             self.sources_scanned.append((str(service_file.relative_to(self.root)), "systemd"))
             
             try:
                 with open(service_file, 'r') as f:
-                    service_name = service_file.stem
+                    service_name = (
+                        f"{service_file.parent.name[:-2]}/{service_file.name}"
+                        if service_file.parent.name.endswith((".service.d", ".timer.d"))
+                        else service_file.stem
+                    )
                     for line in f:
                         # Look for Environment= and EnvironmentFile=
                         if line.strip().startswith('Environment='):
