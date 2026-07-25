@@ -140,3 +140,67 @@ def test_script_syncs_market_rag_runtime() -> None:
     content = _load_script()
     assert "btc_trading_agent/market_rag.py" in content
     assert '${TARGET_DIR}/market_rag.py' in content
+
+
+def test_every_file_the_deploy_syncs_also_triggers_the_deploy() -> None:
+    """Arquivo sincronizado mas fora dos `paths` = correção que nunca chega ao host.
+
+    Foi assim que o `OLLAMA_PLAN_MODEL` dos drop-ins sobreviveu errado por três
+    PRs (#246→#249), e de novo com `training_db.py` no #251: o merge entrou no
+    main e nenhum deploy disparou.
+
+    Este teste fecha a classe inteira, não um caso: extrai de
+    deploy_btc_trading_profiles.sh todo `${REPO_ROOT}/<arquivo>` e exige que o
+    gatilho do workflow o cubra.
+    """
+    import fnmatch
+    import re
+
+    import yaml
+
+    workflow_path = (
+        SCRIPT_PATH.parent.parent / ".github" / "workflows" / "deploy-btc-trading-profiles.yml"
+    )
+    workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+    # `on:` vira True no YAML 1.1
+    triggers = workflow[True] if True in workflow else workflow["on"]
+    paths = triggers["push"]["paths"]
+
+    synced = sorted(set(re.findall(
+        r"\$\{REPO_ROOT\}/([A-Za-z0-9_./@-]+\.(?:py|txt|json|sudoers|service))",
+        _load_script(),
+    )))
+    assert synced, "nenhum arquivo sincronizado encontrado — regex quebrada?"
+
+    def covered(rel_path: str) -> bool:
+        return any(fnmatch.fnmatch(rel_path, p.replace("**", "*")) for p in paths)
+
+    missing = [f for f in synced if not covered(f)]
+    assert not missing, (
+        "o deploy sincroniza estes arquivos, mas mudá-los NÃO dispara o "
+        "workflow — a correção ficaria só no repo: " + ", ".join(missing)
+    )
+
+
+def test_trigger_paths_do_not_reference_removed_files() -> None:
+    """Path de gatilho apontando para arquivo inexistente é ruído que esconde
+    a ausência do path certo (era o caso de systemd/trading-svc-ollama.sudoers,
+    que o próprio deploy remove do host)."""
+    import glob
+
+    import yaml
+
+    repo_root = SCRIPT_PATH.parent.parent
+    workflow = yaml.safe_load(
+        (repo_root / ".github" / "workflows" / "deploy-btc-trading-profiles.yml")
+        .read_text(encoding="utf-8")
+    )
+    triggers = workflow[True] if True in workflow else workflow["on"]
+
+    dangling = [
+        p for p in triggers["push"]["paths"]
+        if not glob.glob(str(repo_root / p), recursive=True)
+    ]
+    assert not dangling, (
+        "paths do gatilho sem arquivo correspondente no repo: " + ", ".join(dangling)
+    )
