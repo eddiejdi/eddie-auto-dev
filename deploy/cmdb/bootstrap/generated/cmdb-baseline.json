@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-24T22:57:13.635828+00:00",
-  "repo_root": "/workspace/eddie-auto-dev",
+  "generated_at": "2026-07-25T00:17:20.276619+00:00",
+  "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/63f6e958-79f8-497a-ba08-e1e33b38ef08/scratchpad/wt-numctx",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",

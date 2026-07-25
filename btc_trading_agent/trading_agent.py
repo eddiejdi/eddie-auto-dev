@@ -1801,6 +1801,15 @@ class BitcoinTradingAgent(
     # trading-analyst a ~6 tok/s com num_predict=1024 leva ~170s; 200s dá margem.
     _OLLAMA_PLAN_TIMEOUT_SEC = float(os.getenv("OLLAMA_PLAN_TIMEOUT_SEC", "200"))
 
+    # Tem que bater com o "PARAMETER num_ctx" do Modelfile do modelo servido.
+    # Um num_ctx divergente força o Ollama a subir um runner novo; com
+    # MAX_LOADED_MODELS=1 e KEEP_ALIVE prendendo o runner residente, esse runner
+    # nunca é agendado e a request morre na fila devolvendo
+    # 503 "maximum pending requests exceeded" — mesmo com a GPU 100% ociosa.
+    # Um valor só para todas as chamadas: divergir daqui derruba o agente em 503.
+    # Para mudar, mude junto com o Modelfile.
+    _OLLAMA_NUM_CTX = 4096
+
     @staticmethod
     def _parse_ai_plan_controls(
         raw_text: str,
@@ -2276,7 +2285,7 @@ class BitcoinTradingAgent(
                 options={
                     "temperature": 0.0,
                     "num_predict": 256,
-                    "num_ctx": 2048,
+                    "num_ctx": self._OLLAMA_NUM_CTX,
                     "repeat_penalty": 1.05,
                     "top_k": 20,
                     "top_p": 0.70,
@@ -2555,7 +2564,7 @@ class BitcoinTradingAgent(
                 options={
                     "temperature": 0.0,
                     "num_predict": 256,
-                    "num_ctx": 2048,
+                    "num_ctx": self._OLLAMA_NUM_CTX,
                     "repeat_penalty": 1.05,
                     "top_k": 20,
                     "top_p": 0.70,
@@ -3145,15 +3154,17 @@ class BitcoinTradingAgent(
             plan_options = {
                 "temperature": 0.4,
                 "num_predict": 1024,
-                "num_ctx": 4096,
+                "num_ctx": self._OLLAMA_NUM_CTX,
                 "repeat_penalty": 1.3,
                 "repeat_last_n": 128,
                 "top_k": 40,
                 "top_p": 0.9,
             }
-            # GPU1 (GTX 1050 2GB) precisa de contexto menor para caber na VRAM
+            # O fallback vai para a GPU1, que também serve o modelo com num_ctx 4096
+            # (lfm2.5-fast:gpu1). Herdar o mesmo num_ctx é obrigatório: um valor
+            # menor aqui só produzia 503 "maximum pending requests exceeded".
             # num_predict=768 evita truncamento que causa respostas curtas sem vocabulário de trading
-            plan_options_fallback = {**plan_options, "num_ctx": 2048, "num_predict": 768}
+            plan_options_fallback = {**plan_options, "num_predict": 768}
 
             # Prompt compacto para modelos instruct pequenos (GPU1)
             # Usa vocabulário explícito de trading para passar no _sanitize_ai_plan
