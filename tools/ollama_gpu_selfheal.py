@@ -48,9 +48,12 @@ TELEGRAM_TOKEN  = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT   = os.environ.get("TELEGRAM_CHAT_ID", "")
 
 # Modelo que deve ficar no GPU1 (leve, <2GB) — não no GPU0
-LIGHT_MODELS = {"gemma3:1b", "gemma3-fast:gpu1", "llama3.2:1b"}
-# Modelo padrão a pré-carregar no GPU1 após limpeza
-GPU1_WARMUP_MODEL = os.environ.get("GPU1_WARMUP_MODEL", "gemma3:1b")
+# lfm2.5-fast:gpu1 é o modelo da GPU1 desde 2026-07-10 (substituiu gemma3-fast).
+LIGHT_MODELS = {"gemma3:1b", "gemma3-fast:gpu1", "lfm2.5-fast:gpu1", "llama3.2:1b"}
+# Modelo padrão a pré-carregar no GPU1 após limpeza — tem que ser o modelo
+# realmente servido pela GPU1, senão a limpeza repõe o modelo errado e as
+# chamadas seguintes forçam carga nova (503 com MAX_LOADED_MODELS=1).
+GPU1_WARMUP_MODEL = os.environ.get("GPU1_WARMUP_MODEL", "lfm2.5-fast:gpu1")
 
 PROBE_TIMEOUT = 15  # segundos para a probe request ao coordinator
 UNLOAD_TIMEOUT = 30
