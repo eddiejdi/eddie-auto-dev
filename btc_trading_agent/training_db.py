@@ -181,6 +181,25 @@ ALTER TABLE {SCHEMA}.ai_plans
     ALTER COLUMN profile SET NOT NULL;
 """
 
+# Estado final garantido por PROFILE_MIGRATION_SQL: (tabela, coluna, default).
+# Serve para PULAR a migração quando ela já foi aplicada — ver
+# _profile_migration_applied(). Manter em paridade com o SQL acima;
+# tests/test_training_db_schema_migration.py falha se divergir.
+PROFILE_MIGRATION_COLUMNS = (
+    ("trades", "profile", "default"),
+    ("trades", "servidor", "homelab"),
+    ("decisions", "servidor", "homelab"),
+    ("decisions", "profile", "default"),
+    ("ai_plans", "profile", "default"),
+)
+
+# Tempo máximo esperando lock durante a migração. Sem isso, o ALTER TABLE fica
+# na fila atrás das transações dos agentes que já estão negociando e acaba em
+# deadlock (incidente 2026-07-25: 5 ocorrências em 24h, todas em deploy).
+SCHEMA_MIGRATION_LOCK_TIMEOUT = os.getenv("BTC_SCHEMA_LOCK_TIMEOUT", "5s")
+SCHEMA_MIGRATION_MAX_ATTEMPTS = int(os.getenv("BTC_SCHEMA_MAX_ATTEMPTS", "5"))
+
+
 # ====================== DATABASE MANAGER ======================
 class TrainingDatabase:
     """Gerenciador do banco de dados de treinamento (PostgreSQL)"""
@@ -211,14 +230,84 @@ class TrainingDatabase:
         finally:
             self._pool.putconn(conn)
 
+    @staticmethod
+    def _profile_migration_applied(cur) -> bool:
+        """True quando PROFILE_MIGRATION_SQL já está aplicado por completo.
+
+        Existe para PULAR a migração no caso comum. Os 13 ALTER TABLE dela
+        pegam AccessExclusiveLock em btc.trades/decisions/ai_plans e os UPDATE
+        varrem a tabela inteira — a cada start de agente. Com 14 agentes, o
+        que reinicia disputa lock com os 13 que já estão negociando nas mesmas
+        tabelas, e o par DDL×DML fecha ciclo: DeadlockDetected.
+
+        O advisory lock acima serializa agentes entre si, mas não protege
+        contra as transações de quem já está rodando — por isso o skip.
+        """
+        tables = tuple({table for table, _, _ in PROFILE_MIGRATION_COLUMNS})
+        cur.execute(
+            """
+            SELECT table_name, column_name, is_nullable, column_default
+            FROM information_schema.columns
+            WHERE table_schema = %s AND table_name = ANY(%s)
+            """,
+            (SCHEMA, list(tables)),
+        )
+        found = {
+            (row[0], row[1]): (row[2], row[3])
+            for row in cur.fetchall()
+        }
+
+        for table, column, default in PROFILE_MIGRATION_COLUMNS:
+            state = found.get((table, column))
+            if state is None:
+                return False
+            is_nullable, column_default = state
+            if is_nullable != "NO":
+                return False
+            # Postgres devolve o default como "'default'::text"
+            if not (column_default or "").startswith(f"'{default}'"):
+                return False
+        return True
+
     def _ensure_schema(self):
-        """Garante que o schema e tabelas existem"""
+        """Garante que o schema e tabelas existem.
+
+        Reexecuta em DeadlockDetected/LockNotAvailable: quando a migração é
+        realmente necessária, ela concorre com as transações dos agentes
+        ativos. Falhar aqui mata o agente e o systemd só o traz de volta 30s
+        depois (RestartSec), então vale tentar de novo aqui mesmo.
+        """
+        last_error = None
+        for attempt in range(1, SCHEMA_MIGRATION_MAX_ATTEMPTS + 1):
+            try:
+                self._ensure_schema_once()
+                return
+            except (psycopg2.errors.DeadlockDetected,
+                    psycopg2.errors.LockNotAvailable) as exc:
+                last_error = exc
+                if attempt == SCHEMA_MIGRATION_MAX_ATTEMPTS:
+                    break
+                backoff = min(2 ** (attempt - 1), 8)
+                logger.warning(
+                    "⏳ Schema migration disputando lock (tentativa %d/%d): %s — "
+                    "repetindo em %ds",
+                    attempt, SCHEMA_MIGRATION_MAX_ATTEMPTS,
+                    type(exc).__name__, backoff,
+                )
+                time.sleep(backoff)
+        raise last_error
+
+    def _ensure_schema_once(self):
+        """Uma passada de criação/migração do schema."""
         with self._get_conn() as conn:
             cur = conn.cursor()
             # Serializa a migração entre agentes que sobem simultaneamente
             # (deploy reinicia os 3 profiles juntos → DeadlockDetected nos
             # ALTER TABLE concorrentes). Lock liberado no commit/rollback.
             cur.execute("SELECT pg_advisory_xact_lock(hashtext('btc_ensure_schema'))")
+            # Não ficar na fila atrás das transações dos agentes ativos: falhar
+            # rápido e repetir é melhor que segurar AccessExclusiveLock.
+            cur.execute("SET LOCAL lock_timeout = %s", (SCHEMA_MIGRATION_LOCK_TIMEOUT,))
             cur.execute(f"CREATE SCHEMA IF NOT EXISTS {SCHEMA}")
 
             cur.execute(f"""
@@ -367,7 +456,12 @@ class TrainingDatabase:
 
             # Compatibilidade: releases recentes passaram a usar colunas/tabelas
             # com "profile"; manter isso aqui evita depender de migration manual.
-            cur.execute(PROFILE_MIGRATION_SQL)
+            # Só roda se ainda não estiver aplicada — ver _profile_migration_applied().
+            if self._profile_migration_applied(cur):
+                logger.debug("↩️ PROFILE_MIGRATION_SQL já aplicada — pulando DDL")
+            else:
+                logger.info("🔧 Aplicando PROFILE_MIGRATION_SQL (schema desatualizado)")
+                cur.execute(PROFILE_MIGRATION_SQL)
 
             # Conversão intermoedas (owner USDT_BRL)
             cur.execute(f"""
