@@ -3,11 +3,11 @@
 Após a captura e a reconciliação, `check_systemd_dropin_drift.py` contra o host:
 
 ```
-Σ ok=13 missing=0 differs=0 redacted=0 not_synced=27 host_only=0
+Σ ok=12 missing=0 differs=1 redacted=0 not_synced=27 host_only=0
 ```
 
-**Paridade total** nos arquivos sincronizáveis, e nada mais existindo só no
-host. Os 27 `not_synced` são os drop-ins capturados que ainda não entraram na
+Nada mais existe só no host. O único `differs` é **intencional**: o
+`OLLAMA_PLAN_MODEL` do perfil agressivo (ver abaixo), que o deploy vai aplicar. Os 27 `not_synced` são os drop-ins capturados que ainda não entraram na
 allowlist — já idênticos ao host, versionados para não se perderem; entram um a
 um quando houver mudança a empurrar.
 
@@ -19,6 +19,24 @@ versão viva para o repo:
 | `ollama-gpu-coordinator.service.d/zz-dual-gpu-routing.conf` | `OLLAMA_NAS_HOST` e `GPU_COORD_POLL_INTERVAL_SEC` |
 | `ollama.service.d/zzzz-warmup-curl.conf` | `OLLAMA_MAX_LOADED_MODELS` |
 | `crypto-agent@.service.d/ollama-timeout.conf` | comentário ainda citava `gemma3-fast` |
+
+### A única divergência intencional
+
+`crypto-agent@BTC_USDT_aggressive.service.d/zz-direct-ollama.conf` leva
+`OLLAMA_PLAN_MODEL=lfm2.5-fast:gpu1`, enquanto o host ainda tem
+`trading-analyst`. É decisão de 2026-07-25: o plano do perfil agressivo volta
+para a GPU1, para não competir com conservative/shadow na GPU0. Reverte o #247,
+que por sua vez revertera o #246.
+
+Override deliberado do default de `/etc/crypto-agent/models.env`
+(`OLLAMA_PLAN_MODEL=trading-analyst`), que **continua valendo para os outros 13
+perfis** — o drop-in é o mecanismo por-perfil justamente para não mover a frota
+inteira. `lfm2.5-fast:gpu1` está residente na GPU1 (`/api/ps`), então não força
+carga nova nem 503 sob `MAX_LOADED_MODELS=1`.
+
+> Antes de trocar o modelo aqui de novo, confira `/api/ps` **e** o valor vivo
+> com `systemctl show`. Foi a falta dessa checagem que gerou o vaivém
+> #246 → #247.
 
 Fora da allowlist e sem previsão de entrar: `crypto-agent@.service.d/cpuaffinity.conf`
 (`CPUAffinity=2-15`), que não existe no host e seria inerte — `zz-proxy-protect.conf`
