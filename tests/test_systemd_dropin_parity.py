@@ -394,3 +394,53 @@ def test_managed_dropins_only_reference_models_declared_in_models_env() -> None:
         "drop-in aponta para modelo ausente de deploy/crypto-agent/models.env "
         "(com MAX_LOADED_MODELS=1 isso devolve 503): " + "; ".join(offenders)
     )
+
+
+# --------------------------------------------------------------------------
+# Environment= morto: sombreado por EnvironmentFile=
+# --------------------------------------------------------------------------
+
+def test_dropin_environment_never_shadowed_by_models_env() -> None:
+    """`EnvironmentFile=` VENCE `Environment=` no systemd, independente da ordem
+    de merge dos drop-ins.
+
+    Medido no homelab em 2026-07-25: `zz-direct-ollama.conf` (instância) traz
+    `Environment=OLLAMA_PLAN_MODEL=lfm2.5-fast:gpu1` e é mesclado DEPOIS de
+    `common.conf` (que tem `EnvironmentFile=/etc/crypto-agent/models.env`) —
+    e mesmo assim `/proc/<pid>/environ` do agente mostra o valor do models.env.
+
+    Consequência: qualquer `Environment=` de drop-in cujo nome também esteja no
+    models.env é LINHA MORTA. Foi sobre duas dessas linhas que os PRs #246 e
+    #247 discordaram — nenhuma delas jamais teve efeito.
+
+    Cuidado ao diagnosticar: `systemctl show -p Environment` NÃO expande
+    `EnvironmentFile=`, então ele mostra o valor do drop-in e dá a impressão
+    errada de que o drop-in venceu. A fonte de verdade é `/proc/<pid>/environ`.
+    """
+    models_env = REPO_ROOT / "deploy" / "crypto-agent" / "models.env"
+    shadowing = {
+        line.split("=", 1)[0].strip()
+        for line in models_env.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#") and "=" in line
+    }
+    assert shadowing, "models.env vazio — regex quebrada?"
+
+    dead: list[str] = []
+    for rel_dir in _allowed_dirs():
+        if not rel_dir.startswith("crypto-agent@"):
+            continue  # models.env é EnvironmentFile só dos crypto-agent
+        for conf in sorted((REPO_ROOT / "systemd" / rel_dir).glob("*.conf")):
+            for name in re.findall(
+                r'^Environment="?([A-Z][A-Z0-9_]*)=',
+                conf.read_text(encoding="utf-8"),
+                flags=re.MULTILINE,
+            ):
+                if name in shadowing:
+                    dead.append(f"{rel_dir}/{conf.name}: {name}")
+
+    assert not dead, (
+        "Environment= de drop-in sombreado por EnvironmentFile=/etc/crypto-agent/models.env "
+        "— a linha não tem efeito nenhum em runtime. Mude o valor no models.env "
+        "(vale para os 14 agentes) ou use um EnvironmentFile= por perfil, que é "
+        "mesclado depois. Linhas mortas: " + "; ".join(dead)
+    )

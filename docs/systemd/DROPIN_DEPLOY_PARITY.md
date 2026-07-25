@@ -3,11 +3,11 @@
 Após a captura e a reconciliação, `check_systemd_dropin_drift.py` contra o host:
 
 ```
-Σ ok=12 missing=0 differs=1 redacted=0 not_synced=27 host_only=0
+Σ ok=13 missing=0 differs=0 redacted=0 not_synced=27 host_only=0
 ```
 
-Nada mais existe só no host. O único `differs` é **intencional**: o
-`OLLAMA_PLAN_MODEL` do perfil agressivo (ver abaixo), que o deploy vai aplicar. Os 27 `not_synced` são os drop-ins capturados que ainda não entraram na
+**Paridade total** nos arquivos sincronizáveis, e nada mais existindo só no
+host. Os 27 `not_synced` são os drop-ins capturados que ainda não entraram na
 allowlist — já idênticos ao host, versionados para não se perderem; entram um a
 um quando houver mudança a empurrar.
 
@@ -20,23 +20,52 @@ versão viva para o repo:
 | `ollama.service.d/zzzz-warmup-curl.conf` | `OLLAMA_MAX_LOADED_MODELS` |
 | `crypto-agent@.service.d/ollama-timeout.conf` | comentário ainda citava `gemma3-fast` |
 
-### A única divergência intencional
+### ⚠️ `EnvironmentFile=` vence `Environment=` — cuidado com linha morta
 
-`crypto-agent@BTC_USDT_aggressive.service.d/zz-direct-ollama.conf` leva
-`OLLAMA_PLAN_MODEL=lfm2.5-fast:gpu1`, enquanto o host ainda tem
-`trading-analyst`. É decisão de 2026-07-25: o plano do perfil agressivo volta
-para a GPU1, para não competir com conservative/shadow na GPU0. Reverte o #247,
-que por sua vez revertera o #246.
+Medido no homelab em 2026-07-25, depois do deploy do #249:
 
-Override deliberado do default de `/etc/crypto-agent/models.env`
-(`OLLAMA_PLAN_MODEL=trading-analyst`), que **continua valendo para os outros 13
-perfis** — o drop-in é o mecanismo por-perfil justamente para não mover a frota
-inteira. `lfm2.5-fast:gpu1` está residente na GPU1 (`/api/ps`), então não força
-carga nova nem 503 sob `MAX_LOADED_MODELS=1`.
+```
+$ sudo systemctl cat crypto-agent@BTC_USDT_aggressive | grep -E '^# /|EnvironmentFile=|PLAN_MODEL'
+# .../crypto-agent@.service.d/common.conf
+EnvironmentFile=/etc/crypto-agent/models.env
+# .../crypto-agent@BTC_USDT_aggressive.service.d/zz-direct-ollama.conf   ← mesclado DEPOIS
+Environment=OLLAMA_PLAN_MODEL=lfm2.5-fast:gpu1
 
-> Antes de trocar o modelo aqui de novo, confira `/api/ps` **e** o valor vivo
-> com `systemctl show`. Foi a falta dessa checagem que gerou o vaivém
-> #246 → #247.
+$ sudo cat /proc/$(systemctl show crypto-agent@BTC_USDT_aggressive -p MainPID --value)/environ \
+    | tr '\0' '\n' | grep OLLAMA_PLAN_MODEL
+OLLAMA_PLAN_MODEL=trading-analyst        ← o models.env venceu
+```
+
+O drop-in é mesclado **depois** e ainda assim perde: no systemd,
+`EnvironmentFile=` sobrepõe `Environment=` para a mesma variável,
+independentemente da ordem. Logo, **todo `Environment=OLLAMA_*_MODEL` num
+drop-in de `crypto-agent@*` é linha morta** — os nomes de modelo vêm todos de
+`/etc/crypto-agent/models.env`.
+
+Foi exatamente sobre duas dessas linhas que os PRs #246 e #247 discordaram.
+Nenhuma jamais teve efeito: o `gemma3-fast:gpu1` do #246 não podia causar 503
+por esse caminho. As linhas foram removidas e
+`test_dropin_environment_never_shadowed_by_models_env` impede a recaída.
+
+#### O diagnóstico que engana
+
+`systemctl show <unit> -p Environment` **não expande `EnvironmentFile=`**. Ele
+mostra o valor do drop-in e dá a impressão de que o drop-in venceu — foi o que
+mascarou isso por três PRs. Junto com o caso do `ExecStartPost=` zerado por
+`zzzzz-idle-power-final.conf`, a regra prática é:
+
+| Quero saber | Comando |
+|---|---|
+| O que a unit **declara** | `systemctl cat <unit>` |
+| `Environment=` efetivo do **processo** | `sudo cat /proc/<MainPID>/environ \| tr '\0' '\n'` |
+| `ExecStartPost=` efetivo | `systemctl show <unit> -p ExecStartPost --value` |
+
+#### Como fazer override por perfil, se um dia precisar
+
+`Environment=` não serve. Seria preciso um `EnvironmentFile=` dedicado no
+drop-in da instância (mesclado depois do `common.conf`, e entre
+`EnvironmentFile=` o último vence), mais a etapa de deploy que o instale.
+Camada nova — só criar com motivo claro.
 
 Fora da allowlist e sem previsão de entrar: `crypto-agent@.service.d/cpuaffinity.conf`
 (`CPUAffinity=2-15`), que não existe no host e seria inerte — `zz-proxy-protect.conf`
