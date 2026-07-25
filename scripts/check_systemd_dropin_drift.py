@@ -10,8 +10,12 @@ errado em produção). Este verificador fecha o buraco nos dois sentidos:
   * host → repo: arquivo que só existe no host = configuração viva não
     versionada (aviso por padrão, falha com ``--fail-on-host-only``).
 
-O escopo vem de ``systemd/managed_dropins.conf`` — a mesma lista usada pelo
-``scripts/deploy_btc_trading_profiles.sh``.
+O escopo de INSTALAÇÃO vem de ``deploy/systemd-dropins-sync.allowlist`` (opt-in
+por arquivo, criada no PR #248) — a mesma lista que o
+``scripts/deploy_btc_trading_profiles.sh`` usa. O escopo de OBSERVAÇÃO são os
+diretórios ``*.service.d`` que essa lista toca: arquivos do repo fora da
+allowlist aparecem como ``not_synced``, e arquivos que só existem no host como
+``host_only``. Observar é read-only; instalar continua sendo opt-in.
 
 Uso típico:
     scripts/check_systemd_dropin_drift.py --strict          # pós-deploy / CI
@@ -28,7 +32,9 @@ from pathlib import Path
 from typing import Iterable
 
 DEFAULT_SYSTEM_DIR = Path("/etc/systemd/system")
-MANIFEST_RELATIVE = Path("systemd/managed_dropins.conf")
+# Fonte única do que PODE ser instalado — opt-in por arquivo, criada no PR #248.
+# Não duplicar essa lista em outro lugar: o deploy lê o mesmo arquivo.
+ALLOWLIST_RELATIVE = Path("deploy/systemd-dropins-sync.allowlist")
 
 # Drop-ins com placeholder NÃO são instaláveis: sobrescrever o host apagaria
 # segredos vivos (ex.: crypto-agent@.service.d/common.conf traz
@@ -55,6 +61,7 @@ STATUS_MISSING = "missing"
 STATUS_DIFFERS = "differs"
 STATUS_REDACTED = "redacted"
 STATUS_HOST_ONLY = "host_only"
+STATUS_NOT_SYNCED = "not_synced"
 
 DRIFT_STATUSES = (STATUS_MISSING, STATUS_DIFFERS)
 
@@ -64,20 +71,35 @@ def is_redacted(text: str) -> bool:
     return any(pattern.search(text) for pattern in REDACTION_PATTERNS)
 
 
-def read_manifest(manifest_path: Path) -> list[str]:
-    """Lê os diretórios gerenciados (uma entrada por linha, `#` comenta)."""
-    if not manifest_path.is_file():
-        raise FileNotFoundError(f"Manifesto não encontrado: {manifest_path}")
+def read_allowlist(allowlist_path: Path) -> list[str]:
+    """Lê os caminhos sincronizáveis (um por linha, `#` comenta).
+
+    Cada entrada é relativa à raiz do repo, ex.:
+    `systemd/crypto-agent@.service.d/deps.conf`.
+    """
+    if not allowlist_path.is_file():
+        raise FileNotFoundError(f"Allowlist não encontrada: {allowlist_path}")
 
     entries: list[str] = []
-    for raw in manifest_path.read_text(encoding="utf-8").splitlines():
+    for raw in allowlist_path.read_text(encoding="utf-8").splitlines():
         line = raw.split("#", 1)[0].strip()
         if not line:
             continue
         if line.startswith("/") or ".." in line:
-            raise ValueError(f"Entrada inválida no manifesto: {raw!r}")
+            raise ValueError(f"Entrada inválida na allowlist: {raw!r}")
+        if not line.startswith("systemd/") or not line.endswith(".conf"):
+            raise ValueError(f"Entrada não é um drop-in de systemd/: {raw!r}")
         entries.append(line)
     return entries
+
+
+def observed_dirs(entries: list[str]) -> list[str]:
+    """Diretórios *.service.d cobertos pela allowlist.
+
+    Escopo de OBSERVAÇÃO (detectar host-only / não-sincronizados), maior que o
+    escopo de INSTALAÇÃO — que continua sendo arquivo a arquivo.
+    """
+    return sorted({Path(e).parent.name for e in entries})
 
 
 def _read_text(path: Path) -> str:
@@ -96,10 +118,12 @@ def _host_conf_files(host_dir: Path) -> Iterable[Path]:
     )
 
 
-def compare(repo_root: Path, system_dir: Path, manifest_path: Path | None = None) -> dict:
-    """Compara cada .conf gerenciado do repo com o correspondente no host."""
-    manifest_path = manifest_path or (repo_root / MANIFEST_RELATIVE)
-    managed_dirs = read_manifest(manifest_path)
+def compare(repo_root: Path, system_dir: Path, allowlist_path: Path | None = None) -> dict:
+    """Compara cada .conf da allowlist com o correspondente no host."""
+    allowlist_path = allowlist_path or (repo_root / ALLOWLIST_RELATIVE)
+    allowed = read_allowlist(allowlist_path)
+    allowed_set = set(allowed)
+    managed_dirs = observed_dirs(allowed)
 
     findings: list[dict] = []
     for rel_dir in managed_dirs:
@@ -108,7 +132,7 @@ def compare(repo_root: Path, system_dir: Path, manifest_path: Path | None = None
 
         if not repo_dir.is_dir():
             raise FileNotFoundError(
-                f"Diretório do manifesto não existe no repo: {repo_dir}"
+                f"Diretório da allowlist não existe no repo: {repo_dir}"
             )
 
         repo_files = sorted(p for p in repo_dir.iterdir() if p.suffix == ".conf")
@@ -118,6 +142,18 @@ def compare(repo_root: Path, system_dir: Path, manifest_path: Path | None = None
             repo_text = _read_text(repo_file)
             host_file = host_dir / repo_file.name
             rel = f"{rel_dir}/{repo_file.name}"
+
+            if f"systemd/{rel}" not in allowed_set:
+                # Versionado mas fora da allowlist: o deploy não o instala.
+                # Informativo — a omissão é intencional e documentada lá.
+                findings.append(
+                    {
+                        "status": STATUS_NOT_SYNCED,
+                        "path": rel,
+                        "detail": "fora de deploy/systemd-dropins-sync.allowlist — não é instalado",
+                    }
+                )
+                continue
 
             if is_redacted(repo_text):
                 findings.append(
@@ -162,12 +198,14 @@ def compare(repo_root: Path, system_dir: Path, manifest_path: Path | None = None
             )
 
     summary = {status: 0 for status in
-               (STATUS_OK, STATUS_MISSING, STATUS_DIFFERS, STATUS_REDACTED, STATUS_HOST_ONLY)}
+               (STATUS_OK, STATUS_MISSING, STATUS_DIFFERS, STATUS_REDACTED,
+                STATUS_NOT_SYNCED, STATUS_HOST_ONLY)}
     for finding in findings:
         summary[finding["status"]] += 1
 
     return {
         "system_dir": str(system_dir),
+        "allowlist": allowed,
         "managed_dirs": managed_dirs,
         "findings": findings,
         "summary": summary,
@@ -181,6 +219,7 @@ _ICONS = {
     STATUS_MISSING: "❌",
     STATUS_DIFFERS: "❌",
     STATUS_REDACTED: "🔒",
+    STATUS_NOT_SYNCED: "➖",
     STATUS_HOST_ONLY: "⚠️ ",
 }
 
@@ -196,8 +235,8 @@ def render(report: dict, verbose: bool) -> str:
 
     summary = report["summary"]
     lines.append(
-        "  Σ ok={ok} missing={missing} differs={differs} "
-        "redacted={redacted} host_only={host_only}".format(**summary)
+        "  Σ ok={ok} missing={missing} differs={differs} redacted={redacted} "
+        "not_synced={not_synced} host_only={host_only}".format(**summary)
     )
     if report["host_only"]:
         lines.append(
@@ -221,6 +260,12 @@ def main(argv: list[str] | None = None) -> int:
         default=DEFAULT_SYSTEM_DIR,
         help=f"Diretório de units do host (default: {DEFAULT_SYSTEM_DIR})",
     )
+    parser.add_argument(
+        "--allowlist",
+        type=Path,
+        default=None,
+        help=f"Allowlist de sincronização (default: <repo>/{ALLOWLIST_RELATIVE})",
+    )
     parser.add_argument("--json", action="store_true", help="Saída JSON")
     parser.add_argument(
         "--strict",
@@ -238,7 +283,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        report = compare(args.repo_root, args.system_dir)
+        report = compare(args.repo_root, args.system_dir, args.allowlist)
     except (FileNotFoundError, ValueError) as exc:
         print(f"❌ {exc}", file=sys.stderr)
         return 2

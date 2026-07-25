@@ -94,10 +94,10 @@ MANAGED_TOOLS=(
   "ollama_offloader.py"
 )
 
-# Manifesto dos diretórios *.service.d/*.timer.d instalados no host. Fonte
-# compartilhada com scripts/check_systemd_dropin_drift.py.
+# Allowlist opt-in POR ARQUIVO do que pode ir para o host (PR #248). Fonte
+# única, compartilhada com scripts/check_systemd_dropin_drift.py — não duplicar.
 SYSTEMD_SYSTEM_DIR="${SYSTEMD_SYSTEM_DIR:-/etc/systemd/system}"
-DROPIN_MANIFEST="${REPO_ROOT}/systemd/managed_dropins.conf"
+DROPIN_ALLOWLIST="${REPO_ROOT}/deploy/systemd-dropins-sync.allowlist"
 DROPIN_DRIFT_CHECKER="${REPO_ROOT}/scripts/check_systemd_dropin_drift.py"
 
 # Units cujo restart já é feito em outro ponto do deploy — não reiniciar duas
@@ -344,10 +344,11 @@ install_managed_units() {
   sudo visudo -cf /etc/sudoers.d/btc-trading-ollama >/dev/null
 }
 
-read_dropin_manifest() {
-  # Diretórios gerenciados, um por linha (`#` comenta, linha vazia ignorada).
+read_dropin_allowlist() {
+  # Caminhos sincronizáveis relativos à raiz do repo, um por linha
+  # (`#` comenta, linha vazia ignorada). Ex.: systemd/<unit>.service.d/x.conf
   sed -e 's/#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' \
-    "${DROPIN_MANIFEST}" | grep -v '^$'
+    "${DROPIN_ALLOWLIST}" | grep -v '^$'
 }
 
 dropin_is_redacted() {
@@ -371,64 +372,64 @@ dropin_unit_is_restarted_elsewhere() {
 }
 
 sync_systemd_dropins() {
-  # Instala systemd/<unit>.service.d/*.conf em /etc/systemd/system/ de forma
-  # ADITIVA. Sem --delete de propósito: o host tem drop-ins vivos ainda não
-  # versionados (zz-trading-preload.conf, zz-gpu1-visible-device.conf,
-  # zz-perf-containment.conf) e apagá-los derrubaria a contenção do Ollama.
-  local rel_dir="" src="" dst="" unit="" base=""
+  # Instala em /etc/systemd/system/ APENAS os arquivos da allowlist (opt-in por
+  # arquivo, PR #248). Cópia ADITIVA, sem --delete de propósito: o host tem
+  # drop-ins vivos e apagá-los derrubaria a contenção do Ollama.
+  local rel="" src="" dst="" unit="" base="" rel_dir=""
+  local -A seen_dirs=()
   local host_only=()
 
-  if [[ ! -f "${DROPIN_MANIFEST}" ]]; then
-    echo "❌ Manifesto de drop-ins ausente: ${DROPIN_MANIFEST}" >&2
+  if [[ ! -f "${DROPIN_ALLOWLIST}" ]]; then
+    echo "❌ Allowlist de drop-ins ausente: ${DROPIN_ALLOWLIST}" >&2
     exit 1
   fi
 
-  echo "🧩 Sincronizando drop-ins systemd (manifesto: $(basename "${DROPIN_MANIFEST}"))..."
+  echo "🧩 Sincronizando drop-ins systemd (allowlist: $(basename "${DROPIN_ALLOWLIST}"))..."
   DROPIN_CHANGED_UNITS=()
 
-  while IFS= read -r rel_dir; do
-    local repo_dir="${REPO_ROOT}/systemd/${rel_dir}"
-    local host_dir="${SYSTEMD_SYSTEM_DIR}/${rel_dir}"
+  while IFS= read -r rel; do
+    src="${REPO_ROOT}/${rel}"
+    rel_dir="$(basename "$(dirname "${rel}")")"
+    base="$(basename "${rel}")"
     unit="${rel_dir%.d}"
+    seen_dirs["${rel_dir}"]=1
 
-    if [[ ! -d "${repo_dir}" ]]; then
-      echo "❌ Diretório do manifesto não existe no repo: ${repo_dir}" >&2
+    if [[ ! -f "${src}" ]]; then
+      echo "❌ Arquivo da allowlist não existe: ${src}" >&2
       exit 1
     fi
 
-    sudo install -d -m 0755 "${host_dir}"
-
-    for src in "${repo_dir}"/*.conf; do
-      [[ -f "${src}" ]] || continue
-      base="$(basename "${src}")"
-      dst="${host_dir}/${base}"
-
-      if dropin_is_redacted "${src}"; then
-        echo "  🔒 ${rel_dir}/${base} (template com placeholder — não instalado)"
-        continue
-      fi
-
-      if [[ -f "${dst}" ]] && cmp -s "${src}" "${dst}"; then
-        echo "  ✅ ${rel_dir}/${base} (já em paridade)"
-        continue
-      fi
-
-      backup_if_present "${dst}"
-      sudo install -m 0644 "${src}" "${dst}"
-      echo "  ⬆️  ${rel_dir}/${base} instalado → ${dst}"
-      DROPIN_CHANGED_UNITS+=("${unit}")
-    done
-
-    # host → repo: o que existe só no host é configuração viva fora do git.
-    if [[ -d "${host_dir}" ]]; then
-      for dst in "${host_dir}"/*.conf; do
-        [[ -f "${dst}" ]] || continue
-        base="$(basename "${dst}")"
-        [[ -f "${repo_dir}/${base}" ]] && continue
-        host_only+=("${rel_dir}/${base}")
-      done
+    # Defesa em profundidade: o guard test do #248 já barra placeholder na
+    # allowlist, mas instalar um template apagaria segredo vivo do host.
+    if dropin_is_redacted "${src}"; then
+      echo "❌ ${rel} tem placeholder de segredo e está na allowlist — abortando" >&2
+      exit 1
     fi
-  done < <(read_dropin_manifest)
+
+    sudo install -d -m 0755 "${SYSTEMD_SYSTEM_DIR}/${rel_dir}"
+    dst="${SYSTEMD_SYSTEM_DIR}/${rel_dir}/${base}"
+
+    if [[ -f "${dst}" ]] && cmp -s "${src}" "${dst}"; then
+      echo "  ✅ ${rel_dir}/${base} (já em paridade)"
+      continue
+    fi
+
+    backup_if_present "${dst}"
+    sudo install -m 0644 "${src}" "${dst}"
+    echo "  ⬆️  ${rel_dir}/${base} instalado → ${dst}"
+    DROPIN_CHANGED_UNITS+=("${unit}")
+  done < <(read_dropin_allowlist)
+
+  # host → repo: o que existe só no host é configuração viva fora do git.
+  for rel_dir in "${!seen_dirs[@]}"; do
+    [[ -d "${SYSTEMD_SYSTEM_DIR}/${rel_dir}" ]] || continue
+    for dst in "${SYSTEMD_SYSTEM_DIR}/${rel_dir}"/*.conf; do
+      [[ -f "${dst}" ]] || continue
+      base="$(basename "${dst}")"
+      [[ -f "${REPO_ROOT}/systemd/${rel_dir}/${base}" ]] && continue
+      host_only+=("${rel_dir}/${base}")
+    done
+  done
 
   if ((${#host_only[@]})); then
     echo "⚠️  Drop-ins presentes só no host (preservados, mas fora do git):"
@@ -436,7 +437,6 @@ sync_systemd_dropins() {
     echo "     ↳ versione com: scripts/export_host_systemd_dropins.sh --apply"
   fi
 
-  # Dedup das units afetadas
   if ((${#DROPIN_CHANGED_UNITS[@]})); then
     mapfile -t DROPIN_CHANGED_UNITS < <(printf '%s\n' "${DROPIN_CHANGED_UNITS[@]}" | sort -u)
   fi
@@ -503,7 +503,8 @@ verify_systemd_dropin_parity() {
     exit 1
   fi
   python3 "${DROPIN_DRIFT_CHECKER}" \
-    --repo-root "${REPO_ROOT}" --system-dir "${SYSTEMD_SYSTEM_DIR}" --strict
+    --repo-root "${REPO_ROOT}" --system-dir "${SYSTEMD_SYSTEM_DIR}" \
+    --allowlist "${DROPIN_ALLOWLIST}" --strict
 }
 
 sync_trading_runtime() {

@@ -15,7 +15,7 @@ Política, escopo e pendências: [`../systemd/DROPIN_DEPLOY_PARITY.md`](../syste
 
 | Nome | Onde | Papel |
 |---|---|---|
-| `DROPIN_MANIFEST` | deploy | Caminho de `systemd/managed_dropins.conf`, a lista dos diretórios gerenciados. |
+| `DROPIN_ALLOWLIST` | deploy | Caminho de `deploy/systemd-dropins-sync.allowlist` (PR #248), o opt-in por arquivo do que vai para o host. |
 | `DROPIN_DRIFT_CHECKER` | deploy | Caminho de `scripts/check_systemd_dropin_drift.py`, chamado no hook de completude. |
 | `MANAGED_TOOLS` | deploy | Scripts de `tools/` referenciados por `ExecStart=`/`ExecStartPost=` das units gerenciadas. Sincronizados **antes** dos drop-ins. |
 | `DROPIN_RESTART_SKIP` | deploy | Units cujo restart já acontece em outro ponto do deploy. |

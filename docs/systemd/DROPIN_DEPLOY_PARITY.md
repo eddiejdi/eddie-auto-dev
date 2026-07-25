@@ -1,3 +1,33 @@
+## Estado da paridade (2026-07-25)
+
+Após a captura e a reconciliação, `check_systemd_dropin_drift.py` contra o host:
+
+```
+Σ ok=13 missing=0 differs=0 redacted=0 not_synced=27 host_only=0
+```
+
+**Paridade total** nos arquivos sincronizáveis, e nada mais existindo só no
+host. Os 27 `not_synced` são os drop-ins capturados que ainda não entraram na
+allowlist — já idênticos ao host, versionados para não se perderem; entram um a
+um quando houver mudança a empurrar.
+
+Três arquivos onde o **host estava à frente** foram reconciliados trazendo a
+versão viva para o repo:
+
+| Arquivo | O que o repo não tinha |
+|---|---|
+| `ollama-gpu-coordinator.service.d/zz-dual-gpu-routing.conf` | `OLLAMA_NAS_HOST` e `GPU_COORD_POLL_INTERVAL_SEC` |
+| `ollama.service.d/zzzz-warmup-curl.conf` | `OLLAMA_MAX_LOADED_MODELS` |
+| `crypto-agent@.service.d/ollama-timeout.conf` | comentário ainda citava `gemma3-fast` |
+
+Fora da allowlist e sem previsão de entrar: `crypto-agent@.service.d/cpuaffinity.conf`
+(`CPUAffinity=2-15`), que não existe no host e seria inerte — `zz-proxy-protect.conf`
+vem depois na ordem alfabética e reseta para `14-15`, o valor efetivo hoje.
+
+Nota: `OLLAMA_NAS_HOST=http://192.168.15.4:11436` está configurado no
+coordenador mas **não responde** (`curl` → `000`). Backend morto, a limpar em
+mudança própria.
+
 # Drop-ins systemd — paridade repo ↔ homelab
 
 ## O buraco que isto fecha
@@ -13,18 +43,22 @@ arquivos de `MANAGED_SYSTEMD_UNITS` (units inteiras). **Nenhum diretório
    `ollama_gpu_selfheal.py` e `ollama_offloader.py` não. Um drop-in que chama
    `ollama_warmup.py` num host sem esse arquivo perde o `ExecStartPost`.
 
-Caso concreto: o PR #246 corrigiu
+Caso concreto — e o desfecho é a moral da história. O PR #246 corrigiu
 `crypto-agent@BTC_USDT_aggressive.service.d/zz-direct-ollama.conf`, que fixava
-`OLLAMA_PLAN_MODEL=gemma3-fast:gpu1` — modelo que não está na GPU1 desde
-2026-07-10 (é `lfm2.5-fast:gpu1`). Apontar para modelo não residente, com
-`OLLAMA_MAX_LOADED_MODELS=1`, devolve 503 *"maximum pending requests exceeded"*
-(mesma classe do #245). O PR consertou o repo; produção seguiu errada.
+`OLLAMA_PLAN_MODEL=gemma3-fast:gpu1`, trocando por `lfm2.5-fast:gpu1`. Sem
+acesso à LAN, presumiu-se que o comentário versionado ("plano vai para a GPU1")
+refletia a decisão vigente. **Não refletia**: produção e
+`deploy/crypto-agent/models.env` diziam `trading-analyst`. O #247 reverteu.
+
+Ou seja, o problema nunca foi só "o repo não chega ao host" — era **não haver
+como comparar os dois**. Sem comparação, o palpite sobre o que produção estava
+rodando errou duas vezes seguidas.
 
 ## Como funciona agora
 
 | Peça | Papel |
 |---|---|
-| `systemd/managed_dropins.conf` | Manifesto: quais diretórios `*.service.d` o deploy instala. Fonte única. |
+| `deploy/systemd-dropins-sync.allowlist` | **Fonte única** (criada no PR #248): opt-in **por arquivo** do que o deploy instala. O escopo de *observação* são os diretórios que ela toca. |
 | `sync_systemd_dropins()` (deploy) | Copia `*.conf` para `/etc/systemd/system/` de forma **aditiva**, com backup do arquivo anterior. |
 | `restart_dropin_changed_units()` | Restart escalonado **só** das units cujo `.conf` mudou e que não são reiniciadas em outro ponto do deploy. |
 | `verify_systemd_dropin_parity()` | Hook de completude: falha o deploy se algum `.conf` versionado não chegou ao host. |
@@ -127,7 +161,7 @@ propósito**.
 
 ## Escopo — o que está fora e por quê
 
-O manifesto cobre só a pilha trading/Ollama do homelab (192.168.15.2). Ficam de
+A allowlist cobre só a pilha trading/Ollama do homelab (192.168.15.2). Ficam de
 fora, deliberadamente:
 
 | Diretório | Motivo |
@@ -138,9 +172,13 @@ fora, deliberadamente:
 | `coordinator-agent.service.d` | Outro serviço, outro deploy. |
 | `systemd/*.conf` soltos (`ollama-optimized.conf`, `ollama-gpu-boot-order.conf`, `btc-trading-agent-validate.conf`, `nginx-dns-over-tls.conf`, `pihole-ipv6-dns-fix.override.conf`, `radvd.conf`) | Não estão numa árvore `<unit>.d/`; o destino no host é ambíguo. Instalar no lugar errado é pior que não instalar. |
 
-Para trazer um diretório para o escopo, basta acrescentá-lo a
-`systemd/managed_dropins.conf` — o deploy, o gatilho do workflow e os testes
-leem o mesmo arquivo.
+Para tornar um arquivo sincronizável, acrescente o caminho a
+`deploy/systemd-dropins-sync.allowlist` — o deploy, o verificador, o gatilho do
+workflow e os testes leem o mesmo arquivo. Antes de listar, **compare com o
+host**: se ele estiver à frente, traga a mudança para o repo primeiro (foi o
+caso de `zz-dual-gpu-routing.conf` e `zzzz-warmup-curl.conf`). Um arquivo
+versionado mas fora da allowlist aparece como `not_synced` no verificador — a
+omissão é intencional e fica documentada na própria allowlist.
 
 ## Operação
 

@@ -21,7 +21,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 DEPLOY_SCRIPT = REPO_ROOT / "scripts" / "deploy_btc_trading_profiles.sh"
 CHECKER_PATH = REPO_ROOT / "scripts" / "check_systemd_dropin_drift.py"
 EXPORT_SCRIPT = REPO_ROOT / "scripts" / "export_host_systemd_dropins.sh"
-MANIFEST = REPO_ROOT / "systemd" / "managed_dropins.conf"
+ALLOWLIST = REPO_ROOT / "deploy" / "systemd-dropins-sync.allowlist"
 DEPLOY_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "deploy-btc-trading-profiles.yml"
 DRIFT_WORKFLOW = REPO_ROOT / ".github" / "workflows" / "systemd-dropin-drift-check.yml"
 
@@ -41,16 +41,29 @@ def _script() -> str:
     return DEPLOY_SCRIPT.read_text(encoding="utf-8")
 
 
-def _manifest_dirs() -> list[str]:
-    return checker.read_manifest(MANIFEST)
+def _allowed() -> list[str]:
+    return checker.read_allowlist(ALLOWLIST)
+
+
+def _allowed_dirs() -> list[str]:
+    return checker.observed_dirs(_allowed())
 
 
 # --------------------------------------------------------------------------
 # Manifesto
 # --------------------------------------------------------------------------
 
-def test_manifest_exists_and_covers_trading_and_ollama_dropins() -> None:
-    dirs = _manifest_dirs()
+def test_allowlist_is_the_single_source_of_truth() -> None:
+    """Manter duas listas (allowlist do #248 + manifesto proprio) recria a dupla
+    fonte de verdade que ja mordeu nos dashboards do Grafana."""
+    assert ALLOWLIST.is_file()
+    assert not (REPO_ROOT / "systemd" / "managed_dropins.conf").exists()
+    for consumer in (DEPLOY_SCRIPT, CHECKER_PATH):
+        assert "systemd-dropins-sync.allowlist" in consumer.read_text(encoding="utf-8")
+
+
+def test_allowlist_covers_trading_and_ollama_dropins() -> None:
+    dirs = _allowed_dirs()
     for expected in (
         "crypto-agent@.service.d",
         "crypto-agent@BTC_USDT_aggressive.service.d",
@@ -59,25 +72,20 @@ def test_manifest_exists_and_covers_trading_and_ollama_dropins() -> None:
         "ollama-gpu1.service.d",
         "ollama-gpu-coordinator.service.d",
     ):
-        assert expected in dirs, f"{expected} fora de systemd/managed_dropins.conf"
+        assert expected in dirs, f"{expected} fora da allowlist"
 
 
-def test_every_manifest_dir_exists_in_repo() -> None:
-    for rel_dir in _manifest_dirs():
-        path = REPO_ROOT / "systemd" / rel_dir
-        assert path.is_dir(), f"Manifesto aponta para diretório inexistente: {path}"
-        assert list(path.glob("*.conf")), f"{rel_dir} não tem nenhum .conf"
+def test_every_allowlisted_file_exists_in_repo() -> None:
+    for rel in _allowed():
+        assert (REPO_ROOT / rel).is_file(), f"Allowlist aponta para arquivo inexistente: {rel}"
 
 
-def test_manifest_rejects_absolute_and_traversal_entries(tmp_path: Path) -> None:
-    bad = tmp_path / "bad.conf"
-    bad.write_text("/etc/systemd/system\n", encoding="utf-8")
-    with pytest.raises(ValueError):
-        checker.read_manifest(bad)
-
-    bad.write_text("../../etc\n", encoding="utf-8")
-    with pytest.raises(ValueError):
-        checker.read_manifest(bad)
+def test_allowlist_rejects_absolute_traversal_and_non_dropin_entries(tmp_path: Path) -> None:
+    bad = tmp_path / "bad.allowlist"
+    for content in ("/etc/systemd/system/x.conf\n", "../../etc/x.conf\n", "scripts/foo.sh\n"):
+        bad.write_text(content, encoding="utf-8")
+        with pytest.raises(ValueError):
+            checker.read_allowlist(bad)
 
 
 # --------------------------------------------------------------------------
@@ -89,7 +97,7 @@ def test_deploy_script_installs_dropins_and_verifies_parity() -> None:
     assert "sync_systemd_dropins" in content
     assert "verify_systemd_dropin_parity" in content
     assert "check_systemd_dropin_drift.py" in content
-    assert 'DROPIN_MANIFEST="${REPO_ROOT}/systemd/managed_dropins.conf"' in content
+    assert 'DROPIN_ALLOWLIST="${REPO_ROOT}/deploy/systemd-dropins-sync.allowlist"' in content
     # A instalação precisa preceder o daemon-reload e o restart dos agents.
     assert content.index("sync_systemd_dropins\n") < content.index("sudo systemctl daemon-reload")
 
@@ -119,7 +127,7 @@ def test_deploy_script_syncs_tools_referenced_by_managed_units() -> None:
     content = _script()
     referenced: set[str] = set()
     unit_sources = list((REPO_ROOT / "systemd").glob("*.service"))
-    for rel_dir in _manifest_dirs():
+    for rel_dir in _allowed_dirs():
         unit_sources.extend((REPO_ROOT / "systemd" / rel_dir).glob("*.conf"))
 
     for path in unit_sources:
@@ -150,8 +158,8 @@ def test_deploy_workflow_triggers_on_managed_dropin_changes() -> None:
     workflow = yaml.safe_load(DEPLOY_WORKFLOW.read_text(encoding="utf-8"))
     paths = workflow[True]["push"]["paths"] if True in workflow else workflow["on"]["push"]["paths"]
 
-    assert "systemd/managed_dropins.conf" in paths
-    for rel_dir in _manifest_dirs():
+    assert "deploy/systemd-dropins-sync.allowlist" in paths
+    for rel_dir in _allowed_dirs():
         assert f"systemd/{rel_dir}/**" in paths, f"gatilho não cobre systemd/{rel_dir}"
     assert "scripts/check_systemd_dropin_drift.py" in paths
 
@@ -187,8 +195,11 @@ def _fixture(tmp_path: Path, repo_files: dict[str, str], host_files: dict[str, s
     rel_dir = "demo.service.d"
 
     (repo_root / "systemd" / rel_dir).mkdir(parents=True)
-    (repo_root / "systemd" / "managed_dropins.conf").write_text(
-        f"# comentário\n{rel_dir}\n", encoding="utf-8"
+    (repo_root / "deploy").mkdir(parents=True, exist_ok=True)
+    (repo_root / "deploy" / "systemd-dropins-sync.allowlist").write_text(
+        "# comentário\n"
+        + "".join(f"systemd/{rel_dir}/{name}\n" for name in repo_files),
+        encoding="utf-8",
     )
     for name, text in repo_files.items():
         (repo_root / "systemd" / rel_dir / name).write_text(text, encoding="utf-8")
@@ -339,11 +350,12 @@ def test_sync_systemd_dropins_is_idempotent(tmp_path: Path) -> None:
     assert "já em paridade" in proc.stdout
 
 
-def test_repo_real_manifest_is_loadable_by_checker() -> None:
+def test_repo_real_allowlist_is_loadable_by_checker() -> None:
     """compare() precisa rodar contra a árvore real sem estourar."""
     report = checker.compare(REPO_ROOT, Path("/nonexistent-system-dir"))
-    assert report["summary"]["missing"] > 0
-    assert report["summary"]["redacted"] >= 1  # common.conf
+    assert report["summary"]["missing"] == len(_allowed())
+    # common.conf esta versionado mas fora da allowlist
+    assert report["summary"]["not_synced"] >= 1
 
 
 # --------------------------------------------------------------------------
@@ -368,7 +380,7 @@ def test_managed_dropins_only_reference_models_declared_in_models_env() -> None:
     assert known, "models.env vazio"
 
     offenders = []
-    for rel_dir in _manifest_dirs():
+    for rel_dir in _allowed_dirs():
         for conf in sorted((REPO_ROOT / "systemd" / rel_dir).glob("*.conf")):
             for name, value in re.findall(
                 r"^Environment=(OLLAMA_[A-Z_]*MODEL)=(.+)$",

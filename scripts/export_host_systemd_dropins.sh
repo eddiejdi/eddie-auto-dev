@@ -16,7 +16,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SYSTEM_DIR="${SYSTEM_DIR:-/etc/systemd/system}"
-MANIFEST="${REPO_ROOT}/systemd/managed_dropins.conf"
+ALLOWLIST="${REPO_ROOT}/deploy/systemd-dropins-sync.allowlist"
 APPLY=0
 
 for arg in "$@"; do
@@ -27,16 +27,20 @@ for arg in "$@"; do
   esac
 done
 
-if [[ ! -f "${MANIFEST}" ]]; then
-  echo "❌ Manifesto ausente: ${MANIFEST}" >&2
+if [[ ! -f "${ALLOWLIST}" ]]; then
+  echo "❌ Allowlist ausente: ${ALLOWLIST}" >&2
   exit 1
 fi
 
+# Diretorios a inspecionar = os que a allowlist toca. Escopo de OBSERVACAO:
+# varre o diretorio inteiro, mesmo que so alguns arquivos sejam sincronizaveis.
+observed_dirs() {
+  sed -e 's/#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' "${ALLOWLIST}" \
+    | grep -v '^$' | xargs -r -n1 dirname | xargs -r -n1 basename | sort -u
+}
+
 found=0
 while IFS= read -r rel_dir; do
-  rel_dir="${rel_dir%%#*}"
-  rel_dir="${rel_dir#"${rel_dir%%[![:space:]]*}"}"
-  rel_dir="${rel_dir%"${rel_dir##*[![:space:]]}"}"
   [[ -z "${rel_dir}" ]] && continue
 
   host_dir="${SYSTEM_DIR}/${rel_dir}"
@@ -57,7 +61,7 @@ while IFS= read -r rel_dir; do
       echo "    ↳ copiado para systemd/${rel_dir}/${base}"
     fi
   done
-done < "${MANIFEST}"
+done < <(observed_dirs)
 
 if [[ "${found}" -eq 0 ]]; then
   echo "✅ Nenhum drop-in exclusivo do host nos diretórios gerenciados."

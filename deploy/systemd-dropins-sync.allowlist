@@ -1,0 +1,73 @@
+# Drop-ins systemd que PODEM ser sincronizados do repo para o host.
+#
+# Formato: um caminho por linha, relativo à raiz do repo. '#' inicia comentário.
+#
+# POR QUE ISSO EXISTE
+# Auditoria de 2026-07-25 comparou os drop-ins versionados com
+# /etc/systemd/system/ no homelab e achou divergência em duas direções:
+#
+#   1. Repo ATRÁS com placeholder — `crypto-agent@.service.d/common.conf` tem
+#      TELEGRAM_BOT_TOKEN, SECRETS_AGENT_API_KEY e ADMIN_CHAT_ID como valores de
+#      exemplo, e aponta OLLAMA_*_HOST para as GPUs diretas (:11434/:11435)
+#      enquanto produção usa o coordinator (:11437). Sincronizar esse arquivo
+#      derruba os 14 agentes: perdem coordinator e param os alertas do Telegram.
+#
+#   2. Repo ATRÁS de features — `ollama-gpu-coordinator.service.d/zz-dual-gpu-routing.conf`
+#      não tinha OLLAMA_NAS_HOST nem GPU_COORD_POLL_INTERVAL_SEC, que existem em
+#      produção. Sincronizar removeria o terceiro endpoint do coordinator.
+#
+# Por isso a sincronização é OPT-IN por arquivo, nunca "tudo que está em systemd/".
+#
+# REGRAS (verificadas por tests/test_systemd_dropins_sync_guard.py)
+#   - Todo caminho listado precisa existir.
+#   - Arquivo listado não pode conter Environment= com chave de credencial
+#     (TOKEN / _KEY / SECRET / PASSWORD / CHAT_ID).
+#   - Arquivo listado não pode conter valor de placeholder (<algo>, your_, changeme).
+#   - Arquivo com credencial ou placeholder NÃO entra aqui: o host é a fonte de
+#     verdade desses, e o valor real nunca deve ser versionado.
+#
+# ANTES DE ADICIONAR UM ARQUIVO: compare com o host primeiro.
+#   diff <(ssh 192.168.15.2 "sudo cat /etc/systemd/system/<rel>") systemd/<rel>
+# Se o host estiver à frente, traga a mudança para o repo antes de listar.
+#
+# ─── FORA DA LISTA DE PROPÓSITO (auditoria 2026-07-25) ──────────────────────
+#
+# systemd/crypto-agent@.service.d/common.conf
+#   Template com credenciais de exemplo + rotas para GPU direta em vez do
+#   coordinator. Vale para os 14 agentes. Host é a fonte de verdade.
+#   Teste dedicado impede que volte: test_common_conf_nunca_e_sincronizavel.
+#
+# systemd/akash-sweep.service.d/secrets.conf
+#   SECRETS_AGENT_API_KEY como placeholder. Ausente no host.
+#
+# (RECONCILIADOS em 2026-07-25 e agora listados abaixo)
+#   zz-dual-gpu-routing.conf e ollama.service.d/zzzz-warmup-curl.conf tiveram a
+#   versão do host trazida para o repo — o host estava à frente. Idem
+#   crypto-agent@.service.d/ollama-timeout.conf (comentário citando gemma3-fast).
+#
+# systemd/crypto-agent@.service.d/cpuaffinity.conf
+#   Não existe no host, e o efetivo é 14-15 (zz-proxy-protect.conf vem depois na
+#   ordem alfabética e reseta). Instalar seria inerte; fora da lista para não
+#   introduzir arquivo novo em produção sem motivo.
+#
+# Drop-ins capturados do host em 2026-07-25 (25 arquivos, ver
+# docs/systemd/DROPIN_DEPLOY_PARITY.md) ficam FORA da lista por ora: já estão
+# idênticos ao host e versioná-los era o objetivo. Entram aqui um a um, quando
+# houver mudança a empurrar. O verificador os reporta como "not_synced".
+#
+# Drop-ins de LTFS/fita (ltfs-*, lto6-*, nextcloud-tape-*, nvme-tape-*)
+#   Ausentes no homelab por design — o hardware de fita vive na NAS.
+
+systemd/crypto-agent@.service.d/deps.conf
+systemd/crypto-agent@.service.d/ollama-timeout.conf
+systemd/crypto-agent@.service.d/zz-ai-throttle.conf
+systemd/crypto-agent@BTC_USDT_aggressive.service.d/cpu-affinity.conf
+systemd/crypto-agent@BTC_USDT_aggressive.service.d/zz-direct-ollama.conf
+systemd/crypto-agent@BTC_USDT_conservative.service.d/cpu-affinity.conf
+systemd/crypto-agent@BTC_USDT_conservative.service.d/ollama-routing.conf
+systemd/crypto-agent@BTC_USDT_conservative.service.d/zz-direct-ollama.conf
+systemd/ollama-gpu1.service.d/memory-limit.conf
+systemd/ollama-gpu1.service.d/zzzz-warmup-curl.conf
+systemd/ollama.service.d/zz-gpu0-visible-device.conf
+systemd/ollama-gpu-coordinator.service.d/zz-dual-gpu-routing.conf
+systemd/ollama.service.d/zzzz-warmup-curl.conf
