@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-25T17:30:37.292781+00:00",
-  "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/63f6e958-79f8-497a-ba08-e1e33b38ef08/scratchpad/wt-gpu1",
+  "generated_at": "2026-07-25T18:55:41.024952+00:00",
+  "repo_root": "/tmp/claude-1000/-workspace-eddie-auto-dev/7f40a52f-d0fb-4e79-95e1-fa52123595d6/scratchpad/wt-dropins",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",

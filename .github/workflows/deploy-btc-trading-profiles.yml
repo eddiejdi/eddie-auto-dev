@@ -40,7 +40,21 @@ on:
       - 'grafana/dashboards/btc-trading-monitor.json'
       - 'systemd/rss-sentiment-exporter.service'
       - 'systemd/ollama-gpu-coordinator.service'
+      # Drop-ins gerenciados (systemd/managed_dropins.conf). Sem estes paths,
+      # corrigir um .conf no repo nem dispara o deploy — foi assim que a GPU1
+      # ficou apontando para gemma3-fast:gpu1 mesmo após o PR #246.
+      - 'systemd/managed_dropins.conf'
+      - 'systemd/crypto-agent@.service.d/**'
+      - 'systemd/crypto-agent@BTC_USDT_aggressive.service.d/**'
+      - 'systemd/crypto-agent@BTC_USDT_conservative.service.d/**'
+      - 'systemd/ollama.service.d/**'
+      - 'systemd/ollama-gpu1.service.d/**'
+      - 'systemd/ollama-gpu-coordinator.service.d/**'
       - 'tools/ollama_gpu_coordinator.py'
+      - 'tools/ollama_warmup.py'
+      - 'tools/ollama_gpu_selfheal.py'
+      - 'tools/ollama_offloader.py'
+      - 'scripts/check_systemd_dropin_drift.py'
       - '.github/workflows/deploy-btc-trading-profiles.yml'
 
 jobs:
@@ -77,10 +91,14 @@ jobs:
             tests/test_multi_entry_sell_behavior.py \
             tests/unit/test_position_manager_mixin.py \
             tests/test_grafana_dashboard_queries.py \
-            tests/test_deploy_btc_trading_profiles_script.py
+            tests/test_deploy_btc_trading_profiles_script.py \
+            tests/test_systemd_dropin_parity.py
 
       - name: Deploy trading profiles (BTC + ETH + SOL + DOGE)
         run: scripts/deploy_btc_trading_profiles.sh
+
+      - name: Verify systemd drop-in parity (repo ↔ host)
+        run: python3 scripts/check_systemd_dropin_drift.py --strict --verbose
 
       - name: Verify SOL and DOGE services and Prometheus scrape targets
         run: |

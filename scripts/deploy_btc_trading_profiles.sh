@@ -84,6 +84,31 @@ MANAGED_SYSTEMD_UNITS=(
   "ollama-gpu-coordinator.service"
 )
 
+# Ferramentas em ${TOOLS_DIR} chamadas por ExecStart=/ExecStartPost= das units e
+# drop-ins gerenciados. Sem elas o drop-in instalado falha no boot (ex.: o
+# warmup da GPU1 chama ollama_warmup.py).
+MANAGED_TOOLS=(
+  "ollama_gpu_coordinator.py"
+  "ollama_warmup.py"
+  "ollama_gpu_selfheal.py"
+  "ollama_offloader.py"
+)
+
+# Manifesto dos diretórios *.service.d/*.timer.d instalados no host. Fonte
+# compartilhada com scripts/check_systemd_dropin_drift.py.
+SYSTEMD_SYSTEM_DIR="${SYSTEMD_SYSTEM_DIR:-/etc/systemd/system}"
+DROPIN_MANIFEST="${REPO_ROOT}/systemd/managed_dropins.conf"
+DROPIN_DRIFT_CHECKER="${REPO_ROOT}/scripts/check_systemd_dropin_drift.py"
+
+# Units cujo restart já é feito em outro ponto do deploy — não reiniciar duas
+# vezes quando o drop-in delas mudar.
+DROPIN_RESTART_SKIP=(
+  "ollama-gpu-coordinator.service"  # restart incondicional mais abaixo
+)
+
+# Preenchido por sync_systemd_dropins(); consumido por restart_dropin_changed_units().
+DROPIN_CHANGED_UNITS=()
+
 require_file() {
   local path="$1"
   if [[ ! -f "${path}" ]]; then
@@ -319,6 +344,168 @@ install_managed_units() {
   sudo visudo -cf /etc/sudoers.d/btc-trading-ollama >/dev/null
 }
 
+read_dropin_manifest() {
+  # Diretórios gerenciados, um por linha (`#` comenta, linha vazia ignorada).
+  sed -e 's/#.*//' -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' \
+    "${DROPIN_MANIFEST}" | grep -v '^$'
+}
+
+dropin_is_redacted() {
+  # Templates com placeholder de segredo NUNCA vão para o host: instalar
+  # common.conf com SECRETS_AGENT_API_KEY=<from_bitwarden> apagaria a
+  # credencial viva do crypto-agent. Mantenha em paridade com
+  # REDACTION_PATTERNS de scripts/check_systemd_dropin_drift.py.
+  grep -Eq '<from_bitwarden>|<your_[a-z0-9_]+>|CHANGEME|REPLACE_ME|<REDACTED>|<PLACEHOLDER>' "$1"
+}
+
+dropin_unit_is_restarted_elsewhere() {
+  local unit="$1" skip=""
+  # Template não é reiniciável; instâncias crypto-agent@* já entram no restart
+  # escalonado de AGENT_SERVICES.
+  [[ "${unit}" == *"@.service" ]] && return 0
+  [[ "${unit}" == crypto-agent@* ]] && return 0
+  for skip in "${DROPIN_RESTART_SKIP[@]}"; do
+    [[ "${unit}" == "${skip}" ]] && return 0
+  done
+  return 1
+}
+
+sync_systemd_dropins() {
+  # Instala systemd/<unit>.service.d/*.conf em /etc/systemd/system/ de forma
+  # ADITIVA. Sem --delete de propósito: o host tem drop-ins vivos ainda não
+  # versionados (zz-trading-preload.conf, zz-gpu1-visible-device.conf,
+  # zz-perf-containment.conf) e apagá-los derrubaria a contenção do Ollama.
+  local rel_dir="" src="" dst="" unit="" base=""
+  local host_only=()
+
+  if [[ ! -f "${DROPIN_MANIFEST}" ]]; then
+    echo "❌ Manifesto de drop-ins ausente: ${DROPIN_MANIFEST}" >&2
+    exit 1
+  fi
+
+  echo "🧩 Sincronizando drop-ins systemd (manifesto: $(basename "${DROPIN_MANIFEST}"))..."
+  DROPIN_CHANGED_UNITS=()
+
+  while IFS= read -r rel_dir; do
+    local repo_dir="${REPO_ROOT}/systemd/${rel_dir}"
+    local host_dir="${SYSTEMD_SYSTEM_DIR}/${rel_dir}"
+    unit="${rel_dir%.d}"
+
+    if [[ ! -d "${repo_dir}" ]]; then
+      echo "❌ Diretório do manifesto não existe no repo: ${repo_dir}" >&2
+      exit 1
+    fi
+
+    sudo install -d -m 0755 "${host_dir}"
+
+    for src in "${repo_dir}"/*.conf; do
+      [[ -f "${src}" ]] || continue
+      base="$(basename "${src}")"
+      dst="${host_dir}/${base}"
+
+      if dropin_is_redacted "${src}"; then
+        echo "  🔒 ${rel_dir}/${base} (template com placeholder — não instalado)"
+        continue
+      fi
+
+      if [[ -f "${dst}" ]] && cmp -s "${src}" "${dst}"; then
+        echo "  ✅ ${rel_dir}/${base} (já em paridade)"
+        continue
+      fi
+
+      backup_if_present "${dst}"
+      sudo install -m 0644 "${src}" "${dst}"
+      echo "  ⬆️  ${rel_dir}/${base} instalado → ${dst}"
+      DROPIN_CHANGED_UNITS+=("${unit}")
+    done
+
+    # host → repo: o que existe só no host é configuração viva fora do git.
+    if [[ -d "${host_dir}" ]]; then
+      for dst in "${host_dir}"/*.conf; do
+        [[ -f "${dst}" ]] || continue
+        base="$(basename "${dst}")"
+        [[ -f "${repo_dir}/${base}" ]] && continue
+        host_only+=("${rel_dir}/${base}")
+      done
+    fi
+  done < <(read_dropin_manifest)
+
+  if ((${#host_only[@]})); then
+    echo "⚠️  Drop-ins presentes só no host (preservados, mas fora do git):"
+    printf '     - %s\n' "${host_only[@]}"
+    echo "     ↳ versione com: scripts/export_host_systemd_dropins.sh --apply"
+  fi
+
+  # Dedup das units afetadas
+  if ((${#DROPIN_CHANGED_UNITS[@]})); then
+    mapfile -t DROPIN_CHANGED_UNITS < <(printf '%s\n' "${DROPIN_CHANGED_UNITS[@]}" | sort -u)
+  fi
+}
+
+restart_dropin_changed_units() {
+  # Restart escalonado APENAS das units cujo drop-in mudou agora e que não são
+  # reiniciadas em outro ponto do deploy. Roda antes do coordenador e dos
+  # agents, para que a pilha suba na ordem GPU → coordenador → agents.
+  local unit="" restarted=0
+  local stagger="${DROPIN_RESTART_STAGGER_SEC:-3}"
+
+  ((${#DROPIN_CHANGED_UNITS[@]})) || {
+    echo "ℹ️ Nenhum drop-in mudou — nenhum restart adicional necessário"
+    return 0
+  }
+
+  for unit in "${DROPIN_CHANGED_UNITS[@]}"; do
+    if dropin_unit_is_restarted_elsewhere "${unit}"; then
+      echo "  ↪︎ ${unit}: drop-in atualizado (restart já coberto pelo deploy)"
+      continue
+    fi
+    if ! systemctl list-unit-files "${unit}" --no-legend >/dev/null 2>&1 \
+       || [[ "$(systemctl show "${unit}" -p LoadState --value 2>/dev/null)" == "not-found" ]]; then
+      echo "  ⚠️  ${unit}: unit não encontrada no host — restart pulado" >&2
+      continue
+    fi
+    echo "  ♻️ restart ${unit} (drop-in alterado)"
+    sudo systemctl restart "${unit}" || {
+      echo "  ⚠️  falha ao reiniciar ${unit} — seguindo" >&2
+      continue
+    }
+    restarted=$((restarted + 1))
+    sleep "${stagger}"
+  done
+
+  # Ollama precisa responder antes de coordenador/agents subirem, senão o
+  # primeiro plano de cada agent bate em 503 (mesma classe do incidente #245).
+  if ((restarted)); then
+    wait_for_ollama_ready
+  fi
+}
+
+wait_for_ollama_ready() {
+  local host="" attempt=0
+  for host in "http://127.0.0.1:11434" "http://127.0.0.1:11435"; do
+    for attempt in 1 2 3 4 5 6 7 8 9 10; do
+      if curl -sf --max-time 5 "${host}/api/tags" >/dev/null 2>&1; then
+        echo "  ✅ Ollama respondendo em ${host}"
+        break
+      fi
+      [[ "${attempt}" -eq 10 ]] && echo "  ⚠️  Ollama não respondeu em ${host} após 10 tentativas" >&2
+      sleep 3
+    done
+  done
+}
+
+verify_systemd_dropin_parity() {
+  # HOOK de completude (espelho de verify_agents_running_current_code): depois
+  # do deploy, todo .conf gerenciado do repo tem que existir idêntico no host.
+  # Divergir aqui significa que o deploy não aplicou o que está versionado.
+  if [[ ! -f "${DROPIN_DRIFT_CHECKER}" ]]; then
+    echo "❌ Verificador de drift ausente: ${DROPIN_DRIFT_CHECKER}" >&2
+    exit 1
+  fi
+  python3 "${DROPIN_DRIFT_CHECKER}" \
+    --repo-root "${REPO_ROOT}" --system-dir "${SYSTEMD_SYSTEM_DIR}" --strict
+}
+
 sync_trading_runtime() {
   sync_runtime_file \
     "${REPO_ROOT}/btc_trading_agent/trading_agent.py" \
@@ -383,11 +570,18 @@ sync_trading_runtime() {
   sync_runtime_file \
     "${REPO_ROOT}/systemd/validate_btc_config.py" \
     "${SYSTEMD_HELPERS_DIR}/validate_btc_config.py"
-  # Coordenador de GPUs (ferramenta homelab, pertence ao user homelab)
+  # Ferramentas Ollama referenciadas por units/drop-ins gerenciados
+  # (ExecStart=/ExecStartPost= apontam para ${TOOLS_DIR}). Sincronizar ANTES de
+  # instalar os drop-ins: um drop-in que chama um script ausente derruba o
+  # ExecStartPost e deixa a GPU sem warmup.
   sudo install -d -o homelab -g homelab -m 0755 "${TOOLS_DIR}"
-  sudo install -o homelab -g homelab -m 0755 \
-    "${REPO_ROOT}/tools/ollama_gpu_coordinator.py" \
-    "${TOOLS_DIR}/ollama_gpu_coordinator.py"
+  local tool=""
+  for tool in "${MANAGED_TOOLS[@]}"; do
+    require_file "${REPO_ROOT}/tools/${tool}"
+    sudo install -o homelab -g homelab -m 0755 \
+      "${REPO_ROOT}/tools/${tool}" \
+      "${TOOLS_DIR}/${tool}"
+  done
 }
 
 write_trading_database_env() {
@@ -479,6 +673,13 @@ verify_agents_running_current_code() {
   echo "✅ Completude confirmada: todos os crypto-agent ativos no código recém-sincronizado."
 }
 
+# `source`ar o script expõe apenas as funções (usado por
+# tests/test_systemd_dropin_parity.py para exercitar sync_systemd_dropins com um
+# /etc/systemd/system falso). Execução direta segue normalmente.
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+  return 0
+fi
+
 echo "=== BTC trading profile deploy ==="
 echo "Repo: ${REPO_ROOT}"
 echo "Target: ${TARGET_DIR}"
@@ -496,6 +697,7 @@ sync_prometheus_config
 sync_myClaude_trading_scripts
 ensure_trading_venv
 install_managed_units
+sync_systemd_dropins
 
 python3 - <<'PY' "${CONSERVATIVE_SRC}" "${AGGRESSIVE_SRC}"
 import json
@@ -543,6 +745,11 @@ sudo -u "${SERVICE_USER}" /usr/bin/python3 -m py_compile "${TARGET_DIR}/promethe
 validate_ollama_models "/etc/crypto-agent/models.env"
 
 sudo systemctl daemon-reload
+
+# Aplica drop-ins recém-instalados nas units que não são reiniciadas adiante
+# (ollama.service / ollama-gpu1.service). Antes do coordenador e dos agents.
+echo "♻️ Aplicando drop-ins alterados..."
+restart_dropin_changed_units
 
 # Habilita e inicia o coordenador de GPUs (deve iniciar antes dos agents)
 sudo systemctl enable ollama-gpu-coordinator.service 2>/dev/null || true
@@ -621,5 +828,8 @@ ensure_doge_trading_profiles
 
 # HOOK de completude: aborta se algum agent ativo ficou com código antigo.
 verify_agents_running_current_code
+
+# HOOK de completude: aborta se algum drop-in versionado não chegou ao host.
+verify_systemd_dropin_parity
 
 echo "=== Deploy concluido ==="
