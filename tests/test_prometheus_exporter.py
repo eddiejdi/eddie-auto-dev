@@ -3,6 +3,8 @@ Testes unitários para prometheus_exporter.py
 Foco: cálculo correto de total_trades e win_rate incluindo sell_reconciled
 """
 import sys
+import threading
+import time
 import types
 from unittest.mock import MagicMock, patch, call
 from pathlib import Path
@@ -172,3 +174,114 @@ class TestEquityDailyChanges:
         assert result["equity_change_today_pct"] == 10.0
         assert result["equity_change_yesterday_usdt"] == -10.0
         assert result["equity_change_yesterday_pct"] == -5.0
+
+
+# ---------------------------------------------------------------------------
+# Testes: TrainingDatabase compartilhada (um pool por processo, não por scrape)
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def pe_module():
+    """prometheus_exporter com o singleton de TrainingDatabase zerado."""
+    sys.path.insert(0, str(Path(__file__).parent.parent / "btc_trading_agent"))
+    import prometheus_exporter as pe
+    saved = pe._TRAINING_DB
+    pe._TRAINING_DB = None
+    try:
+        yield pe
+    finally:
+        pe._TRAINING_DB = saved
+
+
+def _fake_training_db_module(cls):
+    """Módulo training_db falso, para não construir pool psycopg2 de verdade."""
+    mod = types.ModuleType("training_db")
+    mod.TrainingDatabase = cls
+    return mod
+
+
+class TestSharedTrainingDatabase:
+    """get_training_db() deve reaproveitar a instância entre scrapes."""
+
+    def test_constructs_only_once_across_calls(self, pe_module):
+        """Chamadas repetidas retornam a mesma instância e não abrem novo pool."""
+        constructions = []
+
+        class FakeDB:
+            def __init__(self):
+                constructions.append(self)
+
+        with patch.dict(sys.modules, {"training_db": _fake_training_db_module(FakeDB)}):
+            first = pe_module.get_training_db()
+            second = pe_module.get_training_db()
+            third = pe_module.get_training_db()
+
+        assert first is second is third
+        assert len(constructions) == 1, (
+            f"TrainingDatabase deve ser construída 1x, foi {len(constructions)}x "
+            "(um ThreadedConnectionPool vazando por scrape)"
+        )
+
+    def test_concurrent_scrapes_share_one_instance(self, pe_module):
+        """ThreadingHTTPServer: threads simultâneas não podem criar pools extras."""
+        constructions = []
+        barrier = threading.Barrier(8)
+
+        class SlowFakeDB:
+            def __init__(self):
+                # Amplia a janela de corrida entre os threads
+                time.sleep(0.01)
+                constructions.append(self)
+
+        results = []
+        results_lock = threading.Lock()
+
+        def worker():
+            barrier.wait()
+            db = pe_module.get_training_db()
+            with results_lock:
+                results.append(db)
+
+        with patch.dict(sys.modules, {"training_db": _fake_training_db_module(SlowFakeDB)}):
+            threads = [threading.Thread(target=worker) for _ in range(8)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+
+        assert len(constructions) == 1, (
+            f"8 scrapes concorrentes construíram {len(constructions)} instâncias"
+        )
+        assert len(results) == 8
+        assert all(r is results[0] for r in results)
+
+    def test_construction_failure_is_not_cached(self, pe_module):
+        """DB fora do ar: falha propaga e o próximo scrape tenta de novo."""
+        attempts = []
+
+        class FlakyDB:
+            def __init__(self):
+                attempts.append(1)
+                if len(attempts) == 1:
+                    raise RuntimeError("db down")
+
+        with patch.dict(sys.modules, {"training_db": _fake_training_db_module(FlakyDB)}):
+            with pytest.raises(RuntimeError):
+                pe_module.get_training_db()
+            assert pe_module._TRAINING_DB is None
+            db = pe_module.get_training_db()
+
+        assert db is not None
+        assert len(attempts) == 2
+
+    def test_metrics_snapshot_uses_shared_instance(self, pe_module):
+        """A métrica de conversão deve ler pelo singleton, não construir por scrape."""
+        import inspect
+        source = inspect.getsource(pe_module.PrometheusHandler.send_metrics)
+        assert "get_training_db().conversion_metrics_snapshot(" in source, (
+            "send_metrics deve usar get_training_db()"
+        )
+        assert "TrainingDatabase()" not in source, (
+            "send_metrics não pode construir TrainingDatabase por scrape "
+            "(cada construção abre um ThreadedConnectionPool que nunca é fechado)"
+        )

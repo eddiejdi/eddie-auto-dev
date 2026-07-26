@@ -13,6 +13,7 @@ import sys
 import json
 import time
 import subprocess
+import threading
 import urllib.request
 from pathlib import Path
 from datetime import datetime
@@ -52,6 +53,30 @@ def load_config() -> Dict:
             return json.load(f)
     except Exception:
         return {}
+
+
+# Uma única TrainingDatabase por processo (pool interno é thread-safe, então o
+# ThreadingHTTPServer pode compartilhá-la). Construir uma por scrape criava — e
+# descartava sem close() — um ThreadedConnectionPool a cada raspagem: medido em
+# 2026-07-25, ~280 construções/3h por instância × 13 unidades crypto-exporter@*.
+_TRAINING_DB = None
+_TRAINING_DB_LOCK = threading.Lock()
+
+
+def get_training_db():
+    """TrainingDatabase compartilhada, construída sob demanda.
+
+    Propaga a exceção se a construção falhar (DB fora do ar) e mantém o global
+    em None, para que o próximo scrape tente de novo quando o DB voltar.
+    """
+    global _TRAINING_DB
+    if _TRAINING_DB is None:
+        with _TRAINING_DB_LOCK:
+            if _TRAINING_DB is None:
+                from training_db import TrainingDatabase
+
+                _TRAINING_DB = TrainingDatabase()
+    return _TRAINING_DB
 
 
 class MetricsCollector:
@@ -1354,9 +1379,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                     "lock_held": 0,
                 }
                 try:
-                    from training_db import TrainingDatabase
-
-                    snap = TrainingDatabase().conversion_metrics_snapshot(profile=_profile) or snap
+                    snap = get_training_db().conversion_metrics_snapshot(profile=_profile) or snap
                 except Exception:
                     pass
                 output.append("# HELP btc_conversion_enabled Conversion owner enabled (1=yes)")
