@@ -20,7 +20,20 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from specialized_agents.wiki_client import WikiJsClient  # noqa: E402
 
-LOG_FILE = REPO_ROOT / ".git" / "wiki_sync.log"
+# Em worktrees, REPO_ROOT/.git é um arquivo (não diretório) — usar
+# --git-common-dir para achar o .git compartilhado de verdade.
+try:
+    _GIT_COMMON_DIR = Path(
+        subprocess.check_output(
+            ["git", "rev-parse", "--git-common-dir"], cwd=REPO_ROOT, text=True
+        ).strip()
+    )
+    if not _GIT_COMMON_DIR.is_absolute():
+        _GIT_COMMON_DIR = REPO_ROOT / _GIT_COMMON_DIR
+except Exception:
+    _GIT_COMMON_DIR = REPO_ROOT / ".git"
+
+LOG_FILE = _GIT_COMMON_DIR / "wiki_sync.log"
 WIKI_GQL = "http://192.168.15.2:3009/graphql"
 
 PATH_HINTS = {
