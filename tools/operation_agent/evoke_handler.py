@@ -24,6 +24,7 @@ def _env(name: str) -> str | None:
     return os.environ.get(name)
 
 
+# taxonomy: tables=public.agent_actions; owner=operation_agent
 @app.post("/evoke")
 async def evoke(payload: EvokePayload, authorization: str | None = Header(None)):
     # Accept either OP_AGENT_SHARED_SECRET or OP_AGENT_TOKEN for compatibility

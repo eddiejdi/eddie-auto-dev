@@ -1,8 +1,11 @@
 # 🎯 Variables Catalog System - Executive Summary
 
+> **Escopo expandido (2026-07-24):** a taxonomia agora cobre também **Tables** e **APIs**, com grafo, ownership e lifecycle.  
+> Comece por: **[TAXONOMY_QUICK_START.md](./TAXONOMY_QUICK_START.md)** · Docs completas: **[docs/taxonomy/README.md](./docs/taxonomy/README.md)**
+
 ## What You Now Have
 
-A **production-ready variables documentation system** that automatically catalogs, categorizes, and documents your entire homelab infrastructure.
+A **production-ready variables documentation system** that automatically catalogs, categorizes, and documents your entire homelab infrastructure (and is now one domain of the broader taxonomy).
 
 ### By The Numbers
 

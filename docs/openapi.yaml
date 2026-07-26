@@ -33,6 +33,10 @@ paths:
   /api/v1/models:
     get:
       summary: List models
+      # taxonomy: tables=btc.llm_calls; status=active
+      x-tables:
+        - btc.llm_calls
+        - btc.llm_log_config
       responses:
         '200':
           description: Model list
@@ -40,6 +44,7 @@ paths:
   /api/v1/models/{id}:
     get:
       summary: Get model by id
+      x-table: btc.llm_calls
       parameters:
         - name: id
           in: path
@@ -53,6 +58,8 @@ paths:
   /api/v1/functions:
     get:
       summary: List functions
+      deprecated: true
+      x-status: deprecated
       responses:
         '200':
           description: OK
@@ -65,6 +72,9 @@ paths:
   /api/v1/rag/index:
     post:
       summary: Index documents for RAG
+      # taxonomy: tables=btc.training_samples
+      x-tables:
+        - btc.training_samples
       responses:
         '200':
           description: Indexed

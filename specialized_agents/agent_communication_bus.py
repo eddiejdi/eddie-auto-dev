@@ -353,6 +353,7 @@ def clear_active_agents() -> None:
         _active_agents.clear()
 
 
+# taxonomy: tables=public.agent_ipc; owner=agent_bus
 @router.get("/messages")
 async def communication_messages(limit: int = 100) -> Dict[str, Any]:
     """Retorna as últimas mensagens registradas no bus."""
@@ -366,6 +367,7 @@ async def communication_stats() -> Dict[str, Any]:
     return get_communication_bus().get_stats()
 
 
+# taxonomy: tables=public.agent_ipc
 @router.post("/publish")
 @router.post("/send")
 async def communication_publish(payload: CommunicationPublishRequest) -> Dict[str, Any]:

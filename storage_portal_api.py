@@ -1431,6 +1431,7 @@ app.add_middleware(
 )
 
 
+# taxonomy: tables=public.contracts,public.portal_users; owner=storage_portal
 @app.post("/storage/request-access")
 def storage_request_access(payload: StorageRequestPayload) -> JSONResponse:
     if digits_only(payload.company_document) and len(digits_only(payload.company_document)) != 14:
@@ -1441,26 +1442,31 @@ def storage_request_access(payload: StorageRequestPayload) -> JSONResponse:
     return JSONResponse(result)
 
 
+# taxonomy: tables=public.contracts,public.portal_users,public.api_tokens
 @app.get("/storage/portal/bootstrap")
 def storage_portal_bootstrap(portal_token: str) -> JSONResponse:
     return JSONResponse(get_service().bootstrap_portal(portal_token))
 
 
+# taxonomy: tables=public.api_tokens,public.portal_users
 @app.post("/storage/portal/tokens")
 def storage_portal_tokens(payload: PortalTokenCreatePayload) -> JSONResponse:
     return JSONResponse(get_service().create_api_token(payload.portal_token, payload.label))
 
 
+# taxonomy: tables=public.portal_users,public.contracts
 @app.post("/storage/portal/subusers")
 def storage_portal_subusers(payload: PortalSubuserCreatePayload) -> JSONResponse:
     return JSONResponse(get_service().create_subuser(payload.portal_token, payload.full_name, payload.email, payload.profile))
 
 
+# taxonomy: tables=public.portal_users
 @app.patch("/storage/portal/users/{user_id}")
 def storage_portal_update_user(user_id: int, payload: PortalUserUpdatePayload) -> JSONResponse:
     return JSONResponse(get_service().update_user(payload.portal_token, user_id, payload.profile, payload.status))
 
 
+# taxonomy: tables=public.contracts
 @app.get("/storage/portal/files")
 def storage_portal_files(portal_token: str, path: str = ".") -> JSONResponse:
     result = get_service().repository.get_contract_by_portal_token(portal_token)
@@ -1484,11 +1490,13 @@ async def storage_portal_upload_file(
     return JSONResponse(await get_service().upload_file(portal_token, relative_dir, upload))
 
 
+# taxonomy: tables=public.payments,public.contracts
 @app.post("/storage/portal/payments")
 def storage_portal_payments(payload: PortalPaymentPayload) -> JSONResponse:
     return JSONResponse(get_service().create_payment(payload.portal_token, payload.amount_brl, payload.description))
 
 
+# taxonomy: tables=public.contracts,public.portal_users,public.payments
 @app.post("/storage/contracts/finalize")
 def storage_contracts_finalize(payload: FinalizeContractPayload) -> JSONResponse:
     return JSONResponse(get_service().finalize_contract(payload))
