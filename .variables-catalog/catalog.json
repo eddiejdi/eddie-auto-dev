@@ -16691,6 +16691,36 @@
           "systemd"
         ],
         "description": "Endpoint do ollama-gpu-coordinator (:11437) usado por nas-ollama-load.service para rotear a inferencia a GPU correta."
+      },
+      "GPU_COORD_PAYLOAD_LOG_CHARS": {
+        "name": "GPU_COORD_PAYLOAD_LOG_CHARS",
+        "type": "string",
+        "source": "systemd",
+        "value": "32000",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Teto de caracteres de prompt/resposta guardados na auditoria do ollama-gpu-coordinator (ring buffer e painel auth.rpa4all.com/llm-prompts/)."
+      },
+      "GPU_COORD_PG_PROMPT_CHARS": {
+        "name": "GPU_COORD_PG_PROMPT_CHARS",
+        "type": "string",
+        "source": "systemd",
+        "value": "32000",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Teto de caracteres gravados em ollama_payload_log no PostgreSQL; separado de GPU_COORD_PAYLOAD_LOG_CHARS para permitir truncar so no banco."
+      },
+      "GPU_COORD_RING_SIZE": {
+        "name": "GPU_COORD_RING_SIZE",
+        "type": "string",
+        "source": "systemd",
+        "value": "500",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Numero de requisicoes mantidas no ring buffer em memoria do ollama-gpu-coordinator."
       }
     },
     "authentication": {

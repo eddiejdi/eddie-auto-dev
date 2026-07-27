@@ -108,8 +108,11 @@ def _record_duration(model: str, elapsed_s: float) -> None:
 
 # ── Ring buffer de requisições ────────────────────────────────────────────────
 
-_PAYLOAD_LOG_CHARS = int(os.environ.get("GPU_COORD_PAYLOAD_LOG_CHARS", "500"))
-_RING_SIZE = int(os.environ.get("GPU_COORD_RING_SIZE", "100"))
+# Auditoria: por padrão guarda prompt/resposta quase inteiros (32k chars).
+# Override via GPU_COORD_PAYLOAD_LOG_CHARS se precisar reduzir memória.
+_PAYLOAD_LOG_CHARS = int(os.environ.get("GPU_COORD_PAYLOAD_LOG_CHARS", "32000"))
+_RING_SIZE = int(os.environ.get("GPU_COORD_RING_SIZE", "500"))
+_PG_PROMPT_CHARS = int(os.environ.get("GPU_COORD_PG_PROMPT_CHARS", str(_PAYLOAD_LOG_CHARS)))
 
 _ring_lock = threading.Lock()
 _ring: collections.deque = collections.deque(maxlen=_RING_SIZE)
@@ -161,8 +164,8 @@ def _start_pg_writer() -> None:
                             entry.get("ts"), entry.get("model"), entry.get("endpoint"),
                             entry.get("path"), entry.get("status"), entry.get("elapsed_s"),
                             bool(entry.get("streaming")),
-                            (entry.get("prompt") or "")[:2000],
-                            (entry.get("response") or "")[:2000],
+                            (entry.get("prompt") or "")[:_PG_PROMPT_CHARS],
+                            (entry.get("response") or "")[:_PG_PROMPT_CHARS],
                         ),
                     )
             except Exception as exc:
@@ -222,7 +225,9 @@ class EndpointState:
 
         self._lock = threading.Lock()
         self._active: int = 0
-        self._loaded: dict[str, float] = {}        # model_name → vram_mb
+        self._loaded: dict[str, float] = {}        # model_name → vram_mb (residente, /api/ps)
+        self._available: set[str] = set()          # modelos que o endpoint POSSUI (/api/tags)
+        self._available_known: bool = False        # False = catálogo desconhecido → fail-open
         self._model_active: dict[str, int] = {}    # model_name → requests ativas
         self._model_last_used: dict[str, float] = {}  # model_name → monotonic timestamp
         self._healthy: bool = False
@@ -253,8 +258,25 @@ class EndpointState:
         return max(0.0, self.vram_total_mb - self.vram_used_mb)
 
     def has_model(self, model: str) -> bool:
+        """O modelo está carregado em VRAM agora? (afinidade — evita reload)"""
         m = model if ":" in model else model + ":latest"
         return model in self._loaded or m in self._loaded
+
+    def has_model_available(self, model: str) -> bool:
+        """O endpoint POSSUI este modelo? (elegibilidade — evita 404)
+
+        Fail-open deliberado: enquanto o catálogo for desconhecido (endpoint
+        novo, /api/tags falhando), retorna True para não bloquear roteamento
+        que hoje funciona. Só filtra com conhecimento positivo da ausência.
+        """
+        with self._lock:
+            if not self._available_known:
+                return True
+            avail = self._available
+            loaded = set(self._loaded)
+        m = model if ":" in model else model + ":latest"
+        # Um modelo residente está, por definição, disponível.
+        return bool({model, m} & (avail | loaded))
 
     # ── mutação ───────────────────────────────────────────────────────────────
 
@@ -322,6 +344,34 @@ class EndpointState:
             log.warning("poll %s falhou (%d/%d): %s",
                         self.name, self._consec_fails, FAIL_THRESHOLD, exc)
 
+        if self._healthy:
+            self._poll_tags()
+
+    def _poll_tags(self) -> None:
+        """Atualiza o catálogo de modelos que o endpoint possui (/api/tags).
+
+        Falha aqui NÃO marca o endpoint unhealthy nem invalida o catálogo
+        anterior: um /api/tags intermitente não pode tirar uma GPU do pool.
+        """
+        try:
+            req = urllib.request.Request(
+                f"{self.host}/api/tags",
+                headers={"User-Agent": "gpu-coordinator/2.0"},
+            )
+            with urllib.request.urlopen(req, timeout=HEALTH_TIMEOUT_SEC) as resp:
+                data = json.loads(resp.read())
+            names = {m.get("name", "") for m in data.get("models", [])}
+            names.discard("")
+            if not names:
+                return  # resposta vazia/inesperada — preserva o catálogo anterior
+            with self._lock:
+                if names != self._available:
+                    log.info("catálogo de %s atualizado: %d modelos", self.name, len(names))
+                self._available = names
+                self._available_known = True
+        except Exception as exc:
+            log.debug("tags %s falhou (catálogo anterior preservado): %s", self.name, exc)
+
     def mark_unhealthy(self, reason: str = "") -> None:
         """Marca imediatamente como unhealthy (ex.: falha de conexão no forward)."""
         with self._lock:
@@ -338,6 +388,12 @@ class EndpointState:
         Retorna float('inf') se o endpoint não é elegível.
         """
         if not self.healthy:
+            return float("inf")
+
+        # Endpoint não possui o modelo — encaminhar para cá devolve 404.
+        # Era a causa de 116 requisições de trading-analyst perdidas em 2 dias
+        # (roteadas para a NAS, que não tem esse modelo).
+        if not self.has_model_available(model):
             return float("inf")
 
         needed_mb = _estimate_vram_mb(model)
@@ -373,6 +429,8 @@ class EndpointState:
             "vram_used_mb": round(self.vram_used_mb, 1),
             "vram_free_mb": round(self.vram_free_mb, 1),
             "loaded_models": list(self._loaded.keys()),
+            "available_models_known": self._available_known,
+            "available_models_count": len(self._available),
         }
 
 
@@ -504,6 +562,11 @@ class GPUCluster:
             if model.endswith(suffix):
                 pinned = next((ep for ep in self._endpoints if ep.name == ep_name), None)
                 if pinned and pinned.healthy and pinned.name not in exclude:
+                    if not pinned.has_model_available(model):
+                        # Não desvia (o pin é intenção explícita), mas avisa —
+                        # senão a falha vira um 404 silencioso no endpoint.
+                        log.warning("model=%s pinado em %s, mas o endpoint não o possui — vai 404",
+                                    model, pinned.name)
                     log.info("roteando model=%s → %s [pinned] (active=%d vram_free=%.0fMB)",
                              model, pinned.name, pinned.active_requests, pinned.vram_free_mb)
                     return pinned
@@ -672,7 +735,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         host = parsed.hostname
         port = parsed.port or 80
 
-        # Extrai prompt para o ring buffer
+        # Extrai prompt completo para auditoria (ring + PG + painel).
         prompt_preview = ""
         model_name = ""
         try:
@@ -680,8 +743,24 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
             model_name = req_data.get("model", "")
             raw_prompt = req_data.get("prompt") or ""
             if not raw_prompt:
-                msgs = req_data.get("messages", [])
-                raw_prompt = " | ".join(m.get("content", "")[:200] for m in msgs[-3:])
+                msgs = req_data.get("messages") or []
+                parts: list[str] = []
+                for m in msgs:
+                    if not isinstance(m, dict):
+                        continue
+                    role = (m.get("role") or "user").strip()
+                    content = m.get("content") or ""
+                    if isinstance(content, list):
+                        # multimodal: junta textos
+                        content = " ".join(
+                            (c.get("text") or "") if isinstance(c, dict) else str(c)
+                            for c in content
+                        )
+                    parts.append(f"[{role}] {content}")
+                raw_prompt = "\n\n".join(parts)
+            # system separado (algumas APIs)
+            if req_data.get("system") and "system" not in raw_prompt[:80].lower():
+                raw_prompt = f"[system] {req_data['system']}\n\n{raw_prompt}"
             prompt_preview = _clean_text(raw_prompt)
         except Exception:
             pass
