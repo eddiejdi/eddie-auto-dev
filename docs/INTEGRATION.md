@@ -28,8 +28,8 @@ Este documento descreve a integração completa entre os modelos de IA do Shared
 | Modelo | Base | Propósito | Censura |
 |--------|------|-----------|---------|
 | `shared-assistant` | dolphin-llama3:8b | Assistente pessoal completo | ❌ Nenhuma |
-| `shared-coder` | qwen2.5-coder:7b | Programação e DevOps | ✅ Apenas código |
-| `shared-homelab` | qwen2.5-coder:7b | Infraestrutura e homelab | ✅ Técnico |
+| `shared-coder` | mistral:7b | Programação e DevOps | ✅ Apenas código |
+| `shared-homelab` | mistral:7b | Infraestrutura e homelab | ✅ Técnico |
 | `github-agent` | codestral:22b | Desenvolvimento GitHub | ✅ Código |
 
 ## Componentes
@@ -79,8 +79,8 @@ MODEL_PROFILES = {
     "coder": "shared-coder",           # Programação
     "homelab": "shared-homelab",       # Infraestrutura
     "general": "shared-assistant",     # Uso geral
-    "fast": "qwen2.5-coder:1.5b",     # Respostas rápidas
-    "advanced": "deepseek-coder-v2:16b", # Tarefas complexas
+    "fast": "gemma3:1b",              # Respostas rápidas
+    "advanced": "mistral-nemo:12b",   # Tarefas complexas
     "github": "github-agent"          # Desenvolvimento GitHub
 }
 ## Configuração do WhatsApp

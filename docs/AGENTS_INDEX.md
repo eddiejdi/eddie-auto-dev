@@ -40,7 +40,6 @@
 - ❌ **PerformanceAgent** — Performance Agent para Shared Auto-Dev
   - 🔐 Secrets: url
 - ❌ **PythonAgent** — Agentes Especializados por Linguagem
-- ❌ **QwenImageAgent** — Agente Qwen de Geração de Imagem
 - ❌ **ReviewAgent** — ReviewAgent — Agente especializado em Quality Gate + CI/CD Review
 - ❌ **SecurityAgent** — Security Agent para Shared Auto-Dev
   - 🔐 Secrets: secret, url

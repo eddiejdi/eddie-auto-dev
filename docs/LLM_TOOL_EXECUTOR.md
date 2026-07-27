@@ -129,7 +129,7 @@ Os seguintes padrões são bloqueados por motivos de segurança:
 Crie um arquivo `Modelfile` para o seu modelo:
 
 ```dockerfile
-FROM qwen2.5-coder:7b
+FROM mistral:7b
 
 SYSTEM """You are an advanced AI coding assistant with access to terminal, file and system information tools.
 
