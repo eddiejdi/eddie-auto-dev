@@ -24,7 +24,7 @@ print("=" * 60)
 update_payload = {
     "id": "diretor-shared",
     "name": "👔 Diretor Shared",
-    "base_model_id": "qwen2.5-coder:7b",  # CORREÇÃO AQUI!
+    "base_model_id": "mistral:7b",  # CORREÇÃO AQUI!
     "meta": {
         "profile_image_url": "",
         "description": "Diretor principal do sistema Shared Auto-Dev. Coordena agents, aplica regras e gera relatórios.",
@@ -82,7 +82,7 @@ for m in models:
         print(f"\nModelo: {m.get('name')}")
         print(f"base_model_id: {base}")
         
-        if base == 'qwen2.5-coder:7b':
+        if base == 'mistral:7b':
             print("\n🎉 SUCESSO! Modelo corrigido!")
         else:
             print(f"\n❌ AINDA ERRADO! Base: {base}")

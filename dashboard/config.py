@@ -144,12 +144,12 @@ OLLAMA_MODELS = {
     },
     "shared-assistant": {
         "description": "Assistente geral",
-        "base": "qwen2.5-coder:7b",
+        "base": "mistral:7b",
         "modelfile": "shared-assistant-v2.Modelfile"
     },
     "shared-reports": {
         "description": "Geração de relatórios",
-        "base": "qwen2.5-coder:7b",
+        "base": "mistral:7b",
         "modelfile": "shared-assistant-reports.Modelfile"
     },
 }

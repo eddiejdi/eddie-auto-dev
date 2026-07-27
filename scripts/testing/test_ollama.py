@@ -7,7 +7,7 @@ import json
 
 url = "http://localhost:11434/api/generate"
 data = {
-    "model": "qwen2.5-coder:1.5b",
+    "model": "mistral:7b",
     "prompt": "Say hello in Portuguese",
     "stream": False,
     "options": {"num_predict": 50}

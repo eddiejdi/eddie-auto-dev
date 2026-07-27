@@ -147,7 +147,7 @@ PROFILE_ALIASES = {
     "git": "github", "repo": "github",
     "rapido": "fast", "quick": "fast",
     "avancado": "advanced", "complex": "advanced",
-    "deep": "deepseek",
+    "deep": "advanced",
     "pessoal": "assistant", "msg": "assistant", "mensagem": "assistant",
     "texto": "assistant", "amor": "assistant", "criativo": "assistant"
 }

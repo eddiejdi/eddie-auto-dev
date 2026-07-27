@@ -18,8 +18,15 @@ fi
 # ─── Check 2: No .env files (only .env.consolidated) ───────────────────────────
 echo "  [2/6] Checking .env file restrictions..."
 
-# Check for NEW or MODIFIED .env files (not deleted ones)
-ADDED_OR_MODIFIED_ENV=$(git diff --cached --diff-filter=AM --name-only | grep -E "^\.env$|^\.env\.[a-z]" || true)
+# Check for NEW or MODIFIED .env files (not deleted ones).
+# Exceção: .env.example* / .env.sample* são templates por convenção — não têm
+# segredo e existem justamente para serem versionados. Sem esta exceção o hook
+# tornava .env.example.wiki incorrigível (bloqueou o PR #257, que só trocava um
+# nome de modelo). A proteção contra segredo nesses arquivos continua: o Check 1
+# varre o diff inteiro por tokens, e o GitGuardian roda no CI.
+ADDED_OR_MODIFIED_ENV=$(git diff --cached --diff-filter=AM --name-only \
+    | grep -E "^\.env$|^\.env\.[a-z]" \
+    | grep -vE "^\.env\.(example|sample)" || true)
 
 if [ ! -z "$ADDED_OR_MODIFIED_ENV" ]; then
     if ! git diff --cached --name-only | grep -q "\.env.consolidated"; then
