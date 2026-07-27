@@ -16751,6 +16751,26 @@
           "systemd"
         ],
         "description": "Janela em segundos entre tentativas de heal do mesmo tunel no tunnel_healthcheck_exporter."
+      },
+      "EXPORTER_METRICS_FILE": {
+        "name": "EXPORTER_METRICS_FILE",
+        "type": "string",
+        "source": "systemd",
+        "value": "/var/lib/eddie/whatsapp_metrics.json",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Arquivo de estado do eddie-whatsapp-exporter com as metricas persistidas entre restarts."
+      },
+      "RAG_API_URL": {
+        "name": "RAG_API_URL",
+        "type": "string",
+        "source": "systemd",
+        "value": "http://127.0.0.1:8001/api/v1/rag/context",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Endpoint da API de RAG consultado pelo eddie-whatsapp-exporter para metricas de contexto."
       }
     },
     "authentication": {
