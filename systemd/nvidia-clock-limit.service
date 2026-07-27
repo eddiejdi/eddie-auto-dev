@@ -1,0 +1,22 @@
+# Teto de clock da RTX 2060 SUPER (2026-07-27).
+# A maquina (OptiPlex 7010 MT, fonte de fabrica ~275 W) desliga sozinha ao
+# subir modelo para a GPU: 5 de 6 quedas sujas ocorreram de 0 a 93 s depois de
+# "offloaded NN/NN layers to GPU". O power limit ja esta em 125 W, que e o
+# minimo que a placa aceita, entao a unica alavanca de software restante e
+# limitar o clock para cortar o pico de corrente.
+# Substituir por -rgc quando a fonte nova for instalada.
+[Unit]
+Description=NVIDIA GPU clock ceiling (mitigacao de pico de corrente — fonte marginal)
+After=nvidia-modprobe.service
+Wants=nvidia-modprobe.service
+Before=ollama-nas.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+Environment=GPU_CLOCK_MAX=900
+ExecStart=/bin/sh -c "for i in $(seq 1 30); do nvidia-smi -pm 1 >/dev/null 2>&1 && nvidia-smi -lgc 300,${GPU_CLOCK_MAX} >/dev/null 2>&1 && exit 0; sleep 2; done; echo desisti; exit 1"
+ExecStop=-/usr/bin/nvidia-smi -rgc
+
+[Install]
+WantedBy=multi-user.target

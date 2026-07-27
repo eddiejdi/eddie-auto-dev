@@ -19152,6 +19152,16 @@
         "contexts": [
           "config"
         ]
+      },
+      "GPU_CLOCK_MAX": {
+        "name": "GPU_CLOCK_MAX",
+        "type": "string",
+        "source": "systemd",
+        "value": "900",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Teto de clock grafico (MHz) da RTX 2060 SUPER da NAS, aplicado por nvidia-clock-limit.service para cortar o pico de corrente numa fonte marginal. Remover quando a fonte nova for instalada."
       }
     },
     "monitoring": {
