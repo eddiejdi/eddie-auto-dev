@@ -68,6 +68,11 @@ CRITICAL_SERVICES = {
     "ufw", "ufw.service",
 }
 
+# Managed by cloudflared-tunnel-guardian — tunnel-heal only reapplies routes.
+NO_RESTART_TUNNELS = {
+    "cloudflared-rpa4all",
+}
+
 # ── Tunnel definitions ─────────────────────────────────────────────────
 
 @dataclass
@@ -195,6 +200,26 @@ class TunnelHealthChecker:
             )
             return result.returncode == 0
         except Exception:
+            return False
+
+    def _routes_only_heal(self, tunnel: TunnelDef, state: TunnelState) -> bool:
+        """Reapply WAN routes without restarting cloudflared (guardian owns restarts)."""
+        cmd = tunnel.restart_command or "/usr/local/sbin/cloudflared-vpn-routes.sh"
+        log.warning("ROUTES-ONLY HEAL: %s via: %s", tunnel.name, cmd)
+        try:
+            result = subprocess.run(
+                shlex.split(cmd), capture_output=True, text=True, timeout=30,
+            )
+            success = result.returncode == 0
+            self._audit("routes_only", tunnel.name, success, result.stderr.strip())
+            if success:
+                log.info("ROUTES-ONLY HEAL: %s routes reapplied", tunnel.name)
+            else:
+                log.error("ROUTES-ONLY HEAL: %s FAILED: %s", tunnel.name, result.stderr)
+            return success
+        except Exception as e:
+            log.error("ROUTES-ONLY HEAL: %s EXCEPTION: %s", tunnel.name, e)
+            self._audit("routes_only", tunnel.name, False, str(e))
             return False
 
     def restart_service(self, tunnel: TunnelDef, state: TunnelState) -> bool:
@@ -326,7 +351,10 @@ class TunnelHealthChecker:
 
             # Self-heal after 2 consecutive failures
             if state.consecutive_failures >= 2:
-                self.restart_service(tunnel, state)
+                if name in NO_RESTART_TUNNELS:
+                    self._routes_only_heal(tunnel, state)
+                else:
+                    self.restart_service(tunnel, state)
 
         return all_ok
 
