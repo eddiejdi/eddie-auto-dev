@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# watcher: cria shared-assistant, shared-coder e shared-whatsapp quando a base
-# de cada um estiver disponível no Ollama. Roda de /home/homelab/myClaude
-# (migrado de /home/homelab/eddie-auto-dev em 2026-07-27).
+# watcher: cria shared-assistant, shared-coder, shared-homelab e
+# shared-whatsapp quando a base de cada um estiver disponível no Ollama.
+# Roda de /home/homelab/myClaude (migrado de /home/homelab/eddie-auto-dev em
+# 2026-07-27). shared-homelab adicionado 2026-07-27 (2ª rodada): o próprio
+# número do dono está mapeado em PHONE_MODEL_MAPPING (scripts/misc/
+# whatsapp_bot.py) para "shared-homelab", sobrepondo a lógica is_owner ->
+# shared-assistant — faltou nas duas primeiras varreduras.
 #
 # Alvo: NAS (192.168.15.4:11436), NÃO o homelab. É para lá que
 # eddie-whatsapp-bot.service aponta de fato via
@@ -40,6 +44,7 @@ create_if_missing() {
 
 create_if_missing "shared-assistant" "dolphin-llama3:8b" "$REPO_DIR/shared-assistant.Modelfile"
 create_if_missing "shared-coder" "llama3.1:8b" "$REPO_DIR/shared-coder-restricted.Modelfile"
+create_if_missing "shared-homelab" "llama3.1:8b" "$REPO_DIR/shared-homelab.Modelfile"
 create_if_missing "shared-whatsapp" "dolphin-llama3:8b" "$REPO_DIR/shared-whatsapp-trained.Modelfile"
 
 echo "$(date -Is) [watcher] end" >> "$LOG_FILE"
