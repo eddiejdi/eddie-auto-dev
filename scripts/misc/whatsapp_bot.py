@@ -112,7 +112,7 @@ WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER", "5511981193899")
 WHATSAPP_PHONE_ID = f"{WHATSAPP_NUMBER}@s.whatsapp.net"
 
 # Configurações de IA
-OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
+OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11437")
 MODEL = os.getenv("OLLAMA_MODEL", "shared-coder")
 OPENWEBUI_HOST = os.getenv("OPENWEBUI_HOST", "http://192.168.15.2:3000")
 AGENTS_API = os.getenv("AGENTS_API", "http://localhost:8503")
