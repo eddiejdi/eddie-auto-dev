@@ -661,7 +661,7 @@ KNOWLEDGE = [
         "id": "models_uncensored",
         "topic": "Modelos sem Censura",
         "content": """shared-assistant baseado em dolphin-llama3:8b
-        shared-coder baseado em qwen2.5-coder:7b
+        shared-coder baseado em mistral:7b
         """
     }
 ]

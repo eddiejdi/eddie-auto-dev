@@ -75,7 +75,7 @@ O Ollama suporta tool calling nativo a partir da v0.4+. O formato segue:
 ```json
 POST /api/chat
 {
-  "model": "qwen3:8b",
+  "model": "llama3.1:8b",
   "messages": [
     {"role": "system", "content": "You are Shared, an AI assistant with tool execution capabilities..."},
     {"role": "user", "content": "qual o status do docker?"}
@@ -136,7 +136,7 @@ POST /api/chat
 
 ### Modelos com suporte
 
-`qwen3` · `qwen2.5` · `qwen2.5-coder` · `llama3.1+` · `mistral` · `mistral-nemo` · `command-r-plus` · `granite3` · `shared-coder` · `shared-tools`
+`llama3.1+` · `mistral` · `mistral-nemo` · `command-r-plus` · `granite3` · `shared-coder` · `shared-tools`
 
 ---
 
@@ -251,7 +251,7 @@ curl -X POST http://localhost:8503/llm-tools/chat \
   -H "Content-Type: application/json" \
   -d '{
     "prompt": "qual o status do docker?",
-    "model": "qwen3:8b",
+    "model": "llama3.1:8b",
     "use_native_tools": true,
     "max_rounds": 5
   }'
@@ -295,7 +295,7 @@ python3 llm_tool_client.py --legacy "docker ps"
 python3 llm_tool_client.py -i
 
 # Interativo verbose com modelo específico
-python3 llm_tool_client.py -i -v --model qwen3:8b
+python3 llm_tool_client.py -i -v --model llama3.1:8b
 
 # Estatísticas de aprendizado
 python3 llm_tool_client.py --stats
@@ -387,7 +387,7 @@ result = await executor.execute_with_learning(
 
 ### Modelo não suporta tools
 
-**Solução**: usar modelo com suporte (qwen3, qwen2.5-coder, llama3.1+). Verificar com:
+**Solução**: usar modelo com suporte (llama3.1+, mistral, mistral-nemo). Verificar com:
 ```bash
 ollama show <model> | grep -i tool
 ```

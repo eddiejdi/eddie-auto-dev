@@ -1,40 +1,48 @@
-# 🤖 Modelos Shared - Configuração e Uso
+# 🤖 Modelos Eddie - Configuração e Uso
 
 ## Modelos Disponíveis
 
-### shared-assistant (Assistente Pessoal)
+### eddie-assistant (Assistente Pessoal)
 - **Base:** dolphin-llama3:8b
 - **Propósito:** Assistente pessoal completo sem restrições
 - **Uso:** Mensagens pessoais, textos criativos, qualquer solicitação
 
 ```bash
 # Criar/atualizar modelo
-ollama create shared-assistant -f shared-assistant-dolphin.Modelfile
-### shared-coder (Programação)
-- **Base:** qwen2.5-coder:7b
+ollama create eddie-assistant -f eddie-assistant-dolphin.Modelfile
+```
+
+### eddie-coder (Programação)
+- **Base:** mistral:7b
 - **Propósito:** Exclusivamente programação e DevOps
 - **Restrições:** Recusa pedidos pessoais/não-técnicos
 
 ```bash
-ollama create shared-coder -f shared-coder-strict.Modelfile
-### shared-homelab (Infraestrutura)
-- **Base:** qwen2.5-coder:7b
+ollama create eddie-coder -f eddie-coder-strict.Modelfile
+```
+
+### eddie-homelab (Infraestrutura)
+- **Base:** mistral:7b
 - **Propósito:** DevOps, containers, servidores
 
 ## Modelfiles
 
-### shared-assistant-dolphin.Modelfile
+### eddie-assistant-dolphin.Modelfile
+```
 FROM dolphin-llama3:8b
 
 PARAMETER temperature 0.8
 PARAMETER top_p 0.9
 PARAMETER num_ctx 8192
 
-SYSTEM """Você é Shared, o assistente pessoal de Eduardo.
+SYSTEM """Você é Eddie, o assistente pessoal de Eduardo.
 Você ajuda com QUALQUER coisa que o usuário pedir.
 Responda em português brasileiro."""
-### shared-coder-strict.Modelfile
-FROM qwen2.5-coder:7b
+```
+
+### eddie-coder-strict.Modelfile
+```
+FROM mistral:7b
 
 PARAMETER temperature 0.3
 PARAMETER num_ctx 8192
@@ -48,8 +56,11 @@ REGRA ABSOLUTA: Você SÓ responde sobre:
 Para QUALQUER outro assunto, responda APENAS:
 "Desculpe, sou um assistente especializado em programação."
 """
+```
+
 ## Testando Restrições
 
+```python
 import requests
 
 def test_model(model, prompt):
@@ -59,12 +70,14 @@ def test_model(model, prompt):
     )
     return response.json()["response"]
 
-# Teste pessoal (shared-assistant deve responder, shared-coder deve recusar)
-print(test_model("shared-assistant", "Escreva uma mensagem de amor"))
-print(test_model("shared-coder", "Escreva uma mensagem de amor"))
+# Teste pessoal (eddie-assistant deve responder, eddie-coder deve recusar)
+print(test_model("eddie-assistant", "Escreva uma mensagem de amor"))
+print(test_model("eddie-coder", "Escreva uma mensagem de amor"))
 
 # Teste técnico (ambos devem responder)
-print(test_model("shared-coder", "Escreva uma função Python de fatorial"))
+print(test_model("eddie-coder", "Escreva uma função Python de fatorial"))
+```
+
 ## Comandos Úteis
 
 ```bash
@@ -72,12 +85,14 @@ print(test_model("shared-coder", "Escreva uma função Python de fatorial"))
 ollama list
 
 # Testar modelo
-ollama run shared-assistant "Olá, como vai?"
+ollama run eddie-assistant "Olá, como vai?"
 
 # Ver informações do modelo
-ollama show shared-assistant
+ollama show eddie-assistant
 
 # Remover modelo
-ollama rm shared-assistant
+ollama rm eddie-assistant
+```
+
 ---
-*Última atualização: 10 de janeiro de 2026*
+*Última atualização: 2026-07-27 — modelos LLM chineses (Qwen/DeepSeek) removidos por política de soberania de dados (2026-07-01); ver docs/MIGRACAO_MODELOS_CHINESES_2026-07-03.md*
