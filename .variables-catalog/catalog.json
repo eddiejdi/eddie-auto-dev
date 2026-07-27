@@ -16771,6 +16771,86 @@
           "systemd"
         ],
         "description": "Endpoint da API de RAG consultado pelo eddie-whatsapp-exporter para metricas de contexto."
+      },
+      "WAHA_API_KEY": {
+        "name": "WAHA_API_KEY",
+        "type": "string",
+        "source": "systemd",
+        "value": "<from_bitwarden>",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Chave de API da instancia WAHA (WhatsApp HTTP API) usada pelo eddie-whatsapp-bot para enviar/receber mensagens."
+      },
+      "OLLAMA_HTTP_RETRIES": {
+        "name": "OLLAMA_HTTP_RETRIES",
+        "type": "string",
+        "source": "systemd",
+        "value": "5",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Numero de tentativas de retry do eddie-whatsapp-bot ao chamar o Ollama antes de desistir."
+      },
+      "PERSONA_MODE": {
+        "name": "PERSONA_MODE",
+        "type": "string",
+        "source": "systemd",
+        "value": "auto",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Config legada do eddie-whatsapp-bot, nao lida pelo codigo atual (o modelo e decidido por PHONE_MODEL_MAPPING/is_owner). Mantida so para nao divergir do env.conf real do host."
+      },
+      "PERSONA_MODEL_SAFE": {
+        "name": "PERSONA_MODEL_SAFE",
+        "type": "string",
+        "source": "systemd",
+        "value": "eddie-persona-safe",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Config legada do eddie-whatsapp-bot, nao lida pelo codigo atual. Ver PERSONA_MODE."
+      },
+      "PERSONA_MODEL_FREE": {
+        "name": "PERSONA_MODEL_FREE",
+        "type": "string",
+        "source": "systemd",
+        "value": "eddie-persona-free",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Config legada do eddie-whatsapp-bot, nao lida pelo codigo atual. Ver PERSONA_MODE."
+      },
+      "NSFW_FREE_CONTACTS": {
+        "name": "NSFW_FREE_CONTACTS",
+        "type": "string",
+        "source": "systemd",
+        "value": "<phone_number_1>,<phone_number_2>,...",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Lista de numeros de telefone (dados pessoais) com acesso ao modelo sem filtro no eddie-whatsapp-bot."
+      },
+      "ALLOWED_NUMBERS": {
+        "name": "ALLOWED_NUMBERS",
+        "type": "string",
+        "source": "systemd",
+        "value": "<phone_number_1>,<phone_number_2>,...",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Whitelist de numeros de telefone autorizados a usar o eddie-whatsapp-bot quando OWNER_ONLY=true."
+      },
+      "OWNER_ONLY": {
+        "name": "OWNER_ONLY",
+        "type": "string",
+        "source": "systemd",
+        "value": "true",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Quando true, so OWNER_NUMBER + ALLOWED_NUMBERS podem usar o eddie-whatsapp-bot."
       }
     },
     "authentication": {
