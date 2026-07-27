@@ -1,4 +1,4 @@
-name: Deploy Shared WhatsApp Exporter
+name: Deploy Eddie WhatsApp Exporter
 
 on:
   workflow_dispatch:
@@ -15,12 +15,15 @@ on:
     branches:
       - main
     paths:
-      - 'grafana/exporters/**'
-      - 'grafana/dashboards/shared-whatsapp-model.json'
+      - 'grafana/exporters/eddie_whatsapp_exporter.py'
+      - 'grafana/exporters/eddie-whatsapp-exporter.service'
+      - 'grafana/exporters/requirements.txt'
+      - 'grafana/dashboards/eddie-whatsapp-model.json'
+      - '.github/workflows/deploy-eddie-whatsapp.yml'
 
 jobs:
   deploy:
-    name: Deploy Shared WhatsApp Exporter
+    name: Deploy Eddie WhatsApp Exporter
     runs-on:
       - self-hosted
       - linux
@@ -47,50 +50,61 @@ jobs:
           fi
           echo "HOMELAB_SSH_KEY=$HOME/.ssh/shared_deploy_rsa" >> $GITHUB_ENV
 
+      # Destino real: /home/homelab/myClaude — checkout git ja usado pelo
+      # eddie-whatsapp-exporter.service (migrado de eddie-auto-dev em
+      # 2026-07-04, systemd/eddie-whatsapp-exporter.service.d/override.conf
+      # no host). shared-auto-dev nunca foi o destino do servico em producao.
       - name: Copy exporter files
         run: |
           ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" \
             "$HOMELAB_USER@$HOMELAB_HOST" \
-            "mkdir -p /home/$HOMELAB_USER/shared-auto-dev/grafana/exporters /home/$HOMELAB_USER/shared-auto-dev/grafana/dashboards"
+            "mkdir -p /home/$HOMELAB_USER/myClaude/grafana/exporters /home/$HOMELAB_USER/myClaude/grafana/dashboards"
           scp -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" \
-            grafana/exporters/shared_whatsapp_exporter.py \
+            grafana/exporters/eddie_whatsapp_exporter.py \
             grafana/exporters/requirements.txt \
-            grafana/exporters/shared-whatsapp-exporter.service \
-            "$HOMELAB_USER@$HOMELAB_HOST:/home/$HOMELAB_USER/shared-auto-dev/grafana/exporters/"
+            grafana/exporters/eddie-whatsapp-exporter.service \
+            "$HOMELAB_USER@$HOMELAB_HOST:/home/$HOMELAB_USER/myClaude/grafana/exporters/"
           scp -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" \
-            grafana/dashboards/shared-whatsapp-model.json \
-            "$HOMELAB_USER@$HOMELAB_HOST:/home/$HOMELAB_USER/shared-auto-dev/grafana/dashboards/"
+            grafana/dashboards/eddie-whatsapp-model.json \
+            "$HOMELAB_USER@$HOMELAB_HOST:/home/$HOMELAB_USER/myClaude/grafana/dashboards/"
 
+      # O venv em /home/homelab/venv (symlink para eddie-exporter-venv) ja e
+      # compartilhado por outros exporters e ja tem prometheus_client/requests
+      # instalados — nao criar um venv dedicado (o antigo shared-exporter-venv
+      # nunca existiu de fato em producao).
       - name: Install dependencies and enable service
         run: |
           ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" \
             "$HOMELAB_USER@$HOMELAB_HOST" bash -s <<'REMOTE'
           set -eux
-          cd /home/$USER/shared-auto-dev/grafana/exporters
-          python3 -m venv /home/$USER/shared-exporter-venv || true
-          . /home/$USER/shared-exporter-venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-          sudo cp shared-whatsapp-exporter.service /etc/systemd/system/
+          /home/$USER/venv/bin/pip install --quiet -r /home/$USER/myClaude/grafana/exporters/requirements.txt
+          sudo cp /home/$USER/myClaude/grafana/exporters/eddie-whatsapp-exporter.service /etc/systemd/system/
           sudo systemctl daemon-reload
-          sudo systemctl enable --now shared-whatsapp-exporter || sudo systemctl restart shared-whatsapp-exporter
+          sudo systemctl enable --now eddie-whatsapp-exporter || sudo systemctl restart eddie-whatsapp-exporter
           sleep 2
-          sudo systemctl status shared-whatsapp-exporter --no-pager || true
+          sudo systemctl status eddie-whatsapp-exporter --no-pager || true
+          curl -sf http://127.0.0.1:9102/metrics >/dev/null && echo "EXPORTER_HEALTHY" || echo "EXPORTER_METRICS_NOT_RESPONDING"
           REMOTE
 
       - name: Import dashboard to Grafana
+        env:
+          GRAFANA_USER: ${{ secrets.GRAFANA_USER }}
+          GRAFANA_PASS: ${{ secrets.GRAFANA_PASS }}
         run: |
+          if [ -z "$GRAFANA_USER" ] || [ -z "$GRAFANA_PASS" ]; then
+            echo "Missing GRAFANA_USER/GRAFANA_PASS secrets" >&2
+            exit 1
+          fi
           ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -i "$HOMELAB_SSH_KEY" \
-            "$HOMELAB_USER@$HOMELAB_HOST" bash -s <<'REMOTE'
+            "$HOMELAB_USER@$HOMELAB_HOST" bash -s <<REMOTE
           set -eux
-          DASHBOARD_FILE="/home/$USER/shared-auto-dev/grafana/dashboards/shared-whatsapp-model.json"
-          GRAFANA_URL="http://localhost:3002/grafana"
-          GRAFANA_CREDS="${GRAFANA_USER:-admin}:${GRAFANA_PASS:-Shared@2026}"
-          PAYLOAD=$(jq -n --slurpfile d "$DASHBOARD_FILE" '{dashboard: $d[0], overwrite: true, folderId: 0}')
-          curl -sf -X POST "$GRAFANA_URL/api/dashboards/db" \
+          DASHBOARD_FILE="/home/$HOMELAB_USER/myClaude/grafana/dashboards/eddie-whatsapp-model.json"
+          GRAFANA_URL="http://localhost:3002"
+          PAYLOAD=\$(jq -n --slurpfile d "\$DASHBOARD_FILE" '{dashboard: \$d[0], overwrite: true, folderId: 0}')
+          curl -sf -X POST "\$GRAFANA_URL/api/dashboards/db" \
             -H "Content-Type: application/json" \
-            -u "$GRAFANA_CREDS" \
-            -d "$PAYLOAD" && echo "Dashboard imported OK" || echo "Dashboard import failed (Grafana may not be running)"
+            -u "${GRAFANA_USER}:${GRAFANA_PASS}" \
+            -d "\$PAYLOAD" && echo "Dashboard imported OK" || echo "Dashboard import failed (Grafana may not be running)"
           REMOTE
 
       - name: Cleanup SSH key
