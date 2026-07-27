@@ -1,0 +1,21 @@
+[Unit]
+Description=Carga periódica no Ollama NAS (RTX 2060) via coordenador :11437
+After=network-online.target ollama-gpu-coordinator.service
+Wants=ollama-gpu-coordinator.service
+
+[Service]
+Type=oneshot
+User=homelab
+Group=homelab
+WorkingDirectory=/apps/crypto-trader
+Environment=PYTHONUNBUFFERED=1
+Environment=OLLAMA_COORD_HOST=http://192.168.15.2:11437
+Environment=OLLAMA_NAS_HOST=http://192.168.15.4:11436
+# Modelos pinados :nas — garantem GPU da NAS
+ExecStart=/usr/bin/python3 /apps/crypto-trader/scripts/nas_ollama_load.py --loops 1 --workers 2 --timeout 180
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

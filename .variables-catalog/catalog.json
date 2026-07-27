@@ -16681,6 +16681,16 @@
         "contexts": [
           "authentik-http"
         ]
+      },
+      "OLLAMA_COORD_HOST": {
+        "name": "OLLAMA_COORD_HOST",
+        "type": "string",
+        "source": "systemd",
+        "value": null,
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Endpoint do ollama-gpu-coordinator (:11437) usado por nas-ollama-load.service para rotear a inferencia a GPU correta."
       }
     },
     "authentication": {

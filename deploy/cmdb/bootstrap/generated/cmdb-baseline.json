@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-07-26T03:13:55.667725+00:00",
-  "repo_root": "/workspace/eddie-auto-dev/.claude/worktrees/trusting-chatelet-ffb338",
+  "generated_at": "2026-07-27T12:29:30.648750+00:00",
+  "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 183,
+    "repo_services": 184,
     "trading_instances": 12,
     "critical_services": 70,
     "domains": {
       "identity": 4,
       "monitoring": 14,
       "network": 20,
-      "operations": 102,
+      "operations": 103,
       "storage": 32,
       "trading": 11
     }
@@ -1074,6 +1074,14 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/meeting-translator.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "nas-ollama-load.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/nas-ollama-load.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
