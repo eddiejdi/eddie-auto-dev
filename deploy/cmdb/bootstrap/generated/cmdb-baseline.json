@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-07-27T16:51:30.741737+00:00",
+  "generated_at": "2026-07-27T17:07:53.060974+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 185,
+    "repo_services": 187,
     "trading_instances": 12,
-    "critical_services": 70,
+    "critical_services": 72,
     "domains": {
       "identity": 4,
-      "monitoring": 14,
+      "monitoring": 16,
       "network": 20,
       "operations": 104,
       "storage": 32,
@@ -294,6 +294,14 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "grafana-dashboard-sync.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/grafana-dashboard-sync.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "grafana-selfheal.service",
       "domain": "monitoring",
       "kind": "systemd",
@@ -338,6 +346,14 @@
       "domain": "monitoring",
       "kind": "systemd",
       "source": "systemd/tape-component-quality-exporter.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "tunnel-healthcheck-exporter.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/tunnel-healthcheck-exporter.service",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -2003,6 +2019,13 @@
         "critical": true
       },
       {
+        "name": "grafana-dashboard-sync.service",
+        "domain": "monitoring",
+        "source": "systemd/grafana-dashboard-sync.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
         "name": "grafana-selfheal.service",
         "domain": "monitoring",
         "source": "systemd/grafana-selfheal.service",
@@ -2041,6 +2064,13 @@
         "name": "tape-component-quality-exporter.service",
         "domain": "monitoring",
         "source": "systemd/tape-component-quality-exporter.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "tunnel-healthcheck-exporter.service",
+        "domain": "monitoring",
+        "source": "systemd/tunnel-healthcheck-exporter.service",
         "kind": "systemd",
         "critical": true
       },

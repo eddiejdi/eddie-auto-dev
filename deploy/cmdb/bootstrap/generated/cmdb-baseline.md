@@ -1,17 +1,17 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-27T16:51:30.741737+00:00`
+- Generated at: `2026-07-27T17:07:53.060974+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `185`
-- Critical services flagged for MVP: `70`
+- Repo services discovered: `187`
+- Critical services flagged for MVP: `72`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
 - `identity`: 4
-- `monitoring`: 14
+- `monitoring`: 16
 - `network`: 20
 - `operations`: 104
 - `storage`: 32
@@ -50,12 +50,14 @@
 - `agent-network-exporter.service` (monitoring, systemd) from `tools/systemd/agent-network-exporter.service`
 - `banking-metrics-exporter.service` (monitoring, systemd) from `systemd/banking-metrics-exporter.service`
 - `eddie_central_extended_metrics.service` (monitoring, systemd) from `systemd/eddie_central_extended_metrics.service`
+- `grafana-dashboard-sync.service` (monitoring, systemd) from `systemd/grafana-dashboard-sync.service`
 - `grafana-selfheal.service` (monitoring, systemd) from `systemd/grafana-selfheal.service`
 - `job-monitor.service` (monitoring, systemd) from `systemd/job-monitor.service`
 - `monitoring-containers-bootstrap.service` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.service`
 - `rss-sentiment-exporter.service` (monitoring, systemd) from `systemd/rss-sentiment-exporter.service`
 - `storj-exporter.service` (monitoring, systemd) from `deploy/storj-exporter.service`
 - `tape-component-quality-exporter.service` (monitoring, systemd) from `systemd/tape-component-quality-exporter.service`
+- `tunnel-healthcheck-exporter.service` (monitoring, systemd) from `systemd/tunnel-healthcheck-exporter.service`
 - `proxy` (network, compose) from `deploy/cmdb/docker-compose.yml`
 - `cloudflared-named@.service` (network, systemd) from `tools/tunnels/cloudflared-named@.service`
 - `cloudflared-tunnel-guardian.service` (network, systemd) from `systemd/cloudflared-tunnel-guardian.service`
@@ -76,8 +78,6 @@
 - `rpa4all-ddns-server.service` (network, systemd) from `deploy/vpn/rpa4all-ddns-server.service`
 - `rpa4all-vpn-ddns.service` (network, systemd) from `deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service`
 - `wireguard-nat.service` (network, systemd) from `deploy/vpn/wireguard-nat.service`
-- `disk-clean.service` (storage, systemd) from `systemd/disk-clean.service`
-- `disk-clean.timer` (storage, systemd) from `systemd/disk-clean.timer`
 
 ## Serviços anotados manualmente
 

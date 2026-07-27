@@ -16721,6 +16721,36 @@
           "systemd"
         ],
         "description": "Numero de requisicoes mantidas no ring buffer em memoria do ollama-gpu-coordinator."
+      },
+      "TUNNEL_HEAL_DATA_DIR": {
+        "name": "TUNNEL_HEAL_DATA_DIR",
+        "type": "string",
+        "source": "systemd",
+        "value": "/var/lib/eddie/tunnel-heal",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Diretorio de estado/audit do tunnel_healthcheck_exporter (historico de heals aplicados por tunel)."
+      },
+      "TUNNEL_HEAL_MAX_RESTARTS": {
+        "name": "TUNNEL_HEAL_MAX_RESTARTS",
+        "type": "string",
+        "source": "systemd",
+        "value": "3",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Teto de restarts do tunnel_healthcheck_exporter por tunel dentro da janela de cooldown, antes de parar de tentar."
+      },
+      "TUNNEL_HEAL_COOLDOWN": {
+        "name": "TUNNEL_HEAL_COOLDOWN",
+        "type": "string",
+        "source": "systemd",
+        "value": "60",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Janela em segundos entre tentativas de heal do mesmo tunel no tunnel_healthcheck_exporter."
       }
     },
     "authentication": {
