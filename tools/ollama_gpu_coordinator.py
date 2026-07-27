@@ -108,8 +108,11 @@ def _record_duration(model: str, elapsed_s: float) -> None:
 
 # ── Ring buffer de requisições ────────────────────────────────────────────────
 
-_PAYLOAD_LOG_CHARS = int(os.environ.get("GPU_COORD_PAYLOAD_LOG_CHARS", "500"))
-_RING_SIZE = int(os.environ.get("GPU_COORD_RING_SIZE", "100"))
+# Auditoria: por padrão guarda prompt/resposta quase inteiros (32k chars).
+# Override via GPU_COORD_PAYLOAD_LOG_CHARS se precisar reduzir memória.
+_PAYLOAD_LOG_CHARS = int(os.environ.get("GPU_COORD_PAYLOAD_LOG_CHARS", "32000"))
+_RING_SIZE = int(os.environ.get("GPU_COORD_RING_SIZE", "500"))
+_PG_PROMPT_CHARS = int(os.environ.get("GPU_COORD_PG_PROMPT_CHARS", str(_PAYLOAD_LOG_CHARS)))
 
 _ring_lock = threading.Lock()
 _ring: collections.deque = collections.deque(maxlen=_RING_SIZE)
@@ -161,8 +164,8 @@ def _start_pg_writer() -> None:
                             entry.get("ts"), entry.get("model"), entry.get("endpoint"),
                             entry.get("path"), entry.get("status"), entry.get("elapsed_s"),
                             bool(entry.get("streaming")),
-                            (entry.get("prompt") or "")[:2000],
-                            (entry.get("response") or "")[:2000],
+                            (entry.get("prompt") or "")[:_PG_PROMPT_CHARS],
+                            (entry.get("response") or "")[:_PG_PROMPT_CHARS],
                         ),
                     )
             except Exception as exc:
@@ -732,7 +735,7 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         host = parsed.hostname
         port = parsed.port or 80
 
-        # Extrai prompt para o ring buffer
+        # Extrai prompt completo para auditoria (ring + PG + painel).
         prompt_preview = ""
         model_name = ""
         try:
@@ -740,8 +743,24 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
             model_name = req_data.get("model", "")
             raw_prompt = req_data.get("prompt") or ""
             if not raw_prompt:
-                msgs = req_data.get("messages", [])
-                raw_prompt = " | ".join(m.get("content", "")[:200] for m in msgs[-3:])
+                msgs = req_data.get("messages") or []
+                parts: list[str] = []
+                for m in msgs:
+                    if not isinstance(m, dict):
+                        continue
+                    role = (m.get("role") or "user").strip()
+                    content = m.get("content") or ""
+                    if isinstance(content, list):
+                        # multimodal: junta textos
+                        content = " ".join(
+                            (c.get("text") or "") if isinstance(c, dict) else str(c)
+                            for c in content
+                        )
+                    parts.append(f"[{role}] {content}")
+                raw_prompt = "\n\n".join(parts)
+            # system separado (algumas APIs)
+            if req_data.get("system") and "system" not in raw_prompt[:80].lower():
+                raw_prompt = f"[system] {req_data['system']}\n\n{raw_prompt}"
             prompt_preview = _clean_text(raw_prompt)
         except Exception:
             pass
