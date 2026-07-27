@@ -16681,6 +16681,16 @@
         "contexts": [
           "authentik-http"
         ]
+      },
+      "OLLAMA_COORD_HOST": {
+        "name": "OLLAMA_COORD_HOST",
+        "type": "string",
+        "source": "systemd",
+        "value": null,
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Endpoint do ollama-gpu-coordinator (:11437) usado por nas-ollama-load.service para rotear a inferencia a GPU correta."
       }
     },
     "authentication": {
@@ -19142,6 +19152,16 @@
         "contexts": [
           "config"
         ]
+      },
+      "GPU_CLOCK_MAX": {
+        "name": "GPU_CLOCK_MAX",
+        "type": "string",
+        "source": "systemd",
+        "value": "900",
+        "contexts": [
+          "systemd"
+        ],
+        "description": "Teto de clock grafico (MHz) da RTX 2060 SUPER da NAS, aplicado por nvidia-clock-limit.service para cortar o pico de corrente numa fonte marginal. Remover quando a fonte nova for instalada."
       }
     },
     "monitoring": {
