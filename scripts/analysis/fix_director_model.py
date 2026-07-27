@@ -21,7 +21,7 @@ model_data = {
         'description': 'Diretor principal do sistema Shared Auto-Dev. Coordena agents, aplica regras e gera relatórios.',
         'profile_image_url': ''
     },
-    'base_model_id': 'qwen2.5-coder:7b',  # Modelo que EXISTE no Ollama
+    'base_model_id': 'mistral:7b',  # Modelo que EXISTE no Ollama
     'params': {
         'system': """Você é o DIRETOR do sistema Shared Auto-Dev.
 

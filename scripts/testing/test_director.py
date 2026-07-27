@@ -45,9 +45,9 @@ print("""
 1. Vá para http://192.168.15.2:3000
 2. Clique no dropdown de modelos
 3. Procure por "Diretor Shared" ou "director_eddie"
-4. Se não aparecer, use um modelo Ollama normal como "qwen2.5-coder:7b"
+4. Se não aparecer, use um modelo Ollama normal como "mistral:7b"
 
 ALTERNATIVA - USE O MODELO OLLAMA DIRETO:
-1. Selecione "qwen2.5-coder:7b" 
+1. Selecione "mistral:7b" 
 2. Digite sua pergunta normalmente
 """)
