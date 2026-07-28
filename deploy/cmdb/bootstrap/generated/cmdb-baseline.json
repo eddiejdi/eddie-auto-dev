@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-07-28T03:50:10.801641+00:00",
+  "generated_at": "2026-07-28T13:27:24.577903+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 189,
+    "repo_services": 191,
     "trading_instances": 12,
-    "critical_services": 74,
+    "critical_services": 76,
     "domains": {
       "identity": 4,
       "monitoring": 18,
-      "network": 20,
+      "network": 22,
       "operations": 104,
       "storage": 32,
       "trading": 11
@@ -466,6 +466,22 @@
       "domain": "network",
       "kind": "systemd",
       "source": "systemd/pihole-ipv6-dns-fix.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "protonvpn-best-server.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/protonvpn-best-server.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "protonvpn-best-server.timer",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/protonvpn-best-server.timer",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -2185,6 +2201,20 @@
         "name": "pihole-ipv6-dns-fix.service",
         "domain": "network",
         "source": "systemd/pihole-ipv6-dns-fix.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "protonvpn-best-server.service",
+        "domain": "network",
+        "source": "systemd/protonvpn-best-server.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "protonvpn-best-server.timer",
+        "domain": "network",
+        "source": "systemd/protonvpn-best-server.timer",
         "kind": "systemd",
         "critical": true
       },

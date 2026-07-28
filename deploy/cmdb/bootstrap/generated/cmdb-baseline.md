@@ -1,10 +1,10 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-28T03:50:10.801641+00:00`
+- Generated at: `2026-07-28T13:27:24.577903+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `189`
-- Critical services flagged for MVP: `74`
+- Repo services discovered: `191`
+- Critical services flagged for MVP: `76`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
@@ -12,7 +12,7 @@
 
 - `identity`: 4
 - `monitoring`: 18
-- `network`: 20
+- `network`: 22
 - `operations`: 104
 - `storage`: 32
 - `trading`: 11
@@ -72,12 +72,12 @@
 - `ipv6-proxy.service` (network, systemd) from `systemd/ipv6-proxy.service`
 - `localtunnel@.service` (network, systemd) from `tools/tunnels/localtunnel@.service`
 - `pihole-ipv6-dns-fix.service` (network, systemd) from `systemd/pihole-ipv6-dns-fix.service`
+- `protonvpn-best-server.service` (network, systemd) from `systemd/protonvpn-best-server.service`
+- `protonvpn-best-server.timer` (network, systemd) from `systemd/protonvpn-best-server.timer`
 - `protonvpn-boot-selfheal.service` (network, systemd) from `systemd/protonvpn-boot-selfheal.service`
 - `protonvpn-routing-watchdog-fix.service` (network, systemd) from `deploy/vpn/protonvpn-routing-watchdog-fix.service`
 - `protonvpn-routing-watchdog.service` (network, systemd) from `deploy/vpn/protonvpn-routing-watchdog.service`
 - `protonvpn-unit-selfheal.service` (network, systemd) from `systemd/protonvpn-unit-selfheal.service`
-- `protonvpn-unit-selfheal.timer` (network, systemd) from `systemd/protonvpn-unit-selfheal.timer`
-- `rpa4all-ddns-server.service` (network, systemd) from `deploy/vpn/rpa4all-ddns-server.service`
 
 ## Serviços anotados manualmente
 

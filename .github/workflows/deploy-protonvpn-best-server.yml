@@ -1,0 +1,108 @@
+name: Deploy ProtonVPN Best Server
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/homelab/protonvpn_best_server.py'
+      - 'systemd/protonvpn-best-server.service'
+      - 'systemd/protonvpn-best-server.timer'
+      - '.github/workflows/deploy-protonvpn-best-server.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    # Self-hosted runner no homelab — precisa de /etc/wireguard e systemd
+    runs-on: [self-hosted, linux, homelab]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Instalar script e units
+        run: |
+          set -euo pipefail
+
+          python3 -m py_compile tools/homelab/protonvpn_best_server.py
+
+          sudo install -D -m 0755 tools/homelab/protonvpn_best_server.py \
+            /usr/local/bin/protonvpn_best_server.py
+          sudo install -D -m 0644 systemd/protonvpn-best-server.service \
+            /etc/systemd/system/protonvpn-best-server.service
+          sudo install -D -m 0644 systemd/protonvpn-best-server.timer \
+            /etc/systemd/system/protonvpn-best-server.timer
+
+          sudo systemctl daemon-reload
+          echo "✅ Script e units instalados"
+
+      - name: Semear lista de candidatos a partir do peer ativo
+        run: |
+          set -euo pipefail
+
+          # Sem lista, o serviço falharia de hora em hora. Semeia com o servidor
+          # que já está no ar (extraído da conf viva, sem hardcode) — assim o
+          # timer roda inofensivo: mede, vê que o atual é o único/melhor e não
+          # troca nada. Ao adicionar AR/US/CL o seletor passa a agir de fato.
+          # Idempotente: nunca sobrescreve uma lista já preenchida pelo usuário.
+          if sudo test -f /etc/protonvpn-best-server.json; then
+            echo "ℹ️  Lista de candidatos já existe — preservada"
+            sudo python3 -c "import json;d=json.load(open('/etc/protonvpn-best-server.json'));print('Servidores:',[s['name'] for s in d.get('servers',[])])"
+            exit 0
+          fi
+
+          PUBKEY=$(sudo awk '/^\[Peer\]/{p=1} p&&/^PublicKey/{print $3; exit}' /etc/wireguard/protonvpn.conf)
+          ENDPOINT=$(sudo awk '/^\[Peer\]/{p=1} p&&/^Endpoint/{print $3; exit}' /etc/wireguard/protonvpn.conf)
+          NAME=$(sudo awk '/^\[Peer\]/{p=1} p&&/^#/{print $2; exit}' /etc/wireguard/protonvpn.conf)
+          NAME=${NAME:-atual}
+
+          test -n "$PUBKEY" && test -n "$ENDPOINT"
+
+          sudo tee /etc/protonvpn-best-server.json >/dev/null <<EOF
+          {
+            "servers": [
+              {
+                "name": "${NAME}",
+                "country": "${NAME:0:2}",
+                "public_key": "${PUBKEY}",
+                "endpoint": "${ENDPOINT}"
+              }
+            ]
+          }
+          EOF
+          sudo chmod 0644 /etc/protonvpn-best-server.json
+          echo "✅ Lista semeada com o servidor ativo: ${NAME} (${ENDPOINT})"
+
+      - name: Smoke test (medição real, sem trocar)
+        run: |
+          set -euo pipefail
+
+          # Só um candidato na lista semeada → não há para onde trocar.
+          # Valida medição, fwmark, escrita de métricas e leitura do peer ativo.
+          sudo systemctl start protonvpn-best-server.service
+          sudo journalctl -u protonvpn-best-server -n 20 --no-pager
+
+          test -f /var/lib/prometheus/node-exporter/protonvpn_best_server.prom
+          grep -q "protonvpn_candidate_rtt_ms" \
+            /var/lib/prometheus/node-exporter/protonvpn_best_server.prom
+          echo "✅ Métricas publicadas:"
+          cat /var/lib/prometheus/node-exporter/protonvpn_best_server.prom
+
+      - name: Verificar que o túnel seguiu íntegro
+        run: |
+          set -euo pipefail
+
+          # O seletor não deve ter mexido em nada com um candidato só. Se o
+          # roteamento tivesse sido tocado, a LAN inteira cairia — checar é barato.
+          sudo wg show protonvpn | head -8
+          ip rule show | grep -q "32764" && echo "✅ Regra 32764 (tabela 205) presente"
+          ip route show table 205 | grep -q "default dev protonvpn" && echo "✅ Default da 205 intacto"
+
+      - name: Ativar timer horário
+        run: |
+          set -euo pipefail
+
+          sudo systemctl enable protonvpn-best-server.timer
+          sudo systemctl restart protonvpn-best-server.timer
+          systemctl status protonvpn-best-server.timer --no-pager | grep -E "Active|Trigger"
+          echo "✅ Timer horário ativo"
