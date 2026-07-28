@@ -72,10 +72,14 @@ aceitar os dois nomes.
 2. **`TELEGRAM_BOT_TOKEN` no container do Grafana** — hoje ele não tem a
    variável, então o contact point do Telegram não entrega. Já estava quebrado
    antes desta mudança, porque o token no arquivo estava revogado.
-3. **Senha do Postgres (`eddie_memory_2026`) em 29 arquivos rastreados** —
-   incluindo `.mcp.json`, `monitoring/grafana/provisioning/datasources/datasources.yml`,
-   exporters e docs. Não coberto por esta correção: a varredura inicial usava
-   padrões de token e não pega senha simples. Escopo separado.
+3. **Senha do Postgres do trading em ~30 arquivos rastreados** — incluindo
+   `.mcp.json`, `monitoring/grafana/provisioning/datasources/datasources.yml`,
+   exporters, units systemd e docs de instalação. Não coberto por esta
+   correção: a varredura inicial usava padrões de token e não pega senha
+   simples. Escopo separado.
+
+   Para localizar as ocorrências sem repetir o valor aqui:
+   `git ls-files -z | xargs -0 grep -lI "$(sudo grep -oP '(?<=:)[^:@]+(?=@)' /etc/default/eddie-common | head -1)"`
 4. **Histórico do git** — os valores seguem acessíveis em commits antigos e em
    qualquer clone. Limpar exige reescrita de histórico e force-push num repo
    público, quebrando clones existentes. Com as credenciais rotacionadas, passa
