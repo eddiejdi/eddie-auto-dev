@@ -83,7 +83,7 @@ Uptime: 30 seconds
 
 ### Blocker 1: DATABASE_URL Not Configured
 **Status**: ✅ RESOLVED
-- Added to .env: `postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading`
+- Added to .env: `postgresql://postgres:$PGPASSWORD@192.168.15.2:5433/btc_trading`
 - Lazy-load fallback implemented
 - Result: training_db.py imports successfully
 

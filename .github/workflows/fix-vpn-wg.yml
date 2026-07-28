@@ -48,7 +48,8 @@ jobs:
 
       - name: 1.5. Credenciais ZTE do secrets agent
         run: |
-          KEY="188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3"
+          . /etc/crypto-agent/secrets-api.env  # chave fora do git (runner é self-hosted no homelab)
+          KEY="$SECRETS_AGENT_API_KEY"
           RESP=$(curl -fsS --max-time 5 "http://127.0.0.1:8088/secrets/network%2Fzte_gpon_modem" \
             -H "X-API-KEY: $KEY" 2>/dev/null || echo "")
           if [ -n "$RESP" ]; then

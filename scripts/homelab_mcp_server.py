@@ -40,6 +40,31 @@ logging.basicConfig(
 logger = logging.getLogger("homelab-mcp")
 
 # ── Configuração ──────────────────────────────────────────────────────────
+
+def _load_local_secrets_env() -> None:
+    """Carrega ~/.config/homelab/secrets.env se a chave não vier do ambiente.
+
+    O `.mcp.json` é versionado num repo público, então não pode carregar
+    credencial. Esse arquivo (0600, fora do git) é a fonte local canônica.
+    Ver docs/INCIDENTS/2026-07-28_SECRETS_IN_PUBLIC_REPO.md.
+    """
+    if os.environ.get("SECRETS_AGENT_API_KEY"):
+        return
+    path = os.path.expanduser("~/.config/homelab/secrets.env")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
+    except OSError:
+        pass  # sem o arquivo, segue e falha adiante com erro explícito
+
+
+_load_local_secrets_env()
+
 HOMELAB_URL = os.environ.get("HOMELAB_URL", "http://192.168.15.2:8503")
 SECRETS_AGENT_URL = os.environ.get("SECRETS_AGENT_URL", "http://192.168.15.2:8088")
 SECRETS_AGENT_API_KEY = os.environ.get("SECRETS_AGENT_API_KEY", "")
@@ -374,7 +399,8 @@ def db_execute_query(sql: str, params: str = "[]") -> str:
         sql: Query SQL (apenas SELECT permitido).
         params: Parâmetros da query como JSON array (default: []).
     """
-    if not DATABASE_URL:
+    _dsn = _get_db_url()
+    if not _dsn:
         return json.dumps({"ok": False, "error": "DATABASE_URL não configurada."}, indent=2)
 
     # Bloquear queries de escrita
@@ -390,7 +416,7 @@ def db_execute_query(sql: str, params: str = "[]") -> str:
 
         parsed_params = json.loads(params) if params != "[]" else []
 
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(_dsn)
         conn.set_session(readonly=True, autocommit=True)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -478,12 +504,13 @@ _VALID_STATUSES      = {"pending", "approved", "rejected", "in_progress", "done"
 
 def _db_write(sql: str, params: tuple) -> dict:
     """Executa SQL de escrita no PostgreSQL do homelab (INSERT/UPDATE)."""
-    if not DATABASE_URL:
+    _dsn = _get_db_url()
+    if not _dsn:
         return {"ok": False, "error": "DATABASE_URL não configurada."}
     try:
         import psycopg2
         import psycopg2.extras
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(_dsn)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(sql, params)
         rows = cur.fetchall() if cur.description else []
@@ -502,12 +529,13 @@ def _db_write(sql: str, params: tuple) -> dict:
 
 def _db_read_one(sql: str, params: tuple) -> dict:
     """Executa SELECT e retorna a primeira linha como dict (ou None)."""
-    if not DATABASE_URL:
+    _dsn = _get_db_url()
+    if not _dsn:
         return {"ok": False, "error": "DATABASE_URL não configurada."}
     try:
         import psycopg2
         import psycopg2.extras
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(_dsn)
         conn.set_session(readonly=True, autocommit=True)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(sql, params)
@@ -521,12 +549,13 @@ def _db_read_one(sql: str, params: tuple) -> dict:
 
 def _db_read_many(sql: str, params: tuple = ()) -> dict:
     """Executa SELECT e retorna todas as linhas."""
-    if not DATABASE_URL:
+    _dsn = _get_db_url()
+    if not _dsn:
         return {"ok": False, "error": "DATABASE_URL não configurada."}
     try:
         import psycopg2
         import psycopg2.extras
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(_dsn)
         conn.set_session(readonly=True, autocommit=True)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(sql, params)
@@ -916,6 +945,53 @@ def memory_store(fact: str, source: str = "agent", tags: str = "", ttl_days: int
 # Ferramentas do BTC Trading Agent — leitura somente do schema btc.*
 # DB connection: env TRADING_DATABASE_URL ou secrets agent eddie/database_url
 
+_db_url_cache: Optional[str] = None
+
+
+def _get_db_url() -> str:
+    """Resolve o DSN do banco da governança sem hardcodar credenciais.
+
+    Antes o valor vinha cravado no `.mcp.json`, que é versionado num repo
+    público. Ver docs/INCIDENTS/2026-07-28_SECRETS_IN_PUBLIC_REPO.md.
+    """
+    global _db_url_cache
+    if _db_url_cache:
+        return _db_url_cache
+    if DATABASE_URL:
+        _db_url_cache = DATABASE_URL
+        return DATABASE_URL
+    for secret_name in ("eddie/database_url", "shared/database_url"):
+        result = _http_get(
+            f"{SECRETS_AGENT_URL}/secrets/local/{secret_name}?field=url",
+            headers=_secrets_headers(),
+        )
+        if result.get("ok"):
+            val = (result.get("data") or {}).get("value", "")
+            if val:
+                _db_url_cache = _rehost_if_remote(val)
+                return _db_url_cache
+    return ""
+
+
+def _rehost_if_remote(dsn: str) -> str:
+    """Troca localhost pelo host do homelab quando rodamos fora dele.
+
+    O secret `eddie/database_url` guarda o DSN com host `localhost`, que só
+    resolve no próprio homelab. Consumidores remotos (este MCP roda na
+    workstation) precisam do IP real — senão a conexão vai para o Postgres
+    local, que não existe.
+    """
+    import re as _re
+    from urllib.parse import urlparse
+
+    if not _re.search(r"@(localhost|127\.0\.0\.1)[:/]", dsn):
+        return dsn
+    host = urlparse(SECRETS_AGENT_URL).hostname or ""
+    if not host or host in ("localhost", "127.0.0.1"):
+        return dsn  # estamos no próprio homelab: localhost está correto
+    return _re.sub(r"@(localhost|127\.0\.0\.1)([:/])", rf"@{host}\2", dsn, count=1)
+
+
 _trading_db_url_cache: Optional[str] = None
 
 
@@ -936,9 +1012,10 @@ def _get_trading_db_url() -> Optional[str]:
     #    Estou Aqui no mesmo banco btc_trading). Evita depender de um
     #    secret que pode ter sido salvo com host "localhost" (só válido
     #    quando executado no próprio homelab, não em consumidores remotos).
-    if DATABASE_URL:
-        _trading_db_url_cache = DATABASE_URL
-        return DATABASE_URL
+    resolved = _get_db_url()
+    if resolved:
+        _trading_db_url_cache = resolved
+        return resolved
 
     # 3. Secrets agent — mesmo padrão do secrets_helper.py do trading agent
     for secret_name in ("eddie/database_url", "shared/database_url", "crypto/database_url"):

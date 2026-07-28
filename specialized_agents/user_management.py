@@ -35,8 +35,7 @@ AUTHENTIK_TOKEN = os.getenv(
     "AUTHENTIK_TOKEN", "ak-homelab-authentik-api-2026"
 )
 DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres",
+    "DATABASE_URL", ""
 )
 MAIL_DOMAIN = os.getenv("MAIL_DOMAIN", "rpa4all.com")
 NEXTCLOUD_URL = os.getenv("NEXTCLOUD_URL", "https://nextcloud.rpa4all.com")

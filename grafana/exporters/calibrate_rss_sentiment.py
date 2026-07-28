@@ -44,8 +44,7 @@ log = logging.getLogger("calibrate")
 # ── Configuração ───────────────────────────────────────────────────────
 
 DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading"
+    "DATABASE_URL", ""
 )
 OLLAMA_HOST = "http://192.168.15.2:11434"
 OLLAMA_SENTIMENT_MODEL = "mistral:7b"

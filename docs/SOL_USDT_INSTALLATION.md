@@ -135,7 +135,7 @@ curl -s http://127.0.0.1:9106/metrics | grep btc_trading_open_position | head -3
 ### Posição aberta (PostgreSQL)
 
 ```bash
-PGPASSWORD=eddie_memory_2026 psql -h 127.0.0.1 -U postgres -p 5433 -d btc_trading -c \
+PGPASSWORD="$PGPASSWORD" psql -h 127.0.0.1 -U postgres -p 5433 -d btc_trading -c \
   "SELECT profile, symbol, side, quantity, price, executed_at
    FROM btc.trades
    WHERE symbol = 'SOL-USDT' AND side = 'buy'

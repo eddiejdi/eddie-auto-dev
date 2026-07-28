@@ -81,7 +81,7 @@ KUCOIN_API_SECRET=<api_secret_placeholder>
 KUCOIN_PASSPHRASE=<passphrase_placeholder>
 
 # Database (pre-configured)
-DATABASE_URL=postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading
+DATABASE_URL=postgresql://postgres:$PGPASSWORD@192.168.15.2:5433/btc_trading
 
 # Trading Parameters (conservative - safe default)
 TRADING_DRY_RUN=true              # Simulation mode (set to false for live)
@@ -307,7 +307,7 @@ psql -h 192.168.15.2 -p 5433 -U postgres -d btc_trading -c \
 ### Secrets Management
 
 1. **KuCoin credentials** - stored locally, keep `config/trading.env` private
-2. **Database password** - already configured (eddie_memory_2026)
+2. **Database password** - already configured (ver /etc/default/eddie-common)
 3. **File permissions** - config file should be readable by orangepi only:
    ```bash
    chmod 600 ~/trading-agent/config/trading.env

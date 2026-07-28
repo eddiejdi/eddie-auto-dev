@@ -108,6 +108,6 @@ systemctl is-active crypto-agent@BTC_USDT_aggressive.service
 journalctl -u "crypto-agent@BTC_USDT_conservative.service" -f | grep -E "BUY|REBUY|blocked|livre"
 
 # Confirmar último trade no DB
-PGPASSWORD=eddie_memory_2026 psql -h localhost -p 5433 -U postgres -d btc_trading \
+PGPASSWORD="$PGPASSWORD" psql -h localhost -p 5433 -U postgres -d btc_trading \
   -c "SELECT id, side, profile, price, to_timestamp(timestamp) FROM btc.trades ORDER BY timestamp DESC LIMIT 5;"
 ```
