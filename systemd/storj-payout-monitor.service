@@ -6,6 +6,7 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 User=homelab
+StateDirectory=storj-payout-monitor
 EnvironmentFile=-/etc/crypto-agent/secrets-api.env
 Environment=STORJ_API_BASE=http://127.0.0.1:14002/api
 Environment=STORJ_WALLET_ADDRESS=0x4787E8bA11d9D32f8A51336a1844e663105a7d24
