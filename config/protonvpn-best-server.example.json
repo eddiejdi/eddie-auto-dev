@@ -1,0 +1,33 @@
+{
+  "_comment": [
+    "Copie para /etc/protonvpn-best-server.json no homelab e preencha com os",
+    "servidores desejados. public_key e endpoint saem do bloco [Peer] das",
+    "configs WireGuard geradas em account.protonvpn.com -> WireGuard configuration",
+    "(uma config por servidor). A PrivateKey do [Interface] NAO vai aqui — o",
+    "seletor reaproveita a que ja esta em /etc/wireguard/protonvpn.conf.",
+    "",
+    "Sugestao de pool (paises Free no Freedom on the Net, ordenados por",
+    "proximidade do Brasil): AR, CL, US, CR, CA. Manter o BE#72 na lista serve",
+    "de referencia — o seletor so troca com ganho acima de PVPN_MIN_GAIN_PCT."
+  ],
+  "servers": [
+    {
+      "name": "AR#12",
+      "country": "AR",
+      "public_key": "COLE_AQUI_A_PublicKey_DO_PEER=",
+      "endpoint": "0.0.0.0:51820"
+    },
+    {
+      "name": "US-MIA#5",
+      "country": "US",
+      "public_key": "COLE_AQUI_A_PublicKey_DO_PEER=",
+      "endpoint": "0.0.0.0:51820"
+    },
+    {
+      "name": "BE#72",
+      "country": "BE",
+      "public_key": "J/ZzG0F1/adsnl//WNoHQVmUL+eJcYLFwdnHsYvbjC0=",
+      "endpoint": "79.127.164.65:51820"
+    }
+  ]
+}

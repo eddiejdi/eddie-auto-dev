@@ -1,0 +1,31 @@
+[Unit]
+Description=ProtonVPN Best Server — mede candidatos e troca o [Peer] do túnel
+Documentation=file:///home/homelab/myClaude/docs/variables-taxonomy/PROTONVPN_BEST_SERVER.md
+After=network-online.target wg-quick@protonvpn.service
+Wants=network-online.target
+# Sem túnel no ar não há o que medir nem o que trocar.
+ConditionPathExists=/sys/class/net/protonvpn
+
+[Service]
+Type=oneshot
+# Precisa de root: lê /etc/wireguard/protonvpn.conf e chama wg syncconf.
+User=root
+# --apply é obrigatório para agir; sem ele o script só mede e reporta.
+# flock envolve o processo inteiro: duas trocas concorrentes de peer (timer +
+# execução manual) corromperiam a conf. Com -n, a segunda desiste em vez de
+# enfileirar — medição atrasada não tem valor.
+ExecStart=/usr/bin/flock -n /run/protonvpn-best-server.lock \
+    /usr/bin/python3 /usr/local/bin/protonvpn_best_server.py --apply
+TimeoutStartSec=300
+
+StateDirectory=protonvpn-best-server
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=protonvpn-best-server
+
+NoNewPrivileges=true
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

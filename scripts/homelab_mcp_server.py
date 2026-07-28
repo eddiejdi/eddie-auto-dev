@@ -931,7 +931,16 @@ def _get_trading_db_url() -> Optional[str]:
         _trading_db_url_cache = url
         return url
 
-    # 2. Secrets agent — mesmo padrão do secrets_helper.py do trading agent
+    # 2. DATABASE_URL já configurado no ambiente — mesma instância Postgres
+    #    (o schema btc.* do trading agent convive com o schema public da
+    #    Estou Aqui no mesmo banco btc_trading). Evita depender de um
+    #    secret que pode ter sido salvo com host "localhost" (só válido
+    #    quando executado no próprio homelab, não em consumidores remotos).
+    if DATABASE_URL:
+        _trading_db_url_cache = DATABASE_URL
+        return DATABASE_URL
+
+    # 3. Secrets agent — mesmo padrão do secrets_helper.py do trading agent
     for secret_name in ("eddie/database_url", "shared/database_url", "crypto/database_url"):
         result = _http_get(
             f"{SECRETS_AGENT_URL}/secrets/local/{secret_name}?field=url",

@@ -1,18 +1,18 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-27T23:52:08.197902+00:00`
+- Generated at: `2026-07-28T13:27:24.577903+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `187`
-- Critical services flagged for MVP: `72`
+- Repo services discovered: `191`
+- Critical services flagged for MVP: `76`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
 - `identity`: 4
-- `monitoring`: 16
-- `network`: 20
+- `monitoring`: 18
+- `network`: 22
 - `operations`: 104
 - `storage`: 32
 - `trading`: 11
@@ -56,6 +56,8 @@
 - `monitoring-containers-bootstrap.service` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.service`
 - `rss-sentiment-exporter.service` (monitoring, systemd) from `systemd/rss-sentiment-exporter.service`
 - `storj-exporter.service` (monitoring, systemd) from `deploy/storj-exporter.service`
+- `storj-payout-monitor.service` (monitoring, systemd) from `systemd/storj-payout-monitor.service`
+- `storj-payout-monitor.timer` (monitoring, systemd) from `systemd/storj-payout-monitor.timer`
 - `tape-component-quality-exporter.service` (monitoring, systemd) from `systemd/tape-component-quality-exporter.service`
 - `tunnel-healthcheck-exporter.service` (monitoring, systemd) from `systemd/tunnel-healthcheck-exporter.service`
 - `proxy` (network, compose) from `deploy/cmdb/docker-compose.yml`
@@ -70,14 +72,12 @@
 - `ipv6-proxy.service` (network, systemd) from `systemd/ipv6-proxy.service`
 - `localtunnel@.service` (network, systemd) from `tools/tunnels/localtunnel@.service`
 - `pihole-ipv6-dns-fix.service` (network, systemd) from `systemd/pihole-ipv6-dns-fix.service`
+- `protonvpn-best-server.service` (network, systemd) from `systemd/protonvpn-best-server.service`
+- `protonvpn-best-server.timer` (network, systemd) from `systemd/protonvpn-best-server.timer`
 - `protonvpn-boot-selfheal.service` (network, systemd) from `systemd/protonvpn-boot-selfheal.service`
 - `protonvpn-routing-watchdog-fix.service` (network, systemd) from `deploy/vpn/protonvpn-routing-watchdog-fix.service`
 - `protonvpn-routing-watchdog.service` (network, systemd) from `deploy/vpn/protonvpn-routing-watchdog.service`
 - `protonvpn-unit-selfheal.service` (network, systemd) from `systemd/protonvpn-unit-selfheal.service`
-- `protonvpn-unit-selfheal.timer` (network, systemd) from `systemd/protonvpn-unit-selfheal.timer`
-- `rpa4all-ddns-server.service` (network, systemd) from `deploy/vpn/rpa4all-ddns-server.service`
-- `rpa4all-vpn-ddns.service` (network, systemd) from `deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service`
-- `wireguard-nat.service` (network, systemd) from `deploy/vpn/wireguard-nat.service`
 
 ## Serviços anotados manualmente
 

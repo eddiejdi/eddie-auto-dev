@@ -1,0 +1,17 @@
+[Unit]
+Description=Timer do ProtonVPN Best Server (de hora em hora)
+Requires=protonvpn-best-server.service
+
+[Timer]
+Unit=protonvpn-best-server.service
+# De hora em hora. O dwell mínimo de 1h no script (PVPN_MIN_DWELL_SEC) garante
+# que mesmo uma execução manual extra não provoque alternância mais rápida.
+OnCalendar=hourly
+# Espalha a medição para não bater sempre no mesmo minuto cheio.
+RandomizedDelaySec=300
+# Não roda no boot imediato: espera o túnel estabilizar.
+OnBootSec=15min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

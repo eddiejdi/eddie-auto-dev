@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-07-27T23:52:08.197902+00:00",
+  "generated_at": "2026-07-28T13:27:24.577903+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 187,
+    "repo_services": 191,
     "trading_instances": 12,
-    "critical_services": 72,
+    "critical_services": 76,
     "domains": {
       "identity": 4,
-      "monitoring": 16,
-      "network": 20,
+      "monitoring": 18,
+      "network": 22,
       "operations": 104,
       "storage": 32,
       "trading": 11
@@ -342,6 +342,22 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "storj-payout-monitor.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/storj-payout-monitor.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "storj-payout-monitor.timer",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/storj-payout-monitor.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "tape-component-quality-exporter.service",
       "domain": "monitoring",
       "kind": "systemd",
@@ -450,6 +466,22 @@
       "domain": "network",
       "kind": "systemd",
       "source": "systemd/pihole-ipv6-dns-fix.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "protonvpn-best-server.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/protonvpn-best-server.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "protonvpn-best-server.timer",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/protonvpn-best-server.timer",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -2061,6 +2093,20 @@
         "critical": true
       },
       {
+        "name": "storj-payout-monitor.service",
+        "domain": "monitoring",
+        "source": "systemd/storj-payout-monitor.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "storj-payout-monitor.timer",
+        "domain": "monitoring",
+        "source": "systemd/storj-payout-monitor.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
         "name": "tape-component-quality-exporter.service",
         "domain": "monitoring",
         "source": "systemd/tape-component-quality-exporter.service",
@@ -2155,6 +2201,20 @@
         "name": "pihole-ipv6-dns-fix.service",
         "domain": "network",
         "source": "systemd/pihole-ipv6-dns-fix.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "protonvpn-best-server.service",
+        "domain": "network",
+        "source": "systemd/protonvpn-best-server.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "protonvpn-best-server.timer",
+        "domain": "network",
+        "source": "systemd/protonvpn-best-server.timer",
         "kind": "systemd",
         "critical": true
       },

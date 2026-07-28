@@ -1,0 +1,10 @@
+[Unit]
+Description=Roda o monitor de payout Storj a cada 30 minutos
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=30min
+Unit=storj-payout-monitor.service
+
+[Install]
+WantedBy=timers.target
