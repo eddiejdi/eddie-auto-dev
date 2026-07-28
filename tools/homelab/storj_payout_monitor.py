@@ -15,6 +15,7 @@ Fluxo:
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import logging
 import os
@@ -181,6 +182,42 @@ def send_telegram_alert(message: str) -> None:
         log.warning("Telegram alert falhou: %s", exc)
 
 
+def _load_storj_withdraw():
+    """Importa storj_withdraw.py (mesmo diretório) sem exigir estar no PYTHONPATH.
+
+    Em produção ambos ficam em /usr/local/bin — import direto funciona porque
+    o Python adiciona o diretório do script ao sys.path. Em testes (módulo
+    carregado via spec_from_file_location) isso não vale, daí o fallback.
+    """
+    try:
+        import storj_withdraw  # type: ignore
+
+        return storj_withdraw
+    except ImportError:
+        spec = importlib.util.spec_from_file_location(
+            "storj_withdraw", Path(__file__).resolve().parent / "storj_withdraw.py"
+        )
+        assert spec and spec.loader
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+
+def _build_transfer_plan_text(wallet_balance: float) -> str:
+    """Monta o plano de retirada (somente leitura) pra anexar no alerta.
+
+    Nunca assina nem transmite nada — só reaproveita storj_withdraw.py pra
+    buscar o endereço de depósito KuCoin e formatar o plano em 2 etapas.
+    """
+    try:
+        sw = _load_storj_withdraw()
+        deposit_info = sw.fetch_kucoin_deposit_address()
+        return "\n\n" + sw.format_transfer_plan_markdown(wallet_balance, deposit_info)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Falha ao montar plano de transferência p/ alerta: %s", exc)
+        return "\n\n⚠️ Não foi possível montar o plano automático — rode storj_withdraw.py manualmente."
+
+
 def write_prom(metrics: dict[str, float | int]) -> None:
     help_text = {
         "storj_payout_disposed_total": ("gauge", "Total disposed (USD) somado de todos satélites"),
@@ -248,6 +285,7 @@ def main() -> int:
             f"Total disposed acumulado: ${disposed_total:.2f}\n"
             f"Saldo atual na carteira: {wallet_balance:.4f} STORJ\n"
             f"Carteira: `{WALLET_ADDRESS}`"
+            + _build_transfer_plan_text(wallet_balance)
         )
         alert_sent += 1
         log.info("Alerta enviado (delta $%.2f >= threshold $%.2f)", delta_disposed_usd, ALERT_THRESHOLD_USD)

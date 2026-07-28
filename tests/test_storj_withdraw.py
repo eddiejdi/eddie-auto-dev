@@ -110,6 +110,26 @@ def test_main_with_present_flag_raises_not_implemented(monkeypatch):
         sw.main()
 
 
+def test_format_transfer_plan_markdown_success():
+    text = sw.format_transfer_plan_markdown(5.31, {"success": True, "address": "0xdeposit"})
+    assert "0xdeposit" in text
+    assert "5.3100 STORJ" in text
+    assert "portal.zksync.io/bridge" in text
+
+
+def test_format_transfer_plan_markdown_includes_memo():
+    text = sw.format_transfer_plan_markdown(
+        1.0, {"success": True, "address": "0xdeposit", "memo": "tag-123"}
+    )
+    assert "tag-123" in text
+
+
+def test_format_transfer_plan_markdown_failure():
+    text = sw.format_transfer_plan_markdown(1.0, {"success": False, "error": "boom"})
+    assert "Falha ao obter endereço" in text
+    assert "boom" in text
+
+
 def test_main_handles_balance_fetch_failure(monkeypatch):
     def _raise():
         raise ValueError("boom")

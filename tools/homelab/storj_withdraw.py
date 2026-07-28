@@ -142,6 +142,31 @@ def print_transfer_plan(wallet_balance: float, deposit_info: dict) -> None:
     print("=" * 70)
 
 
+def format_transfer_plan_markdown(wallet_balance: float, deposit_info: dict) -> str:
+    """Versão compacta (Markdown) do plano, para incluir no alerta do Telegram.
+
+    Mesmo conteúdo de print_transfer_plan(), sem a assinatura/transmissão —
+    isso continua manual, feito pelo operador com hardware/software wallet.
+    """
+    if not deposit_info.get("success"):
+        return f"⚠️ Falha ao obter endereço de depósito KuCoin: {deposit_info.get('error')}"
+
+    lines = [
+        "*Plano de transferência (2 etapas, manual):*",
+        f"Saldo: `{wallet_balance:.4f} STORJ`",
+        f"Destino KuCoin (rede ERC20, chainId={KUCOIN_DEPOSIT_CHAIN}): `{deposit_info.get('address')}`",
+    ]
+    if deposit_info.get("memo"):
+        lines.append(f"Memo/Tag obrigatório: `{deposit_info['memo']}`")
+    lines += [
+        "1️⃣ Bridge STORJ zkSync Era → Ethereum L1: https://portal.zksync.io/bridge"
+        " (taxa em STORJ, hardware/software wallet, confirmação física)",
+        "2️⃣ Transfer ERC-20 padrão L1 → endereço acima (mesma wallet)",
+        "⚠️ Testar com $1-2 antes do valor total — docs/storj-withdrawal-runbook.md",
+    ]
+    return "\n".join(lines)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(

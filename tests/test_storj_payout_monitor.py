@@ -63,6 +63,10 @@ def test_main_alerts_only_once_per_crossing(tmp_path, monkeypatch):
     monkeypatch.setattr(spm, "fetch_storj_usd_price", lambda: 0.061247)
     monkeypatch.setattr(spm, "fetch_disposed_total", lambda: 100.0)
     monkeypatch.setattr(spm, "fetch_wallet_storj_balance", lambda: 5.31)
+    # Este teste cobre só a lógica de dedup do alerta — o plano de transferência
+    # (que bateria em rede real pra buscar credenciais KuCoin) é coberto à parte
+    # em test_build_transfer_plan_text_* e test_main_alert_includes_transfer_plan.
+    monkeypatch.setattr(spm, "_build_transfer_plan_text", lambda balance: "")
 
     # 1ª execução: sem estado anterior, delta = 0 (last=current) -> sem alerta
     rc = spm.main()
@@ -101,6 +105,54 @@ def test_main_no_alert_below_threshold(tmp_path, monkeypatch):
     rc = spm.main()
     assert rc == 0
     assert alerts == []  # delta = $5, abaixo do threshold $20
+
+
+def test_build_transfer_plan_text_success(monkeypatch):
+    class _FakeStorjWithdraw:
+        @staticmethod
+        def fetch_kucoin_deposit_address():
+            return {"success": True, "address": "0xdeposit"}
+
+        @staticmethod
+        def format_transfer_plan_markdown(balance, info):
+            return f"PLANO balance={balance} addr={info['address']}"
+
+    monkeypatch.setattr(spm, "_load_storj_withdraw", lambda: _FakeStorjWithdraw)
+    text = spm._build_transfer_plan_text(5.31)
+    assert "PLANO balance=5.31 addr=0xdeposit" in text
+
+
+def test_build_transfer_plan_text_handles_failure(monkeypatch):
+    def _raise():
+        raise RuntimeError("sem credenciais KuCoin")
+
+    monkeypatch.setattr(spm, "_load_storj_withdraw", _raise)
+    text = spm._build_transfer_plan_text(5.31)
+    assert "Não foi possível montar o plano" in text
+
+
+def test_main_alert_includes_transfer_plan(tmp_path, monkeypatch):
+    state_file = tmp_path / "state.json"
+    prom_file = tmp_path / "metrics.prom"
+    monkeypatch.setattr(spm, "STATE_FILE", state_file)
+    monkeypatch.setattr(spm, "PROM_FILE", prom_file)
+    monkeypatch.setattr(spm, "ALERT_THRESHOLD_USD", 20.0)
+
+    alerts = []
+    monkeypatch.setattr(spm, "send_telegram_alert", lambda msg: alerts.append(msg))
+    monkeypatch.setattr(spm, "fetch_storj_usd_price", lambda: 0.061247)
+    monkeypatch.setattr(spm, "fetch_disposed_total", lambda: 100.0)
+    monkeypatch.setattr(spm, "fetch_wallet_storj_balance", lambda: 5.31)
+    monkeypatch.setattr(
+        spm, "_build_transfer_plan_text", lambda balance: f"\n\nPLANO balance={balance}"
+    )
+
+    spm.main()  # baseline, sem estado anterior -> sem alerta
+    monkeypatch.setattr(spm, "fetch_disposed_total", lambda: 125.0)
+    spm.main()
+
+    assert len(alerts) == 1
+    assert "PLANO balance=5.31" in alerts[0]
 
 
 def test_main_handles_disposed_fetch_failure(tmp_path, monkeypatch):
