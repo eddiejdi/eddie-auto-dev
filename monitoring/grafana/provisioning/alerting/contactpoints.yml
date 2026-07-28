@@ -11,7 +11,12 @@ contactPoints:
         type: telegram
         disableResolveMessage: false
         settings:
-          bottoken: "1105143633:AAG5BrfOsGbV88BFztljR7fH5ekmszFnulA"
+          # Interpolado pelo Grafana a partir do ambiente do container.
+          # O valor literal que estava aqui vazou neste repo público desde
+          # 2026-03-04 e já foi revogado — este contact point não entrega nada
+          # até que TELEGRAM_BOT_TOKEN seja injetado no container do Grafana.
+          # Ver docs/INCIDENTS/2026-07-28_SECRETS_IN_PUBLIC_REPO.md.
+          bottoken: "$TELEGRAM_BOT_TOKEN"
           chatid: "948686300"
           disable_web_page_preview: false
           protect_content: false

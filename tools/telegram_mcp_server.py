@@ -22,8 +22,19 @@ from mcp.server.stdio import stdio_server
 from mcp.types import TextContent, Tool
 
 # ── Configuração ─────────────────────────────────────────────────────────────
-TG_TOKEN   = os.environ.get("TG_TOKEN", "1105143633:AAG5BrfOsGbV88BFztljR7fH5ekmszFnulA")
-TG_CHAT_ID = os.environ.get("TG_CHAT_ID", "948686300")
+# Sem default hardcoded: o token anterior ficou exposto neste repo público.
+# Fonte canônica é o Secrets Agent (shared/telegram_bot_token), com
+# /etc/default/eddie-common como fallback de ambiente para serviços locais.
+# TELEGRAM_BOT_TOKEN é o nome canônico em /etc/default/eddie-common; TG_TOKEN
+# é o nome histórico usado aqui. Aceita os dois para não depender de mapeamento
+# externo.
+TG_TOKEN   = os.environ.get("TG_TOKEN") or os.environ.get("TELEGRAM_BOT_TOKEN", "")
+TG_CHAT_ID = os.environ.get("TG_CHAT_ID") or os.environ.get("TELEGRAM_CHAT_ID", "948686300")
+if not TG_TOKEN:
+    raise SystemExit(
+        "Token do Telegram ausente. Exporte TG_TOKEN/TELEGRAM_BOT_TOKEN ou "
+        "carregue /etc/default/eddie-common antes de iniciar o MCP."
+    )
 TG_BASE    = f"https://api.telegram.org/bot{TG_TOKEN}"
 TG_FILE    = f"https://api.telegram.org/file/bot{TG_TOKEN}"
 
