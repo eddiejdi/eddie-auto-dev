@@ -1,17 +1,17 @@
 # CMDB Baseline
 
-- Generated at: `2026-07-28T01:03:57.119413+00:00`
+- Generated at: `2026-07-28T03:31:33.818335+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `187`
-- Critical services flagged for MVP: `72`
+- Repo services discovered: `189`
+- Critical services flagged for MVP: `74`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
 - `identity`: 4
-- `monitoring`: 16
+- `monitoring`: 18
 - `network`: 20
 - `operations`: 104
 - `storage`: 32
@@ -56,6 +56,8 @@
 - `monitoring-containers-bootstrap.service` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.service`
 - `rss-sentiment-exporter.service` (monitoring, systemd) from `systemd/rss-sentiment-exporter.service`
 - `storj-exporter.service` (monitoring, systemd) from `deploy/storj-exporter.service`
+- `storj-payout-monitor.service` (monitoring, systemd) from `systemd/storj-payout-monitor.service`
+- `storj-payout-monitor.timer` (monitoring, systemd) from `systemd/storj-payout-monitor.timer`
 - `tape-component-quality-exporter.service` (monitoring, systemd) from `systemd/tape-component-quality-exporter.service`
 - `tunnel-healthcheck-exporter.service` (monitoring, systemd) from `systemd/tunnel-healthcheck-exporter.service`
 - `proxy` (network, compose) from `deploy/cmdb/docker-compose.yml`
@@ -76,8 +78,6 @@
 - `protonvpn-unit-selfheal.service` (network, systemd) from `systemd/protonvpn-unit-selfheal.service`
 - `protonvpn-unit-selfheal.timer` (network, systemd) from `systemd/protonvpn-unit-selfheal.timer`
 - `rpa4all-ddns-server.service` (network, systemd) from `deploy/vpn/rpa4all-ddns-server.service`
-- `rpa4all-vpn-ddns.service` (network, systemd) from `deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service`
-- `wireguard-nat.service` (network, systemd) from `deploy/vpn/wireguard-nat.service`
 
 ## Serviços anotados manualmente
 
