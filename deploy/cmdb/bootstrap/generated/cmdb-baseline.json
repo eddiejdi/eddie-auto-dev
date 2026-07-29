@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-07-28T19:10:36.525389+00:00",
+  "generated_at": "2026-07-29T02:25:11.379479+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 189,
+    "repo_services": 193,
     "trading_instances": 12,
     "critical_services": 74,
     "domains": {
       "identity": 4,
       "monitoring": 18,
       "network": 20,
-      "operations": 104,
+      "operations": 108,
       "storage": 32,
       "trading": 11
     }
@@ -1282,6 +1282,38 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "deploy/homelab/server-error-alert.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "sia-host-shim.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/sia-host-shim.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "sia-macvlan-network.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/sia-macvlan-network.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "sia-macvlan-watchdog.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/sia-macvlan-watchdog.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "sia-macvlan-watchdog.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/sia-macvlan-watchdog.timer",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
