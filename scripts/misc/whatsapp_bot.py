@@ -106,6 +106,15 @@ except ImportError:
     HOME_AVAILABLE = False
     logger.warning("Módulo home_assistant_integration não encontrado - automação desabilitada")
 
+# Import da bridge de tool-calling MCP (ferramentas do homelab_mcp_server.py
+# para o modelo shared-homelab — ver scripts/misc/mcp_tool_bridge.py)
+try:
+    import mcp_tool_bridge
+    MCP_TOOLS_AVAILABLE = True
+except ImportError:
+    MCP_TOOLS_AVAILABLE = False
+    logger.warning("Módulo mcp_tool_bridge não encontrado - tool-calling desabilitado para shared-homelab")
+
 # ============== Configurações ==
 # Número do WhatsApp (formato: código do país + DDD + número, sem +)
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER", "5511981193899")
@@ -135,6 +144,14 @@ if OWNER_NUMBER not in ALLOWED_NUMBERS:
 PHONE_MODEL_MAPPING = {
     "11981193899": "shared-homelab",
 }
+
+# Modelo com tool-calling MCP habilitado (ver mcp_tool_bridge.py) e teto de
+# rodadas do loop tool-call -> resultado -> tool-call para evitar loop infinito.
+TOOL_CALLING_MODEL = "shared-homelab"
+try:
+    MAX_TOOL_ROUNDS = int(os.getenv("MAX_TOOL_ROUNDS", "3"))
+except ValueError:
+    MAX_TOOL_ROUNDS = 3
 
 # Caminho dos dados
 DATA_DIR = Path(__file__).parent / "whatsapp_data"
@@ -536,6 +553,54 @@ class OllamaClient:
             logger.error(f"Exceção no Ollama: {e}")
             return f"Erro de conexão: {str(e)}"
 
+    async def chat_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str = MODEL,
+        system: str = None,
+        tools: Optional[List[Dict[str, Any]]] = None,
+    ) -> Tuple[str, List[Dict[str, Any]]]:
+        """Como chat(), mas envia `tools=` (function-calling do Ollama) e
+        retorna (content, tool_calls) em vez de só o texto.
+
+        tool_calls vem no formato nativo do Ollama:
+        [{"function": {"name": ..., "arguments": {...}}}, ...] — lista vazia
+        se o modelo não chamou nenhuma ferramenta. Método separado de chat()
+        para não alterar a assinatura/retorno usada pelos demais call-sites
+        (calendário, gmail, home, relatórios, resumo de contexto).
+        """
+        try:
+            full_messages = []
+            if system:
+                full_messages.append({"role": "system", "content": system})
+            full_messages.extend(messages)
+
+            payload: Dict[str, Any] = {
+                "model": model,
+                "messages": full_messages,
+                "stream": False,
+                "options": {
+                    "temperature": 0.7,
+                    "num_predict": 2048,
+                },
+            }
+            if tools:
+                payload["tools"] = tools
+
+            response = await self.client.post(f"{self.host}/api/chat", json=payload)
+
+            if response.status_code == 200:
+                data = response.json()
+                msg = data.get("message", {}) or {}
+                return msg.get("content", "") or "", msg.get("tool_calls") or []
+
+            logger.error(f"Erro Ollama (chat_with_tools): {response.status_code} - {response.text}")
+            return f"Erro ao conectar com modelo: {response.status_code}", []
+
+        except Exception as e:
+            logger.error(f"Exceção no Ollama (chat_with_tools): {e}")
+            return f"Erro de conexão: {str(e)}", []
+
     async def chat_validated(
         self,
         messages: List[Dict[str, str]],
@@ -644,7 +709,12 @@ class WhatsAppBot:
         self.search_engine = None
         self.running = False
         self.whatsapp_client = None
-        
+        # Callable(chat_id, text) -> Awaitable, setado via set_notifier() em
+        # main() — permite que uma tarefa de fundo (aprovação de ferramenta
+        # travada) mande uma mensagem WhatsApp minutos depois, fora do ciclo
+        # request/response do webhook.
+        self._notifier: Optional[Any] = None
+
         # Inicializar busca web se disponível
         if WEB_SEARCH_AVAILABLE:
             try:
@@ -653,6 +723,12 @@ class WhatsAppBot:
             except Exception as e:
                 logger.error(f"Erro ao inicializar busca: {e}")
     
+    def set_notifier(self, fn) -> None:
+        """Registra o callable(chat_id, text) usado para mandar mensagens
+        WhatsApp fora do ciclo request/response (ex: resultado de uma
+        ferramenta que ficou pendente de aprovação no Telegram)."""
+        self._notifier = fn
+
     def get_session(self, chat_id: str) -> ChatSession:
         """Obtém ou cria sessão de chat"""
         if chat_id not in self.sessions:
@@ -968,6 +1044,121 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         owner_clean = OWNER_NUMBER.replace("55", "", 1) if OWNER_NUMBER.startswith("55") else OWNER_NUMBER
         return clean_number == owner_clean or number == OWNER_NUMBER or number == owner_clean
     
+    @staticmethod
+    def _format_tool_result(result: Any) -> str:
+        """Formata o resultado de uma ferramenta pra mensagem WhatsApp (JSON
+        compacto, truncado — sem round-trip extra no modelo pra sintetizar
+        texto natural, mantendo o caminho simples)."""
+        try:
+            text = json.dumps(result, ensure_ascii=False, default=str)
+        except (TypeError, ValueError):
+            text = str(result)
+        if len(text) > 1500:
+            text = text[:1500] + "… (truncado)"
+        return f"```\n{text}\n```"
+
+    async def _await_gated_tool(self, intent_id: str, tool_name: str, kwargs: dict, chat_id: str) -> None:
+        """Tarefa de fundo: aguarda aprovação (Telegram) e notifica o WhatsApp
+        com o resultado, seja qual for o desfecho (nunca deixa o usuário sem
+        resposta)."""
+
+        async def on_resolved(status: str, result: Any) -> None:
+            if status == "approved":
+                text = f"✅ Aprovado — executei `{tool_name}`.\n\n{self._format_tool_result(result)}"
+            elif status == "rejected":
+                text = f"❌ Ação `{tool_name}` foi rejeitada no Telegram. Não fiz nada."
+            elif status == "expired":
+                text = f"⌛ A aprovação de `{tool_name}` expirou sem resposta. Manda de novo se ainda quiser."
+            else:
+                text = f"⚠️ Deu erro tentando executar `{tool_name}` após aprovação: {result}"
+
+            if self._notifier is None:
+                logger.warning("Notifier não configurado — não consegui avisar %s sobre %s", chat_id, intent_id)
+                return
+            try:
+                await self._notifier(chat_id, text)
+            except Exception:
+                logger.exception("Falha ao notificar %s sobre intent_id=%s", chat_id, intent_id)
+
+        await mcp_tool_bridge.await_and_execute(intent_id, tool_name, kwargs, on_resolved)
+
+    async def _process_with_tools(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        system_prompt: str,
+        chat_id: str,
+    ) -> str:
+        """Loop de tool-calling para o modelo com fine-tune de ferramentas
+        MCP (TOOL_CALLING_MODEL). Ferramentas seguras (`none`/`low`) executam
+        na hora; ferramentas com efeito colateral são travadas via governança
+        (intent_declare + aprovação Telegram) — ver mcp_tool_bridge.py.
+        """
+        tools = mcp_tool_bridge.build_ollama_tool_schemas()
+        working_messages = list(messages)
+
+        for _round in range(MAX_TOOL_ROUNDS):
+            content, tool_calls = await self.ollama.chat_with_tools(
+                working_messages, model=model, system=system_prompt, tools=tools,
+            )
+            if not tool_calls:
+                return content
+
+            working_messages.append({
+                "role": "assistant",
+                "content": content,
+                "tool_calls": tool_calls,
+            })
+
+            for call in tool_calls:
+                fn = call.get("function", {}) if isinstance(call, dict) else {}
+                tool_name = fn.get("name", "")
+                raw_args = fn.get("arguments") or {}
+                if isinstance(raw_args, str):
+                    try:
+                        kwargs = json.loads(raw_args)
+                    except json.JSONDecodeError:
+                        kwargs = {}
+                else:
+                    kwargs = raw_args
+
+                if not tool_name:
+                    continue
+
+                if mcp_tool_bridge.is_gated(tool_name):
+                    description = (
+                        f"Modelo {model} (self-chat WhatsApp) pediu para chamar "
+                        f"'{tool_name}' com argumentos {kwargs}"
+                    )
+                    try:
+                        intent_id = mcp_tool_bridge.declare_gate(tool_name, kwargs, description)
+                    except Exception as exc:
+                        logger.exception("Falha ao declarar intent para %s", tool_name)
+                        return f"⚠️ Não consegui pedir aprovação para `{tool_name}`: {exc}"
+
+                    asyncio.create_task(self._await_gated_tool(intent_id, tool_name, kwargs, chat_id))
+                    # Encerra o turno aqui — não tenta continuar a conversa de
+                    # forma síncrona enquanto a aprovação está pendente.
+                    return (
+                        f"🔒 Ação `{tool_name}` requer sua aprovação — te aviso no "
+                        "Telegram assim que for decidido."
+                    )
+
+                try:
+                    result = mcp_tool_bridge.execute_safe(tool_name, kwargs)
+                except Exception as exc:
+                    logger.exception("Erro executando ferramenta segura '%s'", tool_name)
+                    result = {"ok": False, "error": str(exc)}
+
+                working_messages.append({
+                    "role": "tool",
+                    "content": json.dumps(result, ensure_ascii=False, default=str),
+                    "name": tool_name,
+                })
+
+        logger.warning("Loop de tool-calling excedeu MAX_TOOL_ROUNDS=%s", MAX_TOOL_ROUNDS)
+        return "Desculpa, não consegui concluir isso a tempo (muitas chamadas de ferramenta seguidas)."
+
     async def process_message(self, message: WhatsAppMessage) -> str:
         """Processa uma mensagem e gera resposta"""
         # Ignorar mensagens próprias, EXCETO se for mensagem para si mesmo (Notes to Self)
@@ -988,7 +1179,17 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         command_response = await self.handle_command(message)
         if command_response:
             return command_response
-        
+
+        # Resolve cedo se essa mensagem vai pro modelo com tool-calling real
+        # (shared-homelab) — se sim, pula o atalho de "relatório" hardcoded
+        # abaixo e deixa o próprio modelo decidir, chamando as ferramentas
+        # MCP reais (trading_summary/trading_performance/etc.) com os
+        # parâmetros que ele julgar certos, em vez de um template fixo com
+        # dados de uma fonte errada/desatualizada.
+        _sender_number = message.sender.split("@")[0]
+        _sender_clean = _sender_number.replace("55", "", 1) if _sender_number.startswith("55") else _sender_number
+        _will_use_tool_calling = MCP_TOOLS_AVAILABLE and PHONE_MODEL_MAPPING.get(_sender_clean) == TOOL_CALLING_MODEL
+
         # === VERIFICAR INTENÇÃO DE CALENDÁRIO ===
         if CALENDAR_AVAILABLE:
             calendar_response = await process_calendar_request(message.text, message.chat_id)
@@ -1026,7 +1227,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
                     return home_response
 
         # === VERIFICAR INTENÇÃO DE RELATÓRIO ===
-        if REPORTS_AVAILABLE:
+        if REPORTS_AVAILABLE and not _will_use_tool_calling:
             text_lower = message.text.lower()
             report_keywords = [
                 'relatório', 'relatorio', 'report', 'status',
@@ -1076,10 +1277,18 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         system_prompt = self.get_system_prompt(session.current_profile, is_owner)
 
         await self.refresh_session_summary(session, model)
-        
+
         # Preparar mensagens para o modelo
         messages = session.get_history()
-        
+
+        if model == TOOL_CALLING_MODEL and MCP_TOOLS_AVAILABLE:
+            response = await self._process_with_tools(messages, model, system_prompt, message.chat_id)
+            self.db.save_message(
+                message.chat_id, WHATSAPP_PHONE_ID, "assistant", response, message.is_group,
+            )
+            session.add_message("assistant", response)
+            return response
+
         # Primeira tentativa de resposta
         response = await self.ollama.chat_validated(
             messages,
@@ -1088,7 +1297,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
             validator=self._response_validator,
             max_attempts=2,
         )
-        
+
         # Se detectar incapacidade, tentar com busca web
         if self.detect_inability(response) and self.search_engine:
             logger.info(f"Incapacidade detectada, buscando na web: {message.text}")
@@ -1701,7 +1910,12 @@ async def main():
     # URL do WAHA/Evolution API (configurar conforme sua instalação)
     waha_url = os.getenv("WAHA_URL", "http://localhost:3000")
     waha = WAHAClient(base_url=waha_url, session="default")
-    
+
+    # Permite que tarefas de fundo (aprovação de ferramenta MCP travada)
+    # mandem uma mensagem WhatsApp minutos depois, fora do request/response
+    # do webhook. Ver WhatsAppBot._await_gated_tool.
+    bot.set_notifier(waha.send_text)
+
     # Iniciar servidor webhook
     webhook = WebhookServer(bot, waha, port=5001)
     
