@@ -242,3 +242,15 @@ def test_process_with_tools_stops_after_max_rounds():
         )
 
     assert "não consegui concluir" in response.lower()
+
+
+# ── Kill-switch do tool-calling ──────────────────────────────────────────
+
+
+def test_tool_calling_disabled_by_default():
+    """Default DESLIGADO: o llama3.1:8b base escolhe ferramenta errada (medido
+    em produção — pediu `bus_publish` para um pedido de Google Calendar), o que
+    é pior que a resposta conversacional anterior. Só religar (WHATSAPP_TOOL_CALLING=1)
+    depois do candidato treinado passar no shadow-eval."""
+    wb = _load_module()
+    assert wb.TOOL_CALLING_ENABLED is False

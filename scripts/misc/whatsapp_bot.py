@@ -148,6 +148,14 @@ PHONE_MODEL_MAPPING = {
 # Modelo com tool-calling MCP habilitado (ver mcp_tool_bridge.py) e teto de
 # rodadas do loop tool-call -> resultado -> tool-call para evitar loop infinito.
 TOOL_CALLING_MODEL = "shared-homelab"
+# Kill-switch do tool-calling. Default DESLIGADO até o fine-tune ficar pronto:
+# medido em produção (2026-07-29), o llama3.1:8b base escolhe a ferramenta
+# errada mesmo recebendo o schema — num pedido de "criar evento no Google
+# Calendar" ele chamou `bus_publish`, que é de risco alto, então o turno virou
+# "aguardando aprovação no Telegram" e expirou 11min depois sem resposta útil.
+# Pior que o comportamento anterior (resposta conversacional). Religar com
+# WHATSAPP_TOOL_CALLING=1 só depois do candidato treinado passar no shadow-eval.
+TOOL_CALLING_ENABLED = os.getenv("WHATSAPP_TOOL_CALLING", "0").lower() in ("1", "true", "yes", "on")
 try:
     MAX_TOOL_ROUNDS = int(os.getenv("MAX_TOOL_ROUNDS", "3"))
 except ValueError:
@@ -1126,9 +1134,14 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
                     continue
 
                 if mcp_tool_bridge.is_gated(tool_name):
+                    # Sem dump cru do dict: nomes de argumento com `_`/`*`
+                    # quebravam o Markdown do approval_gateway e a aprovação
+                    # não chegava no Telegram (medido em produção 2026-07-29).
+                    arg_names = ", ".join(sorted(kwargs.keys())) or "sem argumentos"
                     description = (
                         f"Modelo {model} (self-chat WhatsApp) pediu para chamar "
-                        f"'{tool_name}' com argumentos {kwargs}"
+                        f"a ferramenta {tool_name} ({arg_names}). "
+                        f"Argumentos completos no context_snapshot."
                     )
                     try:
                         intent_id = mcp_tool_bridge.declare_gate(tool_name, kwargs, description)
@@ -1188,7 +1201,11 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         # dados de uma fonte errada/desatualizada.
         _sender_number = message.sender.split("@")[0]
         _sender_clean = _sender_number.replace("55", "", 1) if _sender_number.startswith("55") else _sender_number
-        _will_use_tool_calling = MCP_TOOLS_AVAILABLE and PHONE_MODEL_MAPPING.get(_sender_clean) == TOOL_CALLING_MODEL
+        _will_use_tool_calling = (
+            TOOL_CALLING_ENABLED
+            and MCP_TOOLS_AVAILABLE
+            and PHONE_MODEL_MAPPING.get(_sender_clean) == TOOL_CALLING_MODEL
+        )
 
         # === VERIFICAR INTENÇÃO DE CALENDÁRIO ===
         if CALENDAR_AVAILABLE:
@@ -1281,7 +1298,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         # Preparar mensagens para o modelo
         messages = session.get_history()
 
-        if model == TOOL_CALLING_MODEL and MCP_TOOLS_AVAILABLE:
+        if TOOL_CALLING_ENABLED and model == TOOL_CALLING_MODEL and MCP_TOOLS_AVAILABLE:
             response = await self._process_with_tools(messages, model, system_prompt, message.chat_id)
             self.db.save_message(
                 message.chat_id, WHATSAPP_PHONE_ID, "assistant", response, message.is_group,
