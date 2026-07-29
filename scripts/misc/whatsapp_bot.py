@@ -1470,6 +1470,14 @@ class WebhookServer:
         self.port = port
         self.app = web.Application()
         self.setup_routes()
+        # WAHA manda webhook tanto pra "message" quanto pra "message.any" pra
+        # cada mensagem real (às vezes com redelivery do mesmo evento) — sem
+        # dedupe isso gera 2+ respostas (2+ chamadas ao Ollama, 2+ sendText)
+        # pra uma única mensagem recebida. Dedupe pelo id real da mensagem do
+        # WhatsApp (payload.id), não pelo id do evento de webhook, porque é a
+        # única coisa estável entre as entregas duplicadas.
+        self._recent_message_ids: Dict[str, float] = {}
+        self._recent_message_ids_ttl = 300.0  # segundos
     
     def setup_routes(self):
         """Configura rotas do webhook"""
@@ -1523,6 +1531,24 @@ class WebhookServer:
             logger.error(f"Erro ao processar mensagem: {e}")
             return web.json_response({"error": str(e)}, status=500)
     
+    def _is_duplicate_message(self, wa_message_id: str) -> bool:
+        """Marca `wa_message_id` como visto e retorna True se já tinha sido
+        processado antes. Síncrono e sem `await` no meio — corre até o fim
+        antes de qualquer outra corrotina rodar, então não há corrida entre
+        as entregas quase-simultâneas de "message"/"message.any" pro mesmo
+        evento."""
+        now = time.time()
+        if wa_message_id in self._recent_message_ids:
+            return True
+        self._recent_message_ids[wa_message_id] = now
+        # Poda oportunista — evita crescimento ilimitado num processo de vida longa.
+        if len(self._recent_message_ids) > 500:
+            cutoff = now - self._recent_message_ids_ttl
+            expired = [mid for mid, ts in self._recent_message_ids.items() if ts < cutoff]
+            for mid in expired:
+                del self._recent_message_ids[mid]
+        return False
+
     async def process_message_event(self, data: dict):
         """Processa evento de mensagem (com logs temporários para debug)"""
         try:
@@ -1545,6 +1571,14 @@ class WebhookServer:
 
             if not msg_data:
                 logger.debug("Nenhum msg_data encontrado no payload, abortando")
+                return
+
+            # Dedupe: WAHA entrega o mesmo evento em múltiplos webhooks
+            # ("message" + "message.any", às vezes com redelivery do mesmo
+            # evento) — sem isso cada entrega vira uma resposta separada.
+            wa_message_id = msg_data.get("id", msg_data.get("key", {}).get("id", ""))
+            if wa_message_id and self._is_duplicate_message(wa_message_id):
+                logger.debug(f"Evento duplicado pra mensagem já processada (id={wa_message_id}), ignorando")
                 return
 
             # Extrair informações
