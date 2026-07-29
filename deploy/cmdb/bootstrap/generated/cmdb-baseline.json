@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-07-29T02:25:11.379479+00:00",
+  "generated_at": "2026-07-29T13:50:38.367706+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 193,
+    "repo_services": 196,
     "trading_instances": 12,
-    "critical_services": 74,
+    "critical_services": 75,
     "domains": {
       "identity": 4,
       "monitoring": 18,
-      "network": 20,
-      "operations": 108,
+      "network": 21,
+      "operations": 110,
       "storage": 32,
       "trading": 11
     }
@@ -526,6 +526,14 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "sia-api-proxy.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "systemd/sia-api-proxy.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "wireguard-nat.service",
       "domain": "network",
       "kind": "systemd",
@@ -546,6 +554,14 @@
       "domain": "operations",
       "kind": "compose",
       "source": "deploy/cmdb/docker-compose.yml",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "hostd",
+      "domain": "operations",
+      "kind": "compose",
+      "source": "docker/docker-compose.sia.yml",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -1314,6 +1330,14 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/sia-macvlan-watchdog.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "sia-port-forward.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/sia-port-forward.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -2266,6 +2290,13 @@
         "name": "rpa4all-vpn-ddns.service",
         "domain": "network",
         "source": "deploy/vpn-deb/rpa4all-vpn/usr/share/rpa4all-vpn/rpa4all-vpn-ddns.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "sia-api-proxy.service",
+        "domain": "network",
+        "source": "systemd/sia-api-proxy.service",
         "kind": "systemd",
         "critical": true
       },
