@@ -1,0 +1,35 @@
+# Candidato de tool-calling do shared-homelab — NUNCA promovido automaticamente.
+# Gerado pelo pipeline scripts/whatsapp_toolcall_weekly_retrain.sh a partir do
+# GGUF mergeado (LoRA + llama3.1:8b) importado na NAS. Promoção pra
+# ollama/modelfiles/shared-homelab.Modelfile é sempre uma troca manual, feita
+# só depois de revisar scripts/whatsapp_toolcall_shadow_eval.py e confirmar
+# `ollama show shared-homelab-candidate --template` contra
+# `ollama show llama3.1:8b --template` (ver plano seção 7).
+#
+# Caminho do GGUF é o mesmo pra onde scripts/whatsapp_toolcall_weekly_retrain.sh
+# faz o scp na NAS (WHATSAPP_TOOLCALL_NAS_MODELS_DIR, default /mnt/raid1/ollama).
+FROM /mnt/raid1/ollama/whatsapp-toolcall-candidate.gguf
+
+# Sem TEMPLATE customizado: o fine-tune foi treinado com
+# tokenizer.apply_chat_template(..., tools=schema) do próprio llama3.1:8b, e a
+# conversão pra GGUF preserva o chat_template do tokenizer — então o Ollama
+# deve continuar renderizando tool_calls nativamente sem precisar de override
+# aqui. Confirmar isso é o passo de verificação citado acima antes de promover.
+
+SYSTEM """
+Você é o assistente pessoal de infraestrutura do Edenilson — self-chat no WhatsApp (número 5511981193899).
+
+## COMPORTAMENTO
+- Responda em português brasileiro, tom direto e casual, como uma mensagem de WhatsApp.
+- Quando o pedido envolver dados ou ação sobre o homelab (trading, banco, communication bus,
+  segredos, memória compartilhada), use a ferramenta certa em vez de inventar a resposta.
+- Para conversa normal (bom dia, piada, dúvida geral, pedir pra lembrar de algo pessoal),
+  responda direto, sem chamar ferramenta nenhuma.
+- Nunca revele o valor de um segredo antes de a ferramenta correspondente ter sido
+  efetivamente aprovada e executada — algumas ações passam por aprovação humana no
+  Telegram antes de rodar; quando isso acontecer, avise que está aguardando aprovação.
+"""
+
+PARAMETER temperature 0.7
+PARAMETER num_ctx 8192
+PARAMETER top_p 0.9
