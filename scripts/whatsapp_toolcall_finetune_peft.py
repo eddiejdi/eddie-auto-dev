@@ -32,6 +32,7 @@ import logging
 import os
 import random
 import sys
+import time
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s",
@@ -64,6 +65,18 @@ MIN_SAMPLES = int(os.environ.get("FT_MIN_SAMPLES", "800"))
 # Quantas ferramentas incluir no schema de CADA exemplo de treino (a certa +
 # distratoras) em vez das 33 completas — ver comentário em to_text().
 TOOLS_PER_EXAMPLE = int(os.environ.get("FT_TOOLS_PER_EXAMPLE", "6"))
+
+# Treino em pacotes curtos (ex: 10min a cada 1h, pra não segurar o Ollama de
+# produção pausado por horas seguidas). 0 = sem limite, roda até o fim numa
+# tacada só. Quando setado, o script salva checkpoint e sai ao atingir o
+# orçamento; a próxima invocação retoma sozinha do último checkpoint em
+# FT_OUTPUT_DIR/lora_adapters — orquestrado por
+# scripts/whatsapp_toolcall_chunked_train.sh + systemd timer.
+TIME_BUDGET_SECONDS = int(os.environ.get("FT_TIME_BUDGET_SECONDS", "0"))
+# Baixo de propósito: cada passo (após GRAD_ACCUM micro-batches) já leva
+# dezenas de segundos nesta GPU — precisa salvar com frequência pra garantir
+# ao menos 1 checkpoint dentro de um orçamento de ~10min.
+SAVE_STEPS = int(os.environ.get("FT_SAVE_STEPS", "2"))
 
 # Versão condensada da persona homelab — a instrução detalhada de
 # tool-calling propriamente dita fica embutida nos pesos pelo treino, não
@@ -133,6 +146,29 @@ def _verify_tool_call_template(tokenizer) -> bool:
         BASE_MODEL,
     )
     return False
+
+
+def _make_time_budget_callback(budget_seconds: int):
+    """Cria um TrainerCallback que força parada (com checkpoint) ao estourar
+    o orçamento de tempo de parede de um pacote de treino. Subclassea
+    transformers.TrainerCallback de verdade (não duck-typing) — é o que o
+    CallbackHandler do Trainer espera."""
+    from transformers import TrainerCallback
+
+    class _TimeBudgetCallback(TrainerCallback):
+        def __init__(self):
+            self.budget_seconds = budget_seconds
+            self.start = time.monotonic()
+            self.stopped_early = False
+
+        def on_step_end(self, args, state, control, **kwargs):
+            if time.monotonic() - self.start >= self.budget_seconds:
+                control.should_training_stop = True
+                control.should_save = True
+                self.stopped_early = True
+            return control
+
+    return _TimeBudgetCallback()
 
 
 def train(dry_run: bool, do_merge: bool) -> int:
@@ -229,24 +265,52 @@ def train(dry_run: bool, do_merge: bool) -> int:
     ds = ds.map(tokenize, batched=True, remove_columns=["text"])
     log.info("Dataset tokenizado: %d exemplos", len(ds))
 
+    resume_ckpt = None
+    if TIME_BUDGET_SECONDS and LORA_OUTPUT.exists():
+        checkpoints = sorted(
+            LORA_OUTPUT.glob("checkpoint-*"),
+            key=lambda p: int(p.name.rsplit("-", 1)[-1]),
+        )
+        if checkpoints:
+            resume_ckpt = str(checkpoints[-1])
+            log.info("Retomando de checkpoint anterior: %s", resume_ckpt)
+
     args = TrainingArguments(
         output_dir=str(LORA_OUTPUT), per_device_train_batch_size=BATCH_SIZE,
         gradient_accumulation_steps=GRAD_ACCUM, num_train_epochs=EPOCHS,
         learning_rate=LR, warmup_steps=WARMUP, fp16=True, logging_steps=5,
-        save_strategy="no", optim="paged_adamw_8bit", seed=42, report_to="none",
+        save_strategy=("steps" if TIME_BUDGET_SECONDS else "no"),
+        save_steps=SAVE_STEPS, save_total_limit=2,
+        optim="paged_adamw_8bit", seed=42, report_to="none",
     )
+    callbacks = []
+    time_budget_cb = None
+    if TIME_BUDGET_SECONDS:
+        time_budget_cb = _make_time_budget_callback(TIME_BUDGET_SECONDS)
+        callbacks.append(time_budget_cb)
+
     trainer = Trainer(
         model=model, args=args, train_dataset=ds,
         data_collator=DataCollatorForLanguageModeling(tokenizer, mlm=False),
+        callbacks=callbacks,
     )
-    log.info("Treinando...")
-    result = trainer.train()
-    log.info("Loss final: %.4f | steps: %d", result.training_loss, result.global_step)
+    log.info("Treinando... (orçamento=%s)", f"{TIME_BUDGET_SECONDS}s" if TIME_BUDGET_SECONDS else "sem limite")
+    result = trainer.train(resume_from_checkpoint=resume_ckpt)
+
+    if time_budget_cb is not None and time_budget_cb.stopped_early:
+        log.info(
+            "⏸️  PARCIAL — orçamento de %ds atingido no passo %d. Checkpoint salvo em %s. "
+            "Rode de novo (mesmo FT_OUTPUT_DIR) pra continuar de onde parou.",
+            TIME_BUDGET_SECONDS, result.global_step, LORA_OUTPUT,
+        )
+        return 0
+
+    log.info("✅ COMPLETO — Loss final: %.4f | steps: %d", result.training_loss, result.global_step)
 
     LORA_OUTPUT.mkdir(parents=True, exist_ok=True)
     model.save_pretrained(str(LORA_OUTPUT))
     tokenizer.save_pretrained(str(LORA_OUTPUT))
-    log.info("LoRA salvo em %s", LORA_OUTPUT)
+    log.info("LoRA final salvo em %s", LORA_OUTPUT)
 
     if do_merge:
         log.info("Merge LoRA → fp16 (RAM-heavy)...")
@@ -256,6 +320,7 @@ def train(dry_run: bool, do_merge: bool) -> int:
         tokenizer.save_pretrained(str(MERGED_OUTPUT))
         log.info("Merged fp16 salvo em %s", MERGED_OUTPUT)
 
+    (OUTPUT_DIR / "TRAINING_COMPLETE").write_text(f"steps={result.global_step}\n", encoding="utf-8")
     return 0
 
 
