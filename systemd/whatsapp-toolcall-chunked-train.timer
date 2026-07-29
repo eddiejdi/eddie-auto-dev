@@ -1,0 +1,17 @@
+[Unit]
+Description=Timer dos pacotes de treino QLoRA do shared-homelab (10min a cada 1h)
+
+[Timer]
+# De hora em hora. O serviço se auto-desabilita (systemctl disable --now)
+# assim que o treino termina, então o timer não fica disparando pra sempre.
+OnCalendar=hourly
+# Sem Persistent=true de propósito: se a máquina ficou desligada, não queremos
+# disparar um treino "atrasado" logo no boot, competindo com a subida do
+# Ollama de produção.
+Persistent=false
+# Espalha até 5min pra não bater sempre no mesmo instante de outros timers.
+RandomizedDelaySec=300
+Unit=whatsapp-toolcall-chunked-train.service
+
+[Install]
+WantedBy=timers.target
