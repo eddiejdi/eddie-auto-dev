@@ -13,6 +13,11 @@ Group=homelab
 TimeoutStartSec=1500
 Environment=PYTHONUNBUFFERED=1
 Environment=FT_TIME_BUDGET_SECONDS=600
+# 1 época (não 2): medido 52,6s/passo na 3060, então 2 épocas custariam ~48
+# pacotes (~2 dias). Com 1 época são ~24 pacotes (~1 dia) — e, num dataset
+# sintético/templated como este, 1 época ainda reduz o risco de overfitting
+# nos templates.
+Environment=FT_EPOCHS=1
 # TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID pro aviso de conclusão/falha.
 EnvironmentFile=/etc/default/eddie-common
 ExecStart=/home/homelab/myClaude/scripts/whatsapp_toolcall_chunked_train.sh

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-29T17:59:08.880540+00:00",
-  "repo_root": "/tmp/wb-chunked",
+  "generated_at": "2026-07-29T18:05:44.335037+00:00",
+  "repo_root": "/tmp/wb-race",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
