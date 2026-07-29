@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-29T19:21:35.260920+00:00",
-  "repo_root": "/tmp/wb-consent",
+  "generated_at": "2026-07-29T19:26:57.918463+00:00",
+  "repo_root": "/tmp/wb-apikey",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
