@@ -9,17 +9,14 @@ como fallback de compatibilidade.
 
 O consentimento em si é inerentemente do dono (abrir a URL, autorizar a conta
 Google). Como o homelab é headless, o fluxo usa um servidor local de redirect
-e o dono acessa via túnel SSH:
+e o dono acessa via túnel SSH — UM comando só, do desktop dele (o túnel e a
+execução remota na mesma invocação, pra não confundir sessão local com remota):
 
-  # no SEU desktop (não no homelab):
-  ssh -L 8765:localhost:8765 homelab
+  ssh -L 8771:localhost:8771 homelab 'cd /home/homelab/myClaude && python3 scripts/misc/google_calendar_oauth_consent.py'
 
-  # dentro dessa sessão ssh:
-  cd /home/homelab/myClaude && python3 scripts/misc/google_calendar_oauth_consent.py
-
-  # abra no navegador DO SEU DESKTOP a URL que o script imprimir;
-  # autorize a conta edenilson.adm@gmail.com; o redirect volta pelo túnel
-  # e o token fica salvo em scripts/misc/calendar_data/token.pickle.
+  # a URL aparece no terminal; abra no navegador DO DESKTOP, autorize a conta
+  # edenilson.adm@gmail.com; o redirect volta pelo túnel e o token fica salvo
+  # em scripts/misc/calendar_data/token.pickle.
 
 Depois do token salvo, religar o serviço:
   sudo systemctl reset-failed eddie-calendar.service
@@ -27,6 +24,7 @@ Depois do token salvo, religar o serviço:
 """
 from __future__ import annotations
 
+import os
 import pickle
 import sys
 from pathlib import Path
@@ -35,7 +33,9 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))            # google_calendar_integration
 sys.path.insert(0, str(HERE.parent.parent))  # tools.secrets_loader
 
-REDIRECT_PORT = 8765
+# 8765 NÃO serve: já é do vault server do homelab (homelab-vault-backup.service)
+# — bind falha com EADDRINUSE. 8771 está livre; ajustável via env se preciso.
+REDIRECT_PORT = int(os.environ.get("GCAL_OAUTH_PORT", "8771"))
 
 
 def main() -> int:
@@ -66,8 +66,8 @@ def main() -> int:
         return 1
 
     print(f"\n🌐 Aguardando consentimento na porta {REDIRECT_PORT}…")
-    print("   (rode `ssh -L 8765:localhost:8765 homelab` no seu desktop e abra")
-    print("    a URL abaixo no navegador do desktop)\n")
+    print("   (abra a URL abaixo no navegador do SEU desktop — o redirect")
+    print(f"    volta pelo túnel -L {REDIRECT_PORT}:localhost:{REDIRECT_PORT})\n")
     creds = flow.run_local_server(
         host="localhost", port=REDIRECT_PORT,
         open_browser=False,
