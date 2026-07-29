@@ -306,8 +306,18 @@ Prepare-se! 🚀"""
         
         # Verificar autenticação
         if not self.calendar.is_authenticated():
-            logger.error("❌ Não autenticado! Execute setup_google_calendar.py primeiro.")
-            return
+            logger.error(
+                "❌ Não autenticado! Coloque o credentials.json do Google Cloud em "
+                "scripts/misc/calendar_data/ e rode setup_google_calendar.py."
+            )
+            # Sair com código != 0 é essencial: com `return` o processo saía com
+            # status 0, o systemd considerava execução bem-sucedida e o
+            # `Restart=always` reiniciava a cada 10s pra sempre (chegou a 321
+            # restarts). Como o unit tinha `Wants=ollama.service`, cada restart
+            # ainda reerguia o Ollama — o que sabotava o fine-tune, que precisa
+            # da VRAM da 3060 livre. Falhando de verdade, o StartLimitBurst do
+            # systemd para o loop e o serviço fica visível como `failed`.
+            raise SystemExit(1)
         
         logger.info("✅ Autenticado com Google Calendar")
         
