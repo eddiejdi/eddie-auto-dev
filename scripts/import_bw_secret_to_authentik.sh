@@ -40,10 +40,29 @@ command -v jq >/dev/null || die "jq não encontrado (apt install jq)."
 
 [[ -n "${BW_SESSION:-}" ]] || die "BW_SESSION não definido. Rode antes: export BW_SESSION=\$(bw unlock --raw)"
 
-# A chave nunca fica em código/repo (público) — vem do ambiente, cuja fonte
-# canônica é ~/.config/homelab/secrets.env (0600, fora do git).
-[[ -n "${SECRETS_AGENT_API_KEY:-}" ]] || die \
-  "SECRETS_AGENT_API_KEY ausente do ambiente. Rode: set -a; source ~/.config/homelab/secrets.env; set +a"
+# A chave nunca fica em código/repo (público). Resolvida em runtime, em ordem:
+#   1. ambiente já exportado
+#   2. ~/.config/homelab/secrets.env (0600, fora do git) — fonte na workstation
+#   3. environment do secrets_agent.service — fonte no próprio homelab, onde
+#      o secrets.env da workstation não existe
+KEY_VAR="SECRETS_AGENT_API_KEY"
+
+if [[ -z "${!KEY_VAR:-}" && -r "$HOME/.config/homelab/secrets.env" ]]; then
+  # shellcheck disable=SC1091
+  set -a; source "$HOME/.config/homelab/secrets.env"; set +a
+fi
+
+if [[ -z "${!KEY_VAR:-}" ]]; then
+  resolved="$(systemctl show secrets_agent.service -p Environment --value 2>/dev/null \
+              | tr ' ' '\n' \
+              | awk -v k="$KEY_VAR" -F= '$1==k { print substr($0, length(k)+2) }' \
+              | head -1)"
+  [[ -n "$resolved" ]] && export "$KEY_VAR"="$resolved"
+  unset resolved
+fi
+
+[[ -n "${!KEY_VAR:-}" ]] || die \
+  "$KEY_VAR não resolvida (nem env, nem ~/.config/homelab/secrets.env, nem secrets_agent.service)."
 
 MODE=""; ITEM=""; TARGET=""; declare -a MAPS=()
 while [[ $# -gt 0 ]]; do
