@@ -53,11 +53,21 @@ requests.post(
 PY
 }
 
+# Unidades com `Wants=ollama.service` + `Restart=always`: se ficarem de pé,
+# cada restart delas reergue o ollama em segundos, no meio do treino, e as
+# duas brigam pela VRAM da 3060. Medido: eddie-calendar (quebrado, em loop de
+# restart a cada 10s porque o Google Calendar não está autenticado) reergueu
+# o ollama 7s depois do stop. Precisam ser pausadas junto e restauradas no trap.
+OLLAMA_PULLERS=(eddie-calendar.service llm-optimizer.service)
+
 restore_ollama() {
-  echo "--- [chunk] religando ollama+coordinator ---"
+  echo "--- [chunk] religando ollama+coordinator+dependentes ---"
   sudo systemctl start ollama.service 2>/dev/null || true
   sleep 2
   sudo systemctl start ollama-gpu-coordinator.service 2>/dev/null || true
+  for unit in "${OLLAMA_PULLERS[@]}"; do
+    sudo systemctl start "$unit" 2>/dev/null || true
+  done
   local st_ollama st_coord
   st_ollama="$(systemctl is-active ollama.service 2>/dev/null || true)"
   st_coord="$(systemctl is-active ollama-gpu-coordinator.service 2>/dev/null || true)"
@@ -81,10 +91,19 @@ if [[ ! -f "$DATA_DIR/whatsapp_toolcall_train.jsonl" ]]; then
   exit 1
 fi
 
-echo "--- [chunk] pausando ollama+coordinator p/ liberar a 3060 ---"
+echo "--- [chunk] pausando ollama+coordinator+dependentes p/ liberar a 3060 ---"
+# Ordem importa: primeiro quem reergue o ollama, depois o ollama.
+for unit in "${OLLAMA_PULLERS[@]}"; do
+  sudo systemctl stop "$unit" 2>/dev/null || true
+done
 sudo systemctl stop ollama-gpu-coordinator.service 2>/dev/null || true
 sudo systemctl stop ollama.service 2>/dev/null || true
 sleep 4
+
+if [[ "$(systemctl is-active ollama.service 2>/dev/null || true)" == "active" ]]; then
+  echo "[chunk] ERRO: ollama voltou a subir mesmo após o stop — abortando pacote p/ não brigar pela VRAM."
+  exit 1
+fi
 
 cd "$REPO" || exit 1
 FT_DATASET_DIR="$DATA_DIR" \
