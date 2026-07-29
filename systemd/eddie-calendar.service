@@ -1,18 +1,31 @@
 [Unit]
 Description=Eddie Calendar Reminder Service
-After=network.target ollama.service
-Wants=ollama.service
+After=network.target
+# NÃO declarar Wants=/After=ollama.service: este serviço não usa Ollama em
+# nenhum ponto (verificado: zero referências a ollama/11434/11437 no código).
+# A dependência era espúria e tinha um efeito colateral caro — como o serviço
+# estava em loop de restart, cada restart reerguia o ollama.service, inclusive
+# no meio do fine-tune, que precisa da VRAM da RTX 3060 livre.
+# Se o loop de restart voltar, o systemd desiste depois de 3 tentativas em 5min
+# em vez de reiniciar pra sempre.
+StartLimitIntervalSec=300
+StartLimitBurst=3
 
 [Service]
 Type=simple
 User=homelab
 WorkingDirectory=/home/homelab/myClaude
 ExecStart=/usr/bin/python3 /home/homelab/myClaude/calendar_reminder_service.py
-Restart=always
-RestartSec=10
+# on-failure (não `always`): sem credenciais do Google o serviço sai com
+# código 1 e o StartLimitBurst acima interrompe o ciclo; com `always` até uma
+# saída limpa era reiniciada, o que produziu 321 restarts silenciosos.
+Restart=on-failure
+RestartSec=30
 Environment=PYTHONUNBUFFERED=1
-# TELEGRAM_BOT_TOKEN must be provided at runtime from the vault or environment.
-Environment=TELEGRAM_BOT_TOKEN=
+# TELEGRAM_BOT_TOKEN vem da fonte canônica (/etc/default/eddie-common).
+# NÃO reintroduzir `Environment=TELEGRAM_BOT_TOKEN=` vazio aqui: Environment=
+# vence EnvironmentFile= e zeraria o token, derrubando as notificações.
+EnvironmentFile=-/etc/default/eddie-common
 Environment=ADMIN_CHAT_ID=948686300
 Environment=WHATSAPP_NUMBER=5511981193899
 Environment=WAHA_API=http://localhost:3001

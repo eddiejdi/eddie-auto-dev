@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-07-29T18:45:03.924380+00:00",
-  "repo_root": "/tmp/wb-killswitch",
+  "generated_at": "2026-07-29T18:54:31.641560+00:00",
+  "repo_root": "/tmp/wb-cal",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
