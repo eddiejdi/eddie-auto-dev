@@ -30,6 +30,7 @@ import argparse
 import json
 import logging
 import os
+import random
 import sys
 from pathlib import Path
 
@@ -51,7 +52,7 @@ MERGED_OUTPUT = OUTPUT_DIR / "merged_model"
 
 DATASET_FILE = os.environ.get("FT_DATASET_FILE", "whatsapp_toolcall_train.jsonl")
 
-MAX_SEQ_LENGTH = int(os.environ.get("FT_MAX_SEQ", "3072"))  # schemas de tool ocupam mais contexto
+MAX_SEQ_LENGTH = int(os.environ.get("FT_MAX_SEQ", "2048"))
 EPOCHS = float(os.environ.get("FT_EPOCHS", "2"))
 BATCH_SIZE = int(os.environ.get("FT_BATCH", "1"))
 GRAD_ACCUM = int(os.environ.get("FT_GRAD_ACCUM", "8"))
@@ -60,6 +61,9 @@ LORA_ALPHA = int(os.environ.get("FT_LORA_ALPHA", "32"))
 LR = float(os.environ.get("FT_LR", "2e-4"))
 WARMUP = int(os.environ.get("FT_WARMUP", "10"))
 MIN_SAMPLES = int(os.environ.get("FT_MIN_SAMPLES", "800"))
+# Quantas ferramentas incluir no schema de CADA exemplo de treino (a certa +
+# distratoras) em vez das 33 completas — ver comentário em to_text().
+TOOLS_PER_EXAMPLE = int(os.environ.get("FT_TOOLS_PER_EXAMPLE", "6"))
 
 # Versão condensada da persona homelab — a instrução detalhada de
 # tool-calling propriamente dita fica embutida nos pesos pelo treino, não
@@ -71,6 +75,26 @@ SYSTEM = (
     "chame a ferramenta certa em vez de inventar a resposta. Para conversa "
     "normal, responda direto em português, sem chamar ferramenta nenhuma."
 )
+
+
+def _subset_schema(all_schemas: list[dict], ex: dict, k: int, rng: "random.Random") -> list[dict]:
+    """Monta um schema reduzido para um exemplo: a(s) ferramenta(s) realmente
+    chamada(s) (ou mencionada(s) no near-miss) + distratoras aleatórias até
+    completar `k`. Determinístico dado o mesmo `rng` (chamado em ordem fixa
+    pelos exemplos, já que `random.Random(42)` é recriado uma vez por run)."""
+    required_names = {tc["function"]["name"] for tc in (ex.get("tool_calls") or [])}
+    near_miss = ex.get("near_miss_of")
+    if near_miss:
+        required_names.add(near_miss)
+
+    required = [s for s in all_schemas if s["function"]["name"] in required_names]
+    others = [s for s in all_schemas if s["function"]["name"] not in required_names]
+    rng.shuffle(others)
+
+    fill = max(0, k - len(required))
+    subset = required + others[:fill]
+    rng.shuffle(subset)
+    return subset
 
 
 def load_examples(dataset_dir: Path, filename: str) -> list[dict]:
@@ -158,10 +182,22 @@ def train(dry_run: bool, do_merge: bool) -> int:
     ))
     model.print_trainable_parameters()
 
-    def to_text(ex: dict) -> str:
+    def to_text(ex: dict, rng: "random.Random") -> str:
         user = (ex["instruction"] + (ex.get("input") or "")).strip()
         tool_calls = ex.get("tool_calls") or []
         tool_result = ex.get("tool_result")
+
+        # Schema reduzido por exemplo: a schema completa das 33 ferramentas
+        # sozinha já custa ~4.8k tokens (medido: apply_chat_template com as
+        # 33 definições) — maior que qualquer MAX_SEQ que cabe nesta GPU
+        # (RTX 3060 12GB fica sem memória no cast fp32 dos logits do llama3.1,
+        # vocab=128k, antes mesmo de chegar no texto do exemplo). Em vez de
+        # ensinar as 33 de uma vez, cada exemplo vê a(s) ferramenta(s) certa(s)
+        # + algumas distratoras aleatórias — ensina a discriminar sem estourar
+        # o orçamento de contexto. Em produção o Ollama continua recebendo o
+        # schema completo (tools= com as 33) — o modelo só precisa aprender o
+        # PADRÃO de selecionar a ferramenta certa dentro do que for oferecido.
+        example_schema = _subset_schema(tool_schemas, ex, k=TOOLS_PER_EXAMPLE, rng=rng)
 
         messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]
 
@@ -181,9 +217,10 @@ def train(dry_run: bool, do_merge: bool) -> int:
             # negativo/near-miss: resposta conversacional normal, sem tool_calls
             messages.append({"role": "assistant", "content": ex.get("output") or "Certo."})
 
-        return tokenizer.apply_chat_template(messages, tools=tool_schemas or None, tokenize=False)
+        return tokenizer.apply_chat_template(messages, tools=example_schema or None, tokenize=False)
 
-    texts = [to_text(ex) for ex in examples]
+    _rng = random.Random(42)
+    texts = [to_text(ex, _rng) for ex in examples]
     ds = Dataset.from_dict({"text": texts})
 
     def tokenize(batch: dict) -> dict:
