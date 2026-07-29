@@ -38,6 +38,12 @@ CREDENTIALS_FILE = DATA_DIR / "credentials.json"
 TOKEN_FILE = DATA_DIR / "token.pickle"
 EVENTS_CACHE = DATA_DIR / "events_cache.json"
 
+# Nome do secret no Authentik (via Secrets Agent) com o OAuth client do Google
+# (tipo Desktop/Installed): campos `client_id` e `client_secret`. Fonte
+# preferida sobre o CREDENTIALS_FILE — credenciais vêm do Authentik, não de
+# arquivo solto em disco.
+GOOGLE_OAUTH_SECRET = os.environ.get("GOOGLE_OAUTH_SECRET_NAME", "google/oauth_client_installed")
+
 # Configurações Google Calendar API
 SCOPES = [
     'https://www.googleapis.com/auth/calendar',
@@ -236,6 +242,53 @@ class GoogleCalendarClient:
         except Exception as e:
             logger.warning(f"Erro ao carregar credenciais: {e}")
             self.credentials = None
+
+    @staticmethod
+    def _client_config_from_vault() -> Optional[dict]:
+        """Monta o client config OAuth do Google a partir do Authentik.
+
+        Substitui o `credentials.json` solto em disco: o client_id/secret do
+        Google vivem no Authentik e são lidos via Secrets Agent, igual ao
+        resto do homelab (KuCoin, Grafana, OAuth do Estou Aqui).
+
+        Retorna None quando o cofre não tem os valores — aí o chamador cai
+        no arquivo, mantendo compatibilidade com instalações antigas.
+        """
+        try:
+            from tools.secrets_loader import get_field
+        except ImportError:
+            logger.debug("secrets_loader indisponível — sem leitura do cofre")
+            return None
+
+        try:
+            client_id = get_field(GOOGLE_OAUTH_SECRET, "client_id")
+            client_secret = get_field(GOOGLE_OAUTH_SECRET, "client_secret")
+        except Exception as exc:
+            logger.warning(
+                "Client OAuth do Google não obtido do Authentik (%s): %s",
+                GOOGLE_OAUTH_SECRET, exc,
+            )
+            return None
+
+        if not client_id or not client_secret:
+            logger.warning(
+                "Secret %s existe no Authentik mas está VAZIO — popule "
+                "client_id/client_secret com o OAuth client (tipo Desktop/Installed) "
+                "do Google Cloud Console.", GOOGLE_OAUTH_SECRET,
+            )
+            return None
+
+        logger.info("Client OAuth do Google obtido do Authentik (%s)", GOOGLE_OAUTH_SECRET)
+        return {
+            "installed": {
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob", "http://localhost"],
+            }
+        }
     
     def _save_credentials(self):
         """Salva credenciais no arquivo"""
@@ -282,13 +335,23 @@ class GoogleCalendarClient:
                 except Exception as e:
                     logger.warning(f"Falha ao renovar token: {e}")
             
-            # Iniciar novo fluxo de autenticação
-            if not CREDENTIALS_FILE.exists():
-                return False, "Arquivo credentials.json não encontrado. Execute setup_google_calendar.py primeiro."
-            
-            flow = InstalledAppFlow.from_client_secrets_file(
-                str(CREDENTIALS_FILE), SCOPES
-            )
+            # Iniciar novo fluxo de autenticação — fonte preferida: Authentik
+            # (via Secrets Agent); o credentials.json em disco vira fallback
+            # de compatibilidade para instalações antigas.
+            client_config = self._client_config_from_vault()
+            if client_config is not None:
+                flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
+            elif CREDENTIALS_FILE.exists():
+                flow = InstalledAppFlow.from_client_secrets_file(
+                    str(CREDENTIALS_FILE), SCOPES
+                )
+            else:
+                return False, (
+                    f"Client OAuth do Google indisponível: secret '{GOOGLE_OAUTH_SECRET}' "
+                    "vazio/ausente no Authentik e sem credentials.json local. "
+                    "Popule o secret (ex: scripts/import_bw_secret_to_authentik.sh) "
+                    "ou rode setup_google_calendar.py."
+                )
             
             if auth_code:
                 # Completar autenticação com código
