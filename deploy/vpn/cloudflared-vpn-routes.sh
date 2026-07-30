@@ -114,6 +114,12 @@ ensure_cf_table_routes
 ensure_subnet_routes
 ip route flush cache
 
+# Defesa em profundidade: heals de CF às vezes rodam quando a policy routing
+# da LAN já caiu. Reaplica só 32764/32765 (script leve, sem recursão).
+if [[ -x /usr/local/bin/ensure-protonvpn-policy-rules.sh ]]; then
+  /usr/local/bin/ensure-protonvpn-policy-rules.sh >/dev/null || true
+fi
+
 if verify_routes; then
   log "OK: Cloudflare via ${WAN_GW} dev ${WAN_IF} (UID table ${CF_TABLE} + main; tabela ${PROTONVPN_TABLE} limpa)"
 else
