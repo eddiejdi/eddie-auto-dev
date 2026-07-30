@@ -1,12 +1,13 @@
 [Unit]
-Description=ProtonVPN Routing Watchdog Timer (a cada 5 min)
+Description=ProtonVPN Routing Watchdog Timer (a cada 60s)
 Documentation=file:///workspace/eddie-auto-dev/deploy/vpn/README-protonvpn-watchdog.md
 
 [Timer]
-# Executa a cada 5 minutos
-OnBootSec=30s
-OnUnitActiveSec=5min
-RandomizedDelaySec=10s
+# Após incidente 2026-07-29: rules 32764/32765 sumiram e LAN ficou sem net
+# até o ciclo de 5min. Reduzido para 60s para limitar a janela de impacto.
+OnBootSec=20s
+OnUnitActiveSec=60s
+RandomizedDelaySec=5s
 AccuracySec=1s
 
 # Se perder uma execução (servidor desligado), executa imediatamente ao voltar

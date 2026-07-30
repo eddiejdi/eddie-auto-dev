@@ -22,9 +22,14 @@
 - **Localização:** `/etc/systemd/system/wg-quick@protonvpn.service.d/restore-iprules.conf`
 
 ### 3. **Watchdog Service + Timer**
-- **Executa a cada 5 minutos** — health check completo
+- **Executa a cada 60 segundos** (era 5 min; reduzido após incidente 2026-07-29)
 - Verifica: interface, tabela 205, ip rules 32764/32765, caminho efetivo da LAN, rotas Docker, IP público
 - **Auto-fix** — restaura tudo automaticamente se detectar desvio
+
+### 3b. **ensure-protonvpn-policy-rules.sh** (leve)
+- Reaplica **somente** rules `32764`/`32765` (sem HTTP health-check)
+- Chamado por: `iot-vpn-bypass --heal/--restore`, `cloudflared-vpn-routes.sh`, `wan-selfheal.sh`, `ExecStartPost` do wg-quick
+- Evita janela em que um heal IoT/CF roda com a policy routing da LAN já caída
 
 ### 4. **Gateway da LAN**
 - **Contrato operacional:** clientes da LAN usam `192.168.15.2` como gateway e DNS
