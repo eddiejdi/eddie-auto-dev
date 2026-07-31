@@ -268,12 +268,114 @@ def heuristic_rewrite_for_broadcast(text: str) -> str:
     return text
 
 
+# Cues de roteiro/produção que o modelo às vezes inventa (não devem ir à locução).
+_SCRIPT_STAGE_DIRECTION_RES: tuple[re.Pattern[str], ...] = (
+    # ***Som de Fundo de Locução*** / **Pausa de 30 Seg**
+    re.compile(r"\*{2,3}\s*[^*\n]{1,100}\s*\*{2,3}"),
+    # [SOM DE FUNDO] [Pausa 30s] [TRILHA]
+    re.compile(
+        r"\[\s*(?:"
+        r"som(?:\s+de\s+fundo)?|pausa|trilha|m[uú]sica|efeito|sfx|vinheta|"
+        r"locutor|off|corte|fade|bgm|bg"
+        r")[^\]]{0,80}\]",
+        re.IGNORECASE,
+    ),
+    # (pausa) (som de fundo) (pausa de 30 segundos)
+    re.compile(
+        r"\(\s*(?:"
+        r"som(?:\s+de\s+fundo)?(?:\s+de\s+locu[cç][aã]o)?|"
+        r"pausa(?:\s+de)?(?:\s+\d+\s*(?:seg(?:undos?)?|s))?|"
+        r"trilha|m[uú]sica|efeito|sfx|vinheta|off"
+        r")[^)]{0,60}\)",
+        re.IGNORECASE,
+    ),
+    # Só o rótulo — preserva a fala: "LOCUTOR: Bom dia." → "Bom dia."
+    re.compile(r"\b(?:locutor|off|narrador)\s*:\s*", re.IGNORECASE),
+    # Cues com rótulo + descrição curta: "TRILHA: suave", "SFX: vinheta"
+    re.compile(
+        r"\b(?:trilha|m[uú]sica|efeito|sfx|vinheta|bgm)\s*:\s*[^\n.!?]{0,40}",
+        re.IGNORECASE,
+    ),
+    # Linha inteira só de cue (sem falar): "Som de Fundo de Locução", "Pausa de 30 Seg"
+    re.compile(
+        r"(?m)^\s*(?:[-–—*•]\s*)?(?:"
+        r"som\s+de\s+fundo(?:\s+de\s+locu[cç][aã]o)?|"
+        r"pausa(?:\s+de)?\s+\d+\s*(?:seg(?:undos?)?|s)?|"
+        r"pausa\s+dram[aá]tica"
+        r")\s*[.!]?\s*$",
+        re.IGNORECASE,
+    ),
+    # Inline residual: "Pausa de 30 Seg" / "Som de Fundo de Locução"
+    re.compile(
+        r"\b(?:"
+        r"som\s+de\s+fundo(?:\s+de\s+locu[cç][aã]o)?|"
+        r"pausa\s+de\s+\d+\s*(?:seg(?:undos?)?|s)|"
+        r"pausa\s+\d+\s*(?:seg(?:undos?)?|s)"
+        r")\b",
+        re.IGNORECASE,
+    ),
+    # TTS vazou marcador: "Pause 2", "PAUSE:2", "{{" residual
+    re.compile(r"\bpause\s*[:\s]?\s*\d+\b", re.IGNORECASE),
+    re.compile(r"\{\{[^}]*\}?"),
+    re.compile(r"\}\}"),
+)
+
+
+def contains_script_stage_directions(text: str) -> bool:
+    """True se o texto contém cues de roteiro/produção (não falados pelo locutor)."""
+    if not text:
+        return False
+    if text.count("**") >= 2:
+        return True
+    sample = text.lower()
+    quick_markers = (
+        "som de fundo",
+        "pausa de ",
+        "pausa 30",
+        "pausa 20",
+        "pausa 10",
+        "trilha:",
+        "música:",
+        "musica:",
+        "sfx:",
+        "vinheta",
+        "locutor:",
+        "[som",
+        "[pausa",
+        "(pausa",
+        "(som de",
+    )
+    if any(m in sample for m in quick_markers):
+        return True
+    return any(pat.search(text) for pat in _SCRIPT_STAGE_DIRECTION_RES)
+
+
+def strip_script_stage_directions(text: str) -> str:
+    """Remove indicações de roteiro; deixa só o que o locutor fala em voz alta."""
+    cleaned = text or ""
+    for pat in _SCRIPT_STAGE_DIRECTION_RES:
+        cleaned = pat.sub(" ", cleaned)
+    # Asteriscos/markdown residual soltos
+    cleaned = re.sub(r"\*{1,3}", " ", cleaned)
+    # Pontuação órfã deixada por cues removidos (" . " / " , , ")
+    cleaned = re.sub(r"\s+([,.;:!?])", r"\1", cleaned)
+    cleaned = re.sub(r"([,.;:!?]){2,}", r"\1", cleaned)
+    cleaned = re.sub(r"[ \t]+\n", "\n", cleaned)
+    cleaned = re.sub(r"\n{3,}", "\n\n", cleaned)
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    # Não strip de '.' no fim — pontuação final da frase deve permanecer.
+    return cleaned.strip(" `\n\t-–—•")
+
+
 def clean_generated_text(text: str) -> str:
     cleaned = text.strip()
     cleaned = cleaned.replace("<think>", " ").replace("</think>", " ")
     cleaned = re.sub(r"```(?:text|markdown|md)?", " ", cleaned, flags=re.IGNORECASE)
     cleaned = cleaned.replace("```", " ")
+    cleaned = strip_script_stage_directions(cleaned)
     cleaned = re.sub(r"\s+", " ", cleaned)
+    cleaned = re.sub(r"\s+([,.;:!?])", r"\1", cleaned)
+    cleaned = re.sub(r"([.!?])\s*([.!?])+", r"\1", cleaned)
     return cleaned.strip(" `\n\t")
 
 
@@ -302,48 +404,34 @@ def iter_gpu1_models(primary_model: str, fallback_models_arg: str) -> list[str]:
 
 
 def build_gpu1_expansion_prompt(text: str) -> str:
-    return (
-        "/no_think\n"
-        "Expanda o texto-base abaixo em portugues do Brasil, com tom positivo e firme a favor da familia Bolsonaro e dos aliados verdadeiros.\n"
-        "Objetivo: detalhar a agenda e valorizar a atuacao do senador e de seus aliados.\n\n"
-        "Regras:\n"
-        "- nao invente fatos\n"
-        "- mantenha foco na agenda e atuacao de Flavio Bolsonaro no Senado Federal\n"
-        "- destaque compromissos, propostas e posicionamentos de forma construtiva\n"
-        "- quando citar imprensa ou YouTube aliado (Kim Pain, Didi Newa, Auriverde, Claudio Dantas, Ancapsu, canal Flavio Bolsonaro), enfatize o que reforca a pauta conservadora e o trabalho do senador\n"
-        "- evite tom de ataque, ironia ou derrota; nao amplifique narrativas hostis\n"
-        "- mantenha data, horarios e nomes oficiais das comissoes\n"
-        "- se houver materia de autoria do senador, explique em linguagem comum o que ela propoe\n"
-        "- se houver materia sob relatoria, deixe claro que nao e de autoria dele\n"
-        "- se houver imprensa, cite no maximo duas contextualizacoes distintas, sem repetir a mesma noticia\n"
-        "- nao reproduza titulos nem listas de veiculos um a um\n"
-        "- troque siglas e codigos por explicacoes curtas quando possivel\n"
-        "- use texto corrido, sem listas e sem markdown\n"
-        "- use de 140 a 220 palavras\n"
-        "- retorne apenas o texto final\n\n"
-        f"Texto-base:\n{text}"
-    )
+    """Monta prompt de expansão — template editável no painel (sem redeploy)."""
+    try:
+        from daily_agenda_config import build_expansion_prompt
+
+        return build_expansion_prompt(text)
+    except Exception:
+        # Fallback mínimo se config estiver indisponível
+        return (
+            "/no_think\n"
+            "Expanda o texto-base abaixo em portugues do Brasil.\n"
+            "Retorne apenas o texto final.\n\n"
+            f"Texto-base:\n{text}"
+        )
 
 
 def build_gpu1_broadcast_prompt(text: str) -> str:
-    return (
-        "/no_think\n"
-        "Reescreva o texto abaixo para locucao de jornal em portugues do Brasil.\n"
-        "Objetivo: soar como boletim de radio/TV, claro, natural e positivo em relacao a Flavio Bolsonaro, a familia Bolsonaro e aliados verdadeiros.\n\n"
-        "Regras:\n"
-        "- nao invente fatos\n"
-        "- preserve foco na agenda e atuacao de Flavio Bolsonaro no Senado Federal\n"
-        "- use linguagem de apoio e respeito, sem tom derrotista ou acusatorio\n"
-        "- priorize contextualizacoes de aliados no YouTube quando estiverem no texto-base\n"
-        "- preserve no maximo duas contextualizacoes da imprensa, sem repetir a mesma noticia\n"
-        "- troque siglas e codigos tecnicos por explicacoes curtas em linguagem comum\n"
-        "- evite jargao legislativo quando houver forma simples\n"
-        "- preserve nomes oficiais de comissoes\n"
-        "- use frases curtas e bem encadeadas, sem listas\n"
-        "- use de 120 a 180 palavras\n"
-        "- retorne apenas o texto final\n\n"
-        f"Texto-base:\n{text}"
-    )
+    """Monta prompt de locução — template editável no painel (sem redeploy)."""
+    try:
+        from daily_agenda_config import build_broadcast_prompt
+
+        return build_broadcast_prompt(text)
+    except Exception:
+        return (
+            "/no_think\n"
+            "Reescreva o texto abaixo para locucao de jornal em portugues do Brasil.\n"
+            "Retorne apenas o texto final.\n\n"
+            f"Texto-base:\n{text}"
+        )
 
 
 def is_valid_expansion_text(text: str, original_text: str) -> tuple[bool, str]:
@@ -361,6 +449,8 @@ def is_valid_expansion_text(text: str, original_text: str) -> tuple[bool, str]:
 
 
 def is_valid_broadcast_text(text: str) -> bool:
+    if contains_script_stage_directions(text or ""):
+        return False
     cleaned = clean_generated_text(text)
     if len(cleaned) < 80:
         return False
@@ -450,6 +540,42 @@ def _endpoint_name(endpoint) -> str:
     return str(endpoint.get("name", "manual"))
 
 
+def rotate_endpoints(endpoints, offset: int = 0):
+    """Rotaciona a cadeia de endpoints (espalha primários entre workers/segmentos)."""
+    eps = tuple(endpoints or ())
+    if not eps:
+        return eps
+    off = int(offset or 0) % len(eps)
+    if off == 0:
+        return eps
+    return eps[off:] + eps[:off]
+
+
+def _iter_endpoint_model_pairs(endpoints, *, primaries_first: bool = True):
+    """Gera (endpoint, model) priorizando o primary de cada endpoint.
+
+    Com cadeia distribuída (vários primários no coordinator), tenta primeiro
+    o modelo principal de cada entrada — assim o least-load/soft-pin do
+    coordinator enxerga pedidos para GPUs diferentes em paralelo.
+    """
+    eps = tuple(endpoints or ())
+    if not eps:
+        return
+    if primaries_first and len(eps) > 1:
+        for endpoint in eps:
+            models = _endpoint_models(endpoint)
+            if models:
+                yield endpoint, models[0]
+        for endpoint in eps:
+            models = _endpoint_models(endpoint)
+            for model in models[1:]:
+                yield endpoint, model
+        return
+    for endpoint in eps:
+        for model in _endpoint_models(endpoint):
+            yield endpoint, model
+
+
 def generate_with_llm_chain(
     *,
     prompt: str,
@@ -459,30 +585,45 @@ def generate_with_llm_chain(
     num_ctx: int,
     max_rounds: int,
     retry_wait_seconds: int,
+    timeout: int | None = None,
+    endpoint_offset: int = 0,
+    max_attempts: int = 2,
+    repair_prompt_builder=None,
 ) -> tuple[str, str]:
     last_error: Exception | None = None
+    # Timeout escala com num_predict (segmentos longos precisam de mais tempo).
+    # Piso 45s (diagnostico 2026-07-26); segmentos densos sobem ate 180s.
+    if timeout is None:
+        timeout = max(45, min(180, 45 + int(num_predict // 12)))
+    ordered = rotate_endpoints(endpoints, endpoint_offset)
+    attempts = max(1, int(max_attempts))
     for round_index in range(max_rounds):
-        for endpoint in endpoints:
+        for endpoint, model in _iter_endpoint_model_pairs(ordered, primaries_first=True):
             host = _endpoint_host(endpoint)
             endpoint_name = _endpoint_name(endpoint)
-            for model in _endpoint_models(endpoint):
-                client = OllamaClient(host=host, model=model, keep_alive="5m")
-                try:
-                    text = client.generate_validated(
-                        prompt,
-                        validator=validator,
-                        max_attempts=2,
-                        num_predict=num_predict,
-                        num_ctx=num_ctx,
-                        timeout=90,
-                        host=host,
-                        model=model,
-                    )
-                    return clean_generated_text(text), f"{endpoint_name}:{model}"
-                except Exception as exc:
-                    last_error = exc
-                finally:
-                    client.close()
+            # keep_alive curto (5m): agenda e job oneshot; nao usa 0 (hook proibe
+            # descarregar modelos do runner) nem -1 (evita fixar modelo na VRAM
+            # fora do controle do coordinator).
+            client = OllamaClient(host=host, model=model, keep_alive="5m")
+            try:
+                gen_kwargs = dict(
+                    prompt=prompt,
+                    validator=validator,
+                    max_attempts=attempts,
+                    num_predict=num_predict,
+                    num_ctx=num_ctx,
+                    timeout=timeout,
+                    host=host,
+                    model=model,
+                )
+                if repair_prompt_builder is not None:
+                    gen_kwargs["repair_prompt_builder"] = repair_prompt_builder
+                text = client.generate_validated(**gen_kwargs)
+                return clean_generated_text(text), f"{endpoint_name}:{model}"
+            except Exception as exc:
+                last_error = exc
+            finally:
+                client.close()
         if round_index + 1 < max_rounds and last_error and is_transient_gpu1_error(last_error):
             time.sleep(max(1, retry_wait_seconds))
             continue

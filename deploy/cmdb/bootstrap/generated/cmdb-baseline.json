@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-07-29T13:50:38.367706+00:00",
+  "generated_at": "2026-07-31T19:42:24.383206+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 196,
+    "repo_services": 199,
     "trading_instances": 12,
     "critical_services": 75,
     "domains": {
       "identity": 4,
       "monitoring": 18,
       "network": 21,
-      "operations": 110,
+      "operations": 113,
       "storage": 32,
       "trading": 11
     }
@@ -1394,6 +1394,30 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/tuya-token-selfheal.timer",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "whatsapp-persona-panel.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/whatsapp-persona-panel.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "whatsapp-toolcall-chunked-train.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/whatsapp-toolcall-chunked-train.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "whatsapp-toolcall-chunked-train.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/whatsapp-toolcall-chunked-train.timer",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },

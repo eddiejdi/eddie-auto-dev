@@ -1,0 +1,31 @@
+{
+  "target_seconds": 360,
+  "segment_target_seconds": 180,
+  "gap_seconds": 0.6,
+  "words_per_minute": 140,
+  "total_duration_seconds": 3.0,
+  "segments": [
+    {
+      "index": 1,
+      "role": "abertura",
+      "title": "Abertura do boletim",
+      "words": 460,
+      "duration_seconds": 1.2,
+      "llm_endpoint": "",
+      "tts_backend": "piper-cpu",
+      "error": "",
+      "wav": "seg_01_abertura.wav"
+    },
+    {
+      "index": 2,
+      "role": "encerramento",
+      "title": "Encerramento",
+      "words": 460,
+      "duration_seconds": 1.2,
+      "llm_endpoint": "",
+      "tts_backend": "piper-cpu",
+      "error": "",
+      "wav": "seg_02_encerramento.wav"
+    }
+  ]
+}

@@ -7,10 +7,18 @@ MQTT tuya_sharing cai. O pandaplus-bridge mantém sessão própria, mas o SDK
 só renova o token quando faltam <60s; sem intervenção proativa restam
 janelas de 5–15 min com HA sem token válido.
 
+Modos de falha cobertos (jul/2026):
+1. Token OAuth expirado / na janela soft → refresh proativo + injeção.
+2. Entry em ``setup_error`` (timeout API Tuya) com token ainda "válido" →
+   reload da config entry (self-heal antigo *não* cobria — só olhava token).
+3. 0/N entidades ativas com token aparentemente válido → reload; se bridge
+   tiver token mais novo, injeta mesmo acima do soft threshold.
+
 Fluxo:
 1. Se o access token (HA ou bridge) está abaixo do limiar soft, **força
    refresh** via API Tuya Sharing e grava em tuya_tokens_runtime.json.
-2. Se o bridge/runtime ficou mais novo que o HA, injeta no HA:
+2. Se entry em setup_error / 0 ativas com token válido → **reload** da entry.
+3. Se o bridge/runtime ficou mais novo que o HA, injeta no HA:
    a. **hot** — serviço `tuya_token_inject.apply` (preferido)
    b. **core_restart** — storage + `homeassistant.restart`
    c. **docker_restart** — storage + `docker restart` (último recurso)
@@ -78,6 +86,17 @@ MODE_NONE = 0
 MODE_HOT = 1
 MODE_CORE_RESTART = 2
 MODE_DOCKER_RESTART = 3
+MODE_RELOAD = 4
+
+# entry_state → gauge tuya_entry_state_code
+ENTRY_STATE_CODES = {
+    "loaded": 0,
+    "setup_error": 1,
+    "setup_retry": 2,
+    "not_loaded": 3,
+    "migration_error": 4,
+    "failed_unload": 5,
+}
 
 
 # ---------------------------------------------------------------- helpers puros
@@ -100,6 +119,37 @@ def valid_runtime_token(token_info: object) -> bool:
     return isinstance(token_info, dict) and REQUIRED_TOKEN_FIELDS.issubset(token_info)
 
 
+def should_reload_entry(
+    entry_state: str | None,
+    entities_active: int,
+    entities_total: int,
+    remaining_min: float,
+) -> tuple[bool, str]:
+    """Decide se a config entry Tuya deve ser recarregada (sem injetar token).
+
+    Cobre o buraco do incidente 2026-07-25: entry em ``setup_error`` por
+    timeout da API Tuya, token ainda com dezenas de minutos, 0 entidades
+    ativas — o heal de token recusava com "ainda válido" e ninguém reloadava.
+    """
+    state = (entry_state or "").strip().lower()
+    if state == "setup_error":
+        return True, "entry em setup_error"
+    if state in ("setup_retry", "not_loaded", "migration_error"):
+        return True, f"entry state={state}"
+    # Integração "loaded" mas zumbificada: token ok no storage, 0 ativas.
+    if (
+        entities_total > 0
+        and entities_active == 0
+        and remaining_min > 0
+    ):
+        return (
+            True,
+            f"0/{entities_total} ativas com token ainda válido "
+            f"({remaining_min:.0f} min) — reload da entry",
+        )
+    return False, "reload não necessário"
+
+
 def should_heal(
     ha_token: dict,
     runtime_token: dict | None,
@@ -107,14 +157,18 @@ def should_heal(
     heals_last_24h: int,
     now_ms: float | None = None,
     soft_threshold_min: float | None = None,
+    entities_total: int = 0,
 ) -> tuple[bool, str]:
     """Decide se a injeção do token do bridge deve ser aplicada.
 
-    Regras (2026-07-23):
+    Regras (2026-07-23 + buracos 2026-07-27):
     - Token do HA **expirado** (remaining <= 0): heal **mesmo com entidades
       ainda "ativas"** — estado zumbi típico (cloud morta, HA cacheia on/off).
     - Soft threshold (HEAL_SOFT_THRESHOLD_MIN, default 45): heal proativo se
       remaining estiver abaixo do limiar e o runtime/bridge for mais novo.
+    - **0 entidades ativas** com entidades no registry: permite heal mesmo
+      *acima* do soft threshold se o bridge for estritamente mais novo
+      (token em memória pode estar stale / entry semi-morta).
     - Bridge/runtime precisa de token válido e estritamente mais novo (t maior).
     - Rate limit por 24h.
     """
@@ -123,9 +177,10 @@ def should_heal(
         soft_threshold_min = HEAL_SOFT_THRESHOLD_MIN
 
     remaining = token_remaining_minutes(ha_token, now_ms)
+    zero_entities = entities_total > 0 and entities_active == 0
 
-    # Token saudável: não injeta (hot path é barato, mas refresh desnecessário).
-    if remaining > soft_threshold_min:
+    # Token saudável e integração respondendo: não injeta.
+    if remaining > soft_threshold_min and not zero_entities:
         return False, "token do HA ainda válido"
 
     if not valid_runtime_token(runtime_token):
@@ -145,6 +200,13 @@ def should_heal(
             True,
             f"token HA expirado ({remaining:.0f} min) + bridge mais novo"
             + (f" | {entities_active} entidades ainda ativas" if entities_active > 0 else ""),
+        )
+
+    if zero_entities and remaining > soft_threshold_min:
+        return (
+            True,
+            f"0/{entities_total} ativas com token HA 'válido' "
+            f"({remaining:.0f} min) + bridge mais novo",
         )
 
     # Soft threshold: token ainda válido por poucos minutos.
@@ -270,11 +332,15 @@ def ensure_fresh_runtime_token(
     *,
     soft_threshold_min: float | None = None,
     now_ms: float | None = None,
+    force: bool = False,
 ) -> dict | None:
     """Garante runtime token mais novo que o HA quando restam poucos minutos.
 
     Retorna o runtime token a usar (pode ser o mesmo de entrada se não
     precisou/conseguiu renovar).
+
+    ``force=True``: tenta refresh mesmo com HA acima do soft threshold
+    (ex.: 0 entidades ativas / setup_error — token "válido" mas integração morta).
     """
     now_ms = time.time() * 1000 if now_ms is None else now_ms
     if soft_threshold_min is None:
@@ -287,8 +353,8 @@ def ensure_fresh_runtime_token(
         else -1
     )
 
-    # Nada a fazer se o HA ainda tem folga confortável.
-    if ha_remaining > soft_threshold_min:
+    # Nada a fazer se o HA ainda tem folga confortável (salvo force).
+    if ha_remaining > soft_threshold_min and not force:
         return runtime_token if valid_runtime_token(runtime_token) else None
 
     # Já temos runtime estritamente mais novo e ainda com vida: usa direto.
@@ -364,7 +430,13 @@ def render_prom(metrics: dict[str, float | int]) -> str:
         "tuya_selfheal_healthy": ("gauge", "1=integração Tuya saudável no HA"),
         "tuya_selfheal_last_mode": (
             "gauge",
-            "Último modo de heal: 0=none 1=hot 2=core_restart 3=docker_restart",
+            "Último modo de heal: 0=none 1=hot 2=core_restart 3=docker_restart 4=reload",
+        ),
+        "tuya_selfheal_reloads_total": ("counter", "Reloads de config entry Tuya aplicados"),
+        "tuya_entry_state_code": (
+            "gauge",
+            "Estado da entry: 0=loaded 1=setup_error 2=setup_retry 3=not_loaded "
+            "4=migration_error 5=failed_unload 9=unknown -1=missing",
         ),
         "tuya_token_remaining_minutes": ("gauge", "Minutos até expirar o token da entry tuya no HA"),
         "tuya_bridge_token_remaining_minutes": ("gauge", "Minutos até expirar o token runtime do bridge"),
@@ -400,12 +472,12 @@ def docker_py(script: str, timeout: int = 60) -> str:
 
 
 def ha_tuya_status() -> dict:
-    """Coleta entry_id, token_info e disponibilidade das entidades tuya."""
+    """Coleta entry_id, token_info, entry_state e disponibilidade das entidades tuya."""
     script = (
         "import json\n"
         "ce=json.load(open('/config/.storage/core.config_entries'))\n"
         "e=[x for x in ce['data']['entries'] if x['domain']=='tuya']\n"
-        "out={'entry_id':None,'token_info':{}}\n"
+        "out={'entry_id':None,'token_info':{},'entry_state':None}\n"
         "if e:\n"
         "    out['entry_id']=e[0]['entry_id']\n"
         "    out['token_info']=e[0]['data'].get('token_info') or {}\n"
@@ -427,20 +499,38 @@ def ha_tuya_status() -> dict:
             for eid in json.loads(docker_py(er_script))
             if eid.split(".")[0] not in IGNORED_DOMAINS
         ]
-        # Estados via JWT local (mesma técnica do ha-tuya-mq-watchdog)
+        # Estados + state da config entry via JWT local
         jwt_script = (
             "import json,jwt,time,urllib.request\n"
+            f"entry={status['entry_id']!r}\n"
             "a=json.load(open('/config/.storage/auth'))\n"
             "tok=next(t for t in a['data']['refresh_tokens']\n"
             "         if t.get('token_type')=='long_lived_access_token')\n"
             "j=jwt.encode({'iss':tok['id'],'iat':int(time.time()),\n"
             "              'exp':int(time.time())+300},tok['jwt_key'],algorithm='HS256')\n"
+            "hdr={'Authorization':'Bearer '+j}\n"
             "req=urllib.request.Request('http://127.0.0.1:8123/api/states',\n"
-            "    headers={'Authorization':'Bearer '+j})\n"
+            "    headers=hdr)\n"
             "st=json.load(urllib.request.urlopen(req,timeout=30))\n"
-            "print(json.dumps({s['entity_id']:s['state'] for s in st}))\n"
+            "estate=None\n"
+            "try:\n"
+            "    req2=urllib.request.Request(\n"
+            "        'http://127.0.0.1:8123/api/config/config_entries/entry',\n"
+            "        headers=hdr)\n"
+            "    entries=json.load(urllib.request.urlopen(req2,timeout=30))\n"
+            "    for ent in entries:\n"
+            "        if ent.get('entry_id')==entry:\n"
+            "            estate=ent.get('state'); break\n"
+            "        if estate is None and ent.get('domain')=='tuya':\n"
+            "            estate=ent.get('state')\n"
+            "except Exception:\n"
+            "    estate=None\n"
+            "print(json.dumps({'states':{s['entity_id']:s['state'] for s in st},"
+            " 'entry_state':estate}))\n"
         )
-        states = json.loads(docker_py(jwt_script, timeout=180))
+        payload = json.loads(docker_py(jwt_script, timeout=180))
+        states = payload.get("states") or {}
+        status["entry_state"] = payload.get("entry_state")
         status["entities_total"] = len(entity_ids)
         status["entities_active"] = sum(
             1
@@ -450,6 +540,7 @@ def ha_tuya_status() -> dict:
     else:
         status["entities_total"] = 0
         status["entities_active"] = 0
+        status["entry_state"] = None
     return status
 
 
@@ -572,6 +663,35 @@ def apply_heal_hot(runtime_token: dict) -> bool:
     return True
 
 
+def entry_state_code(entry_state: str | None, entry_id: str | None) -> int:
+    if not entry_id:
+        return -1
+    if not entry_state:
+        return 9
+    return ENTRY_STATE_CODES.get(entry_state.strip().lower(), 9)
+
+
+def reload_tuya_config_entry(entry_id: str) -> bool:
+    """Recarrega a config entry Tuya via API (sem reiniciar o container).
+
+    Resolve setup_error por timeout transitório da API Tuya e estados
+    semi-mortos em que o token no storage ainda parece válido.
+    """
+    if not entry_id:
+        return False
+    code, body = ha_api_request(
+        f"/api/config/config_entries/entry/{entry_id}/reload",
+        method="POST",
+        body={},
+        timeout=120,
+    )
+    if code in (200, 201):
+        log.info("Reload config entry %s OK (http=%s)", entry_id, code)
+        return True
+    log.warning("Reload config entry %s HTTP %s: %s", entry_id, code, body[:300])
+    return False
+
+
 def apply_heal_core_restart(runtime_token: dict) -> bool:
     """Grava storage e reinicia só o core do HA (container permanece)."""
     inject_token_to_disk(runtime_token)
@@ -641,7 +761,7 @@ def wait_recovery(deadline_s: int = HA_BOOT_WAIT_S, poll_s: int = 5) -> int:
 
 
 def wait_recovery_for_mode(mode: int) -> int:
-    if mode == MODE_HOT:
+    if mode in (MODE_HOT, MODE_RELOAD):
         return wait_recovery(deadline_s=TUYA_SELFHEAL_HOT_WAIT_S, poll_s=3)
     if mode == MODE_CORE_RESTART:
         return wait_recovery(deadline_s=min(HA_BOOT_WAIT_S, 180), poll_s=5)
@@ -655,8 +775,14 @@ def load_state() -> dict:
     try:
         return json.loads(STATE_FILE.read_text(encoding="utf-8"))
     except (OSError, ValueError):
-        return {"runs_total": 0, "heals_total": 0, "heal_failures_total": 0,
-                "last_heal_timestamp": 0, "heal_history": []}
+        return {
+            "runs_total": 0,
+            "heals_total": 0,
+            "heal_failures_total": 0,
+            "reloads_total": 0,
+            "last_heal_timestamp": 0,
+            "heal_history": [],
+        }
 
 
 def save_state(state: dict) -> None:
@@ -674,10 +800,43 @@ def write_prom(metrics: dict) -> None:
         log.warning("Falha ao escrever métricas: %s", exc)
 
 
+def _prom_snapshot(
+    state: dict,
+    *,
+    healthy: int,
+    ha_remaining: float,
+    runtime_token: dict | None,
+    status: dict | None,
+    last_mode: int,
+) -> dict:
+    return {
+        "tuya_selfheal_runs_total": state["runs_total"],
+        "tuya_selfheal_heals_total": state["heals_total"],
+        "tuya_selfheal_heal_failures_total": state["heal_failures_total"],
+        "tuya_selfheal_reloads_total": state.get("reloads_total", 0),
+        "tuya_selfheal_check_failures_total": state.get("check_failures_total", 0),
+        "tuya_selfheal_last_run_timestamp": int(time.time()),
+        "tuya_selfheal_last_heal_timestamp": state.get("last_heal_timestamp", 0),
+        "tuya_selfheal_healthy": healthy,
+        "tuya_selfheal_last_mode": last_mode,
+        "tuya_entry_state_code": entry_state_code(
+            (status or {}).get("entry_state"),
+            (status or {}).get("entry_id"),
+        ),
+        "tuya_token_remaining_minutes": round(ha_remaining, 1),
+        "tuya_bridge_token_remaining_minutes": round(
+            token_remaining_minutes(runtime_token) if runtime_token else -1, 1
+        ),
+        "tuya_entities_active": (status or {}).get("entities_active", 0),
+        "tuya_entities_total": (status or {}).get("entities_total", 0),
+    }
+
+
 def main() -> int:
     state = load_state()
     state["runs_total"] += 1
     state["heal_history"] = prune_heal_history(state.get("heal_history", []))
+    state.setdefault("reloads_total", 0)
 
     status = ha_tuya_status_with_retry()
     runtime_token = load_runtime_token()
@@ -685,44 +844,114 @@ def main() -> int:
     if status is None:
         state["check_failures_total"] = state.get("check_failures_total", 0) + 1
         save_state(state)
-        write_prom({
-            "tuya_selfheal_runs_total": state["runs_total"],
-            "tuya_selfheal_heals_total": state["heals_total"],
-            "tuya_selfheal_heal_failures_total": state["heal_failures_total"],
-            "tuya_selfheal_check_failures_total": state["check_failures_total"],
-            "tuya_selfheal_last_run_timestamp": int(time.time()),
-            "tuya_selfheal_last_heal_timestamp": state["last_heal_timestamp"],
-            "tuya_selfheal_healthy": 0,
-            "tuya_bridge_token_remaining_minutes": round(
-                token_remaining_minutes(runtime_token) if runtime_token else -1, 1
-            ),
-        })
+        write_prom(
+            _prom_snapshot(
+                state,
+                healthy=0,
+                ha_remaining=-1,
+                runtime_token=runtime_token,
+                status=None,
+                last_mode=int(state.get("last_mode", MODE_NONE)),
+            )
+        )
         log.error("Checagem do HA indisponível; heal não avaliado nesta rodada")
         return 1
 
     ha_token = status.get("token_info") or {}
+    ha_remaining = token_remaining_minutes(ha_token)
+    integration_dead = (
+        status.get("entities_total", 0) > 0 and status.get("entities_active", 0) == 0
+    ) or (status.get("entry_state") or "").lower() == "setup_error"
 
-    # Antes de decidir heal: renova o runtime token se o HA está na janela soft.
-    # Isso elimina a dependência de o SDK do bridge renovar só com <60s.
+    # Antes de decidir heal: renova o runtime token se o HA está na janela soft
+    # OU se a integração está morta (0 ativas / setup_error).
     try:
-        runtime_token = ensure_fresh_runtime_token(ha_token, runtime_token) or runtime_token
+        runtime_token = (
+            ensure_fresh_runtime_token(
+                ha_token, runtime_token, force=integration_dead
+            )
+            or runtime_token
+        )
     except Exception as exc:  # noqa: BLE001
         log.warning("ensure_fresh_runtime_token falhou (não-fatal): %s", exc)
 
+    last_mode = int(state.get("last_mode", MODE_NONE))
+    acted = False
+    reason = "ok"
+
+    # --- 1) Reload path (setup_error / 0 ativas com token ainda válido) ---
+    do_reload, reload_reason = should_reload_entry(
+        status.get("entry_state"),
+        status["entities_active"],
+        status["entities_total"],
+        ha_remaining,
+    )
+    # Reload só faz sentido se o token no storage ainda pode autenticar.
+    # Token já morto → pular direto para inject (reload só gasta tempo).
+    if do_reload and status.get("entry_id") and ha_remaining > 0:
+        log.info(
+            "Tuya reload: %s/%s ativas | state=%s | %s",
+            status["entities_active"],
+            status["entities_total"],
+            status.get("entry_state"),
+            reload_reason,
+        )
+        try:
+            if reload_tuya_config_entry(status["entry_id"]):
+                state["reloads_total"] = state.get("reloads_total", 0) + 1
+                last_mode = MODE_RELOAD
+                state["last_mode"] = last_mode
+                acted = True
+                active = wait_recovery_for_mode(MODE_RELOAD)
+                status = ha_tuya_status_with_retry() or status
+                ha_token = status.get("token_info") or {}
+                ha_remaining = token_remaining_minutes(ha_token)
+                if active > 0:
+                    state["heals_total"] += 1
+                    state["last_heal_timestamp"] = int(time.time())
+                    state["heal_history"].append(time.time())
+                    log.info(
+                        "Heal OK (reload): %s entidades ativas | token resta %.0f min | state=%s",
+                        active,
+                        ha_remaining,
+                        status.get("entry_state"),
+                    )
+                else:
+                    log.warning(
+                        "Reload aplicado mas entidades ainda 0 — tentando inject se bridge mais novo"
+                    )
+            else:
+                log.warning("Reload da entry falhou; seguindo para inject se aplicável")
+        except Exception:  # noqa: BLE001
+            state["heal_failures_total"] += 1
+            log.exception("Reload da entry falhou com exceção")
+
+    # --- 2) Token inject path ---
+    # Reavalia após possível reload (status/token podem ter mudado).
     heal, reason = should_heal(
-        ha_token, runtime_token, status["entities_active"], len(state["heal_history"])
+        ha_token,
+        runtime_token,
+        status["entities_active"],
+        len(state["heal_history"]),
+        entities_total=status.get("entities_total", 0),
     )
     log.info(
-        "Tuya: %s/%s ativas | token HA resta %.0f min | heal=%s (%s)",
-        status["entities_active"], status["entities_total"],
-        token_remaining_minutes(ha_token), heal, reason,
+        "Tuya: %s/%s ativas | state=%s | token HA resta %.0f min | heal=%s (%s)",
+        status["entities_active"],
+        status["entities_total"],
+        status.get("entry_state"),
+        token_remaining_minutes(ha_token),
+        heal,
+        reason,
     )
 
-    last_mode = int(state.get("last_mode", MODE_NONE))
-    if heal:
+    # Se reload já restaurou entidades, não injeta de novo na mesma rodada.
+    already_healthy = status["entities_active"] > 0 and token_remaining_minutes(ha_token) > 0
+    if heal and not already_healthy:
         try:
             last_mode = apply_heal(runtime_token)
             state["last_mode"] = last_mode
+            acted = True
             active = wait_recovery_for_mode(last_mode)
             if active > 0:
                 state["heals_total"] += 1
@@ -734,6 +963,7 @@ def main() -> int:
                     MODE_HOT: "hot",
                     MODE_CORE_RESTART: "core_restart",
                     MODE_DOCKER_RESTART: "docker_restart",
+                    MODE_RELOAD: "reload",
                 }.get(last_mode, str(last_mode))
                 log.info(
                     "Heal OK (%s): %s entidades ativas | token resta %.0f min",
@@ -755,26 +985,21 @@ def main() -> int:
     ha_remaining = token_remaining_minutes(ha_token)
     # Saudável = entidades respondendo E access token ainda válido.
     healthy = int(status["entities_active"] > 0 and ha_remaining > 0)
-    write_prom({
-        "tuya_selfheal_runs_total": state["runs_total"],
-        "tuya_selfheal_heals_total": state["heals_total"],
-        "tuya_selfheal_heal_failures_total": state["heal_failures_total"],
-        "tuya_selfheal_check_failures_total": state.get("check_failures_total", 0),
-        "tuya_selfheal_last_run_timestamp": int(time.time()),
-        "tuya_selfheal_last_heal_timestamp": state["last_heal_timestamp"],
-        "tuya_selfheal_healthy": healthy,
-        "tuya_selfheal_last_mode": int(state.get("last_mode", MODE_NONE)),
-        "tuya_token_remaining_minutes": round(ha_remaining, 1),
-        "tuya_bridge_token_remaining_minutes": round(
-            token_remaining_minutes(runtime_token) if runtime_token else -1, 1
-        ),
-        "tuya_entities_active": status["entities_active"],
-        "tuya_entities_total": status["entities_total"],
-    })
-    if not healthy and not heal:
+    write_prom(
+        _prom_snapshot(
+            state,
+            healthy=healthy,
+            ha_remaining=ha_remaining,
+            runtime_token=runtime_token,
+            status=status,
+            last_mode=int(state.get("last_mode", MODE_NONE)),
+        )
+    )
+    if not healthy and not acted:
         log.warning(
-            "Tuya degradado sem heal: ativas=%s remaining=%.0f min reason_last=%s",
+            "Tuya degradado sem ação: ativas=%s state=%s remaining=%.0f min reason=%s",
             status["entities_active"],
+            status.get("entry_state"),
             ha_remaining,
             reason,
         )

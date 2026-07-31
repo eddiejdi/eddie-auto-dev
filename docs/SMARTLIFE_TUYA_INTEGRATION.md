@@ -1,6 +1,32 @@
 # Smart Life / Tuya via Home Assistant
 
-Runbook da integracao Smart Life/Tuya no homelab. Estado validado em 2026-04-24.
+Runbook da integracao Smart Life/Tuya no homelab. Estado validado em 2026-04-24;
+atualização de cenas locais e reauth em **2026-07-27/28**.
+
+## Runbooks de cenas (preferir LAN / `tuya_local`)
+
+| Cena | Doc |
+|------|-----|
+| Quarto — ciclo fita/spot pelo interruptor | [CENA_QUARTO_TUYA_LOCAL.md](CENA_QUARTO_TUYA_LOCAL.md) |
+| Suite — botão do ventilador ↔ lâmpada (relé mini) | [CENA_SUITE_LUZ_TUYA_LOCAL.md](CENA_SUITE_LUZ_TUYA_LOCAL.md) |
+
+**Política operacional (jul/2026):** cenas críticas de luz/ventilador devem usar
+entidades `tuya_local` (LAN). A integração cloud `tuya` permanece para sync/self-heal
+de `local_key` e dispositivos ainda não migrados; sessão Sharing morre com erro
+**1010** e deixa entidades cloud `unavailable` — sintomas típicos: latência alta
+ou “funciona às vezes”.
+
+Self-heal e monitor:
+
+- `tools/homelab/tuya_token_selfheal.py` + `tuya-token-selfheal.timer` — renovação proativa + injeção no HA ([vars](variables-taxonomy/TUYA_TOKEN_SELFHEAL.md))
+- `tools/homelab/tuya_token_renewer.py` + `tuya-token-renewer.timer` — **monitor** de saúde (não renova); Telegram **somente em erro** ([política](variables-taxonomy/TUYA_TOKEN_RENEWER.md))
+- `tools/homelab/tuya_local_key_selfheal.py` + `tuya-local-key-selfheal.timer`
+- Reauth QR: `tools/homelab/tuya_reauth_via_authentik.py` / artefatos `artifacts/tuya_reauth_qr_*.png`
+
+**Telegram (renewer, 2026-07-30):** avisos do tipo “⏰ Tuya perto de vencer… ~31 min”
+com entidades ativas **não** são enviados. Só falha de entry/HA, 0 entidades
+ativas ou token **já expirado**. Janela “perto de vencer” fica só no journal;
+o selfheal cobre a renovação.
 
 ## Arquitetura
 

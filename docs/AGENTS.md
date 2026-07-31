@@ -2,6 +2,8 @@
 
 Este documento resume os agentes disponíveis no projeto e como inspecioná-los em tempo de execução.
 
+- **Pi coding agent (local/fallback):** setup e hooks em [PI_CODING_AGENT_SETUP.md](PI_CODING_AGENT_SETUP.md); contexto curto na raiz [`AGENTS.md`](../AGENTS.md).
+
 - **Agentes por linguagem:** Python, JavaScript, TypeScript, Go, Rust, Java, CSharp, PHP.
   - Implementação: [specialized_agents/language_agents.py](specialized_agents/language_agents.py)
 - **Agentes especializados adicionais:** BPM, Home Automation / Google Assistant (via `get_specialized_agent`).

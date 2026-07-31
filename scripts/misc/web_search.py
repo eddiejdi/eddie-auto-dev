@@ -11,7 +11,7 @@ from datetime import datetime
 import re
 import json
 import time
-from urllib.parse import quote_plus, urlparse
+from urllib.parse import quote_plus, urlparse, parse_qs, unquote
 import hashlib
 
 
@@ -41,51 +41,108 @@ class WebSearchEngine:
         })
         self.search_history = []
     
-    def search_duckduckgo(self, query: str, num_results: int = 5) -> List[SearchResult]:
-        """
-        Busca no DuckDuckGo usando HTML scraping.
-        Não requer API key.
-        """
-        results = []
-        
+    @staticmethod
+    def _normalize_result_url(url: str) -> str:
+        """Corrige links relativos e unwrap do redirect DuckDuckGo (uddg=)."""
+        if not url:
+            return ""
+        url = url.strip()
+        if url.startswith("//"):
+            url = "https:" + url
+        if url.startswith("/"):
+            url = "https://duckduckgo.com" + url
+        # //duckduckgo.com/l/?uddg=https%3A%2F%2Fexample.com
         try:
-            # DuckDuckGo HTML search
-            search_url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
-            
-            response = self.session.get(search_url, timeout=10)
+            parsed = urlparse(url)
+            qs = parse_qs(parsed.query)
+            if "uddg" in qs and qs["uddg"]:
+                return unquote(qs["uddg"][0])
+        except Exception:
+            pass
+        return url
+
+    def search_duckduckgo(self, query: str, num_results: int = 5) -> List[SearchResult]:
+        """Busca DuckDuckGo: tenta LITE primeiro (menos 403), depois HTML."""
+        results = self._search_duckduckgo_lite(query, num_results)
+        if results:
+            return results
+        return self._search_duckduckgo_html(query, num_results)
+
+    def _search_duckduckgo_lite(self, query: str, num_results: int = 5) -> List[SearchResult]:
+        """DuckDuckGo Lite — mais estável que html.duckduckgo.com (menos 403)."""
+        results: List[SearchResult] = []
+        try:
+            search_url = f"https://lite.duckduckgo.com/lite/?q={quote_plus(query)}"
+            response = self.session.get(search_url, timeout=15)
             response.raise_for_status()
-            
             soup = BeautifulSoup(response.text, "html.parser")
-            
-            # Encontrar resultados
+            # links de resultado: class result-link
+            anchors = soup.find_all("a", class_="result-link")
+            if not anchors:
+                anchors = [
+                    a for a in soup.find_all("a", href=True)
+                    if "uddg=" in (a.get("href") or "")
+                ]
+            for a in anchors:
+                title = a.get_text(strip=True)
+                url = self._normalize_result_url(a.get("href", ""))
+                if not title or not url or not url.startswith("http"):
+                    continue
+                # snippet: próxima célula / td com class result-snippet
+                snippet = ""
+                parent = a.find_parent("tr")
+                if parent:
+                    sn = parent.find_next("td", class_="result-snippet")
+                    if sn:
+                        snippet = sn.get_text(strip=True)
+                results.append(
+                    SearchResult(title=title, url=url, snippet=snippet, source="duckduckgo_lite")
+                )
+                if len(results) >= num_results:
+                    break
+        except Exception as e:
+            print(f"Erro na busca DuckDuckGo Lite: {e}")
+        return results
+
+    def _search_duckduckgo_html(self, query: str, num_results: int = 5) -> List[SearchResult]:
+        """DuckDuckGo HTML clássico (fallback)."""
+        results: List[SearchResult] = []
+        try:
+            search_url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
+            response = self.session.get(search_url, timeout=15)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, "html.parser")
             result_divs = soup.find_all("div", class_="result")
-            
-            for div in result_divs[:num_results]:
+            if not result_divs:
+                result_divs = soup.find_all("div", class_="web-result")
+            for div in result_divs[: max(num_results * 2, num_results)]:
                 try:
-                    # Título e URL
                     title_elem = div.find("a", class_="result__a")
                     if not title_elem:
+                        title_elem = div.find("a", href=True)
+                    if not title_elem:
                         continue
-                    
                     title = title_elem.get_text(strip=True)
-                    url = title_elem.get("href", "")
-                    
-                    # Snippet
+                    url = self._normalize_result_url(title_elem.get("href", ""))
                     snippet_elem = div.find("a", class_="result__snippet")
+                    if not snippet_elem:
+                        snippet_elem = div.find("div", class_="result__snippet")
                     snippet = snippet_elem.get_text(strip=True) if snippet_elem else ""
-                    
-                    if title and url:
-                        results.append(SearchResult(
-                            title=title,
-                            url=url,
-                            snippet=snippet
-                        ))
+                    if title and url and url.startswith("http"):
+                        results.append(
+                            SearchResult(
+                                title=title,
+                                url=url,
+                                snippet=snippet,
+                                source="duckduckgo_html",
+                            )
+                        )
+                    if len(results) >= num_results:
+                        break
                 except Exception:
                     continue
-                    
         except Exception as e:
-            print(f"Erro na busca DuckDuckGo: {e}")
-        
+            print(f"Erro na busca DuckDuckGo HTML: {e}")
         return results
     
     def search_with_api(self, query: str, num_results: int = 5) -> List[SearchResult]:

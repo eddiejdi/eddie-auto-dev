@@ -158,11 +158,17 @@ ExecStartPost=/bin/bash -c 'sleep 5 && /usr/local/bin/protonvpn-routing-watchdog
 
 Backstop para o caso de o dispatcher NM não cobrir (ex: wg-quick sem NM). Reduzido de 90s para 5s.
 
-### Camada 3 — Watchdog Timer (a cada 5min)
+### Camada 3 — Watchdog Timer (a cada 60s)
 
 **Arquivo:** `protonvpn-routing-watchdog.service` + `.timer`
 
-Health check completo a cada 5 minutos. Detecta e corrige qualquer desvio nas regras, rotas da tabela 205 e Docker bridges.
+Health check completo a cada **60 segundos** (era 5 min; apertado em 2026-07-29). Detecta e corrige qualquer desvio nas regras, rotas da tabela 205 e Docker bridges.
+
+### Camada 3b — ensure leve em heals colaterais
+
+**Arquivo:** `ensure-protonvpn-policy-rules.sh` → `/usr/local/bin/`
+
+Chamado ao final de `iot-vpn-bypass --heal/--restore`, `cloudflared-vpn-routes.sh` e `wan-selfheal.sh`. Só reaplicam `32764`/`32765` (sem health HTTP), porque esses heals já rodaram no incidente 2026-07-29 **enquanto** as rules da LAN estavam ausentes.
 
 ### Janela de impacto após fixes
 
@@ -171,9 +177,10 @@ ProtonVPN reconecta
     │
     ├─ t+0s:  regras removidas
     ├─ t~1s:  NM dispatcher executa → regras restauradas ✅
-    └─ t+5s:  ExecStartPost watchdog confirma (backup)
+    ├─ t+5s:  ExecStartPost watchdog confirma (backup)
+    └─ t≤60s: timer watchdog (pior caso se dispatcher não disparar)
 
-Janela máxima de impacto: ~1 segundo
+Janela máxima de impacto: ~1s (NM) / ≤60s (timer only)
 ```
 
 ---

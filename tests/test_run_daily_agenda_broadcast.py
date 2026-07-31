@@ -72,6 +72,71 @@ def test_escape_telegram_md_protege_caracteres() -> None:
     assert "\\`" in escaped
 
 
+def test_wav_duration_seconds(tmp_path) -> None:
+    import wave
+    import struct
+
+    path = tmp_path / "t.wav"
+    rate = 16000
+    seconds = 2
+    nframes = rate * seconds
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(struct.pack("<" + "h" * nframes, *([0] * nframes)))
+    dur = broadcast.wav_duration_seconds(path)
+    assert abs(dur - 2.0) < 0.05
+
+
+def test_prepare_locution_and_audio_regenera_se_curto(tmp_path, monkeypatch) -> None:
+    calls = {"n": 0}
+
+    tts_mod = MagicMock()
+    tts_mod.normalize_for_speech.side_effect = lambda t: t
+    tts_mod.heuristic_rewrite_for_broadcast.side_effect = lambda t: t
+    tts_mod.is_valid_broadcast_text.return_value = True
+    tts_mod.expand_details_with_llm_chain.side_effect = lambda text, **kw: (text + " expandido", "coord:m")
+    tts_mod.rewrite_for_broadcast_with_llm_chain.side_effect = lambda text, **kw: (text + " locucao", "coord:m")
+
+    def _synth(text, wav_output, **kwargs):
+        calls["n"] += 1
+        # 1ª tentativa curta; 2ª ok
+        frames = 8000 if calls["n"] == 1 else 48000  # 0.5s vs 3s @16k
+        import wave
+        import struct
+
+        with wave.open(str(wav_output), "wb") as w:
+            w.setnchannels(1)
+            w.setsampwidth(2)
+            w.setframerate(16000)
+            w.writeframes(struct.pack("<" + "h" * frames, *([0] * frames)))
+        return "piper-cpu"
+
+    monkeypatch.setattr(broadcast, "synthesize_audio", _synth)
+    wav = tmp_path / "out.wav"
+    text, endpoint, path, backend, duration = broadcast.prepare_locution_and_audio(
+        "base",
+        tts_mod=tts_mod,
+        llm_endpoints=(),
+        max_rounds=1,
+        retry_wait_seconds=0,
+        no_expand=False,
+        no_rewrite=False,
+        no_normalize=False,
+        skip_audio=False,
+        wav_output=wav,
+        tts_settings=MagicMock(),
+        min_duration_seconds=2,
+        max_length_retries=1,
+    )
+    assert calls["n"] == 2
+    assert path == wav
+    assert duration >= 2.0
+    assert "locucao" in text
+    assert endpoint == "coord:m"
+
+
 def test_run_broadcast_dry_run_gera_artefatos(tmp_path, monkeypatch) -> None:
     agenda_mod = MagicMock()
     collected = MagicMock()
@@ -106,8 +171,8 @@ def test_run_broadcast_dry_run_gera_artefatos(tmp_path, monkeypatch) -> None:
 
     monkeypatch.setattr(
         broadcast,
-        "prepare_locution_text",
-        lambda *args, **kwargs: ("Texto final.", "gpu1:gemma3:1b"),
+        "prepare_locution_and_audio",
+        lambda *args, **kwargs: ("Texto final.", "gpu1:gemma3:1b", None, "", 0.0),
     )
     monkeypatch.setattr(broadcast, "send_telegram_message", lambda *args, **kwargs: {"success": True})
     monkeypatch.setattr(broadcast, "send_telegram_audio", lambda *args, **kwargs: {"success": True})

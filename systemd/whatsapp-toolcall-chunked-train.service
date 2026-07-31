@@ -1,0 +1,28 @@
+[Unit]
+Description=Pacote curto de treino QLoRA do shared-homelab (tool-calling MCP)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=homelab
+Group=homelab
+# Orçamento de 10min de treino + margem pra carregar o modelo (~2min),
+# salvar checkpoint e religar o ollama. Nunca deve encostar nesse teto:
+# se encostar, o trap do script já religou a produção.
+TimeoutStartSec=1500
+Environment=PYTHONUNBUFFERED=1
+Environment=FT_TIME_BUDGET_SECONDS=600
+# 1 época (não 2): medido 52,6s/passo na 3060, então 2 épocas custariam ~48
+# pacotes (~2 dias). Com 1 época são ~24 pacotes (~1 dia) — e, num dataset
+# sintético/templated como este, 1 época ainda reduz o risco de overfitting
+# nos templates.
+Environment=FT_EPOCHS=1
+# TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID pro aviso de conclusão/falha.
+EnvironmentFile=/etc/default/eddie-common
+ExecStart=/home/homelab/myClaude/scripts/whatsapp_toolcall_chunked_train.sh
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

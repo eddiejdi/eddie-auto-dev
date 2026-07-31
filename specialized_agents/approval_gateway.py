@@ -126,7 +126,18 @@ def _tg(method: str, body: dict[str, Any], timeout: int = 10) -> dict[str, Any] 
         resp = _req.post(f"{_BOT_URL}/{method}", json=body, timeout=timeout)
         data = resp.json()
         if not data.get("ok"):
-            log.warning("Telegram/%s: %s", method, data.get("description"))
+            desc = data.get("description") or ""
+            # Fallback crítico: se o texto do agente contém Markdown inválido
+            # (ex: `_` de nomes tipo message_type, `*`, `[`), o Telegram recusa
+            # a mensagem inteira e a aprovação NUNCA chega — o portão vira um
+            # buraco negro em que toda ação expira sem chance de decisão.
+            # Reenviar sem parse_mode: melhor a mensagem feia que nenhuma.
+            # Observado em produção 2026-07-29 com o agente whatsapp-bot.
+            if "parse entities" in desc and body.get("parse_mode"):
+                log.warning("Telegram/%s: Markdown inválido (%s) — reenviando sem parse_mode", method, desc)
+                retry = {k: v for k, v in body.items() if k != "parse_mode"}
+                return _tg(method, retry, timeout)
+            log.warning("Telegram/%s: %s", method, desc)
             return None
         return data.get("result")
     except Exception as exc:

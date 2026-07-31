@@ -1,0 +1,11 @@
+[Unit]
+Description=Sia macvlan watchdog timer (2 min)
+Requires=sia-macvlan-watchdog.service
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=2min
+Unit=sia-macvlan-watchdog.service
+
+[Install]
+WantedBy=timers.target

@@ -138,3 +138,8 @@ philco10b_raspios/
 
 # Grok: config local pode conter secrets MCP (hooks em .grok/hooks/ são versionados)
 .grok/config.toml
+
+# Pi coding agent runtime (keep source settings/extensions tracked)
+.pi/npm/
+.pi/git/
+tools/ollama_gpu_coordinator.py.orig

@@ -47,9 +47,15 @@ GPU1_URL        = os.environ.get("OLLAMA_GPU1_URL",  "http://127.0.0.1:11435")
 TELEGRAM_TOKEN  = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT   = os.environ.get("TELEGRAM_CHAT_ID", "")
 
-# Modelo que deve ficar no GPU1 (leve, <2GB) — não no GPU0
-# lfm2.5-fast:gpu1 é o modelo da GPU1 desde 2026-07-10 (substituiu gemma3-fast).
-LIGHT_MODELS = {"gemma3:1b", "gemma3-fast:gpu1", "lfm2.5-fast:gpu1", "llama3.2:1b"}
+# Modelo que deve ficar no GPU1 (leve, GGUF quant <2GB) — não no GPU0.
+# 2026-07-30: só tags quantizadas (Q4_0 / Q4_K_M / IQ3); sem llama3.2:1b Q8.
+LIGHT_MODELS = {
+    "gemma3:1b",
+    "gemma3-fast:gpu1",
+    "lfm2.5-fast:gpu1",
+    "smollm2-iq3:gpu1",
+    "smollm2:iq3m",
+}
 # Modelo padrão a pré-carregar no GPU1 após limpeza — tem que ser o modelo
 # realmente servido pela GPU1, senão a limpeza repõe o modelo errado e as
 # chamadas seguintes forçam carga nova (503 com MAX_LOADED_MODELS=1).
