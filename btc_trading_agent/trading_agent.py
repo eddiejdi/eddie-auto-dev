@@ -2897,11 +2897,14 @@ class BitcoinTradingAgent(
                     cur.execute("""
                         WITH now_eq AS (
                             SELECT equity_usdt, usdt_balance, btc_balance, btc_price
-                            FROM btc.exchange_snapshots ORDER BY timestamp DESC LIMIT 1
+                            FROM btc.exchange_snapshots
+                            WHERE symbol = %s AND profile = %s
+                            ORDER BY timestamp DESC LIMIT 1
                         ), ago_eq AS (
                             SELECT equity_usdt, usdt_balance, btc_balance, btc_price
                             FROM btc.exchange_snapshots
-                            WHERE timestamp <= EXTRACT(EPOCH FROM NOW()) - 82800
+                            WHERE symbol = %s AND profile = %s
+                              AND timestamp <= EXTRACT(EPOCH FROM NOW()) - 82800
                             ORDER BY timestamp DESC LIMIT 1
                         )
                         SELECT
@@ -2910,7 +2913,7 @@ class BitcoinTradingAgent(
                             n.btc_balance, a.btc_balance,
                             n.btc_price
                         FROM now_eq n, ago_eq a
-                    """)
+                    """, (self.symbol, profile, self.symbol, profile))
                     eq_row = cur.fetchone()
                     if eq_row:
                         eq_now, eq_ago = float(eq_row[0]), float(eq_row[1])
