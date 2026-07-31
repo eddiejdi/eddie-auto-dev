@@ -1623,12 +1623,18 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
             parts.append(user_part)
         else:
             # ambíguo: puxa últimas intenções do user na sessão
+            # (history já inclui a mensagem atual — session.add_message roda
+            # antes de get_history() — então ela precisa ser excluída daqui,
+            # senão entra 2x: uma vez no loop, outra no parts.append(user_part)
+            # abaixo. Sem isso a query duplicava a cada turno ambíguo e
+            # degenerava em sopa de frases repetidas — medido 2026-07-31.)
             if history:
                 prev = [
                     (m.get("content") or "").strip()
                     for m in history
                     if m.get("role") == "user"
-                ][-4:]
+                ]
+                prev = [p for p in prev if p and p != user_part][-4:]
                 for p in prev:
                     # tira envelope de quote se existir
                     if "[Resposta do usuário]" in p:

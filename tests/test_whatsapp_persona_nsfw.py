@@ -205,6 +205,21 @@ def test_extract_search_query_from_quote_envelope():
     assert "parceiro" in q2.lower() or "criadora" in q2.lower()
 
 
+def test_extract_search_query_does_not_duplicate_current_message():
+    """Regressão do incidente 2026-07-31: get_history() já inclui a msg atual
+    (add_message roda antes), então ela entrava 2x na query ambígua e a busca
+    degenerava em frases repetidas a cada turno (ex.: "...em você monte um
+    texto...em você" — a mesma frase duas vezes na mesma query)."""
+    mod = _load_module()
+    current = "monte um texto me mim fazendo fistng anal em você"
+    hist = [
+        {"role": "user", "content": "pesquise sobre fisting anal"},
+        {"role": "user", "content": current},  # já presente — add_message roda antes
+    ]
+    q = mod.WhatsAppBot._extract_search_query(current, history=hist)
+    assert q.count("monte um texto me mim fazendo fistng anal em você") == 1
+
+
 def test_extract_quoted_text_and_format_for_model():
     mod = _load_module()
     # formato replyTo com body
