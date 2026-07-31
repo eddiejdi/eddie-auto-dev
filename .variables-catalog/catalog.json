@@ -1,6 +1,6 @@
 {
   "catalogVersion": "1.0.0",
-  "generatedAt": "2026-07-31T16:41:39.798493",
+  "generatedAt": "2026-07-31T17:04:09.248860",
   "environment": "production",
   "categories": {
     "services": {
@@ -221,51 +221,51 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "coordinator",
-          "telegram_bot",
-          "test_improvements",
-          "openwebui_integration",
-          "email_trainer",
-          "test_models",
-          "ollama_finetune_batch",
-          "process_all_messages_from_tmp",
-          "streamlit_app",
-          "tape_quality_ollama_narrator",
-          "github_agent",
-          "github_agent_streamlit",
-          "ollama_warmup",
-          "llm_tool_client",
-          "bn_acervo_agent",
-          "llm_compatibility",
-          "finetune_whatsapp_model",
-          "nextcloud_agent",
           "run_sentiment_finetune",
-          "user_management",
           "job_application_agent",
-          "ollama_offloader",
-          "whatsapp_persona_panel_server",
-          "debug_ollama",
-          "trading_selfheal_exporter",
-          "rss_llm_trainer",
-          "apply_real_job",
-          "train_llm_on_conversations",
-          "github_agent_server",
-          "agenda_media_router",
-          "test_ollama_quick",
-          "compatibility_allinone",
-          "llm_log_panel_server",
-          "gmail_expurgo_inteligente",
-          "llm_system_demo",
           "home_assistant_integration",
-          "ollama_client",
-          "create_dev_agent",
-          "whatsapp_bot",
-          "test_github_agent",
+          "llm_tool_client",
+          "finetune_whatsapp_model",
           "agent_documentation_manager",
-          "proxy_tool_interceptor",
           "config",
+          "trading_selfheal_exporter",
+          "nextcloud_agent",
+          "debug_ollama",
+          "telegram_bot",
+          "llm_log_panel_server",
+          "github_agent",
+          "rss_llm_trainer",
+          "openwebui_integration",
+          "apply_real_job",
+          "user_management",
+          "llm_system_demo",
+          "agenda_media_router",
+          "rss_sentiment_exporter",
+          "tape_quality_ollama_narrator",
+          "github_agent_streamlit",
+          "compatibility_allinone",
+          "test_models",
+          "ollama_offloader",
+          "coordinator",
+          "gmail_expurgo_inteligente",
+          "github_agent_server",
+          "email_trainer",
+          "ollama_client",
+          "proxy_tool_interceptor",
+          "llm_compatibility",
+          "streamlit_app",
+          "process_all_messages_from_tmp",
+          "test_ollama_quick",
+          "test_github_agent",
+          "whatsapp_persona_panel_server",
+          "bn_acervo_agent",
+          "whatsapp_bot",
+          "ollama_finetune_batch",
+          "create_dev_agent",
+          "ollama_warmup",
           "ollama_mcp_bridge",
-          "rss_sentiment_exporter"
+          "test_improvements",
+          "train_llm_on_conversations"
         ]
       },
       "OLLAMA_MODEL": {
@@ -274,27 +274,27 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "telegram_bot",
+          "job_application_agent",
+          "llm_tool_client",
           "test_sell_target_backtest",
+          "agent_documentation_manager",
+          "config",
+          "trading_selfheal_exporter",
+          "nextcloud_agent",
+          "telegram_bot",
           "github_agent",
-          "streamlit_app",
+          "user_management",
           "tape_quality_ollama_narrator",
           "github_agent_streamlit",
           "extract_whatsapp_train",
-          "llm_tool_client",
-          "nextcloud_agent",
-          "job_application_agent",
-          "user_management",
           "ollama_offloader",
-          "trading_selfheal_exporter",
-          "github_agent_server",
           "nas_ai_assessor",
-          "create_dev_agent",
+          "github_agent_server",
           "ollama_client",
-          "whatsapp_bot",
+          "streamlit_app",
           "test_github_agent",
-          "agent_documentation_manager",
-          "config"
+          "whatsapp_bot",
+          "create_dev_agent"
         ]
       },
       "OLLAMA_HOST_GPU1": {
@@ -303,17 +303,17 @@
         "source": "python-config",
         "value": null,
         "contexts": [
+          "run_sentiment_finetune",
           "ollama_offloader",
+          "rss_llm_trainer",
           "ollama_client",
           "bn_acervo_agent",
-          "rss_llm_trainer",
           "ollama_finetune_batch",
-          "nextcloud_agent",
-          "run_sentiment_finetune",
-          "config",
-          "real_workload",
-          "ollama_warmup",
           "rss_sentiment_exporter",
+          "config",
+          "ollama_warmup",
+          "real_workload",
+          "nextcloud_agent",
           "tape_quality_ollama_narrator"
         ]
       },
@@ -365,11 +365,11 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "nextcloud_agent",
+          "storage_portal_api",
           "user_management",
           "config",
-          "configure_authentik_nextcloud_oidc",
-          "storage_portal_api"
+          "nextcloud_agent",
+          "configure_authentik_nextcloud_oidc"
         ]
       },
       "NEXTCLOUD_ADMIN_USER": {
@@ -469,11 +469,11 @@
         "source": "docker-compose",
         "value": "${MAILU_DOMAIN:-mail.rpa4all.com}",
         "contexts": [
+          "mailu-dovecot",
           "mailu-backend",
-          "mailu-roundcube",
           "mailu-frontend",
           "mailu-postfix",
-          "mailu-dovecot"
+          "mailu-roundcube"
         ]
       },
       "ADMIN_EMAIL": {
@@ -1598,9 +1598,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "ltfs_recovery",
           "tape_orchestrator",
-          "tape_manager"
+          "tape_manager",
+          "ltfs_recovery"
         ]
       },
       "LTFS_WORKDIR": {
@@ -1684,10 +1684,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "ltfs_checkpoint_writer",
-          "ltfs_recovery",
           "tape_orchestrator",
-          "tape_manager"
+          "ltfs_checkpoint_writer",
+          "tape_manager",
+          "ltfs_recovery"
         ]
       },
       "LTFS_TAPE_DEVICE": {
@@ -1696,9 +1696,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "ltfs_recovery",
           "tape_orchestrator",
-          "tape_manager"
+          "tape_manager",
+          "ltfs_recovery"
         ]
       },
       "LTO6_SG_DEV": {
@@ -1734,11 +1734,11 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "tape_component_quality_agent",
           "tape_safe_eject",
-          "ltfs_recovery",
+          "tape_component_quality_agent",
           "tape_manager",
-          "tape_orchestrator"
+          "tape_orchestrator",
+          "ltfs_recovery"
         ]
       },
       "LTFS_SELF_HEAL_STATE_FILE": {
@@ -1765,9 +1765,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
+          "operations_agent",
           "autonomous_remediator",
-          "run_pipeline_all_envs",
-          "operations_agent"
+          "run_pipeline_all_envs"
         ]
       },
       "TUNNEL_APP_NAME": {
@@ -1874,8 +1874,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "ollama_client",
           "ollama_offloader",
+          "ollama_client",
           "nextcloud_agent"
         ]
       },
@@ -1885,8 +1885,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "trading_agent",
-          "compare_ollama_replay"
+          "compare_ollama_replay",
+          "trading_agent"
         ]
       },
       "OLLAMA_PLAN_FALLBACK_MODEL": {
@@ -1931,8 +1931,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "trading_agent",
-          "replay_trade_window_history"
+          "replay_trade_window_history",
+          "trading_agent"
         ]
       },
       "OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL": {
@@ -1950,8 +1950,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "trading_agent",
-          "replay_trade_window_history"
+          "replay_trade_window_history",
+          "trading_agent"
         ]
       },
       "HOSTNAME": {
@@ -2068,9 +2068,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
+          "storage_portal_api",
           "2_user_management",
-          "user_management",
-          "storage_portal_api"
+          "user_management"
         ]
       },
       "POSTFIX_CMD_PATH": {
@@ -2196,10 +2196,10 @@
         "source": "docker-compose",
         "value": "America/Sao_Paulo",
         "contexts": [
-          "glpi-db",
-          "netbox-postgres",
+          "glpi",
           "grafana",
-          "glpi"
+          "netbox-postgres",
+          "glpi-db"
         ]
       },
       "GF_DEFAULT_TIMEZONE": {
@@ -2558,36 +2558,36 @@
         "source": "systemd",
         "value": "1",
         "contexts": [
-          "coordinator",
-          "notebook-power-agent",
-          "rss-sentiment-exporter",
-          "marketing-daily-report",
-          "trading-analyst-weekly-retrain",
-          "meeting-translator",
-          "candle-collector",
-          "clear-trading-agent",
-          "tape-component-quality-exporter",
-          "approval-gateway",
-          "marketing-api",
-          "marketing-x-posts",
-          "daily-agenda-broadcast",
-          "whatsapp-toolcall-chunked-train",
-          "banking-metrics-exporter",
-          "decisions-track-record-rollup",
-          "marketing-email-drip",
-          "daily-agenda-panel",
-          "ollama-gpu-coordinator",
           "kucoin-postgres-sync",
-          "eddie-telegram-bot",
-          "bn-acervo-agent",
-          "agent-network-exporter",
-          "diretor",
+          "daily-agenda-panel",
+          "tape-component-quality-exporter",
+          "trading-analyst-weekly-retrain",
+          "ollama-gpu-coordinator",
+          "rss-sentiment-exporter",
           "nas-ollama-load",
-          "eddie-calendar",
+          "diretor",
+          "banking-metrics-exporter",
+          "meeting-translator",
+          "eddie-telegram-bot",
           "eddie-expurgo",
-          "crypto-agent@",
+          "agent-network-exporter",
+          "clear-trading-agent",
+          "bn-acervo-agent",
+          "coordinator",
           "kucoin-usdt-rebalance",
-          "trading-daily-report"
+          "marketing-daily-report",
+          "crypto-agent@",
+          "trading-daily-report",
+          "approval-gateway",
+          "decisions-track-record-rollup",
+          "notebook-power-agent",
+          "marketing-api",
+          "whatsapp-toolcall-chunked-train",
+          "candle-collector",
+          "marketing-email-drip",
+          "marketing-x-posts",
+          "eddie-calendar",
+          "daily-agenda-broadcast"
         ]
       },
       "TG_LONG_POLL": {
@@ -2605,8 +2605,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "approval_gateway",
-          "mcp_tool_bridge"
+          "mcp_tool_bridge",
+          "approval_gateway"
         ]
       },
       "BANKING_EXPORTER_PORT": {
@@ -2642,11 +2642,11 @@
         "source": "systemd",
         "value": "1",
         "contexts": [
-          "rss-sentiment-exporter",
-          "ollama-finetune",
           "llm-log-panel",
+          "ollama-finetune",
           "decisions-track-record-rollup",
           "whatsapp-persona-panel",
+          "rss-sentiment-exporter",
           "candle-collector"
         ]
       },
@@ -2656,11 +2656,11 @@
         "source": "systemd",
         "value": "/apps/crypto-trader",
         "contexts": [
-          "rss-sentiment-exporter",
-          "ollama-finetune",
-          "llm-log-panel",
-          "decisions-track-record-rollup",
           "crypto-agent@",
+          "llm-log-panel",
+          "ollama-finetune",
+          "decisions-track-record-rollup",
+          "rss-sentiment-exporter",
           "candle-collector"
         ]
       },
@@ -2670,16 +2670,16 @@
         "source": "systemd",
         "value": "/apps/crypto-trader/trading",
         "contexts": [
-          "rss-sentiment-exporter",
-          "tape-component-quality-exporter",
-          "ollama-finetune",
-          "marketing-api",
-          "llm-log-panel",
           "marketing-daily-report",
-          "marketing-x-posts",
+          "marketing-api",
+          "tape-component-quality-exporter",
+          "llm-log-panel",
+          "ollama-finetune",
           "decisions-track-record-rollup",
-          "marketing-email-drip",
+          "rss-sentiment-exporter",
           "candle-collector",
+          "marketing-email-drip",
+          "marketing-x-posts",
           "clear-trading-agent"
         ]
       },
@@ -2708,16 +2708,16 @@
         "source": "systemd",
         "value": "/usr/local/bin:/usr/bin:/bin",
         "contexts": [
-          "kucoin-postgres-sync",
-          "tape-component-quality-exporter",
-          "specialized_agents-dashboard",
-          "job-monitor",
-          "eddie-whatsapp-bot",
           "homelab-dashboard",
-          "rpa4all-validation",
-          "crypto-agent@",
+          "kucoin-postgres-sync",
           "kucoin-usdt-rebalance",
-          "github-agent"
+          "tape-component-quality-exporter",
+          "crypto-agent@",
+          "specialized_agents-dashboard",
+          "rpa4all-validation",
+          "job-monitor",
+          "github-agent",
+          "eddie-whatsapp-bot"
         ]
       },
       "ADMIN_CHAT_ID": {
@@ -2726,16 +2726,16 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "send_pending_report",
           "coordinator",
-          "telegram_bot",
-          "trading_selfheal_exporter",
-          "gmail_expurgo_inteligente",
           "storj_payout_monitor",
-          "calendar_reminder_service",
-          "mt5_api",
           "kucoin_api",
-          "github_agent_streamlit"
+          "mt5_api",
+          "gmail_expurgo_inteligente",
+          "calendar_reminder_service",
+          "github_agent_streamlit",
+          "trading_selfheal_exporter",
+          "send_pending_report",
+          "telegram_bot"
         ]
       },
       "OLLAMA_PLAN_HOST": {
@@ -2744,9 +2744,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
+          "compare_ollama_replay",
           "position_manager_mixin",
-          "trading_agent",
-          "compare_ollama_replay"
+          "trading_agent"
         ]
       },
       "OLLAMA_TRADE_PARAMS_HOST": {
@@ -2782,8 +2782,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "trading_agent",
-          "replay_trade_window_history"
+          "replay_trade_window_history",
+          "trading_agent"
         ]
       },
       "OLLAMA_TRADE_WINDOW_FALLBACK_HOST": {
@@ -2927,8 +2927,8 @@
         "source": "systemd",
         "value": "http://192.168.15.2:11437",
         "contexts": [
-          "crypto-agent@BTC_USDT_conservative.service/zz-direct-ollama.conf",
-          "crypto-agent@BTC_USDT_aggressive.service/zz-direct-ollama.conf"
+          "crypto-agent@BTC_USDT_aggressive.service/zz-direct-ollama.conf",
+          "crypto-agent@BTC_USDT_conservative.service/zz-direct-ollama.conf"
         ]
       },
       "AGENDA_LLM_COORD_HOST": {
@@ -3054,8 +3054,8 @@
         "source": "systemd",
         "value": "5",
         "contexts": [
-          "grafana-selfheal",
-          "dhcp-selfheal"
+          "dhcp-selfheal",
+          "grafana-selfheal"
         ]
       },
       "WHATSAPP_NUMBER": {
@@ -3064,11 +3064,11 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "extract_whatsapp_train",
-          "google_calendar_integration",
           "calendar_reminder_service",
+          "google_calendar_integration",
           "whatsapp_bot",
-          "config"
+          "config",
+          "extract_whatsapp_train"
         ]
       },
       "WAHA_API": {
@@ -3105,16 +3105,16 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "wait_and_run_whatsapp_test",
-          "whatsapp_manager",
           "gmail_expurgo_inteligente",
-          "test_whatsapp",
-          "whatsapp_bot",
-          "apply_real_job",
-          "setup_waha",
-          "process_all_messages_from_tmp",
           "search_waha_nil",
-          "github_agent_streamlit"
+          "apply_real_job",
+          "wait_and_run_whatsapp_test",
+          "whatsapp_bot",
+          "whatsapp_manager",
+          "test_whatsapp",
+          "github_agent_streamlit",
+          "setup_waha",
+          "process_all_messages_from_tmp"
         ]
       },
       "GMAIL_DATA_DIR": {
@@ -3123,8 +3123,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "gmail_expurgo_inteligente",
-          "run_full_expurgo"
+          "run_full_expurgo",
+          "gmail_expurgo_inteligente"
         ]
       },
       "ADMIN_PHONE": {
@@ -3261,15 +3261,15 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "codex_mcp_server",
           "report_test_to_diretor",
-          "create_director_model",
-          "capture_login_playwright",
-          "ask_director_coordinator",
-          "install_webui_function_api",
-          "homelab_mcp_server",
+          "list_webui",
+          "codex_mcp_server",
           "openwebui_validator_agent",
-          "list_webui"
+          "ask_director_coordinator",
+          "homelab_mcp_server",
+          "install_webui_function_api",
+          "create_director_model",
+          "capture_login_playwright"
         ]
       },
       "API_BASE_URL": {
@@ -3341,9 +3341,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "github_agent",
-          "test_github_agent",
           "github_agent_streamlit",
+          "test_github_agent",
+          "github_agent",
           "github_agent_server"
         ]
       },
@@ -3418,9 +3418,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "llm_system_demo",
           "job_monitor_continuous",
           "apply_real_job",
+          "llm_system_demo",
           "scan_whatsapp_llm"
         ]
       },
@@ -3536,8 +3536,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "nas_ollama_load",
           "ollama_gpu_coordinator",
+          "nas_ollama_load",
           "trading_analyst_shadow_eval",
           "trading_analyst_finetune_batch"
         ]
@@ -3566,10 +3566,10 @@
         "source": "systemd",
         "value": "0",
         "contexts": [
-          "ollama-gpu1.service/zz-gpu1-visible-device.conf",
-          "ollama-finetune",
           "ollama-gpu1",
-          "ollama.service/zz-gpu0-visible-device.conf"
+          "ollama.service/zz-gpu0-visible-device.conf",
+          "ollama-finetune",
+          "ollama-gpu1.service/zz-gpu1-visible-device.conf"
         ]
       },
       "PYTORCH_CUDA_ALLOC_CONF": {
@@ -3614,9 +3614,9 @@
         "source": "systemd",
         "value": "10",
         "contexts": [
-          "ollama-gpu-coordinator",
           "ollama-gpu-coordinator.service/busy-wait.conf",
-          "ollama-gpu-coordinator.service/zz-dual-gpu-routing.conf"
+          "ollama-gpu-coordinator.service/zz-dual-gpu-routing.conf",
+          "ollama-gpu-coordinator"
         ]
       },
       "GPU_COORD_REQUEST_TIMEOUT_SEC": {
@@ -3679,8 +3679,8 @@
         "source": "systemd",
         "value": "cuda_v12",
         "contexts": [
-          "ollama.service/zz-gpu0-cuda-v12.conf",
-          "ollama-gpu1"
+          "ollama-gpu1",
+          "ollama.service/zz-gpu0-cuda-v12.conf"
         ]
       },
       "OLLAMA_NUM_GPU": {
@@ -3689,8 +3689,8 @@
         "source": "systemd",
         "value": "999",
         "contexts": [
-          "ollama.service/ollama-optimized.conf",
-          "ollama-gpu1"
+          "ollama-gpu1",
+          "ollama.service/ollama-optimized.conf"
         ]
       },
       "OLLAMA_LOAD_TIMEOUT": {
@@ -3699,8 +3699,8 @@
         "source": "systemd",
         "value": "15m",
         "contexts": [
-          "ollama.service/ollama-optimized.conf",
-          "ollama-gpu1"
+          "ollama-gpu1",
+          "ollama.service/ollama-optimized.conf"
         ]
       },
       "OLLAMA_PRELOAD_MODEL": {
@@ -3718,8 +3718,8 @@
         "source": "systemd",
         "value": "q4_0",
         "contexts": [
-          "ollama.service/ollama-optimized.conf",
-          "ollama-gpu1"
+          "ollama-gpu1",
+          "ollama.service/ollama-optimized.conf"
         ]
       },
       "OLLAMA_FLASH_ATTENTION": {
@@ -3728,8 +3728,8 @@
         "source": "systemd",
         "value": "1",
         "contexts": [
-          "ollama.service/ollama-optimized.conf",
-          "ollama-gpu1"
+          "ollama-gpu1",
+          "ollama.service/ollama-optimized.conf"
         ]
       },
       "OLLAMA_NUM_PARALLEL": {
@@ -3738,10 +3738,10 @@
         "source": "systemd",
         "value": "1",
         "contexts": [
-          "ollama.service/zz-concurrency-limit.conf",
+          "ollama-gpu1",
           "ollama.service/ollama-optimized.conf",
-          "ollama.service/zz-perf-containment.conf",
-          "ollama-gpu1"
+          "ollama.service/zz-concurrency-limit.conf",
+          "ollama.service/zz-perf-containment.conf"
         ]
       },
       "OLLAMA_MAX_LOADED_MODELS": {
@@ -3750,15 +3750,15 @@
         "source": "systemd",
         "value": "1",
         "contexts": [
-          "ollama.service/ollama-optimized.conf",
-          "ollama.service/zzzz-warmup-curl.conf",
           "ollama.service/zzzzz-idle-power-final.conf",
-          "ollama-gpu1.service/zzzz-idle-power.conf",
-          "ollama.service/zzzz-idle-power.conf",
+          "ollama.service/ollama-optimized.conf",
           "ollama-gpu1.service/zzzzz-idle-power-final.conf",
+          "ollama.service/zzzz-warmup-curl.conf",
           "ollama-nas.service/zzzz-idle-power.conf",
-          "ollama.service/zzz-dual-model.conf",
-          "ollama-gpu1"
+          "ollama.service/zzzz-idle-power.conf",
+          "ollama-gpu1",
+          "ollama-gpu1.service/zzzz-idle-power.conf",
+          "ollama.service/zzz-dual-model.conf"
         ]
       },
       "OLLAMA_GPU_OVERHEAD": {
@@ -3767,8 +3767,8 @@
         "source": "systemd",
         "value": "104857600",
         "contexts": [
-          "ollama.service/ollama-optimized.conf",
-          "ollama-gpu1"
+          "ollama-gpu1",
+          "ollama.service/ollama-optimized.conf"
         ]
       },
       "OLLAMA_MODELS": {
@@ -3777,8 +3777,8 @@
         "source": "systemd",
         "value": "/mnt/raid1/ollama/models",
         "contexts": [
-          "ollama.service/ollama-optimized.conf",
-          "ollama-gpu1"
+          "ollama-gpu1",
+          "ollama.service/ollama-optimized.conf"
         ]
       },
       "OLLAMA_DEBUG": {
@@ -3796,10 +3796,10 @@
         "source": "systemd",
         "value": "4",
         "contexts": [
-          "ollama.service/ollama-optimized.conf",
-          "ollama.service/zz-perf-containment.conf",
+          "ollama-gpu1",
           "ollama-gpu1.service/zz-perf-containment.conf",
-          "ollama-gpu1"
+          "ollama.service/ollama-optimized.conf",
+          "ollama.service/zz-perf-containment.conf"
         ]
       },
       "OLLAMA_NUM_THREADS": {
@@ -3808,10 +3808,10 @@
         "source": "systemd",
         "value": "4",
         "contexts": [
-          "ollama.service/ollama-optimized.conf",
-          "ollama.service/zz-perf-containment.conf",
+          "ollama-gpu1",
           "ollama-gpu1.service/zz-perf-containment.conf",
-          "ollama-gpu1"
+          "ollama.service/ollama-optimized.conf",
+          "ollama.service/zz-perf-containment.conf"
         ]
       },
       "OMP_NUM_THREADS": {
@@ -3820,10 +3820,10 @@
         "source": "systemd",
         "value": "4",
         "contexts": [
-          "ollama.service/ollama-optimized.conf",
-          "ollama.service/zz-perf-containment.conf",
+          "ollama-gpu1",
           "ollama-gpu1.service/zz-perf-containment.conf",
-          "ollama-gpu1"
+          "ollama.service/ollama-optimized.conf",
+          "ollama.service/zz-perf-containment.conf"
         ]
       },
       "OMP_THREAD_LIMIT": {
@@ -3832,9 +3832,9 @@
         "source": "systemd",
         "value": "2",
         "contexts": [
+          "ollama-gpu1.service/zz-perf-containment.conf",
           "ollama.service/ollama-optimized.conf",
-          "ollama.service/zz-perf-containment.conf",
-          "ollama-gpu1.service/zz-perf-containment.conf"
+          "ollama.service/zz-perf-containment.conf"
         ]
       },
       "OLLAMA_WARM_MODEL_GPU0": {
@@ -4072,10 +4072,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "iot_presence_watchdog",
           "tuya_local_key_selfheal",
           "storj_payout_monitor",
-          "tuya_token_selfheal"
+          "tuya_token_selfheal",
+          "iot_presence_watchdog"
         ]
       },
       "STORJ_PAYOUT_HTTP_TIMEOUT": {
@@ -4149,8 +4149,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "iot_presence_watchdog",
-          "tuya_token_selfheal"
+          "tuya_token_selfheal",
+          "iot_presence_watchdog"
         ]
       },
       "MAX_HEALS_24H": {
@@ -4252,8 +4252,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
-          "whatsapp_toolcall_finetune_peft"
+          "whatsapp_toolcall_finetune_peft",
+          "eddie_persona_finetune_peft"
         ]
       },
       "FT_EPOCHS": {
@@ -4262,10 +4262,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "SMTP_HOST": {
@@ -4274,9 +4274,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "email_nurturing",
           "storage_portal_api",
-          "user_management"
+          "user_management",
+          "email_nurturing"
         ]
       },
       "SMTP_PORT": {
@@ -4285,9 +4285,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "email_nurturing",
           "storage_portal_api",
-          "user_management"
+          "user_management",
+          "email_nurturing"
         ]
       },
       "SMTP_USERNAME": {
@@ -4296,8 +4296,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "user_management",
-          "storage_portal_api"
+          "storage_portal_api",
+          "user_management"
         ]
       },
       "SMTP_FROM_EMAIL": {
@@ -4306,8 +4306,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "user_management",
-          "storage_portal_api"
+          "storage_portal_api",
+          "user_management"
         ]
       },
       "SMTP_FROM_NAME": {
@@ -4316,8 +4316,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "user_management",
-          "storage_portal_api"
+          "storage_portal_api",
+          "user_management"
         ]
       },
       "SMTP_STARTTLS": {
@@ -4326,9 +4326,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "email_nurturing",
           "storage_portal_api",
-          "user_management"
+          "user_management",
+          "email_nurturing"
         ]
       },
       "NEXTCLOUD_BASE_PATH": {
@@ -4382,8 +4382,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "config",
-          "index_documentation"
+          "index_documentation",
+          "config"
         ]
       },
       "DISPLAY": {
@@ -4403,10 +4403,10 @@
         "value": null,
         "contexts": [
           "coordinator",
-          "telegram_bot",
           "whatsapp_bot",
           "homelab_test",
-          "list_agents"
+          "list_agents",
+          "telegram_bot"
         ]
       },
       "OPENWEBUI_HOST": {
@@ -4416,8 +4416,8 @@
         "value": null,
         "contexts": [
           "telegram_bot",
-          "whatsapp_bot",
-          "openwebui_integration"
+          "openwebui_integration",
+          "whatsapp_bot"
         ]
       },
       "HOMELAB_HOST": {
@@ -4426,48 +4426,48 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "openwebui_agent_coordinator_function",
-          "telegram_bot",
-          "test_ssh_mcp",
-          "web_search",
-          "populate_grafana_dashboard",
-          "control_panel",
-          "ask_director_coordinator",
-          "configure_diretor_model",
-          "recreate_printer_complete",
-          "generate_learning_evolution_graph",
-          "test_rpa_selenium",
-          "test_ai_interactive",
-          "test_endpoints_final",
-          "check_model",
-          "test_printer_function",
-          "test_llm_quick",
-          "test_final",
-          "extract_and_train",
-          "create_neural_dashboard",
-          "ui_smoke_tests",
-          "index_new_knowledge",
           "train_coordinator",
-          "fix_model",
-          "install_function_webui",
-          "install_printer_function",
-          "test_embed",
-          "fix_diretor_model",
-          "server_knowledge_generator",
-          "test_ollama_quick",
-          "fix_director_model",
-          "test_ollama_create",
-          "gmail_weekly_cleaner",
-          "update_rag_simple",
-          "test_assistant",
-          "diagnose_phomemo_connection",
-          "rag_dashboard",
-          "test_github_agent",
-          "force_activate_persistent",
-          "deploy_grafana_server_selector",
           "generate_learning_dashboard",
+          "ui_smoke_tests",
+          "control_panel",
+          "config",
+          "test_ai_interactive",
+          "telegram_bot",
+          "test_llm_quick",
+          "test_printer_function",
+          "test_rpa_selenium",
+          "generate_learning_evolution_graph",
+          "diagnose_phomemo_connection",
+          "test_final",
+          "fix_director_model",
+          "create_neural_dashboard",
+          "server_knowledge_generator",
+          "deploy_grafana_server_selector",
+          "ask_director_coordinator",
+          "force_activate_persistent",
+          "extract_and_train",
+          "test_assistant",
+          "recreate_printer_complete",
+          "populate_grafana_dashboard",
+          "update_rag_simple",
+          "openwebui_agent_coordinator_function",
+          "gmail_weekly_cleaner",
           "check_diretor_status",
-          "config"
+          "web_search",
+          "check_model",
+          "test_ollama_create",
+          "fix_model",
+          "index_new_knowledge",
+          "test_ssh_mcp",
+          "test_embed",
+          "configure_diretor_model",
+          "test_ollama_quick",
+          "test_github_agent",
+          "rag_dashboard",
+          "fix_diretor_model",
+          "install_printer_function",
+          "install_function_webui",
+          "test_endpoints_final"
         ]
       },
       "RAG_API": {
@@ -4476,11 +4476,11 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "index_new_knowledge",
-          "telegram_bot",
+          "rag_dashboard",
           "train_coordinator",
           "web_search",
-          "rag_dashboard"
+          "telegram_bot",
+          "index_new_knowledge"
         ]
       },
       "DEPLOY_HOST": {
@@ -4626,9 +4626,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "approval_gateway",
+          "alert_digest_agent",
           "pre_tool_guardrails",
-          "alert_digest_agent"
+          "approval_gateway"
         ]
       },
       "TG_BOT_CHAT": {
@@ -4637,9 +4637,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "approval_gateway",
+          "alert_digest_agent",
           "pre_tool_guardrails",
-          "alert_digest_agent"
+          "approval_gateway"
         ]
       },
       "LTFS_SIZE_THRESHOLD_MB": {
@@ -5027,9 +5027,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
+          "deploy_grafana_server_selector",
           "config",
-          "populate_grafana_dashboard",
-          "deploy_grafana_server_selector"
+          "populate_grafana_dashboard"
         ]
       },
       "HOMELAB_BASE_DIR": {
@@ -5231,8 +5231,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "llm",
-          "ollama_mcp_server"
+          "ollama_mcp_server",
+          "llm"
         ]
       },
       "LLM_GPU1_HOST": {
@@ -5241,8 +5241,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "llm",
-          "ollama_mcp_server"
+          "ollama_mcp_server",
+          "llm"
         ]
       },
       "LLM_NAS_HOST": {
@@ -5251,8 +5251,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "llm",
-          "ollama_mcp_server"
+          "ollama_mcp_server",
+          "llm"
         ]
       },
       "OLLAMA_STRUCTURED_CROSS_MODEL_FALLBACK": {
@@ -5315,8 +5315,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "secrets_helper",
-          "kucoin_api"
+          "kucoin_api",
+          "secrets_helper"
         ]
       },
       "OLLAMA_SELL_NOTIFY_MODEL": {
@@ -5334,10 +5334,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
+          "run_coordinator_service",
           "run_diretor_service",
           "streamlit_app",
-          "eddie_whatsapp_exporter",
-          "run_coordinator_service"
+          "eddie_whatsapp_exporter"
         ]
       },
       "COORDINATOR_SPLIT_TIMEOUT_SECONDS": {
@@ -5546,8 +5546,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "patch_ai_plans_profile",
-          "ha_grafana_sync"
+          "ha_grafana_sync",
+          "patch_ai_plans_profile"
         ]
       },
       "PGPORT": {
@@ -5556,8 +5556,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "patch_ai_plans_profile",
-          "ha_grafana_sync"
+          "ha_grafana_sync",
+          "patch_ai_plans_profile"
         ]
       },
       "PGUSER": {
@@ -5566,8 +5566,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "patch_ai_plans_profile",
-          "ha_grafana_sync"
+          "ha_grafana_sync",
+          "patch_ai_plans_profile"
         ]
       },
       "ZTE_USER": {
@@ -5605,11 +5605,11 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "playwright_click_and_check",
-          "test_rpa_selenium",
           "github_agent_server",
+          "capture_streamlit_screenshot",
           "run_headless_ui_test",
-          "capture_streamlit_screenshot"
+          "playwright_click_and_check",
+          "test_rpa_selenium"
         ]
       },
       "INTERCEPTOR_API": {
@@ -5638,8 +5638,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "router_udp_port_forward",
-          "router_network_config"
+          "router_network_config",
+          "router_udp_port_forward"
         ]
       },
       "ROUTER_USER": {
@@ -5684,10 +5684,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "FT_DATASET_DIR": {
@@ -5696,10 +5696,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "FT_OUTPUT_DIR": {
@@ -5708,10 +5708,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "FT_MAX_SEQ": {
@@ -5720,10 +5720,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "FT_BATCH": {
@@ -5732,10 +5732,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "FT_GRAD_ACCUM": {
@@ -5744,10 +5744,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "FT_LORA_RANK": {
@@ -5756,10 +5756,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "FT_LORA_ALPHA": {
@@ -5768,10 +5768,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "FT_LR": {
@@ -5780,10 +5780,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "FT_WARMUP": {
@@ -5792,10 +5792,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "FT_MIN_SAMPLES": {
@@ -5804,10 +5804,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
           "whatsapp_toolcall_finetune_peft",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_finetune_peft"
+          "trading_analyst_finetune_peft",
+          "eddie_persona_finetune_peft",
+          "trading_analyst_finetune_batch"
         ]
       },
       "FT_SAVE_STEPS": {
@@ -5816,8 +5816,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "eddie_persona_finetune_peft",
-          "whatsapp_toolcall_finetune_peft"
+          "whatsapp_toolcall_finetune_peft",
+          "eddie_persona_finetune_peft"
         ]
       },
       "NEXTCLOUD_BASE_URL": {
@@ -5853,9 +5853,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
+          "trading_analyst_rollout_report",
           "trading_analyst_shadow_eval",
-          "trading_analyst_finetune_batch",
-          "trading_analyst_rollout_report"
+          "trading_analyst_finetune_batch"
         ]
       },
       "SHARED_AGENTS_API": {
@@ -5864,8 +5864,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "list_agents",
-          "homelab_test"
+          "homelab_test",
+          "list_agents"
         ]
       },
       "DAILY_AGENDA_ARTIFACTS_DIR": {
@@ -5883,8 +5883,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "daily_agenda_job_status",
-          "daily_agenda_panel_server"
+          "daily_agenda_panel_server",
+          "daily_agenda_job_status"
         ]
       },
       "DAILY_AGENDA_JOB_LOG_JSON_TAIL": {
@@ -5893,8 +5893,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "daily_agenda_job_status",
-          "daily_agenda_panel_server"
+          "daily_agenda_panel_server",
+          "daily_agenda_job_status"
         ]
       },
       "DAILY_AGENDA_JOB_LOG_FLUSH_SECONDS": {
@@ -5903,8 +5903,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "daily_agenda_job_status",
-          "daily_agenda_panel_server"
+          "daily_agenda_panel_server",
+          "daily_agenda_job_status"
         ]
       },
       "DAILY_AGENDA_JOB_STALE_SECONDS": {
@@ -5958,9 +5958,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "process_all_messages_from_tmp",
           "llm_system_demo",
-          "llm_compatibility"
+          "llm_compatibility",
+          "process_all_messages_from_tmp"
         ]
       },
       "WAHA_MESSAGES_PER_CHAT": {
@@ -5969,8 +5969,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "process_all_messages_from_tmp",
-          "apply_real_job"
+          "apply_real_job",
+          "process_all_messages_from_tmp"
         ]
       },
       "LLM_GPU0_MODEL": {
@@ -6136,9 +6136,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "ltfs_recovery",
           "tape_orchestrator",
-          "tape_manager"
+          "tape_manager",
+          "ltfs_recovery"
         ]
       },
       "LTFS_MEDIUM_WAIT_TIMEOUT": {
@@ -6165,9 +6165,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "ltfs_recovery",
           "tape_orchestrator",
-          "tape_manager"
+          "tape_manager",
+          "ltfs_recovery"
         ]
       },
       "PORTAL_URL": {
@@ -6539,9 +6539,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
+          "tuya_local_key_selfheal",
           "ha_grafana_sync",
-          "tuya_token_selfheal",
-          "tuya_local_key_selfheal"
+          "tuya_token_selfheal"
         ]
       },
       "EDDIE_API_URL": {
@@ -6550,8 +6550,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "proxy_tool_interceptor",
-          "openwebui_tool_executor"
+          "openwebui_tool_executor",
+          "proxy_tool_interceptor"
         ]
       },
       "TOOL_MAX_ROUNDS": {
@@ -6578,9 +6578,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "evoke_handler",
           "app",
-          "diretor_latency_exporter"
+          "diretor_latency_exporter",
+          "evoke_handler"
         ]
       },
       "POLL": {
@@ -7096,8 +7096,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "ltfs_recovery",
-          "tape_component_quality_agent"
+          "tape_component_quality_agent",
+          "ltfs_recovery"
         ]
       },
       "LTFSCK_BIN": {
@@ -7106,8 +7106,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "ltfs_recovery",
-          "tape_orchestrator"
+          "tape_orchestrator",
+          "ltfs_recovery"
         ]
       },
       "MKLTFS_BIN": {
@@ -7125,8 +7125,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "ltfs_recovery",
-          "tape_orchestrator"
+          "tape_orchestrator",
+          "ltfs_recovery"
         ]
       },
       "LTFS_BACKGROUND_UNITS": {
@@ -7279,18 +7279,18 @@
         "source": "python-config",
         "value": null,
         "contexts": [
+          "fix_diretor_model",
           "fix_director_model",
-          "install_terminal_function",
           "test_final",
-          "configure_diretor_model",
-          "fix_model",
-          "install_whatsapp_function",
-          "install_printer_function",
-          "screenshot_openwebui",
           "github_agent_server",
+          "install_whatsapp_function",
           "check_diretor_status",
+          "install_printer_function",
+          "install_terminal_function",
+          "screenshot_openwebui",
+          "fix_model",
           "install_copilot_function",
-          "fix_diretor_model"
+          "configure_diretor_model"
         ]
       },
       "VALIDATOR_CHECK_PHRASE": {
@@ -7389,12 +7389,12 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "webui_function_manager",
-          "install_webui_function_api",
-          "install_function_webui",
-          "recreate_printer_complete",
-          "force_activate_persistent",
           "install_ocr_function",
+          "webui_function_manager",
+          "install_function_webui",
+          "force_activate_persistent",
+          "install_webui_function_api",
+          "recreate_printer_complete",
           "test_printer_function"
         ]
       },
@@ -7404,9 +7404,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "test_webui_install",
           "install_ocr_function",
-          "install_webui_function_api"
+          "install_webui_function_api",
+          "test_webui_install"
         ]
       },
       "WEBUI_PASS": {
@@ -7568,8 +7568,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "migrate_to_bw",
           "secret_store",
+          "migrate_to_bw",
           "github_agent_server"
         ]
       },
@@ -7606,22 +7606,22 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "extract_whatsapp_train",
-          "openwebui_agent_coordinator_function",
-          "test_ollama_create",
-          "update_rag_simple",
-          "test_llm_quick",
-          "gmail_weekly_cleaner",
-          "test_assistant",
-          "test_final",
-          "extract_and_train",
-          "generate_learning_evolution_graph",
-          "test_embed",
-          "generate_learning_dashboard",
-          "test_ai_interactive",
           "test_sell_target_backtest",
           "nas_ai_assessor",
-          "check_model"
+          "test_final",
+          "update_rag_simple",
+          "openwebui_agent_coordinator_function",
+          "gmail_weekly_cleaner",
+          "generate_learning_dashboard",
+          "check_model",
+          "test_ollama_create",
+          "generate_learning_evolution_graph",
+          "test_ai_interactive",
+          "extract_and_train",
+          "test_assistant",
+          "test_llm_quick",
+          "test_embed",
+          "extract_whatsapp_train"
         ]
       },
       "REQUEST_TIMEOUT_SECONDS": {
@@ -7973,8 +7973,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "extract_and_train",
-          "rss_llm_trainer"
+          "rss_llm_trainer",
+          "extract_and_train"
         ]
       },
       "AGENT_CHAT_URL": {
@@ -8037,13 +8037,13 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "server_knowledge_generator",
           "diagnose_phomemo_connection",
-          "recreate_printer_complete",
-          "force_activate_persistent",
-          "generate_learning_evolution_graph",
+          "server_knowledge_generator",
           "generate_learning_dashboard",
-          "test_endpoints_final"
+          "force_activate_persistent",
+          "test_endpoints_final",
+          "recreate_printer_complete",
+          "generate_learning_evolution_graph"
         ]
       },
       "WAHA_SESSION": {
@@ -8052,9 +8052,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "extract_whatsapp_train",
+          "test_whatsapp",
           "wait_and_run_whatsapp_test",
-          "test_whatsapp"
+          "extract_whatsapp_train"
         ]
       },
       "MYCLAUDE_ROOT": {
@@ -8100,6 +8100,15 @@
         "value": null,
         "contexts": [
           "llm_compatibility"
+        ]
+      },
+      "WHATSAPP_MAX_MESSAGE_CHARS": {
+        "name": "WHATSAPP_MAX_MESSAGE_CHARS",
+        "type": "string",
+        "source": "python-config",
+        "value": null,
+        "contexts": [
+          "whatsapp_bot"
         ]
       },
       "OWNER_LID": {
@@ -8189,8 +8198,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "llm_system_demo",
-          "apply_real_job"
+          "apply_real_job",
+          "llm_system_demo"
         ]
       },
       "VAULTWARDEN_ENABLED": {
@@ -8668,13 +8677,13 @@
         "value": "rpa4all_snapshot_alerts",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
+          "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_INTERVAL": {
@@ -8684,13 +8693,13 @@
         "value": "30s",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
+          "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_EXPR": {
@@ -8700,12 +8709,12 @@
         "value": "rpa4all_snapshot_service_up == 0",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_FOR": {
@@ -8715,13 +8724,13 @@
         "value": "5m",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
+          "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_LABELS_SEVERITY": {
@@ -8731,13 +8740,13 @@
         "value": "critical",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
+          "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_LABELS_COMPONENT": {
@@ -8758,13 +8767,13 @@
         "value": "\ud83d\udd34 RPA4All Snapshot Service DOWN",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
+          "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_ANNOTATIONS_DESCRIPTION": {
@@ -8774,13 +8783,13 @@
         "value": "O servi\u00e7o rpa4all-snapshot.service n\u00e3o est\u00e1 rodando por mais de 5 minutos",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
+          "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_ANNOTATIONS_DASHBOARD": {
@@ -8808,12 +8817,12 @@
         "value": "rpa4all_snapshot_hung == 1",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_FOR": {
@@ -8823,13 +8832,13 @@
         "value": "3m",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
+          "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_LABELS_SEVERITY": {
@@ -8839,13 +8848,13 @@
         "value": "critical",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
+          "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_LABELS_COMPONENT": {
@@ -8866,13 +8875,13 @@
         "value": "\u23f8\ufe0f RPA4All Snapshot HUNG (Travado)",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
+          "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_ANNOTATIONS_DESCRIPTION": {
@@ -8882,13 +8891,13 @@
         "value": "Lock file com idade {{ $value | humanizeDuration }}. Snapshot pode estar travado em I/O ou rede",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
+          "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_ANNOTATIONS_ACTION": {
@@ -8915,10 +8924,10 @@
         "source": "yaml",
         "value": "(time() - rpa4all_snapshot_last_run_timestamp) > 86400",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_0_RULES_2_FOR": {
@@ -8927,11 +8936,11 @@
         "source": "yaml",
         "value": "1m",
         "contexts": [
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "alert_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_LABELS_SEVERITY": {
@@ -8940,11 +8949,11 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "alert_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_LABELS_COMPONENT": {
@@ -8962,11 +8971,11 @@
         "source": "yaml",
         "value": "\u23f3 RPA4All Snapshot \u2014 \u00daltima execu\u00e7\u00e3o > 24h",
         "contexts": [
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "alert_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_ANNOTATIONS_DESCRIPTION": {
@@ -8975,11 +8984,11 @@
         "source": "yaml",
         "value": "\u00daltima execu\u00e7\u00e3o bem-sucedida h\u00e1 {{ $value | humanizeDuration }}. Timer pode estar desabilitado",
         "contexts": [
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
-          "alert_rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "alert_rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_ANNOTATIONS_DASHBOARD": {
@@ -8997,10 +9006,10 @@
         "source": "yaml",
         "value": "increase(rpa4all_snapshot_failed_total[1h]) > 3",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_0_RULES_3_FOR": {
@@ -9009,10 +9018,10 @@
         "source": "yaml",
         "value": "5m",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_LABELS_SEVERITY": {
@@ -9021,10 +9030,10 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_LABELS_COMPONENT": {
@@ -9042,10 +9051,10 @@
         "source": "yaml",
         "value": "\u26a0\ufe0f RPA4All Snapshot \u2014 Taxa de Falha Elevada",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_ANNOTATIONS_DESCRIPTION": {
@@ -9054,10 +9063,10 @@
         "source": "yaml",
         "value": "{{ $value }} falhas de snapshot na \u00faltima hora",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_ANNOTATIONS_DASHBOARD": {
@@ -9075,9 +9084,9 @@
         "source": "yaml",
         "value": "rpa4all_snapshot_backup_size_bytes > 500000000000",
         "contexts": [
+          "rpa4all-snapshot-alerts",
           "ltfs-selfheal-rules",
-          "selfhealing_rules",
-          "rpa4all-snapshot-alerts"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_0_RULES_4_FOR": {
@@ -9086,9 +9095,9 @@
         "source": "yaml",
         "value": "10m",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_LABELS_SEVERITY": {
@@ -9097,9 +9106,9 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_LABELS_COMPONENT": {
@@ -9117,9 +9126,9 @@
         "source": "yaml",
         "value": "\u26a0\ufe0f RPA4All Backup \u2014 Tamanho Anormal",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_ANNOTATIONS_DESCRIPTION": {
@@ -9128,9 +9137,9 @@
         "source": "yaml",
         "value": "\u00daltimo backup com {{ $value | humanize1024 }}B. Poss\u00edvel duplica\u00e7\u00e3o ou bloat",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_ANNOTATIONS_DASHBOARD": {
@@ -9148,8 +9157,8 @@
         "source": "yaml",
         "value": "increase(rpa4all_snapshot_recovery_triggered_total[1h]) > 0",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_FOR": {
@@ -9158,9 +9167,9 @@
         "source": "yaml",
         "value": "1m",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_LABELS_SEVERITY": {
@@ -9169,9 +9178,9 @@
         "source": "yaml",
         "value": "info",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_LABELS_COMPONENT": {
@@ -9189,9 +9198,9 @@
         "source": "yaml",
         "value": "\u2139\ufe0f RPA4All Snapshot \u2014 Recupera\u00e7\u00e3o Acionada",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_ANNOTATIONS_DESCRIPTION": {
@@ -9200,9 +9209,9 @@
         "source": "yaml",
         "value": "{{ $value }} recupera\u00e7\u00f5es autom\u00e1ticas acionadas na \u00faltima hora",
         "contexts": [
-          "ltfs-selfheal-rules",
+          "rpa4all-snapshot-alerts",
           "rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_ANNOTATIONS_DASHBOARD": {
@@ -10356,9 +10365,9 @@
         "source": "yaml",
         "value": "trading_agent_alerts",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_INTERVAL": {
@@ -10367,9 +10376,9 @@
         "source": "yaml",
         "value": "15s",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_EXPR": {
@@ -10378,8 +10387,8 @@
         "source": "yaml",
         "value": "trading_agent_up == 0",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_FOR": {
@@ -10388,9 +10397,9 @@
         "source": "yaml",
         "value": "3m",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_LABELS_SEVERITY": {
@@ -10399,9 +10408,9 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_LABELS_COMPONENT": {
@@ -10419,9 +10428,9 @@
         "source": "yaml",
         "value": "\ud83d\udd34 Trading Agent {{ $labels.symbol }} DOWN",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_ANNOTATIONS_DESCRIPTION": {
@@ -10430,9 +10439,9 @@
         "source": "yaml",
         "value": "Agent {{ $labels.symbol }} \u00e9 est\u00e1 inativo por mais de 3 minutos. Systemd unit pode estar crashed.",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_0_ANNOTATIONS_DASHBOARD": {
@@ -10450,8 +10459,8 @@
         "source": "yaml",
         "value": "trading_agent_stalled == 1",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_FOR": {
@@ -10460,9 +10469,9 @@
         "source": "yaml",
         "value": "5m",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_LABELS_SEVERITY": {
@@ -10471,9 +10480,9 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_LABELS_COMPONENT": {
@@ -10491,9 +10500,9 @@
         "source": "yaml",
         "value": "\u23f8\ufe0f Trading Agent {{ $labels.symbol }} STALLED",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_ANNOTATIONS_DESCRIPTION": {
@@ -10502,9 +10511,9 @@
         "source": "yaml",
         "value": "Agent {{ $labels.symbol }} n\u00e3o gerou decis\u00f5es por mais de 5 minutos. Poss\u00edvel deadlock na DB ou timeout na API KuCoin.",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_ANNOTATIONS_DASHBOARD": {
@@ -10522,8 +10531,8 @@
         "source": "yaml",
         "value": "trading_agent_last_decision_age_seconds > 900",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_2_FOR": {
@@ -10532,9 +10541,9 @@
         "source": "yaml",
         "value": "3m",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_2_LABELS_SEVERITY": {
@@ -10543,9 +10552,9 @@
         "source": "yaml",
         "value": "warning",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_2_LABELS_COMPONENT": {
@@ -10563,9 +10572,9 @@
         "source": "yaml",
         "value": "\u23f3 Trading Agent {{ $labels.symbol }} \u2014 Decisions Gap 15+ min",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_2_ANNOTATIONS_DESCRIPTION": {
@@ -10574,9 +10583,9 @@
         "source": "yaml",
         "value": "Agent {{ $labels.symbol }} n\u00e3o gerou decis\u00e3o h\u00e1 {{ $value | humanizeDuration }}. Self-heal pode executar restart.",
         "contexts": [
+          "alert_rules",
           "rules",
-          "selfhealing_rules",
-          "alert_rules"
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_EXPR": {
@@ -10585,8 +10594,8 @@
         "source": "yaml",
         "value": "trading_agent_consecutive_failures > 6",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_FOR": {
@@ -10595,8 +10604,8 @@
         "source": "yaml",
         "value": "2m",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_LABELS_SEVERITY": {
@@ -10605,8 +10614,8 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_LABELS_COMPONENT": {
@@ -10624,8 +10633,8 @@
         "source": "yaml",
         "value": "\ud83d\udea8 Trading Agent {{ $labels.symbol }} \u2014 Self-Heal FAILED",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_ANNOTATIONS_DESCRIPTION": {
@@ -10634,8 +10643,8 @@
         "source": "yaml",
         "value": "Agent {{ $labels.symbol }} failed health checks {{ $value | humanize }} times. Auto-restart n\u00e3o conseguiu recuperar. Interven\u00e7\u00e3o manual necess\u00e1ria.",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_ANNOTATIONS_DASHBOARD": {
@@ -10662,8 +10671,8 @@
         "source": "yaml",
         "value": "up{job=\"crypto-exporters\"} == 0",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_4_FOR": {
@@ -10726,8 +10735,8 @@
         "source": "yaml",
         "value": "increase(trading_selfheal_actions_total{action=\"ollama_error\"}[1h]) > 5",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_5_FOR": {
@@ -10790,8 +10799,8 @@
         "source": "yaml",
         "value": "rate(trading_agent_restart_total[1h]) > 3",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_6_FOR": {
@@ -11528,10 +11537,10 @@
         "source": "yaml",
         "value": "ollama",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules",
           "gpu_coord_failover_rules",
-          "ollama_coord_error_rules"
+          "ollama_coord_error_rules",
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_LABELS_CATEGORY": {
@@ -11540,10 +11549,10 @@
         "source": "yaml",
         "value": "ollama",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules",
           "gpu_coord_failover_rules",
-          "ollama_coord_error_rules"
+          "ollama_coord_error_rules",
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_LABELS_CATEGORY": {
@@ -11552,8 +11561,8 @@
         "source": "yaml",
         "value": "ltfs",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_3_LABELS_CATEGORY": {
@@ -11562,8 +11571,8 @@
         "source": "yaml",
         "value": "ltfs",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_LABELS_CATEGORY": {
@@ -11572,8 +11581,8 @@
         "source": "yaml",
         "value": "ltfs",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_LABELS_CATEGORY": {
@@ -11582,8 +11591,8 @@
         "source": "yaml",
         "value": "infrastructure",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_6_EXPR": {
@@ -11601,8 +11610,8 @@
         "source": "yaml",
         "value": "2m",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_6_LABELS_SEVERITY": {
@@ -11611,8 +11620,8 @@
         "source": "yaml",
         "value": "critical",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_6_LABELS_CATEGORY": {
@@ -11621,8 +11630,8 @@
         "source": "yaml",
         "value": "infrastructure",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_6_ANNOTATIONS_SUMMARY": {
@@ -11631,8 +11640,8 @@
         "source": "yaml",
         "value": "NAS offline no Prometheus: rpa4all-nas-001",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_6_ANNOTATIONS_DESCRIPTION": {
@@ -11641,8 +11650,8 @@
         "source": "yaml",
         "value": "Prometheus n\u00e3o consegue coletar m\u00e9tricas da NAS 192.168.15.4 h\u00e1 mais de 2 minutos. Verificar energia, boot loop, rede e exporter.",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rules"
+          "rules",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_0_LABELS_SERVICE": {
@@ -11669,12 +11678,12 @@
         "source": "yaml",
         "value": "1",
         "contexts": [
-          "dashboards",
           "contactpoints",
           "authentik-http",
-          "datasources",
           "rules",
-          "policies"
+          "datasources",
+          "policies",
+          "dashboards"
         ]
       },
       "POLICIES_0_ORGID": {
@@ -20854,8 +20863,8 @@
         "source": "yaml",
         "value": "Prometheus",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_UID": {
@@ -20864,8 +20873,8 @@
         "source": "yaml",
         "value": "dfc0w4yioe4u8e",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_TYPE": {
@@ -20874,8 +20883,8 @@
         "source": "yaml",
         "value": "prometheus",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_ACCESS": {
@@ -20884,8 +20893,8 @@
         "source": "yaml",
         "value": "proxy",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_ORGID": {
@@ -20903,8 +20912,8 @@
         "source": "yaml",
         "value": "http://prometheus:9090",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_ISDEFAULT": {
@@ -20913,8 +20922,8 @@
         "source": "yaml",
         "value": "True",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_0_JSONDATA_TIMEINTERVAL": {
@@ -20932,8 +20941,8 @@
         "source": "yaml",
         "value": "False",
         "contexts": [
-          "authentik-http",
-          "datasources"
+          "datasources",
+          "authentik-http"
         ]
       },
       "DATASOURCES_1_NAME": {
@@ -21862,8 +21871,8 @@
         "value": "curiosidades",
         "contexts": [
           "curiosidades",
-          "cripto",
-          "viral_trends"
+          "viral_trends",
+          "cripto"
         ]
       },
       "TITLE_TEMPLATE": {
@@ -21873,8 +21882,8 @@
         "value": "Voc\u00ea sabia? {trend_title}",
         "contexts": [
           "curiosidades",
-          "cripto",
-          "viral_trends"
+          "viral_trends",
+          "cripto"
         ]
       },
       "SCRIPT_TEMPLATE": {
@@ -21884,8 +21893,8 @@
         "value": "Hook: Em 60 segundos voc\u00ea vai entender {trend_title}.\nFato 1: Um detalhe pouco conhecido que muda a forma de ver o assunto.\nFato 2: Por que isso viraliza agora ({tags}).\nFechamento: Curiosidade pr\u00e1tica para compartilhar hoje.\n",
         "contexts": [
           "curiosidades",
-          "cripto",
-          "viral_trends"
+          "viral_trends",
+          "cripto"
         ]
       },
       "CTA_TEMPLATE": {
@@ -21895,8 +21904,8 @@
         "value": "Comenta qual curiosidade voc\u00ea quer no pr\u00f3ximo v\u00eddeo!",
         "contexts": [
           "curiosidades",
-          "cripto",
-          "viral_trends"
+          "viral_trends",
+          "cripto"
         ]
       },
       "NAME": {
@@ -21905,8 +21914,8 @@
         "source": "yaml",
         "value": "Homelab MCP Server",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "VERSION": {
@@ -21915,8 +21924,8 @@
         "source": "yaml",
         "value": "0.0.1",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "SCHEMA": {
@@ -21925,8 +21934,8 @@
         "source": "yaml",
         "value": "v1",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "MCPSERVERS_0_NAME": {
@@ -21935,8 +21944,8 @@
         "source": "yaml",
         "value": "homelab",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "MCPSERVERS_0_COMMAND": {
@@ -21945,8 +21954,8 @@
         "source": "yaml",
         "value": "/home/edenilson/shared-auto-dev/.venv/bin/python",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "MCPSERVERS_0_ENV_HOMELAB_URL": {
@@ -21955,8 +21964,8 @@
         "source": "yaml",
         "value": "http://192.168.15.2:8503",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "MCPSERVERS_0_ENV_API_BASE_URL": {
@@ -21965,8 +21974,8 @@
         "source": "yaml",
         "value": "http://192.168.15.2:3000",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       },
       "DATASOURCES_0_JSONDATA_TLSSKIPVERIFY": {
@@ -22014,8 +22023,8 @@
         "value": "***REDACTED***",
         "contexts": [
           "wiki_agent",
-          "create_wiki_page",
           "wiki_sync",
+          "create_wiki_page",
           "wiki_bulk_publish"
         ]
       },
@@ -22170,11 +22179,11 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
+          "mailu-dovecot",
           "mailu-backend",
-          "mailu-roundcube",
           "mailu-frontend",
           "mailu-postfix",
-          "mailu-dovecot"
+          "mailu-roundcube"
         ]
       },
       "MAILU_DB_PASSWORD": {
@@ -22333,34 +22342,34 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "coordinator",
+          "ltfs_button_watch",
+          "ollama_gpu_selfheal",
+          "config",
+          "trading_selfheal_exporter",
+          "send_pending_report",
           "telegram_bot",
-          "akash_sweep_to_kucoin",
-          "test_playwright",
+          "ci_watcher",
           "smart_ir_selfheal",
+          "alertmanager_telegram_webhook",
+          "trading_analyst_rollout_report",
           "job_monitor_continuous",
+          "setup_telegram",
+          "secrets_loader",
+          "github_agent_streamlit",
+          "ltfs_recovery",
+          "coordinator",
+          "kucoin_api",
+          "mt5_api",
+          "setup_trading_telegram_channel",
+          "linkedin_job_scanner",
+          "akash_sweep_to_kucoin",
+          "storj_payout_monitor",
+          "server_error_alert",
+          "test_telegram",
           "trading_daily_report",
           "telegram_mcp_server",
-          "test_telegram",
-          "github_agent_streamlit",
-          "send_pending_report",
-          "trading_analyst_rollout_report",
-          "setup_telegram",
-          "alertmanager_telegram_webhook",
-          "ltfs_button_watch",
-          "ltfs_recovery",
-          "ollama_gpu_selfheal",
-          "server_error_alert",
-          "trading_selfheal_exporter",
           "iot_presence_watchdog",
-          "ci_watcher",
-          "linkedin_job_scanner",
-          "kucoin_api",
-          "setup_trading_telegram_channel",
-          "storj_payout_monitor",
-          "mt5_api",
-          "secrets_loader",
-          "config"
+          "test_playwright"
         ]
       },
       "NETBOX_REMOTE_AUTH_ENABLED": {
@@ -22753,13 +22762,13 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "telegram_bot",
-          "setup_deploy_key",
-          "test_github_push",
-          "control_panel",
           "test_github_agent",
-          "github_agent",
-          "config"
+          "setup_deploy_key",
+          "control_panel",
+          "config",
+          "telegram_bot",
+          "test_github_push",
+          "github_agent"
         ]
       },
       "TUNNEL_API_TOKEN": {
@@ -22930,11 +22939,11 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "wikijs-db",
-          "postgres",
+          "mailu-db",
           "mail-db",
+          "postgres",
           "netbox-postgres",
-          "mailu-db"
+          "wikijs-db"
         ]
       },
       "ROUNDCUBEMAIL_DB_PASSWORD": {
@@ -23088,10 +23097,10 @@
         "source": "docker-compose",
         "value": "***REDACTED***",
         "contexts": [
-          "netbox-worker",
           "netbox-redis-cache",
-          "netbox",
-          "netbox-redis"
+          "netbox-redis",
+          "netbox-worker",
+          "netbox"
         ]
       },
       "REMOTE_AUTH_AUTO_CREATE_USER": {
@@ -23228,26 +23237,26 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "akash_sweep_to_kucoin",
-          "test_secrets_agent",
-          "ollama_finetune_batch",
-          "smart_ir_selfheal",
-          "homelab_mcp_server",
-          "generate_ollama_api_key",
-          "x_agent",
-          "tuya_move_license",
+          "home_assistant_integration",
+          "secrets_agent",
+          "generate_gemini_api_key",
           "tuya_token_renewer",
-          "audit_and_migrate_secrets",
+          "smart_ir_selfheal",
           "cmdb_validate",
           "kucoin_api",
           "setup_trading_telegram_channel",
-          "configure_authentik_nas_ldap",
-          "home_assistant_integration",
+          "akash_sweep_to_kucoin",
+          "audit_and_migrate_secrets",
           "secrets_helper",
+          "generate_ollama_api_key",
+          "x_agent",
+          "secrets_agent_client",
           "storj_payout_monitor",
-          "generate_gemini_api_key",
-          "secrets_agent",
-          "secrets_agent_client"
+          "tuya_move_license",
+          "ollama_finetune_batch",
+          "test_secrets_agent",
+          "homelab_mcp_server",
+          "configure_authentik_nas_ldap"
         ]
       },
       "SECRETS_AGENT_URL": {
@@ -23256,25 +23265,25 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "akash_sweep_to_kucoin",
+          "home_assistant_integration",
           "agent_documentation_manager",
-          "ollama_finetune_batch",
-          "smart_ir_selfheal",
-          "homelab_mcp_server",
-          "generate_ollama_api_key",
-          "x_agent",
-          "tuya_move_license",
+          "generate_gemini_api_key",
           "tuya_token_renewer",
-          "audit_and_migrate_secrets",
+          "smart_ir_selfheal",
           "kucoin_api",
           "setup_trading_telegram_channel",
-          "configure_authentik_nas_ldap",
-          "home_assistant_integration",
+          "akash_sweep_to_kucoin",
+          "audit_and_migrate_secrets",
           "secrets_helper",
-          "wikijs_authentik_oidc",
+          "generate_ollama_api_key",
+          "x_agent",
+          "secrets_agent_client",
           "storj_payout_monitor",
-          "generate_gemini_api_key",
-          "secrets_agent_client"
+          "tuya_move_license",
+          "ollama_finetune_batch",
+          "homelab_mcp_server",
+          "wikijs_authentik_oidc",
+          "configure_authentik_nas_ldap"
         ]
       },
       "SECRETS_AGENT_DATA": {
@@ -23284,10 +23293,10 @@
         "value": "***REDACTED***",
         "contexts": [
           "secret_store",
+          "secrets_agent",
           "test_secrets_agent",
-          "secrets_helper",
           "test_btc_secrets_helper",
-          "secrets_agent"
+          "secrets_helper"
         ]
       },
       "WAHA_API_KEY": {
@@ -23297,17 +23306,17 @@
         "value": "***REDACTED***",
         "contexts": [
           "scan_whatsapp_llm",
-          "extract_whatsapp_train",
-          "wait_and_run_whatsapp_test",
-          "test_whatsapp",
-          "whatsapp_bot",
+          "search_waha_nil",
           "apply_real_job",
           "job_match_pipeline",
-          "process_all_messages_from_tmp",
-          "search_waha_nil",
-          "search_waha_production",
+          "wait_and_run_whatsapp_test",
+          "whatsapp_bot",
           "reports_integration",
-          "github_agent_streamlit"
+          "search_waha_production",
+          "test_whatsapp",
+          "github_agent_streamlit",
+          "process_all_messages_from_tmp",
+          "extract_whatsapp_train"
         ]
       },
       "BRIDGE_RUNTIME_TOKENS": {
@@ -23335,21 +23344,21 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "authentik_rotate_secrets_agent_token",
-          "configure_authentik_nas_ldap",
-          "authentik_secret_fetcher",
-          "register_nextcloud_access_panel",
-          "authentik_user_manager",
-          "secrets_helper",
-          "register_governance_app",
-          "register_whatsapp_persona_panel",
+          "storage_portal_api",
           "register_llm_prompt_audit_panel",
+          "authentik_user_manager",
           "secrets_agent",
-          "install_authentik_os_login",
-          "user_management",
           "2_user_management",
-          "configure_authentik_nextcloud_oidc",
-          "storage_portal_api"
+          "user_management",
+          "register_nextcloud_access_panel",
+          "register_governance_app",
+          "authentik_secret_fetcher",
+          "authentik_rotate_secrets_agent_token",
+          "install_authentik_os_login",
+          "secrets_helper",
+          "register_whatsapp_persona_panel",
+          "configure_authentik_nas_ldap",
+          "configure_authentik_nextcloud_oidc"
         ]
       },
       "AUTHENTIK_TOKEN": {
@@ -23358,20 +23367,20 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "configure_authentik_nas_ldap",
-          "authentik_secret_fetcher",
-          "register_nextcloud_access_panel",
-          "authentik_user_manager",
-          "secrets_helper",
-          "register_governance_app",
-          "register_llm_prompt_audit_panel",
-          "secrets_agent",
-          "install_authentik_os_login",
-          "register_whatsapp_persona_panel",
-          "user_management",
-          "configure_authentik_nextcloud_oidc",
           "storage_portal_api",
-          "register_mailu_authentik"
+          "register_llm_prompt_audit_panel",
+          "authentik_user_manager",
+          "secrets_agent",
+          "register_mailu_authentik",
+          "user_management",
+          "register_nextcloud_access_panel",
+          "authentik_secret_fetcher",
+          "register_governance_app",
+          "install_authentik_os_login",
+          "secrets_helper",
+          "register_whatsapp_persona_panel",
+          "configure_authentik_nas_ldap",
+          "configure_authentik_nextcloud_oidc"
         ]
       },
       "AUTHENTIK_VERIFY_TLS": {
@@ -23380,8 +23389,8 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "install_authentik_os_login",
-          "storage_portal_api"
+          "storage_portal_api",
+          "install_authentik_os_login"
         ]
       },
       "SMTP_PASSWORD": {
@@ -23390,8 +23399,8 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "user_management",
-          "storage_portal_api"
+          "storage_portal_api",
+          "user_management"
         ]
       },
       "AUTHENTIK_PUBLIC_URL": {
@@ -23438,8 +23447,8 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "user_management",
-          "install_authentik_os_login"
+          "install_authentik_os_login",
+          "user_management"
         ]
       },
       "AUTHENTIK_OS_LOCAL_GROUPS": {
@@ -23448,8 +23457,8 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "user_management",
-          "install_authentik_os_login"
+          "install_authentik_os_login",
+          "user_management"
         ]
       },
       "HF_TOKEN": {
@@ -23476,11 +23485,11 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "populate_grafana_dashboard",
-          "generate_learning_evolution_graph",
-          "generate_learning_dashboard",
           "deploy_grafana_server_selector",
-          "config"
+          "generate_learning_dashboard",
+          "config",
+          "populate_grafana_dashboard",
+          "generate_learning_evolution_graph"
         ]
       },
       "CONUBE_ACTION_TOKEN": {
@@ -23507,8 +23516,8 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "secrets_helper",
-          "kucoin_api"
+          "kucoin_api",
+          "secrets_helper"
         ]
       },
       "API_SECRET": {
@@ -23517,8 +23526,8 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "secrets_helper",
-          "kucoin_api"
+          "kucoin_api",
+          "secrets_helper"
         ]
       },
       "API_KEY_VERSION": {
@@ -23563,8 +23572,8 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "patch_ai_plans_profile",
-          "ha_grafana_sync"
+          "ha_grafana_sync",
+          "patch_ai_plans_profile"
         ]
       },
       "SECRETS_API_URL": {
@@ -23573,10 +23582,10 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "router_udp_port_forward",
           "zte_modem_admin",
+          "router_network_config",
           "zte_akash_portforward",
-          "router_network_config"
+          "router_udp_port_forward"
         ]
       },
       "SECRETS_API_KEY": {
@@ -23585,10 +23594,10 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "router_udp_port_forward",
           "zte_modem_admin",
+          "router_network_config",
           "zte_akash_portforward",
-          "router_network_config"
+          "router_udp_port_forward"
         ]
       },
       "PANEL_API_KEY": {
@@ -23598,9 +23607,9 @@
         "value": "***REDACTED***",
         "contexts": [
           "daily_agenda_job_status",
+          "llm_log_panel_server",
           "daily_agenda_panel_server",
-          "whatsapp_persona_panel_server",
-          "llm_log_panel_server"
+          "whatsapp_persona_panel_server"
         ]
       },
       "AUTHENTIK_ADMIN_TOKEN": {
@@ -24125,8 +24134,8 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "test_webui_install",
-          "install_webui_function_api"
+          "install_webui_function_api",
+          "test_webui_install"
         ]
       },
       "GCAL_OAUTH_PORT": {
@@ -24234,9 +24243,9 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "grafana_learning_dashboard",
+          "update_grafana_dashboard_phase2",
           "update_grafana_panels_phase2",
-          "update_grafana_dashboard_phase2"
+          "grafana_learning_dashboard"
         ]
       },
       "LINKEDIN_PASSWORD": {
@@ -24451,8 +24460,8 @@
         "source": "yaml",
         "value": "***REDACTED***",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       }
     },
@@ -24463,69 +24472,69 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "backfill_pnl",
-          "news_sentiment_patch",
-          "ollama_finetune_batch",
-          "migrate_sqlite_to_postgres",
-          "deploy_multiposition",
-          "langgraph_base",
-          "agent_ipc",
-          "setup_grafana_home",
-          "trading_daily_report",
-          "homelab_mcp_server",
-          "test_integration_sentiment",
-          "test_sell_target_backtest",
-          "training_db",
-          "whatsapp_knowledge_finetune_dataset_builder",
-          "grafana_query",
-          "candle_collector",
-          "db_migrate",
-          "example_agent_memory",
-          "search_whatsapp_postgres",
-          "operations_agent",
-          "decisions_track_record_rollup",
-          "daily_report",
-          "trading_analyst_rollout_report",
-          "migrate_whatsapp_to_postgres",
-          "kucoin_postgres_sync",
-          "test_agent_memory",
           "run_sentiment_finetune",
-          "user_management",
-          "validate_trades_sync",
-          "ollama_gpu_coordinator",
-          "trading_conversation",
-          "btc_signals_exporter",
-          "diretor_latency_exporter",
-          "fetch_autocoinbot_trades",
-          "prometheus_exporter",
-          "trading_selfheal_exporter",
-          "autonomous_remediator",
-          "rss_llm_trainer",
-          "eddie_central_missing_metrics",
-          "query_deposits",
-          "watch_coordinator_db",
-          "run_migration",
-          "validate_sell_fix_final",
-          "train_llm_on_conversations",
-          "2_user_management",
-          "journal_ingestor",
-          "export_trading_pnl_portfolio",
-          "eddie_central_extended_metrics",
-          "approval_gateway",
-          "migrate_trading_profile_schema",
-          "lead_capture_api",
-          "llm_log_panel_server",
-          "x_post_scheduler",
-          "secrets_helper",
-          "calibrate_rss_sentiment",
-          "restore_trading_history",
-          "telegram_trading",
-          "whatsapp_bot",
-          "email_nurturing",
-          "agent_network_exporter",
-          "trading_agent_desk_test",
+          "test_sell_target_backtest",
+          "test_agent_memory",
+          "backfill_pnl",
+          "example_agent_memory",
           "config",
-          "rss_sentiment_exporter"
+          "trading_selfheal_exporter",
+          "operations_agent",
+          "grafana_query",
+          "restore_trading_history",
+          "llm_log_panel_server",
+          "trading_conversation",
+          "test_integration_sentiment",
+          "kucoin_postgres_sync",
+          "rss_llm_trainer",
+          "prometheus_exporter",
+          "migrate_trading_profile_schema",
+          "whatsapp_knowledge_finetune_dataset_builder",
+          "deploy_multiposition",
+          "user_management",
+          "trading_analyst_rollout_report",
+          "rss_sentiment_exporter",
+          "validate_sell_fix_final",
+          "export_trading_pnl_portfolio",
+          "query_deposits",
+          "fetch_autocoinbot_trades",
+          "migrate_whatsapp_to_postgres",
+          "journal_ingestor",
+          "candle_collector",
+          "eddie_central_missing_metrics",
+          "autonomous_remediator",
+          "agent_network_exporter",
+          "decisions_track_record_rollup",
+          "calibrate_rss_sentiment",
+          "agent_ipc",
+          "search_whatsapp_postgres",
+          "watch_coordinator_db",
+          "telegram_trading",
+          "ollama_gpu_coordinator",
+          "diretor_latency_exporter",
+          "email_nurturing",
+          "secrets_helper",
+          "btc_signals_exporter",
+          "training_db",
+          "eddie_central_extended_metrics",
+          "train_llm_on_conversations",
+          "db_migrate",
+          "news_sentiment_patch",
+          "migrate_sqlite_to_postgres",
+          "x_post_scheduler",
+          "trading_agent_desk_test",
+          "daily_report",
+          "whatsapp_bot",
+          "trading_daily_report",
+          "ollama_finetune_batch",
+          "setup_grafana_home",
+          "homelab_mcp_server",
+          "2_user_management",
+          "validate_trades_sync",
+          "run_migration",
+          "langgraph_base",
+          "approval_gateway",
+          "lead_capture_api"
         ]
       },
       "DB_HOST": {
@@ -24534,9 +24543,9 @@
         "source": "docker-compose",
         "value": "wikijs-db",
         "contexts": [
-          "netbox",
           "netbox-worker",
-          "wikijs"
+          "wikijs",
+          "netbox"
         ]
       },
       "DB_PORT": {
@@ -24554,9 +24563,9 @@
         "source": "docker-compose",
         "value": "wikijs",
         "contexts": [
-          "netbox",
           "netbox-worker",
-          "wikijs"
+          "wikijs",
+          "netbox"
         ]
       },
       "DB_NAME": {
@@ -24565,9 +24574,9 @@
         "source": "docker-compose",
         "value": "wikijs",
         "contexts": [
-          "netbox",
           "netbox-worker",
-          "wikijs"
+          "wikijs",
+          "netbox"
         ]
       },
       "MAILU_DATABASE_URL": {
@@ -24844,11 +24853,11 @@
         "source": "docker-compose",
         "value": "roundcube",
         "contexts": [
-          "wikijs-db",
-          "postgres",
+          "mailu-db",
           "mail-db",
+          "postgres",
           "netbox-postgres",
-          "mailu-db"
+          "wikijs-db"
         ]
       },
       "POSTGRES_USER": {
@@ -24857,11 +24866,11 @@
         "source": "docker-compose",
         "value": "roundcube",
         "contexts": [
-          "wikijs-db",
-          "postgres",
+          "mailu-db",
           "mail-db",
+          "postgres",
           "netbox-postgres",
-          "mailu-db"
+          "wikijs-db"
         ]
       },
       "ROUNDCUBEMAIL_DB_TYPE": {
@@ -25100,8 +25109,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "patch_ai_plans_profile",
-          "ha_grafana_sync"
+          "ha_grafana_sync",
+          "patch_ai_plans_profile"
         ]
       },
       "CHROMA_DB_PATH": {
@@ -25173,8 +25182,8 @@
         "source": "yaml",
         "value": "***REDACTED***",
         "contexts": [
-          "homelab",
-          "new-mcp-server"
+          "new-mcp-server",
+          "homelab"
         ]
       }
     },
@@ -25186,9 +25195,9 @@
         "value": "***REDACTED***",
         "contexts": [
           "kucoin_api",
-          "secrets_helper",
+          "restore_trading_history",
           "test_kucoin_api",
-          "restore_trading_history"
+          "secrets_helper"
         ]
       },
       "KUCOIN_API_SECRET": {
@@ -25198,9 +25207,9 @@
         "value": "***REDACTED***",
         "contexts": [
           "kucoin_api",
-          "secrets_helper",
+          "restore_trading_history",
           "test_kucoin_api",
-          "restore_trading_history"
+          "secrets_helper"
         ]
       },
       "KUCOIN_API_PASSPHRASE": {
@@ -25210,9 +25219,9 @@
         "value": null,
         "contexts": [
           "kucoin_api",
-          "secrets_helper",
+          "restore_trading_history",
           "test_kucoin_api",
-          "restore_trading_history"
+          "secrets_helper"
         ]
       },
       "KUCOIN_ALLOWED_IP": {
@@ -25282,10 +25291,10 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "validate_btc_config",
-          "prometheus_exporter",
-          "trading_agent",
           "kucoin_api",
+          "validate_btc_config",
+          "trading_agent",
+          "prometheus_exporter",
           "fix_prometheus_exporter"
         ]
       },
@@ -25295,8 +25304,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "llm_system_demo",
-          "apply_real_job"
+          "apply_real_job",
+          "llm_system_demo"
         ]
       },
       "BTC_AGENT_DIR": {
@@ -25305,8 +25314,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "validate_trades_sync",
-          "kucoin_postgres_sync"
+          "kucoin_postgres_sync",
+          "validate_trades_sync"
         ]
       },
       "COINGECKO_PRICE_URL": {
@@ -25325,9 +25334,9 @@
         "value": null,
         "contexts": [
           "tape_quality_ollama_narrator",
-          "nas_ai_assessor",
+          "alert_digest_agent",
           "populate_grafana_dashboard",
-          "alert_digest_agent"
+          "nas_ai_assessor"
         ]
       },
       "OLLAMA_TRADING_MODEL": {
@@ -25356,10 +25365,10 @@
         "source": "python-config",
         "value": "***REDACTED***",
         "contexts": [
-          "bridge_api",
           "mt5_api",
-          "secrets_helper",
-          "test_mt5_bridge"
+          "test_mt5_bridge",
+          "bridge_api",
+          "secrets_helper"
         ]
       },
       "COIN_SYMBOL": {
@@ -25396,8 +25405,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "trading_conversation",
-          "homelab_mcp_server"
+          "homelab_mcp_server",
+          "trading_conversation"
         ]
       },
       "BTC_TRADING_DB_HOST": {
@@ -26166,33 +26175,33 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "akash_sweep_to_kucoin",
-          "alert_digest_agent",
-          "test_playwright",
+          "ltfs_button_watch",
+          "ollama_gpu_selfheal",
+          "config",
+          "trading_selfheal_exporter",
+          "ci_watcher",
           "delivery_approval",
           "smart_ir_selfheal",
+          "alertmanager_telegram_webhook",
+          "trading_analyst_rollout_report",
           "job_monitor_continuous",
-          "trading_daily_report",
-          "telegram_mcp_server",
+          "setup_telegram",
+          "pre_tool_guardrails",
+          "secrets_loader",
+          "ltfs_recovery",
+          "kucoin_api",
+          "alert_digest_agent",
+          "linkedin_job_scanner",
+          "akash_sweep_to_kucoin",
+          "storj_payout_monitor",
           "test_telegram",
           "daily_report",
-          "trading_analyst_rollout_report",
-          "setup_telegram",
-          "alertmanager_telegram_webhook",
-          "ltfs_button_watch",
-          "ltfs_recovery",
-          "pre_tool_guardrails",
-          "ollama_gpu_selfheal",
-          "trading_selfheal_exporter",
+          "trading_daily_report",
+          "telegram_mcp_server",
           "iot_presence_watchdog",
-          "ci_watcher",
-          "linkedin_job_scanner",
-          "kucoin_api",
+          "test_playwright",
           "approval_gateway",
-          "lead_capture_api",
-          "storj_payout_monitor",
-          "secrets_loader",
-          "config"
+          "lead_capture_api"
         ]
       },
       "WEBHOOKS_ENABLED": {
@@ -26220,9 +26229,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "approval_gateway",
+          "alert_digest_agent",
           "pre_tool_guardrails",
-          "alert_digest_agent"
+          "approval_gateway"
         ]
       },
       "GITHUB_AGENT_URL": {
@@ -26285,8 +26294,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "secrets_loader",
-          "daily_agenda_config"
+          "daily_agenda_config",
+          "secrets_loader"
         ]
       },
       "LTFS_TELEGRAM_CONFIRMATION_TIMEOUT": {
@@ -26499,9 +26508,9 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "ltfs_recovery",
           "tape_orchestrator",
-          "tape_manager"
+          "tape_manager",
+          "ltfs_recovery"
         ]
       },
       "AGENT_NETWORK_EXPORTER_PORT": {
@@ -26582,8 +26591,8 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "config",
-          "create_dev_agent"
+          "create_dev_agent",
+          "config"
         ]
       },
       "LTFS_MAX_MOUNT_ATTEMPTS": {
@@ -26684,16 +26693,16 @@
         "source": "python-config",
         "value": null,
         "contexts": [
+          "nas_ai_assessor",
+          "update_grafana_dashboard_phase2",
+          "update_grafana_panels_phase2",
+          "create_neural_dashboard",
+          "selenium_grafana_action",
+          "deploy_grafana",
           "test_grafana_selenium",
           "validate_eddie_central_api",
-          "deploy_grafana",
-          "update_grafana_dashboard_phase2",
-          "selenium_grafana_action",
-          "grafana_query",
-          "nas_ai_assessor",
-          "create_neural_dashboard",
-          "update_grafana_panels_phase2",
-          "tape_quality_ollama_narrator"
+          "tape_quality_ollama_narrator",
+          "grafana_query"
         ]
       },
       "GRAFANA_CONTAINER": {
@@ -26729,16 +26738,16 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "test_grafana_selenium",
-          "validate_eddie_central_api",
-          "populate_grafana_dashboard",
-          "deploy_grafana",
-          "selenium_grafana_action",
-          "deploy_grafana_server_selector",
-          "grafana_query",
           "nas_ai_assessor",
           "update_grafana_panels_phase2",
-          "tape_quality_ollama_narrator"
+          "selenium_grafana_action",
+          "deploy_grafana_server_selector",
+          "deploy_grafana",
+          "test_grafana_selenium",
+          "validate_eddie_central_api",
+          "tape_quality_ollama_narrator",
+          "grafana_query",
+          "populate_grafana_dashboard"
         ]
       },
       "GRAFANA_PASS": {
@@ -26747,15 +26756,15 @@
         "source": "python-config",
         "value": null,
         "contexts": [
-          "test_grafana_selenium",
-          "validate_eddie_central_api",
-          "populate_grafana_dashboard",
-          "deploy_grafana",
+          "update_grafana_panels_phase2",
           "selenium_grafana_action",
           "deploy_grafana_server_selector",
+          "deploy_grafana",
+          "test_grafana_selenium",
+          "validate_eddie_central_api",
+          "tape_quality_ollama_narrator",
           "grafana_query",
-          "update_grafana_panels_phase2",
-          "tape_quality_ollama_narrator"
+          "populate_grafana_dashboard"
         ]
       },
       "GRAFANA_PANEL_ID": {
@@ -26911,12 +26920,12 @@
         "value": "RPA4AllSnapshotServiceDown",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_1_ALERT": {
@@ -26926,12 +26935,12 @@
         "value": "RPA4AllSnapshotHung",
         "contexts": [
           "pandaplus_bridge_rules",
-          "gpu_coord_failover_rules",
-          "ltfs-selfheal-rules",
           "selfhealing_rules",
+          "gpu_coord_failover_rules",
+          "rpa4all-snapshot-alerts",
           "alert_rules",
           "ollama_coord_error_rules",
-          "rpa4all-snapshot-alerts"
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_2_ALERT": {
@@ -26940,10 +26949,10 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotLastRunTooOld",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "selfhealing_rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_0_RULES_3_ALERT": {
@@ -26952,9 +26961,9 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotFailureRate",
         "contexts": [
-          "ltfs-selfheal-rules",
           "alert_rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_4_ALERT": {
@@ -26963,8 +26972,8 @@
         "source": "yaml",
         "value": "RPA4AllBackupSizeUnusual",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_0_RULES_5_ALERT": {
@@ -26973,8 +26982,8 @@
         "source": "yaml",
         "value": "RPA4AllSnapshotRecoveryTriggered",
         "contexts": [
-          "ltfs-selfheal-rules",
-          "rpa4all-snapshot-alerts"
+          "rpa4all-snapshot-alerts",
+          "ltfs-selfheal-rules"
         ]
       },
       "GROUPS_1_RULES_0_ALERT": {
@@ -26983,8 +26992,8 @@
         "source": "yaml",
         "value": "TradingAgentDown",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_1_ALERT": {
@@ -26993,8 +27002,8 @@
         "source": "yaml",
         "value": "TradingAgentStalled",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_2_ALERT": {
@@ -27003,8 +27012,8 @@
         "source": "yaml",
         "value": "TradingDecisionsGap",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_3_ALERT": {
@@ -27013,8 +27022,8 @@
         "source": "yaml",
         "value": "TradingSelfHealExhausted",
         "contexts": [
-          "selfhealing_rules",
-          "alert_rules"
+          "alert_rules",
+          "selfhealing_rules"
         ]
       },
       "GROUPS_1_RULES_4_ALERT": {
@@ -27074,7 +27083,7 @@
     }
   },
   "metadata": {
-    "totalVariables": 2708,
+    "totalVariables": 2709,
     "sourceFiles": [
       ".env",
       ".env.openai-compatible.example",

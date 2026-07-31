@@ -144,6 +144,15 @@ def _get_homelab_memory():
 WHATSAPP_NUMBER = os.getenv("WHATSAPP_NUMBER", "5511981193899")
 WHATSAPP_PHONE_ID = f"{WHATSAPP_NUMBER}@s.whatsapp.net"
 
+# Tamanho máximo (chars) de cada mensagem de saída antes de quebrar em várias
+# — WhatsApp aceita textos bem maiores, mas bolhas muito longas ficam ruins
+# de ler no celular. Corte prefere parágrafo > linha > espaço (ver
+# _split_message_chunks), nunca no meio de uma palavra.
+try:
+    WHATSAPP_MAX_MESSAGE_CHARS = max(500, int(os.getenv("WHATSAPP_MAX_MESSAGE_CHARS", "3500")))
+except ValueError:
+    WHATSAPP_MAX_MESSAGE_CHARS = 3500
+
 # Configurações de IA
 # Personas 2026 (treinadas via scripts/training/build_persona_models.py):
 #   eddie-persona-safe  — base llama3.1:8b + guarda-rails (COM censura)
@@ -3015,8 +3024,69 @@ class WAHAClient:
             sep = " "
         return f"{tag}{sep}{body}"
 
+    @staticmethod
+    def _split_message_chunks(text: str, max_len: int = None) -> List[str]:
+        """Quebra uma mensagem grande em partes que cabem no limite de saída.
+
+        Prioriza cortar em fronteira de parágrafo, depois linha, depois
+        espaço — só corta no meio de uma palavra como último recurso.
+        """
+        max_len = max_len or WHATSAPP_MAX_MESSAGE_CHARS
+        body = (text or "").strip()
+        if not body:
+            return []
+        if len(body) <= max_len:
+            return [body]
+
+        chunks: List[str] = []
+        remaining = body
+        min_cut = max(1, int(max_len * 0.5))
+        while len(remaining) > max_len:
+            window = remaining[:max_len]
+            cut = window.rfind("\n\n")
+            if cut < min_cut:
+                cut = window.rfind("\n")
+            if cut < min_cut:
+                cut = window.rfind(" ")
+            if cut <= 0:
+                cut = max_len
+            chunks.append(remaining[:cut].rstrip())
+            remaining = remaining[cut:].lstrip()
+        if remaining:
+            chunks.append(remaining)
+        return chunks
+
     async def send_text(self, chat_id: str, text: str) -> dict:
-        """Envia mensagem de texto, tentando JIDs candidatos (LID / telefone)."""
+        """Envia texto, quebrando em várias mensagens se passar do limite
+        configurado (WHATSAPP_MAX_MESSAGE_CHARS) — cada parte numerada
+        "(i/N)" quando há mais de uma.
+        """
+        parts = self._split_message_chunks(text)
+        if not parts:
+            return {"error": "texto vazio"}
+        if len(parts) == 1:
+            return await self._send_text_chunk(chat_id, parts[0])
+
+        last_result: dict = {}
+        total = len(parts)
+        for i, part in enumerate(parts, start=1):
+            numbered = f"({i}/{total}) {part}"
+            last_result = await self._send_text_chunk(chat_id, numbered)
+            if isinstance(last_result, dict) and (
+                last_result.get("error") or last_result.get("status_code") not in (200, 201, 202, None)
+            ):
+                logger.error(
+                    "send_text: falha na parte %s/%s peer=%s — abortando restante",
+                    i, total, chat_id,
+                )
+                break
+            if i < total:
+                await asyncio.sleep(0.6)
+        return last_result
+
+    async def _send_text_chunk(self, chat_id: str, text: str) -> dict:
+        """Envia uma única mensagem (já dentro do limite), tentando JIDs
+        candidatos (LID / telefone)."""
         try:
             text = self._tag_outbound_text(text)
             last_status = None
