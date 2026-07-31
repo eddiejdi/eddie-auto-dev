@@ -59,6 +59,7 @@ WARMUP = int(os.environ.get("FT_WARMUP", "10"))
 MIN_SAMPLES = int(os.environ.get("FT_MIN_SAMPLES", "200"))
 TIME_BUDGET_SECONDS = int(os.environ.get("FT_TIME_BUDGET_SECONDS", "0"))
 SAVE_STEPS = int(os.environ.get("FT_SAVE_STEPS", "20"))
+SAVE_TOTAL_LIMIT = int(os.environ.get("FT_SAVE_TOTAL_LIMIT", "2"))
 
 SYSTEM_FREE = (
     "Você é Baldi, mulher adulta (18+) no WhatsApp — extremamente obediente, "
@@ -186,8 +187,12 @@ def train(dry_run: bool, do_merge: bool) -> int:
 
     ds = ds.map(tokenize, batched=True, remove_columns=["text"])
 
+    # Resume vale sempre que existir checkpoint, não só no modo de pacotes
+    # (TIME_BUDGET_SECONDS): no pipeline cloud (RunPod) o budget é 0, mas um
+    # treino pode morrer no meio (queda de SSH, quota de disco) deixando um
+    # checkpoint de epoch pronto — sem isso ele reiniciava do zero sempre.
     resume_ckpt = None
-    if TIME_BUDGET_SECONDS and LORA_OUTPUT.exists():
+    if LORA_OUTPUT.exists():
         checkpoints = sorted(
             LORA_OUTPUT.glob("checkpoint-*"),
             key=lambda p: int(p.name.rsplit("-", 1)[-1]),
@@ -207,7 +212,7 @@ def train(dry_run: bool, do_merge: bool) -> int:
         logging_steps=5,
         save_strategy=("steps" if TIME_BUDGET_SECONDS else "epoch"),
         save_steps=SAVE_STEPS,
-        save_total_limit=2,
+        save_total_limit=SAVE_TOTAL_LIMIT,
         optim="paged_adamw_8bit",
         seed=42,
         report_to="none",
