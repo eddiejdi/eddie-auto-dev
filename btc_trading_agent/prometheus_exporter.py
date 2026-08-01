@@ -1048,7 +1048,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                 ('btc_trading_open_position_count', 'open_position_count', 'Number of open BUY entries (multi-position)', 'gauge', '{v}'),
                 ('btc_trading_open_position_raw_entries', 'open_position_raw_entries', 'Number of raw BUY entries in the open position', 'gauge', '{v}'),
                 ('btc_trading_open_position_logical_slots', 'open_position_logical_slots', 'Logical slot occupancy for the open position', 'gauge', '{v}'),
-                ('btc_trading_avg_entry_price', 'avg_entry_price', 'Weighted avg entry price of open position', 'gauge', '{v:.2f}'),
+                ('btc_trading_avg_entry_price', 'avg_entry_price', 'Weighted avg entry price of open position', 'gauge', '{v:.8f}'),
             ]
 
             track_record_metrics = [
@@ -1326,9 +1326,9 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                         tw_age = max(time.time() - tw_ts, 0.0) if tw_ts > 0 else 0.0
                         tw_fresh = 1 if tw_valid_until > time.time() else 0
                         window_metrics = [
-                            ("btc_trade_window_entry_low", "Fresh AI trade window lower entry bound", tw.get("entry_low", 0), "{v:.2f}"),
-                            ("btc_trade_window_entry_high", "Fresh AI trade window upper entry bound", tw.get("entry_high", 0), "{v:.2f}"),
-                            ("btc_trade_window_target_sell", "Fresh AI trade window target sell", tw.get("target_sell", 0), "{v:.2f}"),
+                            ("btc_trade_window_entry_low", "Fresh AI trade window lower entry bound", tw.get("entry_low", 0), "{v:.8f}"),
+                            ("btc_trade_window_entry_high", "Fresh AI trade window upper entry bound", tw.get("entry_high", 0), "{v:.8f}"),
+                            ("btc_trade_window_target_sell", "Fresh AI trade window target sell", tw.get("target_sell", 0), "{v:.8f}"),
                             ("btc_trade_window_min_confidence", "Fresh AI trade window minimum confidence", tw.get("min_confidence", 0), "{v:.4f}"),
                             ("btc_trade_window_min_trade_interval", "Fresh AI trade window minimum trade interval (s)", tw.get("min_trade_interval", 0), "{v}"),
                             ("btc_trade_window_ttl_seconds", "Fresh AI trade window TTL in seconds", tw.get("ttl_seconds", 0), "{v}"),
