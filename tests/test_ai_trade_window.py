@@ -226,6 +226,28 @@ def test_parse_ai_trade_controls_min_sell_pnl_fallback_when_missing() -> None:
     assert 0.002 <= suggestion.min_sell_pnl_pct <= 0.010
 
 
+def test_get_trade_window_file_is_scoped_by_symbol_and_profile() -> None:
+    """Regressão (2026-08-01): trade_window_{profile}.json sozinho era
+    compartilhado por todos os símbolos que dividem o mesmo profile
+    (BTC/ETH/SOL/DOGE em "shadow" gravavam/liam o mesmo arquivo),
+    contaminando a janela operacional de um símbolo com a de outro — mesma
+    classe de bug do index.pkl legado, corrigida em 2026-07-13 só pro
+    Market RAG. O nome do arquivo precisa incluir o symbol."""
+    btc_agent = _agent("shadow")
+    btc_agent.symbol = "BTC-USDT"
+    doge_agent = _agent("shadow")
+    doge_agent.symbol = "DOGE-USDT"
+
+    btc_file = btc_agent._get_trade_window_file()
+    doge_file = doge_agent._get_trade_window_file()
+
+    assert btc_file != doge_file, "BTC e DOGE no mesmo profile não podem compartilhar arquivo"
+    assert "BTC-USDT" in btc_file.name
+    assert "DOGE-USDT" in doge_file.name
+    assert "shadow" in btc_file.name
+    assert "shadow" in doge_file.name
+
+
 def test_get_fresh_ai_trade_window_returns_none_when_stale(tmp_path: Path) -> None:
     agent = _agent("conservative")
     window_file = tmp_path / "trade_window_conservative.json"

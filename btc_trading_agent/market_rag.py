@@ -1358,7 +1358,13 @@ class MarketRAG:
         self.recalibrate_interval = recalibrate_interval
         self.snapshot_interval = snapshot_interval
         suffix = "" if self.profile == "default" else f"_{self.profile}"
-        self.adjustments_file = RAG_DIR / f"regime_adjustments{suffix}.json"
+        # Per-symbol (não só per-profile): regime_adjustments_{profile}.json
+        # legado era compartilhado por todos os símbolos que dividem o mesmo
+        # profile (BTC/ETH/SOL/DOGE em "shadow" gravavam no mesmo arquivo),
+        # contaminando regime/target de um símbolo com o de outro — mesma
+        # classe de bug do index.pkl legado corrigida abaixo em 2026-07-13,
+        # mas que nunca tinha sido aplicada aqui.
+        self.adjustments_file = RAG_DIR / f"regime_adjustments_{self.symbol}{suffix}.json"
         # Índice per-symbol: o index.pkl legado era compartilhado por todos os
         # agentes (BTC/ETH/SOL/...), contaminando os cálculos de buy target
         # com preços de outros símbolos.

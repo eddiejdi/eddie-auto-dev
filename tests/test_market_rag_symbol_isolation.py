@@ -147,6 +147,24 @@ def test_marketrag_migrates_legacy_shared_index(tmp_path, monkeypatch):
     assert reloaded.size == 18
 
 
+def test_marketrag_adjustments_file_scoped_by_symbol_and_profile(tmp_path, monkeypatch):
+    """Regressão (2026-08-01): regime_adjustments_{profile}.json sozinho era
+    compartilhado por todos os símbolos que dividem o mesmo profile (BTC/
+    ETH/SOL/DOGE em "shadow" gravavam/liam o mesmo arquivo), contaminando o
+    regime/target de um símbolo com o de outro — mesma classe de bug do
+    index.pkl legado (corrigido acima em 2026-07-13), mas nunca aplicada ao
+    arquivo irmão adjustments_file até agora."""
+    monkeypatch.setattr(market_rag, "RAG_DIR", tmp_path)
+    monkeypatch.setattr(market_rag, "INDEX_FILE", tmp_path / "index.pkl")
+
+    btc_rag = MarketRAG(symbol="BTC-USDT", profile="shadow")
+    doge_rag = MarketRAG(symbol="DOGE-USDT", profile="shadow")
+
+    assert btc_rag.adjustments_file != doge_rag.adjustments_file
+    assert btc_rag.adjustments_file == tmp_path / "regime_adjustments_BTC-USDT_shadow.json"
+    assert doge_rag.adjustments_file == tmp_path / "regime_adjustments_DOGE-USDT_shadow.json"
+
+
 def test_marketrag_prefers_per_symbol_index(tmp_path, monkeypatch):
     monkeypatch.setattr(market_rag, "RAG_DIR", tmp_path)
     monkeypatch.setattr(market_rag, "INDEX_FILE", tmp_path / "index.pkl")

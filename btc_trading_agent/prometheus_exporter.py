@@ -1251,8 +1251,20 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             # ═══════════════ MARKET RAG (AI Output) ═══════════════
             try:
                 rag_dir = BASE_DIR / "data" / "market_rag"
-                profile_file = rag_dir / f"regime_adjustments_{_profile}.json"
-                rag_file = profile_file if profile_file.exists() else rag_dir / "regime_adjustments.json"
+                # Per-symbol (não só per-profile): regime_adjustments_{profile}.json
+                # sozinho é compartilhado por todos os símbolos que dividem o mesmo
+                # profile (BTC/ETH/SOL/DOGE em "shadow" liam o mesmo arquivo),
+                # contaminando o regime exibido de um símbolo com o de outro. Sufixo
+                # espelha exatamente MarketRAG.__init__ (market_rag.py).
+                _profile_suffix = "" if _profile == "default" else f"_{_profile}"
+                symbol_profile_file = rag_dir / f"regime_adjustments_{_sym}{_profile_suffix}.json"
+                profile_file = rag_dir / f"regime_adjustments{_profile_suffix}.json"
+                if symbol_profile_file.exists():
+                    rag_file = symbol_profile_file
+                elif profile_file.exists():
+                    rag_file = profile_file
+                else:
+                    rag_file = rag_dir / "regime_adjustments.json"
                 if rag_file.exists():
                     with open(rag_file) as _rf:
                         rag_data = json.load(_rf)
@@ -1315,8 +1327,19 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                     output.append(f'btc_rag_ollama_mode_info{{mode="{ollama_mode}",{_cl}}} 1')
                     output.append("")
 
+                    # Per-symbol (não só per-profile): trade_window_{profile}.json
+                    # sozinho é compartilhado por todos os símbolos que dividem o
+                    # mesmo profile — mesma contaminação do regime_adjustments
+                    # acima. Sufixo espelha exatamente
+                    # BitcoinTradingAgent._get_trade_window_file (trading_agent.py).
                     suffix = "" if _profile == "default" else f"_{_profile}"
-                    trade_window_file = rag_dir / f"trade_window{suffix}.json"
+                    symbol_trade_window_file = rag_dir / f"trade_window_{_sym}{suffix}.json"
+                    legacy_trade_window_file = rag_dir / f"trade_window{suffix}.json"
+                    trade_window_file = (
+                        symbol_trade_window_file
+                        if symbol_trade_window_file.exists()
+                        else legacy_trade_window_file
+                    )
                     if trade_window_file.exists():
                         with open(trade_window_file) as _twf:
                             trade_window_data = json.load(_twf)

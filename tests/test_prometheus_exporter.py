@@ -312,3 +312,30 @@ class TestSubDollarPricePrecision:
                 "trunca preços sub-$1 até parecerem abaixo da entrada"
             )
             assert "{v:.8f}" in snippet, f"{metric_name} deve usar {{v:.8f}}"
+
+
+class TestMarketRagFileSymbolScoping:
+    """Regressão do achado real de produção (2026-08-01): regime_adjustments
+    e trade_window eram lidos por um caminho scoped só por profile
+    (shadow/aggressive/conservative), compartilhado por todos os símbolos
+    que dividem o mesmo profile (BTC/ETH/SOL/DOGE em "shadow" liam o mesmo
+    arquivo) — o exporter da DOGE-USDT shadow chegou a expor
+    target_sell=63015 (preço de BTC). Mesma classe de bug do index.pkl
+    legado, nunca corrigida nos arquivos irmãos até agora."""
+
+    def test_send_metrics_reads_symbol_scoped_regime_adjustments_first(self, pe_module):
+        import inspect
+        source = inspect.getsource(pe_module.PrometheusHandler.send_metrics)
+        assert 'f"regime_adjustments_{_sym}{_profile_suffix}.json"' in source or \
+            "regime_adjustments_{_sym}" in source, (
+                "send_metrics precisa preferir o arquivo scoped por symbol+profile "
+                "antes do fallback só-por-profile"
+            )
+
+    def test_send_metrics_reads_symbol_scoped_trade_window_first(self, pe_module):
+        import inspect
+        source = inspect.getsource(pe_module.PrometheusHandler.send_metrics)
+        assert "trade_window_{_sym}" in source, (
+            "send_metrics precisa preferir o trade_window scoped por symbol+profile "
+            "antes do fallback só-por-profile"
+        )

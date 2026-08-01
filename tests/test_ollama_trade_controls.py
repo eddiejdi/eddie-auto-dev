@@ -51,7 +51,10 @@ def rag(monkeypatch):
 
 
 def test_profile_uses_isolated_adjustments_file(rag):
-    assert rag.adjustments_file.name == "regime_adjustments_aggressive.json"
+    """Scoped por symbol+profile (2026-08-01) — regime_adjustments_aggressive.json
+    sozinho era compartilhado por todos os símbolos no profile "aggressive"
+    (BTC/ETH/SOL/DOGE), contaminando regime/target entre eles."""
+    assert rag.adjustments_file.name == "regime_adjustments_BTC-USDT_aggressive.json"
 
 
 def test_shadow_mode_preserves_baseline(rag):
