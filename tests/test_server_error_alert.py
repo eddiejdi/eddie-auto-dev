@@ -25,6 +25,22 @@ class _FakeResponse:
         return None
 
 
+def test_is_noisy_filters_ssh_login_session_scopes() -> None:
+    """session-<N>.scope é um login PAM normal, não um serviço quebrado.
+
+    O número muda a cada conexão SSH, então sem esse filtro o dedup por
+    unit_base nunca colapsa entradas repetidas — cada sessão vira um alerta
+    novo no Telegram.
+    """
+    assert sea._is_noisy("session-10673.scope") is True
+    assert sea._is_noisy("session-1.scope") is True
+
+
+def test_is_noisy_keeps_real_services_alertable() -> None:
+    assert sea._is_noisy("crypto-agent@BTC_USDT_shadow.service") is False
+    assert sea._is_noisy("grafana-selfheal.service") is False
+
+
 def test_glpi_api_url_accepts_public_index_entrypoint() -> None:
     assert sea._glpi_api_url("initSession", "https://auth.rpa4all.com/cmdb/glpi/index.php") == (
         "https://auth.rpa4all.com/cmdb/glpi/apirest.php/initSession"
