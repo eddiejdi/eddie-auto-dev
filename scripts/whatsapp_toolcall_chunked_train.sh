@@ -5,7 +5,12 @@
 # Motivação: o treino precisa da RTX 3060, que é a mesma GPU do Ollama de
 # produção (trading + bot WhatsApp). Segurar produção parada por horas não é
 # aceitável; segurar por 10min de hora em hora é. Cada invocação:
-#   1. para ollama+coordinator (libera a 3060)
+#   1. para ollama.service (libera a 3060) — ollama-gpu-coordinator NUNCA é
+#      parado: é só um proxy HTTP, não retém VRAM, e ficando no ar detecta o
+#      GPU0 fora do ar sozinho e passa a rotear trading-analyst pra NAS
+#      (:11436) automaticamente. Coordenador cair é o problema em si (deixa
+#      os 14 crypto-agent@* sem NENHUM caminho pra IA), não uma consequência
+#      aceitável do treino — ver alerta dedicado se isso acontecer.
 #   2. sobe um guard em background que reforça o stop se algo externo religar
 #      o ollama durante a janela de treino (ver incidente 2026-07-31: um
 #      `systemctl start ollama.service` de fora, 2min30s após o pause, subiu
@@ -13,7 +18,7 @@
 #      preso porque o restore de fim de pacote só via "systemctl start" em
 #      serviço já "active" — no-op, nunca recarregava o modelo)
 #   3. treina por FT_TIME_BUDGET_SECONDS, salvando checkpoint
-#   4. RELIGA ollama+coordinator com stop+start forçado (nunca só "start" em
+#   4. RELIGA ollama.service com stop+start forçado (nunca só "start" em
 #      cima de um serviço que pode ter sido religado torto) + warmup que
 #      confere VRAM real via /api/ps antes de declarar sucesso (trap EXIT —
 #      sempre, mesmo em falha)
@@ -94,7 +99,6 @@ start_ollama_guard() {
       if [[ "$(systemctl is-active ollama.service 2>/dev/null || true)" == "active" ]]; then
         echo "[chunk] ⚠️ guard: algo religou ollama.service durante o treino — parando de novo"
         touch "$GUARD_TRIGGERED_FLAG"
-        sudo systemctl stop ollama-gpu-coordinator.service 2>/dev/null || true
         sudo systemctl stop ollama.service 2>/dev/null || true
       fi
     done
@@ -150,16 +154,21 @@ restore_ollama() {
     # dataset ausente) — ollama nunca foi pausado, não mexer nele.
     return 0
   fi
-  echo "--- [chunk] religando ollama+coordinator+dependentes ---"
+  echo "--- [chunk] religando ollama+dependentes (coordenador nunca foi parado) ---"
   # Stop+start forçado (nunca só "start"): se algo externo religou o ollama
   # torto durante a janela de treino, "start" em cima de um serviço já
   # "active" é um no-op e mantém o CPU-fallback — precisa derrubar e subir
   # de novo agora que a VRAM do treino já foi liberada.
+  #
+  # ollama-gpu-coordinator NÃO é reiniciado aqui porque nunca foi parado
+  # (ver pausa mais abaixo) — ele fica no ar o pacote inteiro, roteando
+  # trading-analyst pra NAS (:11436, mesmo Modelfile do GPU0) enquanto o
+  # GPU0 está de folga. O coordinator cair era o problema real: agentes
+  # perdiam TODO caminho pra IA, não só o GPU0.
   sudo systemctl stop ollama.service 2>/dev/null || true
   sleep 1
   sudo systemctl start ollama.service 2>/dev/null || true
   sleep 2
-  sudo systemctl start ollama-gpu-coordinator.service 2>/dev/null || true
   for unit in "${OLLAMA_PULLERS[@]}"; do
     sudo systemctl start "$unit" 2>/dev/null || true
   done
@@ -190,7 +199,12 @@ restore_ollama() {
     rm -f "$GUARD_TRIGGERED_FLAG"
   fi
 
-  if [[ "$st_ollama" != "active" ]]; then
+  if [[ "$st_coord" != "active" ]]; then
+    # O coordinator nunca é parado por este script — se caiu, foi por conta
+    # própria (crash/OOM/bug), e é o problema mais sério possível aqui: os
+    # agentes perdem TODO caminho pra IA, não só o GPU0. Nunca deve acontecer.
+    send_telegram "🚨 *Treino tool-calling*%0A%0Aollama-gpu-coordinator caiu (não foi este script que parou) — TODOS os agentes ficam sem IA, não só o GPU0. Verificar manualmente: systemctl status ollama-gpu-coordinator.service${guard_note}"
+  elif [[ "$st_ollama" != "active" ]]; then
     send_telegram "🚨 *Treino tool-calling*%0A%0AFalha ao religar ollama.service após o pacote de treino. Verificar manualmente no homelab.${guard_note}"
   elif [[ "$gpu_ok" != "1" ]]; then
     send_telegram "🚨 *Treino tool-calling*%0A%0Aollama.service religou mas *$WARMUP_MODEL* não carregou na GPU (CPU-fallback) mesmo após retry. Verificar manualmente (nvidia-smi / systemctl restart ollama.service).${guard_note}"
@@ -213,13 +227,20 @@ if [[ ! -f "$DATA_DIR/whatsapp_toolcall_train.jsonl" ]]; then
   exit 1
 fi
 
-echo "--- [chunk] pausando ollama+coordinator+dependentes p/ liberar a 3060 ---"
+echo "--- [chunk] pausando ollama+dependentes p/ liberar a 3060 (coordenador fica no ar) ---"
 PAUSED=1
+# ollama-gpu-coordinator NUNCA é parado: ele não retém VRAM da 3060 (é só um
+# proxy HTTP), então não precisa parar pra liberar GPU pro treino. Ficando
+# no ar, ele detecta o GPU0 indisponível sozinho (poll falha) e passa a
+# rotear trading-analyst pra NAS (:11436) automaticamente — os 14
+# crypto-agent@* continuam com IA o pacote inteiro, sem CPU-fallback e sem
+# precisar de nenhum bypass fora da arquitetura. Coordenador cair É o
+# problema (ver alerta em restore_ollama), não uma consequência aceitável
+# do treino.
 # Ordem importa: primeiro quem reergue o ollama, depois o ollama.
 for unit in "${OLLAMA_PULLERS[@]}"; do
   sudo systemctl stop "$unit" 2>/dev/null || true
 done
-sudo systemctl stop ollama-gpu-coordinator.service 2>/dev/null || true
 sudo systemctl stop ollama.service 2>/dev/null || true
 sleep 4
 

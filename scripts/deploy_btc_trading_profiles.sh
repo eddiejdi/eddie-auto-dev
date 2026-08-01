@@ -757,22 +757,24 @@ sudo systemctl enable ollama-gpu-coordinator.service 2>/dev/null || true
 sudo systemctl restart ollama-gpu-coordinator.service
 sleep 2
 
-# Atualiza common.conf para rotear chamadas pelo coordenador (:11437).
-# FALLBACK_HOST fica na NAS (:11436, ollama direto, sem passar pelo
-# coordenador) de propósito — se apontasse pro mesmo :11437 do primário,
-# "fallback" nenhum ajudaria quando o coordenador cai (ex.: pausado pelo job
-# de fine-tune horário): primário e fallback morreriam juntos. A NAS não é
-# parada por esse job, então segue de pé como rota independente — e roda o
-# MESMO modelo trading-analyst (não um modelo pequeno genérico), preservando
-# qualidade de decisão. GPU1 fica reservado pra persona/WhatsApp.
+# Atualiza common.conf para rotear TODAS as chamadas (HOST e FALLBACK_HOST)
+# pelo coordenador (:11437) de propósito. O coordenador é quem decide qual
+# GPU usar por modelo/saúde/carga e faz failover interno sozinho (ex.: NAS
+# tem trading-analyst desde 2026-08-01 — se o GPU0 cai, ele roteia pra lá
+# automaticamente). Um agente com FALLBACK_HOST apontando direto pra uma
+# GPU (por fora do coordenador) tira a serialização anti-503-storm do
+# incidente 2026-07-24 e quebra a visibilidade centralizada — não fazer
+# isso. O coordenador em si nunca deve cair; se cair, conserte o que o
+# derrubou (ver whatsapp_toolcall_chunked_train.sh), não dê um desvio pros
+# agentes.
 sudo sed -i \
   -e 's|^Environment=OLLAMA_PLAN_HOST=.*|Environment=OLLAMA_PLAN_HOST=http://192.168.15.2:11437|' \
   -e 's|^Environment=OLLAMA_TRADE_PARAMS_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_HOST=http://192.168.15.2:11437|' \
-  -e 's|^Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.4:11436|' \
+  -e 's|^Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11437|' \
   -e 's|^Environment=OLLAMA_TRADE_WINDOW_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_HOST=http://192.168.15.2:11437|' \
-  -e 's|^Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.4:11436|' \
+  -e 's|^Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11437|' \
   /etc/systemd/system/crypto-agent@.service.d/common.conf 2>/dev/null || true
-echo "🔀 Routing: agents → coordenador :11437 (llama3.2:1b) | fallback → NAS :11436 trading-analyst"
+echo "🔀 Routing: agents → coordenador :11437 (roteia GPU0/GPU1/NAS por saúde e modelo)"
 
 # Habilita e reinicia RSS sentiment
 sudo systemctl enable rss-sentiment-exporter.service 2>/dev/null || true
