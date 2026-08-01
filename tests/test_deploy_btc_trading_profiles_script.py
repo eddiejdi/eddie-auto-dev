@@ -18,12 +18,13 @@ def test_script_routes_ollama_fallback_host_away_from_coordinator() -> None:
     O coordenador (:11437) é pausado toda hora pelo job de fine-tune; se o
     fallback também apontar pra ele, primário e fallback caem juntos e os
     agentes ficam cegos ~10-15min/hora sem nenhum caminho alternativo.
-    ollama-gpu1.service (:11435) não é pausado por esse job — é o fallback
-    correto.
+    A NAS (:11436, roda trading-analyst — mesmo modelo do GPU0) não é
+    pausada por esse job — é o fallback correto. GPU1 (:11435) fica
+    reservado pra persona/WhatsApp, não é usado como fallback de trading.
     """
     content = _load_script()
-    assert "Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11435" in content
-    assert "Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11435" in content
+    assert "Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.4:11436" in content
+    assert "Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.4:11436" in content
     assert "Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11437" not in content
     assert "Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11437" not in content
     # Primário continua no coordenador — só o fallback muda.
