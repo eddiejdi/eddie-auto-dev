@@ -12,6 +12,25 @@ def _load_script() -> str:
     return SCRIPT_PATH.read_text(encoding="utf-8")
 
 
+def test_script_routes_ollama_fallback_host_away_from_coordinator() -> None:
+    """FALLBACK_HOST não pode apontar pro mesmo endereço do HOST primário.
+
+    O coordenador (:11437) é pausado toda hora pelo job de fine-tune; se o
+    fallback também apontar pra ele, primário e fallback caem juntos e os
+    agentes ficam cegos ~10-15min/hora sem nenhum caminho alternativo.
+    ollama-gpu1.service (:11435) não é pausado por esse job — é o fallback
+    correto.
+    """
+    content = _load_script()
+    assert "Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11435" in content
+    assert "Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11435" in content
+    assert "Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11437" not in content
+    assert "Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11437" not in content
+    # Primário continua no coordenador — só o fallback muda.
+    assert "Environment=OLLAMA_TRADE_PARAMS_HOST=http://192.168.15.2:11437" in content
+    assert "Environment=OLLAMA_TRADE_WINDOW_HOST=http://192.168.15.2:11437" in content
+
+
 def test_script_syncs_btc_dashboard_to_canonical_remote_filename() -> None:
     content = _load_script()
     assert 'BTC_DASHBOARD_SRC="${REPO_ROOT}/grafana/dashboards/btc-trading-monitor.json"' in content

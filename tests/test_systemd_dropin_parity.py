@@ -444,3 +444,40 @@ def test_dropin_environment_never_shadowed_by_models_env() -> None:
         "(vale para os 14 agentes) ou use um EnvironmentFile= por perfil, que é "
         "mesclado depois. Linhas mortas: " + "; ".join(dead)
     )
+
+
+def test_ollama_fallback_host_never_matches_primary_host_in_dropins() -> None:
+    """`*_FALLBACK_HOST` não pode apontar pro mesmo endereço do `*_HOST` primário.
+
+    O coordenador (:11437) é pausado toda hora pelo job de fine-tune
+    (whatsapp_toolcall_chunked_train.sh). Se o fallback também apontar pra
+    ele, primário e fallback caem juntos e os crypto-agent@* ficam sem
+    nenhum caminho pra IA durante a pausa — o "fallback" nunca ajuda.
+    ollama-gpu1.service (:11435) não é parado por esse job; é o fallback
+    correto (ver deploy_btc_trading_profiles.sh e zz-direct-ollama.conf).
+    """
+    offenders: list[str] = []
+    for rel_dir in _allowed_dirs():
+        if not rel_dir.startswith("crypto-agent@"):
+            continue
+        for conf in sorted((REPO_ROOT / "systemd" / rel_dir).glob("*.conf")):
+            text = conf.read_text(encoding="utf-8")
+            hosts: dict[str, str] = {}
+            for name, value in re.findall(
+                r'^Environment="?(OLLAMA_[A-Z_]*_HOST)="?([^"\s]+)"?\s*$',
+                text,
+                flags=re.MULTILINE,
+            ):
+                hosts[name] = value
+            for name, value in hosts.items():
+                if not name.endswith("_FALLBACK_HOST"):
+                    continue
+                primary_name = name.replace("_FALLBACK_HOST", "_HOST")
+                primary_value = hosts.get(primary_name)
+                if primary_value is not None and primary_value == value:
+                    offenders.append(f"{rel_dir}/{conf.name}: {name}={value} == {primary_name}")
+
+    assert not offenders, (
+        "FALLBACK_HOST igual ao HOST primário — fallback inútil quando o "
+        "primário cai. Offenders: " + "; ".join(offenders)
+    )
