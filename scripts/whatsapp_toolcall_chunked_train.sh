@@ -114,8 +114,15 @@ stop_ollama_guard() {
 # Confere que o modelo de produção carregou de verdade na GPU (não em CPU-
 # fallback) — dispara um /api/generate trivial (força load se preciso) e lê
 # size_vram em /api/ps. size_vram==0 com o modelo presente = CPU-fallback.
+#
+# Timeout de 220s (não 90s): medido um cold-load de 171.86s do trading-analyst
+# (8B Q4_K_M) logo após o treino liberar a VRAM — cache de disco frio +
+# handoff de driver com a GPU recém-liberada tornam o load bem mais lento que
+# um load "quente". Com 90s o script declarava CPU-fallback (e disparava
+# alerta falso no Telegram) enquanto o load ainda estava em andamento e
+# terminava com sucesso segundos depois, sem intervenção manual (2026-08-01).
 ollama_gpu_ok() {
-  curl -s -m 90 -X POST "$OLLAMA_URL/api/generate" \
+  curl -s -m 220 -X POST "$OLLAMA_URL/api/generate" \
     -d "{\"model\":\"$WARMUP_MODEL\",\"prompt\":\"ping\",\"stream\":false}" \
     -o /dev/null -w '' 2>/dev/null || true
   local vram

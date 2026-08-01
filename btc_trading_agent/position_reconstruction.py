@@ -43,43 +43,29 @@ def _is_excluded_buy(trade: dict[str, Any], *, exclude_external_deposits: bool) 
     return source in ("external_deposit", "conversion")
 
 
-def _reconstruct_recent_buy_streak(
-    trades: list[dict[str, Any]],
-    *,
-    exclude_external_deposits: bool,
-) -> list[dict[str, Any]]:
-    """Em conta compartilhada, usa apenas a sequência recente de BUYs ainda não revertida.
-
-    Isso evita ressuscitar posições antigas de outro profile quando o saldo spot
-    global é compartilhado e o ledger por profile já divergiu da KuCoin.
-    """
-    open_buys: list[dict[str, Any]] = []
-    for trade in trades:
-        side = trade.get("side")
-        if side in SELL_SIDES:
-            break
-        if side == "buy" and not _is_excluded_buy(
-            trade,
-            exclude_external_deposits=exclude_external_deposits,
-        ):
-            open_buys.append(trade)
-    return open_buys
-
-
 def reconstruct_open_buys(
     trades: list[dict[str, Any]],
     *,
     shared_profile_ambiguous: bool = False,
     exclude_external_deposits: bool = True,
 ) -> list[dict[str, Any]]:
-    """Reconstrói BUYs abertos a partir de trades em ordem decrescente de tempo."""
-    normalized = [_normalize_trade(trade) for trade in trades]
+    """Reconstrói BUYs abertos a partir de trades em ordem decrescente de tempo.
 
-    if shared_profile_ambiguous:
-        return _reconstruct_recent_buy_streak(
-            normalized,
-            exclude_external_deposits=exclude_external_deposits,
-        )
+    Um SELL com metadata de saída por slot (`slot_exit_reason`) fecha apenas a
+    entrada específica que ele referencia (por `slot_buy_trade_id`, ou por preço
+    como fallback) — nunca todas as entradas anteriores. Só um SELL "cego" (sem
+    metadata de slot, ex.: reconciliação manual/exchange) é tratado como
+    flatten global, encerrando a reconstrução naquele ponto.
+
+    Em conta compartilhada (`shared_profile_ambiguous=True`), o matching por
+    preço fica desabilitado — preços podem colidir entre profiles que dividem
+    a mesma subconta KuCoin — mas o matching por `slot_buy_trade_id` continua
+    válido, pois o id referencia um trade já filtrado por profile na consulta
+    ao banco. Isso evita "esquecer" entradas antigas ainda abertas sempre que
+    qualquer SELL por slot mais recente acontece na mesma conta.
+    """
+    normalized = [_normalize_trade(trade) for trade in trades]
+    allow_price_matching = not shared_profile_ambiguous
 
     slot_sells_by_id: dict[int, int] = {}
     slot_sells_by_price: dict[float, int] = {}
@@ -96,7 +82,7 @@ def reconstruct_open_buys(
             if buy_id:
                 key = int(buy_id)
                 slot_sells_by_id[key] = slot_sells_by_id.get(key, 0) + 1
-            elif slot_price:
+            elif slot_price and allow_price_matching:
                 try:
                     key = round(float(slot_price), 2)
                     slot_sells_by_price[key] = slot_sells_by_price.get(key, 0) + 1
@@ -132,7 +118,7 @@ def reconstruct_open_buys(
             if slot_sells_by_id.get(trade_id_int, 0) > 0:
                 slot_sells_by_id[trade_id_int] -= 1
                 consumed = True
-        if not consumed and slot_sells_by_price.get(price_key, 0) > 0:
+        if not consumed and allow_price_matching and slot_sells_by_price.get(price_key, 0) > 0:
             slot_sells_by_price[price_key] -= 1
             consumed = True
         if not consumed and slot_sells_blind > 0:
