@@ -146,9 +146,13 @@ class SellTargetMixin:
         if self.state.target_sell_price <= 0:
             return {}
 
+        # 8 casas (não 2): round(x, 2) trunca qualquer preço sub-$1 (DOGE, XRP,
+        # ADA...) em degraus de 1 centavo — para um ativo de $0.07, isso é ~14%
+        # do preço e faz o target arredondar para BAIXO da entrada mesmo quando
+        # o valor calculado (entry × (1+ai_tp)) está corretamente acima dela.
         metadata: Dict[str, Any] = {
-            "target_sell_price": round(float(self.state.target_sell_price), 2),
-            "target_sell_trigger_price": round(float(self.state.target_sell_price), 2),
+            "target_sell_price": round(float(self.state.target_sell_price), 8),
+            "target_sell_trigger_price": round(float(self.state.target_sell_price), 8),
         }
         if self.state.target_sell_reason:
             metadata["target_sell_reason"] = self.state.target_sell_reason

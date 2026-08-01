@@ -285,3 +285,30 @@ class TestSharedTrainingDatabase:
             "send_metrics não pode construir TrainingDatabase por scrape "
             "(cada construção abre um ThreadedConnectionPool que nunca é fechado)"
         )
+
+
+class TestSubDollarPricePrecision:
+    """Regressão do achado real de produção (2026-08-01, DOGE-USDT shadow
+    slot #3817): métricas de preço formatadas com '{v:.2f}' truncam
+    qualquer ativo sub-$1 (DOGE, XRP, ADA...) em degraus de 1 centavo —
+    ~14% do preço de um ativo de $0.07 — fazendo um target_sell calculado
+    corretamente acima da entrada aparecer como se estivesse abaixo dela
+    no dashboard/Prometheus. Preço precisa de 8 casas, como já usado em
+    btc_trading_open_position_btc."""
+
+    def test_price_scale_metrics_use_eight_decimal_precision(self, pe_module):
+        import inspect
+        source = inspect.getsource(pe_module)
+        for metric_name in (
+            "btc_trading_avg_entry_price",
+            "btc_trade_window_entry_low",
+            "btc_trade_window_entry_high",
+            "btc_trade_window_target_sell",
+        ):
+            idx = source.index(f"'{metric_name}'") if f"'{metric_name}'" in source else source.index(f'"{metric_name}"')
+            snippet = source[idx:idx + 200]
+            assert "{v:.2f}" not in snippet.split("\n")[0], (
+                f"{metric_name} não pode usar precisão de 2 casas — "
+                "trunca preços sub-$1 até parecerem abaixo da entrada"
+            )
+            assert "{v:.8f}" in snippet, f"{metric_name} deve usar {{v:.8f}}"

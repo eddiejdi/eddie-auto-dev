@@ -227,6 +227,22 @@ class TestSerializeTargetSellMetadata:
         meta = agent._serialize_target_sell_metadata()
         assert "target_sell_reason" not in meta
 
+    def test_preserves_precision_for_sub_dollar_assets(self):
+        """Regressão do achado real de produção (2026-08-01, DOGE-USDT shadow
+        slot #3817): round(x, 2) trunca preços sub-$1 em degraus de 1 centavo
+        — pra um ativo de ~$0.07, isso é ~14% do preço e faz um alvo
+        calculado corretamente ACIMA da entrada (entry=0.07209, alvo
+        calculado=0.07389) ser persistido como 0.07, que parece ABAIXO da
+        entrada. round(x, 8) preserva a precisão real."""
+        entry = 0.07209
+        target = entry * 1.025  # ai_tp=2.5%, corretamente acima da entrada
+        agent = _make_agent(target_sell_price=target, target_sell_reason="ranging")
+        meta = agent._serialize_target_sell_metadata()
+        assert meta["target_sell_price"] == pytest.approx(target, abs=1e-6)
+        assert meta["target_sell_price"] > entry, (
+            "alvo persistido não pode parecer abaixo da entrada por arredondamento"
+        )
+
 
 # ── _build_trade_metadata ────────────────────────────────────────────────────
 
