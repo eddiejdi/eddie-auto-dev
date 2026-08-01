@@ -33,7 +33,7 @@ Execute este script no homelab:
 # Obter token
 JWT=$(curl -s -X POST http://192.168.15.2:3009/graphql \
   -H "Content-Type: application/json" \
-  -d '{"query":"mutation{authentication{login(username:\"copilot-agent\",password:\"eddie_memory_2026\",strategy:\"local\"){responseResult{succeeded}jwt}}}"}' | grep -o '"jwt":"[^"]*' | cut -d'"' -f4)
+  -d '{"query":"mutation{authentication{login(username:\"copilot-agent\",password:\"$WIKI_PASSWORD\",strategy:\"local\"){responseResult{succeeded}jwt}}}"}' | grep -o '"jwt":"[^"]*' | cut -d'"' -f4)
 
 # Ler conteúdo do arquivo
 CONTENT=$(cat /workspace/eddie-auto-dev/docs/WIKI_PAGE_CRYPTO_AGENTS_RESTORATION.md)

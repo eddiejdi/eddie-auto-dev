@@ -1,0 +1,15 @@
+[Unit]
+Description=Sia (hostd) API proxy to macvlan node
+After=network-online.target
+Wants=network-online.target
+# Soft dependency only — never block/create cycle
+Wants=sia-host-shim.service
+Requires=sia-api-proxy.socket
+
+[Service]
+ExecStart=/lib/systemd/systemd-socket-proxyd 192.168.15.252:9980
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

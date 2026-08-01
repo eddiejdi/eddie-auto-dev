@@ -4,6 +4,10 @@
 O Home Assistant renova o token Tuya automaticamente. Este script monitora
 falhas de autenticação e disponibilidade real das entidades da config entry,
 evitando falso positivo baseado apenas em substring no `entity_id`.
+
+Telegram: somente em erro (falha de entry/HA, 0 entidades ativas, token
+já expirado). Avisos de "perto de vencer" ficam só no journal — o selfheal
+cuida da renovação proativa.
 """
 
 from __future__ import annotations
@@ -28,6 +32,10 @@ CONTAINER = os.environ.get("HA_CONTAINER", "homeassistant")
 IGNORED_AVAILABILITY_DOMAINS = {"scene"}
 HA_API_RETRIES = 6
 HA_API_RETRY_SLEEP_S = 10
+ZERO_ACTIVE_RETRIES = int(os.environ.get("TUYA_ZERO_ACTIVE_RETRIES", "3"))
+ZERO_ACTIVE_RETRY_SLEEP_S = int(os.environ.get("TUYA_ZERO_ACTIVE_RETRY_SLEEP_S", "20"))
+# Apenas para log no journal — NÃO dispara Telegram.
+TOKEN_WARN_MINUTES = int(os.environ.get("TUYA_TOKEN_WARN_MINUTES", "45"))
 
 
 def get_secret(name: str, field: str = "password", required: bool = True) -> str:
@@ -272,6 +280,18 @@ def main() -> int:
         return 2
 
     remaining = result.get("remaining_min", 0)
+    for attempt in range(1, ZERO_ACTIVE_RETRIES + 1):
+        if ha_summary["available"] != 0 or ha_summary["monitored_total"] == 0:
+            break
+        log.warning(
+            "HA retornou 0 entidades Tuya ativas; repetindo leitura %s/%s em %ss",
+            attempt,
+            ZERO_ACTIVE_RETRIES,
+            ZERO_ACTIVE_RETRY_SLEEP_S,
+        )
+        time.sleep(ZERO_ACTIVE_RETRY_SLEEP_S)
+        ha_summary = evaluate_ha_entities(ha_url, ha_token, result["entity_ids"])
+
     log.info("Tuya token expira em %.0f min | HA: %s", remaining, ha_summary["status"])
 
     if ha_summary["available"] == 0 and ha_summary["monitored_total"] > 0:
@@ -288,18 +308,26 @@ def main() -> int:
             )
         return 2
 
-    if remaining < 10:
-        log.warning("Token expira em menos de 10 minutos!")
+    if remaining <= 0:
+        log.error("Token Tuya expirado; reautenticação por QR é necessária")
         if tg_token and tg_chat_id:
             send_telegram(
-                f"⏰ Tuya perto de renovar no Home Assistant\n"
-                f"Token expira em ~{remaining:.0f} min.\n"
+                f"🔴 Tuya expirado no Home Assistant\n"
+                f"Token venceu há ~{abs(remaining):.0f} min.\n"
                 f"HA: {ha_summary['status']}\n"
-                f"O HA costuma renovar sozinho. Reautentique só se aparecer erro de auth em:\n"
-                f"{ha_url}/config/integrations",
+                f"Reautentique em: {ha_url}/config/integrations",
                 tg_token,
                 tg_chat_id,
             )
+        return 2
+
+    # Janela de aviso: só journal — selfheal renova proativamente; não spamar Telegram.
+    if remaining < TOKEN_WARN_MINUTES:
+        log.warning(
+            "Token expira em ~%.0f min (limiar log %s min); sem Telegram (somente erros)",
+            remaining,
+            TOKEN_WARN_MINUTES,
+        )
 
     return 0
 

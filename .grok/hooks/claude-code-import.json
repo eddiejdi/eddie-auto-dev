@@ -71,6 +71,26 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "matcher": "web-agent__.*|web_agent__.*|.*web_run_task.*|.*web_fill_form.*|.*web_scrape.*|.*web_ask_human.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/web_agent_live_log.py --mode=pre",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/web_agent_live_log.py --mode=delta",
+            "timeout": 5
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -96,6 +116,15 @@
       }
     ],
     "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/web_agent_live_log.py --mode=stop",
+            "timeout": 10
+          }
+        ]
+      },
       {
         "hooks": [
           {

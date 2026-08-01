@@ -41,8 +41,7 @@ except ImportError:
 # ── Constantes ───────────────────────────────────────────────────────────────
 
 DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading",
+    "DATABASE_URL", ""
 )
 OLLAMA_URL   = os.getenv("OLLAMA_URL", "http://192.168.15.2:11434")
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "")  # vazio = detectar modelo carregado

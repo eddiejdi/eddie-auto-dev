@@ -29,15 +29,20 @@ _SPEC.loader.exec_module(approval)
 
 def test_approval_keyboard_contains_actions() -> None:
     keyboard = approval.approval_keyboard("2026-07-09")
-    row = keyboard["inline_keyboard"][0]
-    callbacks = {btn["callback_data"] for btn in row}
+    callbacks = {
+        btn["callback_data"]
+        for row in keyboard["inline_keyboard"]
+        for btn in row
+    }
     assert "dag:A:2026-07-09" in callbacks
     assert "dag:R:2026-07-09" in callbacks
+    assert "dag:X:2026-07-09" in callbacks
 
 
 def test_parse_callback_data() -> None:
     assert approval._parse_callback_data("dag:A:2026-07-10") == ("approved", "2026-07-10")
     assert approval._parse_callback_data("dag:R:2026-07-10") == ("regenerate", "2026-07-10")
+    assert approval._parse_callback_data("dag:X:2026-07-10") == ("rejected", "2026-07-10")
     assert approval._parse_callback_data("A:intent") is None
 
 

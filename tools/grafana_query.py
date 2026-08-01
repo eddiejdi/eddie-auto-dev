@@ -34,7 +34,7 @@ GRAFANA_URL = os.getenv("GRAFANA_URL", "http://localhost:3002")
 GRAFANA_USER = os.getenv("GRAFANA_USER", "admin")
 GRAFANA_PASS = os.getenv("GRAFANA_PASS", "")
 # Banco principal de trading (contém news_sentiment, trades, etc.)
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading")
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 GRAFANA_DS_UID = os.getenv("GRAFANA_DS_UID", "btc-trading-pg")
 
 # ---------------------------------------------------------------------------

@@ -72,7 +72,8 @@ jobs:
       - name: 4. ZTE port forward WireGuard 51820
         run: |
           echo "=== ZTE GPON - WireGuard 51820 UDP ==="
-          SECRETS_KEY="188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3"
+          . /etc/crypto-agent/secrets-api.env  # chave fora do git (runner é self-hosted no homelab)
+          SECRETS_KEY="$SECRETS_AGENT_API_KEY"
           ZTE_USER=$(curl -sf "http://localhost:8088/secrets/local/network/zte_gpon_modem?field=username" \
             -H "x-api-key: $SECRETS_KEY" 2>/dev/null \
             | python3 -c "import sys,json; print(json.load(sys.stdin).get('value',''))" 2>/dev/null || echo "")

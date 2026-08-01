@@ -12,6 +12,10 @@ HA preferindo hot-apply (`tuya_token_inject.apply`), com fallback para
 `/var/lib/prometheus/node-exporter/tuya_token_selfheal.prom` (dashboard
 Grafana `tuya-token-selfheal`).
 
+Complementa (não substitui) o **monitor** `tuya-token-renewer` — ver
+[TUYA_TOKEN_RENEWER.md](TUYA_TOKEN_RENEWER.md): aquele job **não** renova e, desde
+2026-07-30, manda Telegram **somente em erro** (não no aviso “perto de vencer”).
+
 | Variável | Default | Propósito |
 |---|---|---|
 | `HA_CONTAINER` | `homeassistant` | Nome do container Docker do Home Assistant (mesma semântica do `tuya_token_renewer.py`). |

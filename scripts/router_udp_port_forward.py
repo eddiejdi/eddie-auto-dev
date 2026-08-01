@@ -43,10 +43,12 @@ TARGET_PORT = "28967"
 SECRETS_API = os.environ.get(
     "SECRETS_API_URL", "http://192.168.15.2:8088"
 )
-SECRETS_KEY = os.environ.get(
-    "SECRETS_API_KEY",
-    "188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3",
-)
+SECRETS_KEY = os.environ.get("SECRETS_API_KEY", "")
+if not SECRETS_KEY:
+    raise SystemExit(
+        "SECRETS_API_KEY ausente. Exporte a variável ou carregue o "
+        "arquivo de ambiente do host antes de rodar este script."
+    )
 
 
 def _fetch_credentials() -> tuple[str, str]:

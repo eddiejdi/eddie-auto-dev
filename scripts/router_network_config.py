@@ -57,10 +57,12 @@ FALLBACK_DNS = "8.8.8.8"
 SQUID_PORT = 3128
 SCREENSHOT_DIR = Path("/tmp/router_config_screenshots")
 SECRETS_API = os.environ.get("SECRETS_API_URL", f"http://{HOMELAB_IP}:8088")
-SECRETS_KEY = os.environ.get(
-    "SECRETS_API_KEY",
-    "188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3",
-)
+SECRETS_KEY = os.environ.get("SECRETS_API_KEY", "")
+if not SECRETS_KEY:
+    raise SystemExit(
+        "SECRETS_API_KEY ausente. Exporte a variável ou carregue o "
+        "arquivo de ambiente do host antes de rodar este script."
+    )
 
 
 # ─── Credenciais ─────────────────────────────────────────────────────────────

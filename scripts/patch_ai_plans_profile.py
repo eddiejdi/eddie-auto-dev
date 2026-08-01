@@ -27,7 +27,7 @@ DB_HOST = os.getenv("PGHOST", "192.168.15.2")
 DB_PORT = int(os.getenv("PGPORT", "5433"))
 DB_NAME = os.getenv("PGDATABASE", "btc_trading")
 DB_USER = os.getenv("PGUSER", "postgres")
-DB_PASS = os.getenv("PGPASSWORD", "eddie_memory_2026")
+DB_PASS = os.getenv("PGPASSWORD", "")
 
 # ---------------------------------------------------------------------------
 # 1. Migração SQL

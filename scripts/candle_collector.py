@@ -31,8 +31,7 @@ logging.basicConfig(
 logger = logging.getLogger("candle_collector")
 
 DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading",
+    "DATABASE_URL", ""
 )
 SCHEMA = "btc"
 KUCOIN_BASE = "https://api.kucoin.com"

@@ -50,8 +50,7 @@ FETCH_INTERVAL = int(os.environ.get("BTC_SIGNALS_INTERVAL", "60"))
 SYMBOL         = os.environ.get("BTC_SIGNALS_SYMBOL", "BTC-USDT")
 PROMETHEUS_PORT= int(os.environ.get("BTC_SIGNALS_PORT", "9123"))
 DATABASE_URL   = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading",
+    "DATABASE_URL", ""
 )
 
 WEIGHTS = {

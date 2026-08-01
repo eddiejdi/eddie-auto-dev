@@ -1,0 +1,7 @@
+[Unit]
+Description=Sia macvlan watchdog — corrige eth0 ausente no namespace
+After=docker.service sia-host-shim.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/sia-macvlan-watchdog.sh

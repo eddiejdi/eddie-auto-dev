@@ -126,8 +126,9 @@ def _get_report_db_url() -> str:
         return _gdu()
     except Exception:
         pass
-    # Fallback idêntico ao de training_db.py
-    return "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading"
+    # Sem fallback com credencial: este arquivo é versionado num repo público.
+    # Ver docs/INCIDENTS/2026-07-28_SECRETS_IN_PUBLIC_REPO.md.
+    return os.environ.get("DATABASE_URL", "")
 
 
 def _load_training_db_module():

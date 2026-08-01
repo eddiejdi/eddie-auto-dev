@@ -56,7 +56,16 @@
     .edition .meta { color:var(--muted); font-size:12px; margin-bottom:8px; }
     audio { width:100%; margin-top:8px; }
     pre.joblog { background:var(--bg); border:1px solid var(--line); border-radius:8px;
-                 padding:10px; max-height:180px; overflow:auto; font-size:12px; white-space:pre-wrap; }
+                 padding:10px; max-height:420px; min-height:160px; overflow:auto; font-size:12px;
+                 white-space:pre-wrap; font-family:ui-monospace,Menlo,Consolas,monospace;
+                 line-height:1.45; color:#c9d4e3; }
+    pre.joblog.empty { color:var(--muted); }
+    .joblog-bar { display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center;
+                  margin:10px 0 8px; font-size:12px; color:var(--muted); }
+    .joblog-bar label { display:inline-flex; align-items:center; gap:6px; cursor:pointer; user-select:none; }
+    .joblog-bar .live-dot { width:8px; height:8px; border-radius:50%; background:#567086; display:inline-block; }
+    .joblog-bar .live-dot.on { background:var(--ok); box-shadow:0 0 0 3px rgba(61,214,140,.15); animation:pulse 1.2s infinite; }
+    @keyframes pulse { 50% { opacity:.55; } }
   </style>
 </head>
 <body>
@@ -113,6 +122,34 @@
           <div><div class="label">Telegram pessoal</div><div class="hint">Notificação adicional</div></div>
           <label class="switch"><input type="checkbox" id="send_telegram" checked /><span class="slider"></span></label>
         </div>
+        <div class="row" style="margin-top:8px">
+          <div>
+            <div class="label">Duração alvo do áudio (s)</div>
+            <div class="hint">3600 = 1h. Acima de ~300s usa geração modular (N segmentos + concat)</div>
+          </div>
+        </div>
+        <input id="min_audio_seconds" type="number" min="0" step="60" value="3600" style="max-width:140px" />
+        <div class="row" style="margin-top:8px">
+          <div>
+            <div class="label">Duração por segmento (s)</div>
+            <div class="hint">Cada bloco LLM+TTS; depois concatena no locution.wav</div>
+          </div>
+        </div>
+        <input id="segment_target_seconds" type="number" min="90" step="30" value="180" style="max-width:140px" />
+        <div class="row" style="margin-top:8px">
+          <div>
+            <div class="label">Tentativas extras se curto</div>
+            <div class="hint">0 = não regenera; no modular gera blocos extras para cobrir o déficit</div>
+          </div>
+        </div>
+        <input id="max_length_retries" type="number" min="0" max="5" step="1" value="1" style="max-width:140px" />
+        <div class="row" style="margin-top:8px">
+          <div>
+            <div class="label">Mesa de Editor</div>
+            <div class="hint">Revisa rascunhos no final: corta, reorganiza e polisce antes do TTS</div>
+          </div>
+          <label class="switch"><input type="checkbox" id="editor_enabled" checked /><span class="slider"></span></label>
+        </div>
         <div class="actions" style="margin-top:12px">
           <button id="runBtn">Gerar boletim</button>
           <button class="ghost" id="reloadBtn">Recarregar</button>
@@ -122,9 +159,47 @@
     </div>
 
     <div class="card">
+      <h2>Prompts LLM — Agenda Diária Importante</h2>
+      <div class="hint" style="margin-bottom:12px">
+        Editáveis aqui e gravados em <code>artifacts/daily_agenda/panel_config.json</code>.
+        A próxima geração usa o texto salvo — <b>sem redeploy</b>.
+        Placeholders: <code>{text}</code> · <code>{allies}</code> · no Editor também
+        <code>{source}</code>, <code>{previous_tail}</code>, <code>{target_words}</code>,
+        <code>{batch_index}</code>, <code>{total_batches}</code>.
+      </div>
+      <div class="row"><div class="label">1) Prompt de expansão (repórter / detalha o source)</div></div>
+      <textarea id="prompt_expansion" style="min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"
+        placeholder="Template de expansão…"></textarea>
+      <div class="row" style="margin-top:12px"><div class="label">2) Prompt de locução (boletim rádio/TV)</div></div>
+      <textarea id="prompt_broadcast" style="min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"
+        placeholder="Template de locução…"></textarea>
+      <div class="row" style="margin-top:12px"><div class="label">3) Prompt do Editor-chefe (corta, reorganiza, polisce)</div></div>
+      <textarea id="prompt_editor" style="min-height:220px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px"
+        placeholder="Template da mesa de Editor…"></textarea>
+      <div class="actions" style="margin-top:12px">
+        <button id="savePromptsBtn">Salvar prompts</button>
+        <button class="ghost" id="resetPromptsBtn">Restaurar padrão</button>
+        <span class="msg" id="promptMsg"></span>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>Job atual</h2>
       <div id="jobStatus" class="hint">Nenhum job em execução.</div>
-      <pre class="joblog" id="jobLog" hidden></pre>
+      <div class="joblog-bar">
+        <span><span class="live-dot" id="jobLiveDot"></span> <span id="jobLiveLabel">log idle</span></span>
+        <label title="Mantém a rolagem no fim do log"><input type="checkbox" id="jobLogFollow" checked /> seguir tempo real</label>
+        <span id="jobLogMeta" class="hint"></span>
+      </div>
+      <pre class="joblog empty" id="jobLog" aria-live="polite">Aguardando job…</pre>
+      <div class="actions" style="margin-top:10px">
+        <button class="ghost" id="clearJobBtn" type="button" title="Libera o botão Gerar se o job travou">
+          Liberar botão / limpar job
+        </button>
+        <button class="ghost" id="clearLogViewBtn" type="button" title="Limpa só a visualização do log">
+          Limpar tela do log
+        </button>
+      </div>
     </div>
 
     <div class="card">

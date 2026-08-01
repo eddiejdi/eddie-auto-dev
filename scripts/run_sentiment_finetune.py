@@ -14,7 +14,7 @@ Uso:
 Parâmetros via env:
   OLLAMA_HOST          GPU0 (default: http://192.168.15.2:11434)
   OLLAMA_HOST_GPU1     GPU1 (default: http://192.168.15.2:11435)
-  DATABASE_URL         PostgreSQL (default: postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading)
+  DATABASE_URL         PostgreSQL (obrigatória — sem default embutido)
   MIN_DATE             Data mínima dos artigos (default: 2026-02-01)
 """
 
@@ -48,8 +48,7 @@ except ImportError:
 OLLAMA_HOST_GPU1 = os.environ.get("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435")
 OLLAMA_HOST_GPU0 = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434")
 DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading",
+    "DATABASE_URL", ""
 )
 CLASSIFIER_MODEL = os.environ.get("OLLAMA_CLASSIFIER_MODEL", "phi4-mini")
 MIN_DATE = os.environ.get("MIN_DATE", "2026-02-01")

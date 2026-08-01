@@ -4,6 +4,9 @@ Runbook da automação de cena do quarto e da migração dos três dispositivos
 (Interruptor, Spot, Fita) para controle local via `tuya_local`. Estado
 validado em 2026-07-21.
 
+**Relacionado (Suite — botão ventilador ↔ lâmpada):**  
+[CENA_SUITE_LUZ_TUYA_LOCAL.md](CENA_SUITE_LUZ_TUYA_LOCAL.md)
+
 ## Contexto / pedido original
 
 Objetivo: uma cena onde o clique físico no interruptor de 1 canal do

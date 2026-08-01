@@ -51,9 +51,16 @@ DEFAULT_ALLY_YOUTUBE: tuple[dict[str, Any], ...] = (
 DEFAULT_EDITORIAL: dict[str, Any] = {
     "stance": "pro_bolsonaro_allies",
     "prefer_ally_youtube": True,
+    "prefer_direitaja_truths": True,
     "exclude_hostile_headlines": True,
     "include_bolsonaro_family_context": True,
 }
+
+DIREITAJA_TRUTH_MARKERS: tuple[str, ...] = (
+    "direitaja.com",
+    "direita já",
+    "direita ja",
+)
 
 HOSTILE_NEWS_MARKERS: tuple[str, ...] = (
     "taxado de",
@@ -74,6 +81,44 @@ HOSTILE_NEWS_MARKERS: tuple[str, ...] = (
     "fracasso",
     "isolado",
     "rejeitado",
+    # Redução a "cópia do pai" / ataque a urnas (ex.: "repete o pai e ataca urnas eletrônicas")
+    "repete o pai",
+    "repetindo o pai",
+    "copia o pai",
+    "copiando o pai",
+    "segue o pai",
+    "seguindo o pai",
+    "igual ao pai",
+    "herda do pai",
+    "ecoando o pai",
+    "ataca urnas",
+    "atacando urnas",
+    "ataque às urnas",
+    "ataque as urnas",
+    "ataques às urnas",
+    "ataques as urnas",
+    "contra as urnas",
+    "urnas eletrônicas",
+    "urnas eletronicas",
+    "fraude nas urnas",
+    "questiona as urnas",
+    "questionando as urnas",
+    # Ausência / ineficácia / enquadramento pejorativo (ex. "zero-um", "só emplaca")
+    "deixa de votar",
+    "deixou de votar",
+    "só emplaca",
+    "so emplaca",
+    "zero-um",
+    "zero um",
+    "\"zero-um\" para o pai",
+    "acusações de corrupção",
+    "acusacoes de corrupcao",
+    "carinho pela ditadura",
+    "calúnia",
+    "calunia",
+    "investigação por",
+    "investigacao por",
+    "cancela depoimento",
 )
 
 POSITIVE_NEWS_MARKERS: tuple[str, ...] = (
@@ -223,6 +268,11 @@ def build_ally_youtube_queries(
     return list(dict.fromkeys(queries))
 
 
+def is_direitaja_truth_item(*, title: str = "", outlet: str = "", url: str = "") -> bool:
+    blob = _normalize_title(f"{title} {outlet} {url}")
+    return any(marker in blob for marker in DIREITAJA_TRUTH_MARKERS)
+
+
 def news_editorial_score(
     *,
     title: str,
@@ -231,6 +281,9 @@ def news_editorial_score(
     allies: tuple[dict[str, Any], ...],
 ) -> int:
     score = 0
+    # Fonte oficial de verdades (direitaja.com) tem prioridade máxima.
+    if is_direitaja_truth_item(title=title, outlet=outlet, url=url):
+        score += 150
     if match_ally_youtube_creator(title=title, outlet=outlet, url=url, allies=allies):
         score += 100
     if is_positive_news_title(title):
@@ -251,10 +304,16 @@ def should_keep_news_item(
     editorial: dict[str, Any],
     relevance_checker,
 ) -> bool:
-    if match_ally_youtube_creator(title=title, outlet=outlet, url=url, allies=allies):
-        return is_relevant_ally_youtube_title(title)
+    # Direita Já: fonte oficial de verdades — sempre mantém (se não for hostil).
+    if is_direitaja_truth_item(title=title, outlet=outlet, url=url):
+        if editorial.get("exclude_hostile_headlines", True) and is_hostile_news_title(title):
+            return False
+        return True
+    # Manchetes hostis saem sempre — inclusive de canais aliados no YouTube.
     if editorial.get("exclude_hostile_headlines", True) and is_hostile_news_title(title):
         return False
+    if match_ally_youtube_creator(title=title, outlet=outlet, url=url, allies=allies):
+        return is_relevant_ally_youtube_title(title)
     return bool(relevance_checker(title))
 
 

@@ -101,8 +101,10 @@ jobs:
           
           if [ -n "$ZTE_SCRIPT" ]; then
             echo "=== Listando port forwardings atuais ==="
+            # Chave vem do arquivo do host, fora do git (runner self-hosted).
+            # set -a exporta o que o arquivo definir, então o script herda.
+            set -a; . /etc/crypto-agent/secrets-api.env; set +a
             cd /home/homelab/eddie-auto-dev && \
-              SECRETS_AGENT_API_KEY=188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3 \
               .venv/bin/python "$ZTE_SCRIPT" 2>&1 | head -40 || true
           else
             echo "ZTE automation script not found"

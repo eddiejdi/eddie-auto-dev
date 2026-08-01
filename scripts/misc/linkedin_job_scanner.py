@@ -81,10 +81,8 @@ _PHOTO_UPLOAD_RE = re.compile(
     re.IGNORECASE,
 )
 
-TELEGRAM_TOKEN = os.getenv(
-    "TELEGRAM_BOT_TOKEN",
-    "1105143633:AAG5BrfOsGbV88BFztljR7fH5ekmszFnulA",
-)
+# Sem default hardcoded: o token anterior ficou exposto neste repo público.
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 TELEGRAM_CHAT_ID = int(os.getenv("TELEGRAM_CHAT_ID", "948686300"))
 
 MIN_COMPAT_SCORE = 60

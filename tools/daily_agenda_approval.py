@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
+import shutil
+import subprocess
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -21,7 +23,10 @@ ApprovalDecision = Literal["approved", "regenerate", "rejected", "timeout", "wai
 APPROVAL_FILE = DEFAULT_ARTIFACTS_DIR / "approval_pending.json"
 CALLBACK_APPROVE = "dag:A:"
 CALLBACK_REGENERATE = "dag:R:"
+CALLBACK_REJECT = "dag:X:"
 POLL_INTERVAL_SECS = 5
+# Bot API limita upload ~50 MiB; margem para multipart + caption.
+TELEGRAM_AUDIO_MAX_BYTES = 48 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -66,10 +71,24 @@ class ApprovalState:
 
 def approval_keyboard(date_str: str) -> dict[str, Any]:
     return {
-        "inline_keyboard": [[
-            {"text": "✅ Aprovar e publicar", "callback_data": f"{CALLBACK_APPROVE}{date_str}"},
-            {"text": "🔍 Gerar de novo (busca profunda)", "callback_data": f"{CALLBACK_REGENERATE}{date_str}"},
-        ]]
+        "inline_keyboard": [
+            [
+                {
+                    "text": "✅ Aprovar e publicar",
+                    "callback_data": f"{CALLBACK_APPROVE}{date_str}",
+                },
+                {
+                    "text": "🔍 Gerar de novo",
+                    "callback_data": f"{CALLBACK_REGENERATE}{date_str}",
+                },
+            ],
+            [
+                {
+                    "text": "⏹️ Não publicar / descartar",
+                    "callback_data": f"{CALLBACK_REJECT}{date_str}",
+                },
+            ],
+        ]
     }
 
 
@@ -131,7 +150,67 @@ def build_preview_caption(
         f"Qualidade: {quality} | Modo: {mode}\n\n"
         "Ouça o áudio e escolha:\n"
         "✅ Aprovar e publicar no YouTube\n"
-        "🔍 Gerar de novo com busca mais profunda"
+        "🔍 Gerar de novo com busca mais profunda\n"
+        "⏹️ Não publicar / descartar"
+    )
+
+
+def prepare_telegram_audio(wav_path: Path, *, max_bytes: int = TELEGRAM_AUDIO_MAX_BYTES) -> Path:
+    """Garante arquivo de áudio abaixo do limite do Bot API (WAV longo → MP3)."""
+    wav_path = Path(wav_path)
+    if not wav_path.is_file():
+        raise FileNotFoundError(f"Áudio não encontrado: {wav_path}")
+    size = wav_path.stat().st_size
+    if size <= max_bytes:
+        return wav_path
+
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise RuntimeError(
+            f"Áudio {size} bytes excede limite Telegram ({max_bytes}) e ffmpeg não está no PATH."
+        )
+
+    # ~56 min de mono: 48 kbps ≈ 20 MB; 32 kbps ≈ 13 MB.
+    out_path = wav_path.with_suffix(".telegram.mp3")
+    for bitrate in ("64k", "48k", "32k", "24k"):
+        cmd = [
+            ffmpeg,
+            "-y",
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-i",
+            str(wav_path),
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            "22050",
+            "-c:a",
+            "libmp3lame",
+            "-b:a",
+            bitrate,
+            str(out_path),
+        ]
+        proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        if proc.returncode != 0:
+            logger.warning("ffmpeg bitrate=%s falhou: %s", bitrate, (proc.stderr or "")[-400:])
+            continue
+        out_size = out_path.stat().st_size
+        logger.info(
+            "Áudio comprimido para Telegram: %s → %s (%.1f MB @ %s)",
+            wav_path.name,
+            out_path.name,
+            out_size / (1024 * 1024),
+            bitrate,
+        )
+        if out_size <= max_bytes:
+            return out_path
+
+    if out_path.is_file() and out_path.stat().st_size <= max_bytes:
+        return out_path
+    raise RuntimeError(
+        f"Não foi possível comprimir {wav_path} abaixo de {max_bytes} bytes para o Telegram."
     )
 
 
@@ -184,8 +263,12 @@ def send_preview_request(
             },
         )
 
-    with wav_path.open("rb") as handle:
+    audio_path = prepare_telegram_audio(Path(wav_path))
+    with audio_path.open("rb") as handle:
         audio_bytes = handle.read()
+
+    filename = audio_path.name
+    content_type = "audio/mpeg" if audio_path.suffix.lower() == ".mp3" else "application/octet-stream"
 
     boundary = "----eddieAgendaApprovalBoundary"
     body_parts: list[bytes] = []
@@ -202,9 +285,9 @@ def send_preview_request(
 
     body_parts.append(f"--{boundary}\r\n".encode())
     body_parts.append(
-        b'Content-Disposition: form-data; name="audio"; filename="locution.wav"\r\n'
+        f'Content-Disposition: form-data; name="audio"; filename="{filename}"\r\n'.encode()
     )
-    body_parts.append(b"Content-Type: application/octet-stream\r\n\r\n")
+    body_parts.append(f"Content-Type: {content_type}\r\n\r\n".encode())
     body_parts.append(audio_bytes)
     body_parts.append(b"\r\n")
     body_parts.append(f"--{boundary}--\r\n".encode())
@@ -218,7 +301,7 @@ def send_preview_request(
         method="POST",
     )
     try:
-        with request.urlopen(req, timeout=120) as response:
+        with request.urlopen(req, timeout=300) as response:
             raw = response.read().decode("utf-8")
     except error.HTTPError as exc:
         details = exc.read().decode("utf-8", errors="replace")
@@ -246,6 +329,8 @@ def _parse_callback_data(data: str) -> tuple[ApprovalDecision, str] | None:
         return "approved", data[len(CALLBACK_APPROVE) :]
     if data.startswith(CALLBACK_REGENERATE):
         return "regenerate", data[len(CALLBACK_REGENERATE) :]
+    if data.startswith(CALLBACK_REJECT):
+        return "rejected", data[len(CALLBACK_REJECT) :]
     return None
 
 
@@ -284,7 +369,15 @@ def handle_telegram_callback(callback: dict[str, Any]) -> bool:
     )
     save_state(updated)
 
-    note = "Aprovado — publicando..." if decision == "approved" else "Regenerando com busca profunda..."
+    if decision == "approved":
+        note = "Aprovado — publicando..."
+        status_line = "✅ Aprovado"
+    elif decision == "regenerate":
+        note = "Regenerando com busca profunda..."
+        status_line = "🔍 Nova geração solicitada"
+    else:
+        note = "Descartado — não publica."
+        status_line = "⏹️ Não publicada (descartada)"
     _telegram_api(
         "answerCallbackQuery",
         {"callback_query_id": callback.get("id", ""), "text": note},
@@ -294,7 +387,6 @@ def handle_telegram_callback(callback: dict[str, Any]) -> bool:
     msg_id = msg.get("message_id")
     chat_id = (msg.get("chat") or {}).get("id")
     if msg_id and chat_id:
-        status_line = "✅ Aprovado" if decision == "approved" else "🔍 Nova geração solicitada"
         _telegram_api(
             "editMessageReplyMarkup",
             {

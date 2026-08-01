@@ -34,15 +34,15 @@ bridge = _load_bridge()
 # ── Descoberta de ferramentas / schema ──────────────────────────────────────
 
 
-def test_discovers_36_tools_including_excluded():
+def test_discovers_39_tools_including_excluded():
     names = bridge.discovered_tool_names(include_excluded=True)
-    assert len(names) == 36, sorted(names)
+    assert len(names) == 39, sorted(names)
 
 
 def test_excludes_governance_tools_from_model_visible_set():
     names = bridge.discovered_tool_names(include_excluded=False)
     assert names.isdisjoint(bridge.EXCLUDED_TOOLS)
-    assert len(names) == 36 - len(bridge.EXCLUDED_TOOLS)
+    assert len(names) == 39 - len(bridge.EXCLUDED_TOOLS)
 
 
 def test_schema_generation_matches_visible_tools():
@@ -98,6 +98,9 @@ def test_classify_unknown_tool_defaults_to_high(caplog):
         ("memory_search", "none"),
         ("trading_summary", "none"),
         ("db_list_tables", "none"),
+        ("code_write_file", "high"),
+        ("code_read_file", "none"),
+        ("code_list_files", "none"),
     ],
 )
 def test_classify_known_tools(tool_name, expected):
@@ -111,6 +114,8 @@ def test_classify_known_tools(tool_name, expected):
         ("db_execute_query", True),
         ("memory_store", False),
         ("trading_summary", False),
+        ("code_write_file", True),
+        ("code_read_file", False),
     ],
 )
 def test_is_gated(tool_name, expected_gated):

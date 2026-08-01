@@ -196,12 +196,18 @@ class VariablesCatalog:
         logger.info("🐍 Scanning Python configs...")
         python_vars = {}
         
-        # Look for config.py, settings.py, etc
-        config_files = list(self.root.rglob("*config*.py")) + \
-                      list(self.root.rglob("*settings*.py"))
-        
+        # Todo .py do repo — antes só *config*.py/*settings*.py, o que deixava
+        # de fora a maioria de tools/ e scripts/ (onde a maior parte das vars
+        # novas é criada) e causava falsos "duplicata" no hook de taxonomia
+        # (variable_registry_validate.py escaneia tudo, catalog_variables.py
+        # não cobria o mesmo universo).
+        config_files = list(self.root.rglob("*.py"))
+
         for config_file in config_files:
-            if any(skip in str(config_file) for skip in ['.venv', '__pycache__', '.git']):
+            if any(
+                skip in str(config_file)
+                for skip in ('.venv', '__pycache__', '.git', 'node_modules', '.claude/worktrees')
+            ):
                 continue
             
             logger.info(f"  └─ {config_file.relative_to(self.root)}")
@@ -213,9 +219,9 @@ class VariablesCatalog:
                     
                     # Look for os.getenv() and os.environ patterns
                     patterns = [
-                        r"os\.getenv\(['\"]([A-Z_][A-Z0-9_]*)['\"]",
-                        r"os\.environ\[['\"]([A-Z_][A-Z0-9_]*)['\"]",
-                        r"os\.environ\.get\(['\"]([A-Z_][A-Z0-9_]*)['\"]",
+                        r"os\.getenv\(\s*['\"]([A-Z_][A-Z0-9_]*)['\"]",
+                        r"os\.environ\[\s*['\"]([A-Z_][A-Z0-9_]*)['\"]",
+                        r"os\.environ\.get\(\s*['\"]([A-Z_][A-Z0-9_]*)['\"]",
                     ]
                     
                     for pattern in patterns:

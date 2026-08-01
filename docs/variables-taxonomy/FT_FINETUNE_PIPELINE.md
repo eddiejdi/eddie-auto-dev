@@ -6,6 +6,7 @@ Família de variáveis de configuração dos scripts de fine-tuning QLoRA (trans
 ## Consumidores
 - `scripts/trading_analyst_finetune_peft.py` (original — trading-analyst)
 - `scripts/whatsapp_toolcall_finetune_peft.py` (fork — tool-calling MCP do `shared-homelab`, 2026-07-29)
+- `scripts/eddie_persona_finetune_peft.py` (fork — personas free/safe, 2026-07-31)
 
 ## Variáveis
 
@@ -27,6 +28,7 @@ Família de variáveis de configuração dos scripts de fine-tuning QLoRA (trans
 | `FT_TOOLS_PER_EXAMPLE` | int | `6` (só tool-calling) | Quantas ferramentas incluir no schema de cada exemplo de treino (a certa + distratoras) em vez das 33 completas — a schema completa sozinha já custa ~4.8k tokens (medido em produção), maior que qualquer `FT_MAX_SEQ` viável nesta GPU (RTX 3060 12GB estoura memória no cast fp32 dos logits do llama3.1, vocab=128k). Em produção o Ollama continua recebendo o schema completo; o modelo só precisa aprender o padrão de selecionar a ferramenta certa dentro do que for oferecido. |
 | `FT_TIME_BUDGET_SECONDS` | int | `0` = sem limite (`600` no systemd) | Orçamento de tempo de parede de UM pacote de treino. Ao estourar, salva checkpoint e sai com sucesso; a invocação seguinte retoma do último checkpoint. Existe porque a GPU de treino é a mesma do Ollama de produção — treinar em pacotes de 10min de hora em hora evita segurar produção parada por ~7h seguidas. |
 | `FT_SAVE_STEPS` | int | `2` | Frequência de checkpoint (em passos) quando `FT_TIME_BUDGET_SECONDS` está ativo. Baixo de propósito: cada passo já leva dezenas de segundos nesta GPU, então precisa salvar cedo pra garantir progresso dentro de um pacote de 10min. |
+| `FT_SAVE_TOTAL_LIMIT` | int | `2` | Quantos checkpoints o `Trainer` mantém simultaneamente (os mais antigos são apagados automaticamente). No pipeline cloud (RunPod, volume fixo de 40GB) o `jobs.json` seta `1` para não acumular checkpoints de treinos já concluídos. O resume (retomar de `checkpoint-*`) vale sempre que existir um checkpoint salvo, não só quando `FT_TIME_BUDGET_SECONDS` está ativo — um treino cloud pode morrer no meio (queda de SSH, quota de disco) e precisa retomar do último checkpoint em vez de reiniciar do zero. |
 
 ## Variáveis do orquestrador de pacotes (`scripts/whatsapp_toolcall_chunked_train.sh`)
 

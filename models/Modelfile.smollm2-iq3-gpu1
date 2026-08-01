@@ -1,0 +1,13 @@
+# smollm2-iq3:gpu1 — quant IQ3_M agressivo p/ GTX 1050 2GB
+# Base local smollm2:iq3m (~0.81GB). Útil como fallback ultra-leve.
+#
+# Criação:
+#   OLLAMA_HOST=127.0.0.1:11435 ollama create smollm2-iq3:gpu1 -f models/Modelfile.smollm2-iq3-gpu1
+
+FROM smollm2:iq3m
+
+PARAMETER temperature 0.2
+PARAMETER num_ctx 1024
+PARAMETER num_predict 384
+PARAMETER repeat_penalty 1.05
+PARAMETER num_gpu 99

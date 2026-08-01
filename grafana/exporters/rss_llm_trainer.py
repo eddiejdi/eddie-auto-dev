@@ -62,8 +62,7 @@ log = logging.getLogger("rss_llm_trainer")
 # ── Configuração ───────────────────────────────────────────────────────────────
 
 DATABASE_URL = os.environ.get(
-    "DATABASE_URL",
-    "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading",
+    "DATABASE_URL", ""
 )
 OLLAMA_HOST_GPU1 = os.environ.get("OLLAMA_HOST_GPU1", "http://192.168.15.2:11435")
 OLLAMA_HOST_GPU0 = os.environ.get("OLLAMA_HOST", "http://192.168.15.2:11434")

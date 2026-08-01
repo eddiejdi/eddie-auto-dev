@@ -81,8 +81,7 @@ except ImportError:
 
     new_init_end = """        # News sentiment — 5º fator do ensemble (peso dinâmico 0-20%)
         self._news_db_url: str = os.environ.get(
-            "DATABASE_URL",
-            "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/postgres"
+            "DATABASE_URL", ""
         )
         self._news_cache: Optional[Tuple[float, float, float]] = None  # (ts, score, weight)
         self._news_cache_ttl: float = 60.0  # Cache 60s (notícias mudam devagar)

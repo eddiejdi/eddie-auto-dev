@@ -1,0 +1,18 @@
+# lfm2.5-fast:gpu1 — GTX 1050 2GB (:11435)
+# Quantização agressiva Q4_0 (antes: Q4_K_M ~731MB → Q4_0 ~696MB + KV q4).
+# Base: LiquidAI LFM2.5 1.2B Instruct GGUF Q4_0 (não chinês).
+#
+# Criação (homelab):
+#   OLLAMA_HOST=127.0.0.1:11435 ollama pull hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_0
+#   OLLAMA_HOST=127.0.0.1:11435 ollama create lfm2.5-fast:gpu1 -f models/Modelfile.lfm2.5-fast-gpu1
+
+FROM hf.co/LiquidAI/LFM2.5-1.2B-Instruct-GGUF:Q4_0
+
+PARAMETER temperature 0.3
+PARAMETER min_p 0.15
+PARAMETER num_ctx 2048
+PARAMETER num_predict 512
+PARAMETER repeat_penalty 1.05
+PARAMETER num_gpu 99
+PARAMETER stop "<|im_start|>"
+PARAMETER stop "<|im_end|>"

@@ -1,0 +1,15 @@
+[Unit]
+Description=Sia (hostd) API local socket proxy
+Documentation=https://github.com/eddiejdi/eddie-auto-dev
+# IMPORTANT: do NOT After=/Wants= sia-host-shim/docker here.
+# That chain pulls network→basic→sockets and systemd deletes this job on boot
+# ("ordering cycle ... Job sia-api-proxy.socket/start deleted").
+
+[Socket]
+ListenStream=127.0.0.1:9980
+NoDelay=true
+Accept=false
+
+[Install]
+# multi-user avoids sockets.target ordering cycles with docker/network
+WantedBy=multi-user.target

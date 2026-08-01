@@ -211,37 +211,45 @@ class MetricsCollector:
                                 btc_price: float, equity: float) -> None:
         """Grava snapshot de saldo da exchange na tabela btc.exchange_snapshots.
 
-        Limita a 1 snapshot por minuto para não sobrecarregar o banco.
+        Cada instância (symbol+profile) grava sua própria série — a tabela é
+        compartilhada por até 15 instâncias de agente em paralelo, então o
+        dedup de "1 por minuto" e o cleanup diário precisam ser escopados por
+        (symbol, profile); sem isso, uma instância bloqueia a gravação das
+        outras e o painel de equity mistura contas diferentes numa só linha.
         """
         try:
             conn = self._get_conn()
             cur = conn.cursor()
-            # Só insere se o último snapshot tem mais de 60 segundos
+            # Só insere se o último snapshot desta mesma instância tem mais de 60 segundos
             cur.execute("""
                 INSERT INTO btc.exchange_snapshots
-                    (timestamp, usdt_balance, btc_balance, btc_price, equity_usdt)
-                SELECT EXTRACT(EPOCH FROM NOW()), %s, %s, %s, %s
+                    (timestamp, symbol, profile, usdt_balance, btc_balance, btc_price, equity_usdt)
+                SELECT EXTRACT(EPOCH FROM NOW()), %s, %s, %s, %s, %s, %s
                 WHERE NOT EXISTS (
                     SELECT 1 FROM btc.exchange_snapshots
-                    WHERE timestamp > EXTRACT(EPOCH FROM NOW()) - 60
+                    WHERE symbol = %s AND profile = %s
+                      AND timestamp > EXTRACT(EPOCH FROM NOW()) - 60
                 )
-            """, (usdt, btc, btc_price, equity))
+            """, (self.symbol, self.profile, usdt, btc, btc_price, equity,
+                  self.symbol, self.profile))
             # Cleanup: manter snapshots das últimas 24h (intraday) + último snapshot de cada dia
-            # histórico por até 90 dias (para o calendário de PnL).
+            # histórico por até 90 dias (para o calendário de PnL), por instância (symbol+profile).
             # Regra: delete row se (mais de 24h E não é o último do seu dia) OU mais de 90 dias.
             cur.execute("""
                 DELETE FROM btc.exchange_snapshots
-                WHERE timestamp < EXTRACT(EPOCH FROM NOW()) - 86400
+                WHERE symbol = %s AND profile = %s
+                  AND timestamp < EXTRACT(EPOCH FROM NOW()) - 86400
                   AND (
                     id NOT IN (
                       SELECT DISTINCT ON (to_timestamp(timestamp)::date) id
                       FROM btc.exchange_snapshots
-                      WHERE timestamp < EXTRACT(EPOCH FROM NOW()) - 86400
+                      WHERE symbol = %s AND profile = %s
+                        AND timestamp < EXTRACT(EPOCH FROM NOW()) - 86400
                       ORDER BY to_timestamp(timestamp)::date, timestamp DESC
                     )
                     OR timestamp < EXTRACT(EPOCH FROM NOW()) - 7776000
                   )
-            """)
+            """, (self.symbol, self.profile, self.symbol, self.profile))
             cur.close()
             conn.close()
         except Exception as e:

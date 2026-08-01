@@ -14,6 +14,8 @@ Configuração via variáveis de ambiente:
     DATABASE_URL          - Connection string PostgreSQL (Estou Aqui / governance)
     TRADING_DATABASE_URL  - Connection string PostgreSQL do trading agent (btc_trading DB)
     CHROMA_DB_PATH        - Path do ChromaDB (default: /home/homelab/myClaude/chroma_db)
+    CODE_SANDBOX_DIR      - Sandbox de code_write_file/code_read_file/code_list_files
+                            (default: <repo>/generated/integrations)
 """
 import importlib.util
 import json
@@ -22,6 +24,7 @@ import os
 import sys
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 # Adiciona raiz do projeto ao path para imports de tools/
@@ -40,6 +43,31 @@ logging.basicConfig(
 logger = logging.getLogger("homelab-mcp")
 
 # ── Configuração ──────────────────────────────────────────────────────────
+
+def _load_local_secrets_env() -> None:
+    """Carrega ~/.config/homelab/secrets.env se a chave não vier do ambiente.
+
+    O `.mcp.json` é versionado num repo público, então não pode carregar
+    credencial. Esse arquivo (0600, fora do git) é a fonte local canônica.
+    Ver docs/INCIDENTS/2026-07-28_SECRETS_IN_PUBLIC_REPO.md.
+    """
+    if os.environ.get("SECRETS_AGENT_API_KEY"):
+        return
+    path = os.path.expanduser("~/.config/homelab/secrets.env")
+    try:
+        with open(path, encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, val = line.partition("=")
+                os.environ.setdefault(key.strip(), val.strip().strip('"').strip("'"))
+    except OSError:
+        pass  # sem o arquivo, segue e falha adiante com erro explícito
+
+
+_load_local_secrets_env()
+
 HOMELAB_URL = os.environ.get("HOMELAB_URL", "http://192.168.15.2:8503")
 SECRETS_AGENT_URL = os.environ.get("SECRETS_AGENT_URL", "http://192.168.15.2:8088")
 SECRETS_AGENT_API_KEY = os.environ.get("SECRETS_AGENT_API_KEY", "")
@@ -374,7 +402,8 @@ def db_execute_query(sql: str, params: str = "[]") -> str:
         sql: Query SQL (apenas SELECT permitido).
         params: Parâmetros da query como JSON array (default: []).
     """
-    if not DATABASE_URL:
+    _dsn = _get_db_url()
+    if not _dsn:
         return json.dumps({"ok": False, "error": "DATABASE_URL não configurada."}, indent=2)
 
     # Bloquear queries de escrita
@@ -390,7 +419,7 @@ def db_execute_query(sql: str, params: str = "[]") -> str:
 
         parsed_params = json.loads(params) if params != "[]" else []
 
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(_dsn)
         conn.set_session(readonly=True, autocommit=True)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
 
@@ -478,12 +507,13 @@ _VALID_STATUSES      = {"pending", "approved", "rejected", "in_progress", "done"
 
 def _db_write(sql: str, params: tuple) -> dict:
     """Executa SQL de escrita no PostgreSQL do homelab (INSERT/UPDATE)."""
-    if not DATABASE_URL:
+    _dsn = _get_db_url()
+    if not _dsn:
         return {"ok": False, "error": "DATABASE_URL não configurada."}
     try:
         import psycopg2
         import psycopg2.extras
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(_dsn)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(sql, params)
         rows = cur.fetchall() if cur.description else []
@@ -502,12 +532,13 @@ def _db_write(sql: str, params: tuple) -> dict:
 
 def _db_read_one(sql: str, params: tuple) -> dict:
     """Executa SELECT e retorna a primeira linha como dict (ou None)."""
-    if not DATABASE_URL:
+    _dsn = _get_db_url()
+    if not _dsn:
         return {"ok": False, "error": "DATABASE_URL não configurada."}
     try:
         import psycopg2
         import psycopg2.extras
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(_dsn)
         conn.set_session(readonly=True, autocommit=True)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(sql, params)
@@ -521,12 +552,13 @@ def _db_read_one(sql: str, params: tuple) -> dict:
 
 def _db_read_many(sql: str, params: tuple = ()) -> dict:
     """Executa SELECT e retorna todas as linhas."""
-    if not DATABASE_URL:
+    _dsn = _get_db_url()
+    if not _dsn:
         return {"ok": False, "error": "DATABASE_URL não configurada."}
     try:
         import psycopg2
         import psycopg2.extras
-        conn = psycopg2.connect(DATABASE_URL)
+        conn = psycopg2.connect(_dsn)
         conn.set_session(readonly=True, autocommit=True)
         cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
         cur.execute(sql, params)
@@ -916,6 +948,53 @@ def memory_store(fact: str, source: str = "agent", tags: str = "", ttl_days: int
 # Ferramentas do BTC Trading Agent — leitura somente do schema btc.*
 # DB connection: env TRADING_DATABASE_URL ou secrets agent eddie/database_url
 
+_db_url_cache: Optional[str] = None
+
+
+def _get_db_url() -> str:
+    """Resolve o DSN do banco da governança sem hardcodar credenciais.
+
+    Antes o valor vinha cravado no `.mcp.json`, que é versionado num repo
+    público. Ver docs/INCIDENTS/2026-07-28_SECRETS_IN_PUBLIC_REPO.md.
+    """
+    global _db_url_cache
+    if _db_url_cache:
+        return _db_url_cache
+    if DATABASE_URL:
+        _db_url_cache = DATABASE_URL
+        return DATABASE_URL
+    for secret_name in ("eddie/database_url", "shared/database_url"):
+        result = _http_get(
+            f"{SECRETS_AGENT_URL}/secrets/local/{secret_name}?field=url",
+            headers=_secrets_headers(),
+        )
+        if result.get("ok"):
+            val = (result.get("data") or {}).get("value", "")
+            if val:
+                _db_url_cache = _rehost_if_remote(val)
+                return _db_url_cache
+    return ""
+
+
+def _rehost_if_remote(dsn: str) -> str:
+    """Troca localhost pelo host do homelab quando rodamos fora dele.
+
+    O secret `eddie/database_url` guarda o DSN com host `localhost`, que só
+    resolve no próprio homelab. Consumidores remotos (este MCP roda na
+    workstation) precisam do IP real — senão a conexão vai para o Postgres
+    local, que não existe.
+    """
+    import re as _re
+    from urllib.parse import urlparse
+
+    if not _re.search(r"@(localhost|127\.0\.0\.1)[:/]", dsn):
+        return dsn
+    host = urlparse(SECRETS_AGENT_URL).hostname or ""
+    if not host or host in ("localhost", "127.0.0.1"):
+        return dsn  # estamos no próprio homelab: localhost está correto
+    return _re.sub(r"@(localhost|127\.0\.0\.1)([:/])", rf"@{host}\2", dsn, count=1)
+
+
 _trading_db_url_cache: Optional[str] = None
 
 
@@ -936,9 +1015,10 @@ def _get_trading_db_url() -> Optional[str]:
     #    Estou Aqui no mesmo banco btc_trading). Evita depender de um
     #    secret que pode ter sido salvo com host "localhost" (só válido
     #    quando executado no próprio homelab, não em consumidores remotos).
-    if DATABASE_URL:
-        _trading_db_url_cache = DATABASE_URL
-        return DATABASE_URL
+    resolved = _get_db_url()
+    if resolved:
+        _trading_db_url_cache = resolved
+        return resolved
 
     # 3. Secrets agent — mesmo padrão do secrets_helper.py do trading agent
     for secret_name in ("eddie/database_url", "shared/database_url", "crypto/database_url"):
@@ -1312,6 +1392,138 @@ def trading_summary(symbol: str = "BTC-USDT", profile: str = "default") -> str:
         "active_trade_window": (window.get("rows") or [{}])[0],
         "latest_ai_controls": (ctrl.get("rows") or [{}])[0],
     }, ensure_ascii=False, indent=2)
+
+
+# ═══════════════════════  CODE / INTEGRATIONS  ═════════════════════════════
+#
+# Dá aos agentes (incl. o bot do WhatsApp via mcp_tool_bridge.py) a
+# capacidade de criar/ler/listar código dentro de um sandbox dedicado —
+# NUNCA no resto do repositório. Escrita é sempre "high" (aprovação Telegram
+# via governança); leitura/listagem são "none" (auto-executam).
+#
+# Por que sandbox e não escrita livre no repo: o modelo que recebe essas
+# ferramentas roda sem supervisão de código (não é o Claude Code numa sessão
+# revisada) — permitir path arbitrário seria RCE-por-WhatsApp. O sandbox
+# confina o blast radius a um diretório descartável/versionável à parte, e
+# quem quiser promover algo gerado para o repo de verdade faz isso manualmente.
+
+CODE_SANDBOX_DIR = Path(
+    os.environ.get(
+        "CODE_SANDBOX_DIR",
+        str(Path(__file__).resolve().parent.parent / "generated" / "integrations"),
+    )
+).resolve()
+
+# Extensões permitidas — nada de binário, nada com permissão de execução
+# implícita perigosa (.sh fica de fora de propósito: shell gerado por LLM sem
+# revisão humana antes de rodar é a receita de um incidente).
+_CODE_ALLOWED_SUFFIXES = frozenset({
+    ".py", ".js", ".ts", ".json", ".yaml", ".yml", ".md", ".txt",
+    ".toml", ".cfg", ".ini", ".sql", ".html", ".css",
+})
+_CODE_MAX_BYTES = 200_000
+
+
+def _code_sandbox_path(rel_path: str) -> Path:
+    """Resolve rel_path DENTRO do sandbox; levanta ValueError em qualquer
+    tentativa de escapar dele (`..`, symlink, path absoluto etc.)."""
+    rel_path = (rel_path or "").strip().lstrip("/")
+    if not rel_path:
+        raise ValueError("path vazio")
+    CODE_SANDBOX_DIR.mkdir(parents=True, exist_ok=True)
+    candidate = (CODE_SANDBOX_DIR / rel_path).resolve()
+    if candidate != CODE_SANDBOX_DIR and CODE_SANDBOX_DIR not in candidate.parents:
+        raise ValueError(f"path fora do sandbox de integrações: {rel_path}")
+    return candidate
+
+
+@mcp.tool()
+def code_write_file(path: str, content: str, description: str = "") -> str:
+    """Cria ou sobrescreve um arquivo de código dentro do sandbox de
+    integrações (generated/integrations/ no repo, configurável via
+    CODE_SANDBOX_DIR). Use para prototipar scripts, integrações ou
+    snippets pedidos pelo dono — NUNCA escreve fora desse diretório
+    (path traversal é bloqueado) e não executa nada, só grava texto.
+
+    Args:
+        path: caminho relativo dentro do sandbox (ex: "meu_script.py",
+              "clima/openweather_client.py").
+        content: conteúdo completo do arquivo (texto).
+        description: uma linha explicando o que o arquivo faz (fica no log).
+    """
+    try:
+        target = _code_sandbox_path(path)
+    except ValueError as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
+
+    if target.suffix.lower() not in _CODE_ALLOWED_SUFFIXES:
+        return json.dumps({
+            "ok": False,
+            "error": f"extensão '{target.suffix}' não permitida no sandbox "
+                     f"(aceitas: {sorted(_CODE_ALLOWED_SUFFIXES)})",
+        })
+
+    encoded = (content or "").encode("utf-8")
+    if len(encoded) > _CODE_MAX_BYTES:
+        return json.dumps({
+            "ok": False,
+            "error": f"conteúdo muito grande ({len(encoded)} bytes > {_CODE_MAX_BYTES})",
+        })
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content or "", encoding="utf-8")
+    logger.info("code_write_file: %s (%d bytes) — %s", target, len(encoded), description[:200])
+    return json.dumps({
+        "ok": True,
+        "path": str(target.relative_to(CODE_SANDBOX_DIR)),
+        "bytes": len(encoded),
+        "description": description[:200],
+    }, ensure_ascii=False)
+
+
+@mcp.tool()
+def code_read_file(path: str) -> str:
+    """Lê um arquivo já criado no sandbox de integrações (generated/integrations/).
+
+    Args:
+        path: caminho relativo dentro do sandbox.
+    """
+    try:
+        target = _code_sandbox_path(path)
+    except ValueError as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
+    if not target.is_file():
+        return json.dumps({"ok": False, "error": "arquivo não encontrado"})
+    text = target.read_text(encoding="utf-8", errors="replace")
+    return json.dumps({
+        "ok": True,
+        "path": str(target.relative_to(CODE_SANDBOX_DIR)),
+        "content": text[:20_000],
+        "truncated": len(text) > 20_000,
+    }, ensure_ascii=False)
+
+
+@mcp.tool()
+def code_list_files(subdir: str = "") -> str:
+    """Lista os arquivos já criados no sandbox de integrações
+    (generated/integrations/), opcionalmente dentro de um subdiretório.
+
+    Args:
+        subdir: subdiretório relativo dentro do sandbox (vazio = raiz inteira).
+    """
+    try:
+        base = _code_sandbox_path(subdir) if subdir else CODE_SANDBOX_DIR
+    except ValueError as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
+    CODE_SANDBOX_DIR.mkdir(parents=True, exist_ok=True)
+    if not base.exists():
+        return json.dumps({"ok": True, "files": []})
+    files = sorted(
+        str(p.relative_to(CODE_SANDBOX_DIR))
+        for p in base.rglob("*")
+        if p.is_file()
+    )
+    return json.dumps({"ok": True, "sandbox": str(CODE_SANDBOX_DIR), "files": files}, ensure_ascii=False)
 
 
 # ═══════════════════════════  ENTRYPOINT  ═════════════════════════════════

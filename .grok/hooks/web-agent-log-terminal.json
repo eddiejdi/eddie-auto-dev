@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "web-agent__.*|web_agent__.*|.*web_run_task.*|.*web_fill_form.*|.*web_scrape.*|.*web_ask_human.*|.*web_apply.*|.*web_analyze.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/open_agent_log_terminal.py",
+            "timeout": 8
+          }
+        ]
+      }
+    ]
+  }
+}

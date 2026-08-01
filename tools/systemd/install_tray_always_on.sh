@@ -12,11 +12,29 @@ echo "📦 Instalando Shared Tray Agent service..."
 cp "$REPO_DIR/tools/systemd/shared-tray-agent.service" "$SYSTEMD_DIR/shared-tray-agent.service"
 echo "   ✅ shared-tray-agent.service instalado"
 
-# 2. Adicionar HOME_ASSISTANT_TOKEN ao drop-in da API
+# 2. Instalar drop-in da API (sem segredo: ele aponta para o EnvironmentFile)
 mkdir -p "$SYSTEMD_DIR/specialized-agents-api.service.d"
 cp "$REPO_DIR/tools/systemd/specialized-agents-api-ha.conf" \
    "$SYSTEMD_DIR/specialized-agents-api.service.d/ha.conf"
-echo "   ✅ HOME_ASSISTANT_TOKEN adicionado à API (drop-in ha.conf)"
+echo "   ✅ drop-in ha.conf instalado"
+
+# 2b. Materializar o token do HA fora do git, a partir do Secrets Agent.
+# O drop-in é versionado num repo público — o valor não pode morar nele.
+mkdir -p /etc/eddie
+HA_ENV="/etc/eddie/home-assistant.env"
+if HA_TOKEN=$(cd "$REPO_DIR" && python3 -c "
+from tools.secrets_loader import get_field
+print(get_field('eddie/home_assistant_token', 'password'))
+" 2>/dev/null) && [ -n "$HA_TOKEN" ]; then
+    # umask antes do redirect: sem isso o arquivo nasce 0644 por um instante.
+    ( umask 077; printf 'HOME_ASSISTANT_TOKEN=%s\n' "$HA_TOKEN" > "$HA_ENV" )
+    chmod 0600 "$HA_ENV"
+    echo "   ✅ $HA_ENV gerado a partir do Secrets Agent (0600)"
+else
+    echo "   ⚠️  Secrets Agent não respondeu — $HA_ENV não foi atualizado."
+    echo "      A API sobe, mas chamadas ao Home Assistant vão falhar até que"
+    echo "      o secret 'eddie/home_assistant_token' esteja acessível."
+fi
 
 # 3. Reload systemd
 systemctl daemon-reload

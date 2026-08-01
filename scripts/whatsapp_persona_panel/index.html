@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WhatsApp Persona NSFW — Treino</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --card: #1a2332;
+      --text: #e7ecf3;
+      --muted: #8b9bb4;
+      --accent: #e879a9;
+      --accent2: #7c5cff;
+      --ok: #3dd68c;
+      --err: #ff6b6b;
+      --border: #2a3548;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 10% -10%, #2a1530 0%, transparent 50%),
+                  radial-gradient(900px 500px at 100% 0%, #15203a 0%, transparent 45%),
+                  var(--bg);
+      color: var(--text); min-height: 100vh; padding: 24px;
+    }
+    h1 { font-size: 1.4rem; margin: 0 0 4px; }
+    .sub { color: var(--muted); font-size: 0.9rem; margin-bottom: 20px; }
+    .grid { display: grid; gap: 16px; max-width: 960px; margin: 0 auto; }
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px 18px;
+    }
+    label { display: block; font-size: 0.8rem; color: var(--muted); margin: 10px 0 4px; }
+    input, select, textarea {
+      width: 100%; background: #0d121a; color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px;
+      font: inherit;
+    }
+    textarea { min-height: 220px; font-family: ui-monospace, monospace; font-size: 0.85rem; line-height: 1.45; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .row { grid-template-columns: 1fr; } }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    button {
+      border: 0; border-radius: 10px; padding: 10px 16px; font-weight: 600;
+      cursor: pointer; font: inherit;
+    }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: #fff; }
+    .btn-secondary { background: #2a3548; color: var(--text); }
+    .btn-danger { background: #5a2030; color: #ffd0d8; }
+    #status { margin-top: 12px; font-size: 0.9rem; min-height: 1.2em; }
+    #status.ok { color: var(--ok); }
+    #status.err { color: var(--err); }
+    pre {
+      background: #0d121a; border: 1px solid var(--border); border-radius: 8px;
+      padding: 12px; overflow: auto; max-height: 280px; font-size: 0.78rem;
+      color: #c5d0e0;
+    }
+    .shots { font-size: 0.85rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="grid">
+    <div>
+      <h1>WhatsApp Persona NSFW</h1>
+      <p class="sub">Ajustes de treino / system prompt · auth.rpa4all.com/whatsapp-persona/</p>
+    </div>
+
+    <div class="card">
+      <div class="row">
+        <div>
+          <label>Nome da persona</label>
+          <input id="persona_name" />
+        </div>
+        <div>
+          <label>Gênero</label>
+          <select id="gender">
+            <option value="female">female (mulher)</option>
+            <option value="male">male</option>
+            <option value="neutral">neutral</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Obediência</label>
+          <select id="obedience">
+            <option value="extreme">extreme</option>
+            <option value="high">high</option>
+            <option value="normal">normal</option>
+          </select>
+        </div>
+        <div>
+          <label>Model tag (Ollama)</label>
+          <input id="model_tag" />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Temperature</label>
+          <input id="temperature" type="number" step="0.01" min="0" max="2" />
+        </div>
+        <div>
+          <label>num_predict</label>
+          <input id="num_predict" type="number" step="1" min="32" max="2048" />
+        </div>
+      </div>
+      <label>System prompt (treino + runtime do bot)</label>
+      <textarea id="system_prompt"></textarea>
+      <p class="shots" id="shots_info"></p>
+      <div class="actions">
+        <button class="btn-primary" id="btn_save">Salvar config</button>
+        <button class="btn-secondary" id="btn_preview">Preview Modelfile</button>
+        <button class="btn-danger" id="btn_rebuild">Rebuild modelo na NAS</button>
+        <button class="btn-secondary" id="btn_reload">Recarregar</button>
+      </div>
+      <div id="status"></div>
+    </div>
+
+    <div class="card">
+      <label>Modelfile / log</label>
+      <pre id="preview">—</pre>
+    </div>
+  </div>
+
+  <script>
+    const base = (() => {
+      const p = location.pathname;
+      if (p.includes("/whatsapp-persona")) return p.replace(/\/?$/, "").replace(/\/index\.html$/, "") || "/whatsapp-persona";
+      return "";
+    })();
+
+    function setStatus(msg, ok) {
+      const el = document.getElementById("status");
+      el.textContent = msg || "";
+      el.className = ok === true ? "ok" : ok === false ? "err" : "";
+    }
+
+    function fill(cfg) {
+      document.getElementById("persona_name").value = cfg.persona_name || "";
+      document.getElementById("gender").value = cfg.gender || "female";
+      document.getElementById("obedience").value = cfg.obedience || "extreme";
+      document.getElementById("model_tag").value = cfg.model_tag || "eddie-persona-free";
+      document.getElementById("temperature").value = cfg.temperature ?? 0.92;
+      document.getElementById("num_predict").value = cfg.num_predict ?? 384;
+      document.getElementById("system_prompt").value = cfg.system_prompt || "";
+      const n = (cfg.few_shots || []).length;
+      document.getElementById("shots_info").textContent =
+        n ? `${n} few-shots no config (editáveis via JSON/API).` : "Sem few-shots no config.";
+    }
+
+    function collect() {
+      return {
+        persona_name: document.getElementById("persona_name").value.trim(),
+        gender: document.getElementById("gender").value,
+        obedience: document.getElementById("obedience").value,
+        model_tag: document.getElementById("model_tag").value.trim(),
+        temperature: parseFloat(document.getElementById("temperature").value),
+        num_predict: parseInt(document.getElementById("num_predict").value, 10),
+        system_prompt: document.getElementById("system_prompt").value,
+      };
+    }
+
+    async function load() {
+      setStatus("Carregando…");
+      const r = await fetch(base + "/api/config");
+      const j = await r.json();
+      if (!r.ok) throw new Error(j.error || r.statusText);
+      window.__cfg = j.config;
+      fill(j.config);
+      setStatus("Config carregado · " + (j.config.updated_at || ""), true);
+    }
+
+    async function save() {
+      const patch = collect();
+      const cfg = Object.assign({}, window.__cfg || {}, patch);
+      setStatus("Salvando…");
+      const r = await fetch(base + "/api/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ config: cfg }),
+      });
+      const j = await r.json();
+      if (!r.ok || !j.ok) throw new Error(j.error || "falha ao salvar");
+      window.__cfg = j.config;
+      fill(j.config);
+      setStatus("Salvo. O bot WhatsApp passa a usar o novo SYSTEM no próximo turno.", true);
+    }
+
+    async function preview() {
+      // salva patch local só no preview body
+      const patch = collect();
+      const cfg = Object.assign({}, window.__cfg || {}, patch);
+      // usa endpoint com config atual do disco; se quiser preview do form, rebuild local simples:
+      document.getElementById("preview").textContent = "FROM " + (cfg.base_model || "dolphin-llama3:8b") +
+        "\n\nSYSTEM \"\"\"\n" + (cfg.system_prompt || "") + "\n\"\"\"\n\nPARAMETER temperature " + cfg.temperature;
+      setStatus("Preview montado a partir do formulário.", true);
+    }
+
+    async function rebuild() {
+      if (!confirm("Rebuild do modelo na NAS? Pode levar vários minutos e usa a GPU.")) return;
+      await save();
+      setStatus("Rebuild em andamento (até 10 min)…");
+      document.getElementById("preview").textContent = "aguardando ollama create…";
+      const r = await fetch(base + "/api/rebuild", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const j = await r.json();
+      document.getElementById("preview").textContent = JSON.stringify(j, null, 2);
+      if (!j.ok) throw new Error(j.error || j.stderr || "rebuild falhou");
+      setStatus("Modelo recriado: " + (j.model || ""), true);
+    }
+
+    document.getElementById("btn_save").onclick = () => save().catch(e => setStatus(String(e), false));
+    document.getElementById("btn_preview").onclick = () => preview().catch(e => setStatus(String(e), false));
+    document.getElementById("btn_rebuild").onclick = () => rebuild().catch(e => setStatus(String(e), false));
+    document.getElementById("btn_reload").onclick = () => load().catch(e => setStatus(String(e), false));
+    load().catch(e => setStatus(String(e), false));
+  </script>
+</body>
+</html>
