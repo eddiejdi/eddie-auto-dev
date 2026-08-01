@@ -1083,7 +1083,6 @@ def _floor_to_increment(value: float, increment: str) -> str:
     return format(quantized.normalize(), "f")
 
 
-@retry_on_failure(max_retries=3)
 def place_market_order(symbol: str, side: str, funds: float = None,
                        size: float = None,
                        notify_extra: Dict[str, float] = None) -> Dict[str, Any]:
@@ -1091,6 +1090,14 @@ def place_market_order(symbol: str, side: str, funds: float = None,
 
     notify_extra: contexto opcional para a notificação Telegram
     (invested, proceeds, pnl, pnl_pct) — usado nos SELLs.
+
+    client_oid é gerado uma única vez e reaproveitado em todas as
+    tentativas de retry (nunca use @retry_on_failure aqui, que re-executa
+    a função inteira e geraria um clientOid novo por tentativa). Se uma
+    tentativa anterior chegou a criar a ordem na KuCoin mas a resposta se
+    perdeu por erro de rede, reenviar o clientOid original faz a KuCoin
+    deduplicar; antes de cada reenvio checamos via clientOid se a ordem já
+    existe, para nunca duplicar uma ordem de dinheiro real.
     """
     validate_credentials()
 
@@ -1115,11 +1122,52 @@ def place_market_order(symbol: str, side: str, funds: float = None,
 
     body_str = json.dumps(payload, separators=(",", ":"))
 
-    logger.info(f"📤 {side.upper()} {symbol} - funds={funds}, size={size}")
+    max_attempts = 3
+    last_error: Optional[Exception] = None
+    result: Optional[Dict[str, Any]] = None
 
-    r = _signed_request("POST", endpoint, body_str=body_str, timeout=15)
+    for attempt in range(max_attempts):
+        if attempt > 0:
+            existing = get_order_by_client_oid(client_oid)
+            if existing:
+                logger.warning(
+                    "⚠️ Ordem clientOid=%s já existe na KuCoin (id=%s) — "
+                    "resposta da tentativa anterior deve ter se perdido; "
+                    "reaproveitando em vez de reenviar",
+                    client_oid, existing.get("id"),
+                )
+                result = {"code": "200000", "data": existing}
+                break
+        try:
+            logger.info(
+                f"📤 {side.upper()} {symbol} - funds={funds}, size={size} "
+                f"(tentativa {attempt + 1}/{max_attempts}, clientOid={client_oid})"
+            )
+            r = _signed_request("POST", endpoint, body_str=body_str, timeout=15)
+            result = r.json()
+            break
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                f"⚠️ Falha de rede ao enviar ordem (tentativa {attempt + 1}/{max_attempts}): {e}"
+            )
+            if attempt < max_attempts - 1:
+                time.sleep(0.5 * (attempt + 1))
 
-    result = r.json()
+    if result is None:
+        # Todas as tentativas falharam por exceção — checa uma última vez
+        # se a ordem foi criada mesmo assim antes de desistir de vez.
+        existing = get_order_by_client_oid(client_oid)
+        if existing:
+            logger.warning(
+                "⚠️ Ordem clientOid=%s foi criada apesar das exceções de rede "
+                "(id=%s) — usando ordem existente",
+                client_oid, existing.get("id"),
+            )
+            result = {"code": "200000", "data": existing}
+        else:
+            raise last_error
+
     if result.get("code") != "200000":
         logger.error(f"❌ Order failed: {result}")
         error_msg = result.get("msg", "Unknown")
@@ -1135,7 +1183,10 @@ def place_market_order(symbol: str, side: str, funds: float = None,
         )
         return {"success": False, "error": error_msg, "raw": result}
 
-    order_id = result.get("data", {}).get("orderId")
+    # POST /api/v1/orders devolve "orderId"; GET .../client-order/{clientOid}
+    # (usado no caminho de reconciliação acima) devolve "id" para o mesmo campo.
+    order_data = result.get("data", {})
+    order_id = order_data.get("orderId") or order_data.get("id")
     logger.info(f"✅ Order placed: {order_id}")
     _send_telegram_alert(
         _format_market_order_notification(
@@ -1504,6 +1555,20 @@ def get_trade_fees(symbols: str) -> List[Dict[str, Any]]:
 def get_order_details(order_id: str) -> Optional[Dict[str, Any]]:
     """Obtém detalhes de uma ordem"""
     endpoint = f"/api/v1/orders/{order_id}"
+    r = _signed_request("GET", endpoint, timeout=10)
+    if r.status_code == 200 and r.json().get("code") == "200000":
+        return r.json().get("data")
+    return None
+
+@retry_on_failure(max_retries=2)
+def get_order_by_client_oid(client_oid: str) -> Optional[Dict[str, Any]]:
+    """Obtém detalhes de uma ordem pelo clientOid (idempotency token).
+
+    Usado para checar se uma ordem já foi criada antes de reenviar o mesmo
+    clientOid após falha de rede — evita duplicar ordem quando a resposta
+    da tentativa anterior se perdeu mas a ordem chegou a ser aceita.
+    """
+    endpoint = f"/api/v1/order/client-order/{client_oid}"
     r = _signed_request("GET", endpoint, timeout=10)
     if r.status_code == 200 and r.json().get("code") == "200000":
         return r.json().get("data")

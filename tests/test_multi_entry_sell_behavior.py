@@ -32,6 +32,7 @@ sys.modules.setdefault(
         _has_keys=lambda: False,
         _resolve_telegram_bot_token=lambda: "",
         _resolve_telegram_chat_id=lambda: "",
+        _send_telegram_alert=lambda *a, **kw: None,
     ),
 )
 sys.modules.setdefault(

@@ -4582,9 +4582,32 @@ class BitcoinTradingAgent(
             min_confidence = max(0.45, min_confidence - 0.05)
 
         # REBUY lock: envelope determinístico (grace→decay→expired) + margem IA dentro.
+        # Guardrail de segurança (dinheiro real): se algo falhar ao AVALIAR o
+        # envelope, o comportamento correto é falhar FECHADO (bloquear a
+        # compra), nunca aberto — o docstring de _resolve_rebuy_envelope
+        # promete que o freio "é mecânico e SEMPRE ativo"; um `except: pass`
+        # que deixa passar a compra silenciosamente viola exatamente essa
+        # garantia sempre que a config tiver um valor malformado ou algum
+        # atributo inesperado faltar.
         if signal.action == "BUY":
             try:
                 env = self._resolve_rebuy_envelope(rag_adj, controls)
+            except Exception as exc:
+                last_sell_fallback = float(getattr(self.state, "last_sell_entry_price", 0.0) or 0.0)
+                if last_sell_fallback > 0:
+                    logger.error(
+                        f"❌ Erro ao avaliar rebuy envelope ({exc!r}) com venda "
+                        f"registrada (${last_sell_fallback:,.2f}) — bloqueando por "
+                        f"segurança (fail-closed) em vez de ignorar o lock"
+                    )
+                    return self._block_trade(
+                        "buy_rebuy_lock_evaluation_error",
+                        price=float(getattr(signal, "price", 0.0) or 0.0),
+                        last_sell_entry_price=last_sell_fallback,
+                        rebuy_error=repr(exc),
+                    )
+                logger.debug(f"Erro ao aplicar rebuy envelope (sem venda registrada; ignorando): {exc!r}")
+            else:
                 if env["active"]:
                     price = float(getattr(signal, "price", 0.0) or 0.0)
                     if price >= env["ceiling"]:
@@ -4605,8 +4628,6 @@ class BitcoinTradingAgent(
                             rebuy_elapsed_hours=round(env["elapsed_hours"], 2),
                             rebuy_source=env["source"],
                         )
-            except Exception:
-                logger.debug("Erro ao aplicar rebuy envelope; ignorando bloqueio")
 
         if signal.action == "SELL":
             guardrail_sell = self._get_guardrail_sell_verdict(signal.price)

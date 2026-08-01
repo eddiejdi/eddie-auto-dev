@@ -11,6 +11,8 @@ import pytest
 
 sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent.parent / "btc_trading_agent"))
 
+import kucoin_api
+import position_manager_mixin
 from position_manager_mixin import PositionManagerMixin
 
 _FEE = 0.001
@@ -599,3 +601,112 @@ class TestMixinInheritance:
 
         for method in expected_methods:
             assert method in all_mixin_attrs, f"Método ausente nos mixins: {method}"
+
+
+# ── _reconcile_position_with_exchange ──────────────────────────────────────
+
+class TestReconcilePositionWithExchange:
+    """Cobre os 3 achados da revisão 2026-08-01:
+
+    1. Direção reversa (exchange > DB) não pode criar entries sintéticas
+       (risco de atribuir saldo de outro profile) — deve só alertar.
+    2. TOCTOU: os números usados para decidir QUAIS/QUANTOS slots fechar
+       devem vir de uma leitura de `entries` feita já dentro do lock, não
+       da leitura pré-lock (que pode estar obsoleta se outro trade mutou
+       `self.state.entries` entre a checagem inicial e a aquisição do lock).
+    3. (Comportamento pré-existente, preservado) fecha do slot mais
+       recente para o mais antigo até eliminar o excesso.
+    """
+
+    def test_dry_run_returns_zero_without_querying_exchange(self):
+        agent = _make_agent(entries=[_entry(90_000, 0.001)], dry_run=True)
+        with patch.object(kucoin_api, "get_balance") as mock_balance:
+            result = agent._reconcile_position_with_exchange()
+        assert result == 0
+        mock_balance.assert_not_called()
+
+    def test_no_entries_returns_zero(self):
+        agent = _make_agent(entries=[], dry_run=False)
+        with patch.object(kucoin_api, "get_balance") as mock_balance:
+            result = agent._reconcile_position_with_exchange()
+        assert result == 0
+        mock_balance.assert_not_called()
+
+    def test_consistent_within_tolerance_returns_zero_no_alert(self):
+        entries = [_entry(90_000, 0.001), _entry(89_000, 0.001)]
+        agent = _make_agent(entries=entries, dry_run=False)
+        with (
+            patch.object(kucoin_api, "get_balance", return_value=0.002),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange()
+        assert result == 0
+        assert len(agent.state.entries) == 2
+        mock_alert.assert_not_called()
+
+    def test_exchange_greater_than_db_alerts_and_does_not_mutate_entries(self):
+        """Achado #2: exchange com MAIS moeda do que o DB só alerta — nunca
+        cria uma entry sintética automaticamente."""
+        entries = [_entry(90_000, 0.001)]
+        agent = _make_agent(entries=entries, dry_run=False)
+        with (
+            patch.object(kucoin_api, "get_balance", return_value=0.010),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange()
+        assert result == 0
+        assert len(agent.state.entries) == 1  # nada mudou no state
+        mock_alert.assert_called_once()
+        message = mock_alert.call_args.args[0]
+        assert "mais" in message.lower()
+        assert "BTC" in message
+
+    def test_db_greater_than_exchange_closes_most_recent_slots_first(self):
+        entries = [
+            _entry(88_000, 0.001),  # mais antigo — deve sobreviver
+            _entry(90_000, 0.001),  # mais recente — deve ser fechado
+        ]
+        agent = _make_agent(entries=entries, dry_run=False)
+        with (
+            patch.object(kucoin_api, "get_balance", return_value=0.001),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange(current_price=90_000.0)
+        assert result == 1
+        assert len(agent.state.entries) == 1
+        assert agent.state.entries[0]["price"] == 88_000
+        mock_alert.assert_not_called()
+
+    def test_toctou_uses_fresh_entries_read_inside_lock_not_stale_prelock_snapshot(self):
+        """Regressão do achado #3: simula um trade concorrente que remove
+        um entry (via efeito colateral no get_price, chamado ENTRE a
+        checagem pré-lock e a aquisição do lock) tornando a posição já
+        consistente. Se o código (incorretamente) confiasse nos números
+        pré-lock, fecharia o entry restante (fantasma calculado com dados
+        obsoletos); com o fix, a releitura dentro do lock detecta que já
+        está tudo consistente e não fecha nada."""
+        entry_a = _entry(88_000, 0.001)
+        entry_b = _entry(90_000, 0.001)
+        agent = _make_agent(entries=[entry_a, entry_b], dry_run=False)
+        # real_balance fixo em 0.001: no snapshot pré-lock (2 entries =
+        # 0.002 db_position) isso pareceria phantom=0.001 (1 entry sobra).
+        # Mas um "trade concorrente" remove entry_b antes do lock ser
+        # adquirido — deixando db_position real = 0.001 == real_balance.
+        def _simulate_concurrent_trade_removing_entry_b(*_a, **_kw):
+            agent.state.entries = [entry_a]
+            return 90_000.0
+
+        with (
+            patch.object(kucoin_api, "get_balance", return_value=0.001),
+            patch.object(
+                kucoin_api, "get_price",
+                side_effect=_simulate_concurrent_trade_removing_entry_b,
+            ),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange()
+
+        assert result == 0, "TOCTOU: fechou um slot usando phantom_btc obsoleto (pré-lock)"
+        assert len(agent.state.entries) == 1
+        assert agent.state.entries[0] is entry_a
+        mock_alert.assert_not_called()

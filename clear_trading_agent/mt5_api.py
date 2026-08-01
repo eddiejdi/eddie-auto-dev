@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 import os
 import time
+import uuid
 from functools import wraps
 from pathlib import Path
 from typing import Any, Optional
@@ -260,7 +261,98 @@ def get_active_orders(symbol: Optional[str] = None) -> list[dict[str, Any]]:
 
 
 # ====================== TRADING ======================
-@retry_on_failure(max_retries=3)
+def _tagged_comment(comment: str) -> str:
+    """Anexa um sufixo aleatório único ao comentário da ordem.
+
+    O bridge MT5 (mt5_bridge/bridge_api.py) não suporta um idempotency
+    token nativo como o clientOid da KuCoin — mas o campo `comment` da
+    ordem é ecoado de volta em cada deal executado (DealInfo.comment) e
+    fica disponível via get_history_deals(). Usamos essa tag como
+    substituto de idempotency key: antes de reenviar após uma exceção de
+    rede, checamos se já existe um deal recente com essa tag exata antes
+    de disparar uma segunda ordem real na Clear. MT5 limita comment a 31
+    bytes, daí o truncamento.
+    """
+    tag = uuid.uuid4().hex[:10]
+    return f"{comment[:20]}#{tag}"[:31]
+
+
+def _find_recent_deal_by_comment(symbol: str, tagged_comment: str) -> Optional[dict[str, Any]]:
+    """Procura um deal já executado com o comment tag exato (janela de 1 dia)."""
+    try:
+        deals = get_history_deals(days=1, symbol=symbol)
+    except Exception as e:
+        logger.warning("⚠️ Falha ao checar histórico de deals p/ dedup: %s", e)
+        return None
+    for deal in deals:
+        if deal.get("comment") == tagged_comment:
+            return deal
+    return None
+
+
+def _place_order_with_dedup(
+    endpoint_payload: dict[str, Any],
+    *,
+    symbol: str,
+    tagged_comment: str,
+    max_attempts: int = 3,
+) -> dict[str, Any]:
+    """Envia a ordem ao bridge, reaproveitando a mesma comment tag entre
+    tentativas e checando o histórico de deals antes de reenviar — nunca
+    use @retry_on_failure aqui, que re-executaria a função inteira sem
+    checar se a ordem anterior já tinha sido aceita pela Clear."""
+    last_error: Optional[Exception] = None
+    result: Optional[dict[str, Any]] = None
+
+    for attempt in range(max_attempts):
+        if attempt > 0:
+            existing = _find_recent_deal_by_comment(symbol, tagged_comment)
+            if existing:
+                logger.warning(
+                    "⚠️ Deal com comment=%s já existe na Clear (ticket=%s) — "
+                    "resposta da tentativa anterior deve ter se perdido; "
+                    "reaproveitando em vez de reenviar",
+                    tagged_comment, existing.get("ticket"),
+                )
+                result = {
+                    "success": True,
+                    "order_id": existing.get("order"),
+                    "price": existing.get("price"),
+                    "volume": existing.get("volume"),
+                }
+                break
+        try:
+            result = _post("/order", endpoint_payload)
+            break
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                "⚠️ Falha de rede ao enviar ordem (tentativa %d/%d): %s",
+                attempt + 1, max_attempts, e,
+            )
+            if attempt < max_attempts - 1:
+                time.sleep(0.5 * (attempt + 1))
+
+    if result is None:
+        existing = _find_recent_deal_by_comment(symbol, tagged_comment)
+        if existing:
+            logger.warning(
+                "⚠️ Deal com comment=%s foi criado apesar das exceções de rede "
+                "(ticket=%s) — usando deal existente",
+                tagged_comment, existing.get("ticket"),
+            )
+            result = {
+                "success": True,
+                "order_id": existing.get("order"),
+                "price": existing.get("price"),
+                "volume": existing.get("volume"),
+            }
+        else:
+            raise last_error
+
+    return result
+
+
 def place_market_order(
     symbol: str,
     side: str,
@@ -282,6 +374,7 @@ def place_market_order(
     Returns:
         Dict com success, order_id, price, volume, error.
     """
+    tagged_comment = _tagged_comment(comment)
     payload = {
         "symbol": symbol,
         "side": side.lower(),
@@ -289,15 +382,15 @@ def place_market_order(
         "order_type": "market",
         "deviation": deviation,
         "magic": magic,
-        "comment": comment,
+        "comment": tagged_comment,
     }
 
     logger.info(
-        "📤 %s %s %.2f lotes (slippage=%d pts)",
-        side.upper(), symbol, volume, deviation,
+        "📤 %s %s %.2f lotes (slippage=%d pts, comment=%s)",
+        side.upper(), symbol, volume, deviation, tagged_comment,
     )
 
-    result = _post("/order", payload)
+    result = _place_order_with_dedup(payload, symbol=symbol, tagged_comment=tagged_comment)
 
     if result.get("success"):
         logger.info(
@@ -310,7 +403,6 @@ def place_market_order(
     return result
 
 
-@retry_on_failure(max_retries=3)
 def place_limit_order(
     symbol: str,
     side: str,
@@ -332,6 +424,7 @@ def place_limit_order(
     Returns:
         Dict com success, order_id, error.
     """
+    tagged_comment = _tagged_comment(comment)
     payload = {
         "symbol": symbol,
         "side": side.lower(),
@@ -339,15 +432,15 @@ def place_limit_order(
         "order_type": "limit",
         "price": price,
         "magic": magic,
-        "comment": comment,
+        "comment": tagged_comment,
     }
 
     logger.info(
-        "📤 LIMIT %s %s %.2f @ %.4f",
-        side.upper(), symbol, volume, price,
+        "📤 LIMIT %s %s %.2f @ %.4f (comment=%s)",
+        side.upper(), symbol, volume, price, tagged_comment,
     )
 
-    result = _post("/order", payload)
+    result = _place_order_with_dedup(payload, symbol=symbol, tagged_comment=tagged_comment)
 
     if result.get("success"):
         logger.info("✅ Ordem limitada: id=%s", result.get("order_id"))

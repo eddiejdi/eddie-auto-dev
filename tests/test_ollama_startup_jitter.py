@@ -54,6 +54,7 @@ for _mod in (
         get_fills_for_order=lambda *a, **kw: {},
     _resolve_telegram_bot_token=lambda: "",
     _resolve_telegram_chat_id=lambda: "",
+    _send_telegram_alert=lambda *a, **kw: None,
         FastTradingModel=lambda *a, **kw: types.SimpleNamespace(save=lambda: None, load=lambda: None),
         MarketState=object,
         Signal=object,
