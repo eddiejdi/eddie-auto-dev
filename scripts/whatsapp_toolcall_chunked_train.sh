@@ -68,12 +68,18 @@ requests.post(
 PY
 }
 
-# Unidades com `Wants=ollama.service` + `Restart=always`: se ficarem de pé,
-# cada restart delas reergue o ollama em segundos, no meio do treino, e as
-# duas brigam pela VRAM da 3060. Medido: eddie-calendar (quebrado, em loop de
-# restart a cada 10s porque o Google Calendar não está autenticado) reergueu
-# o ollama 7s depois do stop. Precisam ser pausadas junto e restauradas no trap.
-OLLAMA_PULLERS=(eddie-calendar.service llm-optimizer.service)
+# Unidades que reergem o ollama sozinhas e brigam pela VRAM da 3060 durante
+# o treino — precisam ser pausadas junto e restauradas no trap:
+#   - eddie-calendar/llm-optimizer: Wants=ollama.service + Restart=always
+#     (medido: eddie-calendar quebrado, em loop de restart a cada 10s, reergueu
+#     o ollama 7s depois do stop).
+#   - ollama-gpu-selfheal: não é Restart=always do systemd, mas o PRÓPRIO
+#     script monitora "ollama down" e chama `systemctl start ollama.service`
+#     de propósito (é o self-heal) — sem saber que a pausa é intencional.
+#     Medido 2026-07-31: religou o ollama 2x no meio de um pacote de treino
+#     ("gpu0: service down há 131s — tentando restart"); o guard deste script
+#     bloqueou a tempo, mas é desperdício de ciclo e risco desnecessário.
+OLLAMA_PULLERS=(eddie-calendar.service llm-optimizer.service ollama-gpu-selfheal.service)
 GUARD_TRIGGERED_FLAG="$OUT_DIR/.guard_triggered"
 
 # Enquanto o treino roda, algo fora deste script pode religar o ollama (visto
