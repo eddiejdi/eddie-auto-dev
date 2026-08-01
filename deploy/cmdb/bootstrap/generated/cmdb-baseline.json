@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-01T22:28:51.582744+00:00",
-  "repo_root": "/workspace/eddie-auto-dev",
+  "generated_at": "2026-08-01T23:58:12.242584+00:00",
+  "repo_root": "/home/edenilson/.traycer/worktrees/eddiejdi__eddie-auto-dev/traycer-plucky-rabbit",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",

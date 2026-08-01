@@ -92,6 +92,40 @@ def get_database_url() -> str:
     )
 
 
+def get_telegram_bot_token() -> str:
+    """Return the shared Telegram bot token.
+
+    Prefers env vars (TELEGRAM_BOT_TOKEN / TG_BOT_TOKEN / TG_TOKEN), then Secrets
+    Agent. The live secret answers on field=password (not field=value).
+    """
+    token = (
+        os.getenv("TELEGRAM_BOT_TOKEN")
+        or os.getenv("TG_BOT_TOKEN")
+        or os.getenv("TG_TOKEN")
+        or ""
+    ).strip()
+    if token:
+        return token
+
+    for secret_name, field in (
+        ("shared/telegram_bot_token", "password"),
+        ("shared/telegram_bot_token", "token"),
+        ("authentik/shared/telegram_bot_token", "password"),
+        ("authentik/shared/telegram_bot_token", "token"),
+        ("eddie/telegram_bot_token", "password"),
+        ("crypto/telegram_bot_token", "password"),
+    ):
+        token = get_secret(secret_name, field)
+        if token:
+            return token.strip()
+
+    raise RuntimeError(
+        "❌ TELEGRAM_BOT_TOKEN não configurado. "
+        "Configure via env var TELEGRAM_BOT_TOKEN ou Secrets Agent "
+        "(shared/telegram_bot_token, field=password)."
+    )
+
+
 def get_kucoin_credentials() -> tuple[str, str, str]:
     """Resolve KuCoin credentials from secrets or env vars."""
     api_key, api_secret, passphrase, _source = get_kucoin_credentials_with_source()

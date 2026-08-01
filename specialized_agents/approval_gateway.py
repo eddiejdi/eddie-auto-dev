@@ -16,7 +16,7 @@ Uso:
 
 Variáveis de ambiente (lidas de /etc/default/eddie-common e .env):
     DATABASE_URL        — PostgreSQL DSN (/etc/default/eddie-common)
-    TELEGRAM_BOT_TOKEN  — token Telegram (/home/homelab/myClaude/.env)
+    TELEGRAM_BOT_TOKEN  — opcional; fallback Secrets Agent (shared/telegram_bot_token)
     TELEGRAM_CHAT_ID    — chat_id destino (/home/homelab/myClaude/.env)
 
     Aliases aceitos se as vars acima não estiverem definidas:
@@ -91,13 +91,20 @@ def _boot() -> bool:
     if not _DB_DSN:
         missing.append("DATABASE_URL")
 
-    # Aceitar tanto TELEGRAM_BOT_TOKEN (padrão do homelab) quanto TG_BOT_TOKEN
-    _bot_tok = (
-        os.environ.get("TELEGRAM_BOT_T" "OKEN", "")
-        or os.environ.get("TG_BOT_T" "OKEN", "")
-    )
-    if not _bot_tok:
-        missing.append("TELEGRAM_BOT_TOKEN or TG_BOT_TOKEN")
+    # Token: env (TELEGRAM_BOT_TOKEN/TG_*) ou Secrets Agent via secrets_helper
+    _bot_tok = ""
+    try:
+        from btc_trading_agent.secrets_helper import get_telegram_bot_token
+
+        _bot_tok = get_telegram_bot_token()
+    except Exception:
+        try:
+            from secrets_helper import get_telegram_bot_token  # type: ignore
+
+            _bot_tok = get_telegram_bot_token()
+        except Exception as exc:
+            log.error("TELEGRAM_BOT_TOKEN indisponível (env + Secrets Agent): %s", exc)
+            missing.append("TELEGRAM_BOT_TOKEN (env ou Secrets Agent shared/telegram_bot_token)")
 
     # Aceitar tanto TELEGRAM_CHAT_ID (padrão) quanto TG_BOT_CHAT
     _CHAT = (
@@ -109,7 +116,10 @@ def _boot() -> bool:
 
     if missing:
         log.error("Variáveis obrigatórias não definidas: %s", ", ".join(missing))
-        log.error("Fontes: /etc/default/eddie-common (DB) + /home/homelab/myClaude/.env (TG)")
+        log.error(
+            "Fontes: /etc/default/eddie-common (DB/chat) + "
+            "Secrets Agent shared/telegram_bot_token (token)"
+        )
         return False
 
     _BOT_URL = "https://api.telegram.org/bot" + _bot_tok

@@ -94,18 +94,24 @@ except ImportError:
     INTEGRATION_AVAILABLE = False
     print("⚠️ Módulo openwebui_integration não encontrado")
 
-# Configurações
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
-if not BOT_TOKEN:
+# Configurações — token via secrets_helper (env → Secrets Agent)
+BOT_TOKEN = ""
+try:
+    from btc_trading_agent.secrets_helper import get_telegram_bot_token
+
+    BOT_TOKEN = get_telegram_bot_token()
+except Exception:
     try:
         from tools.secrets_loader import get_telegram_token
+
         BOT_TOKEN = get_telegram_token() or ""
     except Exception:
         try:
             from tools.vault.secret_store import get_field
+
             BOT_TOKEN = get_field("shared/telegram_bot_token", "password") or ""
         except Exception:
-            BOT_TOKEN = ""
+            BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 HOMELAB_HOST = os.environ.get('HOMELAB_HOST', 'localhost')
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", f"http://{HOMELAB_HOST}:11434")
 MODEL = os.getenv("OLLAMA_MODEL", "shared-coder")
