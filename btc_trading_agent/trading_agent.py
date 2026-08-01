@@ -1130,12 +1130,20 @@ class BitcoinTradingAgent(
         }
 
     def _get_trade_window_file(self) -> Path:
-        """Arquivo local do cache quente da janela operacional."""
+        """Arquivo local do cache quente da janela operacional.
+
+        Per-symbol (não só per-profile): trade_window_{profile}.json sozinho
+        era compartilhado por todos os símbolos que dividem o mesmo profile
+        (BTC/ETH/SOL/DOGE em "shadow" gravavam no mesmo arquivo),
+        contaminando a janela de um símbolo com a de outro — mesma classe de
+        bug do index.pkl legado corrigida em 2026-07-13 para o Market RAG,
+        que nunca tinha sido aplicada aqui.
+        """
         trade_dir = Path(__file__).parent / "data" / "market_rag"
         trade_dir.mkdir(parents=True, exist_ok=True)
         profile = self._current_profile()
         suffix = "" if profile == "default" else f"_{profile}"
-        return trade_dir / f"trade_window{suffix}.json"
+        return trade_dir / f"trade_window_{self.symbol}{suffix}.json"
 
     def _has_min_structured_ollama_evidence(self, rag_adj, rag_stats: Dict[str, Any]) -> tuple[bool, str]:
         """Valida evidência mínima para aceitar análises estruturadas do Ollama.
