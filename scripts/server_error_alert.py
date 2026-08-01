@@ -80,6 +80,12 @@ _NOISE_UNITS = {
     "dbus", "systemd-", "rsyslog", "cron", "sshd",
     "smartmontools", "smartd", "accounts-daemon", "polkit",
     "rtkit-daemon", "udisks2", "avahi-daemon", "colord",
+    # session-<N>.scope: escopo de login SSH/PAM normal, não um serviço. O
+    # journal loga esses fechamentos em prioridade "err" quando o comando
+    # dentro da sessão sai com código != 0 (ex.: grep sem match) — nada
+    # quebrado, e o número da sessão muda a cada conexão, então o dedup por
+    # unit_base (session-<N>, sem o sufixo) não colapsa entradas repetidas.
+    "session-",
 }
 
 
