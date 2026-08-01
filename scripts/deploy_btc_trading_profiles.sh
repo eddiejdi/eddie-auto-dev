@@ -757,15 +757,20 @@ sudo systemctl enable ollama-gpu-coordinator.service 2>/dev/null || true
 sudo systemctl restart ollama-gpu-coordinator.service
 sleep 2
 
-# Atualiza common.conf para rotear chamadas pelo coordenador (:11437)
+# Atualiza common.conf para rotear chamadas pelo coordenador (:11437).
+# FALLBACK_HOST fica em :11435 (ollama-gpu1.service, direto, sem passar pelo
+# coordenador) de propósito — se apontasse pro mesmo :11437 do primário,
+# "fallback" nenhum ajudaria quando o coordenador cai (ex.: pausado pelo job
+# de fine-tune horário): primário e fallback morreriam juntos. ollama-gpu1
+# não é parado por esse job, então segue de pé como rota independente.
 sudo sed -i \
   -e 's|^Environment=OLLAMA_PLAN_HOST=.*|Environment=OLLAMA_PLAN_HOST=http://192.168.15.2:11437|' \
   -e 's|^Environment=OLLAMA_TRADE_PARAMS_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_HOST=http://192.168.15.2:11437|' \
-  -e 's|^Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11437|' \
+  -e 's|^Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11435|' \
   -e 's|^Environment=OLLAMA_TRADE_WINDOW_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_HOST=http://192.168.15.2:11437|' \
-  -e 's|^Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11437|' \
+  -e 's|^Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=.*|Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11435|' \
   /etc/systemd/system/crypto-agent@.service.d/common.conf 2>/dev/null || true
-echo "🔀 Routing: agents → coordenador :11437 (llama3.2:1b)"
+echo "🔀 Routing: agents → coordenador :11437 (llama3.2:1b) | fallback → gpu1 :11435 direto"
 
 # Habilita e reinicia RSS sentiment
 sudo systemctl enable rss-sentiment-exporter.service 2>/dev/null || true
