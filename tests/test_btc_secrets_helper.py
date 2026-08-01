@@ -143,3 +143,57 @@ def test_get_secret_uses_authentik_fallback() -> None:
             val = secrets_helper.get_secret("authentik/some/path", "password", use_cache=False)
 
     assert val == "auth-value"
+
+
+def test_get_telegram_bot_token_prefers_env() -> None:
+    """Env var TELEGRAM_BOT_TOKEN vence o cofre (mesmo padrão de get_database_url)."""
+    with patch.object(secrets_helper, "get_secret") as mock_get_secret, patch.dict(
+        "os.environ",
+        {"TELEGRAM_BOT_TOKEN": "env-token-123"},
+        clear=False,
+    ):
+        mock_get_secret.return_value = "vault-token"
+        assert secrets_helper.get_telegram_bot_token() == "env-token-123"
+    mock_get_secret.assert_not_called()
+
+
+def test_get_telegram_bot_token_accepts_tg_aliases() -> None:
+    """Aliases TG_BOT_TOKEN / TG_TOKEN também resolvem sem ir ao cofre."""
+    with patch.object(secrets_helper, "get_secret") as mock_get_secret, patch.dict(
+        "os.environ",
+        {"TELEGRAM_BOT_TOKEN": "", "TG_BOT_TOKEN": "", "TG_TOKEN": "alias-token"},
+        clear=False,
+    ):
+        mock_get_secret.return_value = "vault-token"
+        assert secrets_helper.get_telegram_bot_token() == "alias-token"
+    mock_get_secret.assert_not_called()
+
+
+def test_get_telegram_bot_token_uses_secrets_agent_password_field() -> None:
+    """Sem env, resolve shared/telegram_bot_token com field=password."""
+    with patch.object(secrets_helper, "get_secret") as mock_get_secret, patch.dict(
+        "os.environ",
+        {"TELEGRAM_BOT_TOKEN": "", "TG_BOT_TOKEN": "", "TG_TOKEN": ""},
+        clear=False,
+    ):
+        def _secret(name: str, field: str = "password", use_cache: bool = True):
+            if name == "shared/telegram_bot_token" and field == "password":
+                return "vault-token-pwd"
+            return None
+
+        mock_get_secret.side_effect = _secret
+        assert secrets_helper.get_telegram_bot_token() == "vault-token-pwd"
+
+
+def test_get_telegram_bot_token_raises_when_missing() -> None:
+    """Sem env e sem cofre, levanta RuntimeError explícito."""
+    with patch.object(secrets_helper, "get_secret", return_value=None), patch.dict(
+        "os.environ",
+        {"TELEGRAM_BOT_TOKEN": "", "TG_BOT_TOKEN": "", "TG_TOKEN": ""},
+        clear=False,
+    ):
+        try:
+            secrets_helper.get_telegram_bot_token()
+            raise AssertionError("expected RuntimeError")
+        except RuntimeError as exc:
+            assert "TELEGRAM_BOT_TOKEN" in str(exc)

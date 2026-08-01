@@ -10,7 +10,7 @@ Uso::
 Env vars::
     ALERTMANAGER_URL   — default http://localhost:9093
     PROMETHEUS_URL     — default http://localhost:9090
-    TELEGRAM_BOT_TOKEN / TG_BOT_TOKEN
+    TELEGRAM_BOT_TOKEN / TG_BOT_TOKEN  — opcional; fallback Secrets Agent
     TELEGRAM_CHAT_ID   / TG_BOT_CHAT
     DATABASE_URL       — herdado de /etc/default/eddie-common
 """
@@ -26,6 +26,21 @@ _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 
 from specialized_agents.langgraph_base import AgentState, HomelabAgent
+
+
+def _resolve_telegram_bot_token() -> str:
+    """Token via secrets_helper (env → Secrets Agent); string vazia se indisponível."""
+    try:
+        from btc_trading_agent.secrets_helper import get_telegram_bot_token
+
+        return get_telegram_bot_token()
+    except Exception:
+        try:
+            from secrets_helper import get_telegram_bot_token  # type: ignore
+
+            return get_telegram_bot_token()
+        except Exception:
+            return ""
 
 ALERTMANAGER_URL = os.environ.get("ALERTMANAGER_URL", "http://localhost:9093")
 PROMETHEUS_URL   = os.environ.get("PROMETHEUS_URL",   "http://localhost:9090")
@@ -93,19 +108,13 @@ def _format_digest(alerts: list[dict]) -> str:
 
 
 def _send_telegram(text: str) -> bool:
-    tok = (
-        os.environ.get("TELEGRAM_BOT_T" "OKEN", "")
-        or os.environ.get("TG_BOT_T" "OKEN", "")
-    )
+    tok = _resolve_telegram_bot_token()
     chat = os.environ.get("TELEGRAM_CHAT_ID", "") or os.environ.get("TG_BOT_CHAT", "")
-    if not tok or not chat:
-        # Tenta /etc/default/eddie-common
+    if not chat:
         try:
             for line in open("/etc/default/eddie-common").read().splitlines():
                 k, _, v = line.partition("=")
-                if k in ("TELEGRAM_BOT_T" "OKEN", "TG_BOT_T" "OKEN"):
-                    tok = v.strip()
-                if k in ("TELEGRAM_CHAT_ID", "TG_BOT_CHAT"):
+                if k in ("TELEGRAM_CHAT_ID", "TG_BOT_CHAT") and not chat:
                     chat = v.strip()
         except (FileNotFoundError, PermissionError):
             pass
