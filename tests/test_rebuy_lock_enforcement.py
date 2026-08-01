@@ -30,6 +30,7 @@ sys.modules.setdefault("kucoin_api", types.SimpleNamespace(
     get_fills_for_order=lambda *a, **kw: {},
     _resolve_telegram_bot_token=lambda: "",
     _resolve_telegram_chat_id=lambda: "",
+    _send_telegram_alert=lambda *a, **kw: None,
 ))
 sys.modules.setdefault("fast_model", types.SimpleNamespace(
     FastTradingModel=object, MarketState=object, Signal=object))
@@ -368,3 +369,38 @@ def test_block_context_reports_phase_and_ceiling():
     assert ctx["rebuy_max_price"] > 70000.0            # teto decaído acima do last_sell
     assert ctx["rebuy_envelope_ceiling"] >= ctx["rebuy_max_price"]
     assert 5.5 < ctx["rebuy_elapsed_hours"] < 6.5
+
+
+# ── Achado #4 (revisão 2026-08-01): fail-closed em erro de avaliação ────────
+
+def test_rebuy_envelope_evaluation_error_fails_closed_when_sell_registered():
+    """Config malformada (não numérica) faz _resolve_rebuy_envelope lançar
+    ValueError. Antes do fix, um `except Exception: pass` no call site
+    deixava a compra passar silenciosamente — violando a garantia do
+    próprio docstring de que o freio é "SEMPRE ativo" enquanto houver
+    venda registrada. Preço abaixo do last_sell (que normalmente SERIA
+    liberado pela lógica correta do envelope) prova que o bloqueio aqui é
+    por segurança/fail-closed, não pela regra normal de preço."""
+    agent = _make_agent(
+        position=0.0,
+        last_sell_entry_price=70000.0,
+        rebuy_envelope={"grace_hours": "not_a_number"},
+    )
+    sig = SimpleNamespace(action="BUY", price=69000.0, confidence=0.9, reason="unit")
+    result = agent._check_can_trade(sig)
+    assert result is False
+    assert agent.state.last_trade_block_reason == "buy_rebuy_lock_evaluation_error"
+
+
+def test_rebuy_envelope_evaluation_error_does_not_block_fresh_buy_without_sell_history():
+    """Sem venda registrada (last_sell_entry_price=0), _resolve_rebuy_envelope
+    retorna cedo (antes de tocar a config) e nunca lança — então mesmo com
+    config malformada, um BUY fresco continua livre. O fail-closed só se
+    aplica quando existe um lock que de fato deveria estar protegendo algo."""
+    agent = _make_agent(
+        position=0.0,
+        last_sell_entry_price=0.0,
+        rebuy_envelope={"grace_hours": "not_a_number"},
+    )
+    sig = SimpleNamespace(action="BUY", price=69000.0, confidence=0.9, reason="unit")
+    assert agent._check_can_trade(sig) is True

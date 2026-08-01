@@ -16,7 +16,7 @@ import threading
 import time
 from typing import Any, Dict
 
-from kucoin_api import place_market_order
+from kucoin_api import place_market_order, _send_telegram_alert
 from slot_exit_policy import (
     PerSlotExitPlanner,
     SignalSellContext,
@@ -521,9 +521,15 @@ class PositionManagerMixin:
         que o conservative acredita ser seu, o conservative fica com posição
         registrada no DB mas sem BTC na exchange.
 
-        Ao detectar a divergência, fecha os slots excedentes com uma venda
-        sintética (metadata.source = "reconciled"), do slot mais recente para
+        Ao detectar essa divergência (DB > exchange), fecha os slots excedentes
+        do state (sem gravar sell sintético no DB), do slot mais recente para
         o mais antigo, até que DB == saldo real ± tolerância.
+
+        Na direção oposta (exchange > DB — a exchange tem MAIS moeda do que o
+        DB conhece), NÃO criamos entries sintéticas automaticamente: em conta
+        compartilhada entre profiles, atribuir esse saldo ao profile errado
+        corrompe PnL/histórico de outro agente. Esse caso só dispara um alerta
+        Telegram para investigação manual.
 
         Chamado:
         - Em background quando sell falha com código 200004 (Balance insufficient)
@@ -531,7 +537,8 @@ class PositionManagerMixin:
         - Em background após cada compra bem-sucedida
 
         Returns:
-            Número de slots fechados por reconciliação (0 = tudo consistente).
+            Número de slots fechados por reconciliação (0 = tudo consistente,
+            ou exchange > DB — nesse caso apenas alertado, não contado aqui).
         """
         if self.state.dry_run:
             return 0
@@ -549,20 +556,38 @@ class PositionManagerMixin:
             logger.warning("⚠️ Reconciliação: falha ao consultar saldo KuCoin — %s", exc)
             return 0
 
+        profile = self._current_profile() if callable(getattr(self, "_current_profile", None)) else "default"
+
         db_position = sum(float(e.get("size", 0) or 0) for e in entries)
         # Tolerância de 0.5% ou 1 satoshi — evita falsos positivos por arredondamento
         tolerance = max(db_position * 0.005, 0.000_000_01)
 
+        if real_balance > db_position + tolerance:
+            excess = real_balance - db_position
+            logger.warning(
+                "⚠️ [reconcile] Exchange tem mais %s do que o DB conhece (%s/%s): "
+                "DB=%.8f | Exchange=%.8f | excesso=%.8f — alertando, sem ação automática",
+                base_currency, self.symbol, profile, db_position, real_balance, excess,
+            )
+            _send_telegram_alert(
+                f"⚠️ *Reconciliação* `{self.symbol}`/`{profile}`\n"
+                f"Exchange tem *mais* {base_currency} do que o DB sabe:\n"
+                f"DB: `{db_position:.8f}` | Exchange: `{real_balance:.8f}` | "
+                f"excesso: `{excess:.8f}`\n"
+                f"Sem ação automática (risco de atribuir saldo de outro profile "
+                f"na mesma subconta) — verificar manualmente."
+            )
+            return 0
+
         if real_balance >= db_position - tolerance:
             return 0  # consistente, nada a fazer
 
-        phantom_btc = db_position - real_balance
         logger.warning(
-            "⚠️ [reconcile] Divergência detectada: DB=%.8f %s | Exchange=%.8f %s | "
-            "phantom=%.8f %s — fechando slots excedentes",
+            "⚠️ [reconcile] Divergência detectada (pré-lock): DB=%.8f %s | Exchange=%.8f %s | "
+            "phantom~%.8f %s — confirmando dentro do lock antes de fechar slots",
             db_position, base_currency,
             real_balance, base_currency,
-            phantom_btc, base_currency,
+            db_position - real_balance, base_currency,
         )
 
         if not current_price or current_price <= 0:
@@ -573,12 +598,32 @@ class PositionManagerMixin:
                 pass
 
         fee_pct = getattr(self, "_trading_fee_pct", _TRADING_FEE_PCT)
-        profile = self._current_profile() if callable(getattr(self, "_current_profile", None)) else "default"
 
         closed = 0
-        # Fecha do slot mais recente para o mais antigo até eliminar o excesso
+        # Fecha do slot mais recente para o mais antigo até eliminar o excesso.
         with self._trade_lock:
+            # Recomputa db_position/tolerance/phantom a partir de uma leitura
+            # FRESCA de entries feita já dentro do lock — os valores calculados
+            # acima (pré-lock) só servem para decidir se vale a pena buscar
+            # current_price e entrar aqui. Usá-los para a decisão de quais/quantos
+            # slots fechar seria uma condição de corrida (TOCTOU): outro trade
+            # pode ter mutado self.state.entries entre aquela leitura e a
+            # aquisição do lock, tornando phantom_btc/tolerance obsoletos.
             entries = list(getattr(self.state, "entries", []) or [])
+            db_position = sum(float(e.get("size", 0) or 0) for e in entries)
+            tolerance = max(db_position * 0.005, 0.000_000_01)
+            phantom_btc = db_position - real_balance
+
+            if phantom_btc <= tolerance:
+                return 0  # já consistente no momento em que o lock foi obtido
+
+            logger.warning(
+                "⚠️ [reconcile] Divergência confirmada dentro do lock: DB=%.8f %s | "
+                "Exchange=%.8f %s | phantom=%.8f %s — fechando slots excedentes",
+                db_position, base_currency, real_balance, base_currency,
+                phantom_btc, base_currency,
+            )
+
             for idx in range(len(entries) - 1, -1, -1):
                 if phantom_btc <= tolerance:
                     break

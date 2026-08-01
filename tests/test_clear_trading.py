@@ -300,6 +300,75 @@ class TestMt5ApiClient:
         result = place_limit_order("PETR4", "buy", 100, 28.00)
         assert result["success"] is True
 
+    @patch("clear_trading_agent.mt5_api.uuid.uuid4")
+    @patch("clear_trading_agent.mt5_api.requests.post")
+    def test_place_market_order_reusa_comment_tag_entre_tentativas(
+        self, mock_post: MagicMock, mock_uuid: MagicMock,
+    ) -> None:
+        """Regressão: place_market_order não pode gerar uma comment tag
+        (idempotency key do MT5 bridge, já que MT5 não tem clientOid) nova
+        a cada retry. @retry_on_failure re-executava a função inteira,
+        inclusive a geração da tag, arriscando ordem duplicada na Clear se
+        a 1ª tentativa tivesse sido aceita mas a resposta se perdesse."""
+        mock_uuid.return_value = MagicMock(hex="abc123def456")
+        mock_post.side_effect = [
+            ConnectionError("network reset"),
+            MagicMock(
+                status_code=200,
+                json=lambda: {"success": True, "order_id": 555, "price": 28.5, "volume": 100},
+                raise_for_status=MagicMock(),
+            ),
+        ]
+        with patch(
+            "clear_trading_agent.mt5_api._find_recent_deal_by_comment",
+            return_value=None,
+        ) as mock_lookup:
+            result = place_market_order("PETR4", "buy", 100)
+
+        assert result["success"] is True
+        assert mock_post.call_count == 2
+        comments = [call.kwargs["json"]["comment"] for call in mock_post.call_args_list]
+        assert comments[0] == comments[1], "comment tag mudou entre tentativas"
+        mock_lookup.assert_called_once()
+
+    @patch("clear_trading_agent.mt5_api.requests.post")
+    def test_place_market_order_nao_duplica_se_deal_ja_existe(
+        self, mock_post: MagicMock,
+    ) -> None:
+        """Se a 1ª tentativa falhar por exceção de rede mas o deal já
+        tiver sido executado na Clear, a 2ª tentativa deve reaproveitar o
+        deal existente (achado via comment tag) em vez de enviar outra
+        ordem real."""
+        mock_post.side_effect = [ConnectionError("network reset")]
+        existing_deal = {"ticket": 777, "order": 999, "price": 28.4, "volume": 100}
+        with patch(
+            "clear_trading_agent.mt5_api._find_recent_deal_by_comment",
+            return_value=existing_deal,
+        ) as mock_lookup:
+            result = place_market_order("PETR4", "buy", 100)
+
+        assert result["success"] is True
+        assert result["order_id"] == 999
+        assert mock_post.call_count == 1
+        mock_lookup.assert_called_once()
+
+    @patch("clear_trading_agent.mt5_api.time.sleep")
+    @patch("clear_trading_agent.mt5_api.requests.post")
+    def test_place_market_order_relanca_erro_sem_deal_e_tentativas_esgotadas(
+        self, mock_post: MagicMock, mock_sleep: MagicMock,
+    ) -> None:
+        """Sem deal encontrado e todas as tentativas esgotadas por
+        exceção, o erro original deve propagar — nunca ser engolido."""
+        mock_post.side_effect = [
+            ConnectionError("a"), ConnectionError("b"), ConnectionError("c"),
+        ]
+        with patch(
+            "clear_trading_agent.mt5_api._find_recent_deal_by_comment",
+            return_value=None,
+        ):
+            with pytest.raises(ConnectionError):
+                place_market_order("PETR4", "buy", 100)
+
     @patch("clear_trading_agent.mt5_api.requests.get")
     def test_is_bridge_healthy(self, mock_get: MagicMock) -> None:
         """is_bridge_healthy retorna True quando bridge responde."""

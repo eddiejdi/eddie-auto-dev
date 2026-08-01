@@ -625,6 +625,89 @@ class TestSignedRequestTimestampRecovery:
         assert "Invalid KC-API-TIMESTAMP" in message
 
 
+# ============ TESTES: dedup de clientOid ao reenviar ordem ============
+
+class TestPlaceMarketOrderClientOidStability:
+    """Regressão: place_market_order não pode gerar um clientOid novo a
+    cada retry. Antes desse fix, place_market_order era decorada com
+    @retry_on_failure, que re-executa a função inteira (inclusive a linha
+    que gera client_oid) — uma falha de rede DEPOIS da KuCoin aceitar a
+    ordem, mas ANTES da resposta HTTP chegar, causava reenvio com um
+    clientOid diferente e uma ordem de dinheiro real duplicada."""
+
+    def test_reusa_o_mesmo_client_oid_entre_tentativas(self) -> None:
+        """O clientOid enviado deve ser idêntico em todas as tentativas."""
+        timeout_error = TimeoutError("connection reset")
+
+        success = MagicMock()
+        success.status_code = 200
+        success.json.return_value = {
+            "code": "200000",
+            "data": {"orderId": "order-999"},
+        }
+
+        with (
+            patch("kucoin_api.rate_limit"),
+            patch(
+                "kucoin_api.requests.request",
+                side_effect=[timeout_error, success],
+            ) as mock_request,
+            patch("kucoin_api.get_order_by_client_oid", return_value=None) as mock_lookup,
+            patch("kucoin_api._send_telegram_alert"),
+        ):
+            result = kucoin_api.place_market_order("BTC-USDT", "sell", size=0.001)
+
+        assert result["success"] is True
+        assert result["orderId"] == "order-999"
+        assert mock_request.call_count == 2
+        bodies = [call.kwargs["data"] for call in mock_request.call_args_list]
+        assert bodies[0] == bodies[1], "clientOid mudou entre tentativas"
+        mock_lookup.assert_called_once()
+
+    def test_nao_duplica_ordem_se_a_anterior_ja_foi_aceita(self) -> None:
+        """Se a 1ª tentativa falhar por exceção de rede mas a ordem já
+        tiver sido criada na KuCoin, a 2ª tentativa deve reaproveitar a
+        ordem existente (via clientOid) em vez de enviar um novo POST."""
+        timeout_error = TimeoutError("connection reset")
+        existing_order = {"id": "order-existing-1", "clientOid": "whatever"}
+
+        with (
+            patch("kucoin_api.rate_limit"),
+            patch(
+                "kucoin_api.requests.request",
+                side_effect=[timeout_error],
+            ) as mock_request,
+            patch("kucoin_api.get_order_by_client_oid", return_value=existing_order) as mock_lookup,
+            patch("kucoin_api._send_telegram_alert"),
+        ):
+            result = kucoin_api.place_market_order("BTC-USDT", "sell", size=0.001)
+
+        assert result["success"] is True
+        assert result["orderId"] == "order-existing-1"
+        # Só a 1ª tentativa chegou a bater na rede — a 2ª foi resolvida via lookup
+        assert mock_request.call_count == 1
+        mock_lookup.assert_called_once()
+
+    def test_relanca_erro_se_nao_houver_ordem_e_tentativas_se_esgotarem(self) -> None:
+        """Se todas as tentativas falharem por exceção E o lookup por
+        clientOid não encontrar nada, o erro original deve propagar (não
+        deve ser engolido silenciosamente)."""
+        conn_error = ConnectionError("network unreachable")
+
+        with (
+            patch("kucoin_api.rate_limit"),
+            patch("kucoin_api.time.sleep"),
+            patch(
+                "kucoin_api.requests.request",
+                side_effect=[conn_error, conn_error, conn_error],
+            ),
+            patch("kucoin_api.get_order_by_client_oid", return_value=None),
+            patch("kucoin_api._send_telegram_alert"),
+        ):
+            with pytest.raises(ConnectionError):
+                kucoin_api.place_market_order("BTC-USDT", "sell", size=0.001)
+
+
 # ================ TESTES: Withdrawal / Deposit / Fees ================
 
 class TestGetWithdrawalQuotas:
