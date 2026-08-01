@@ -51,56 +51,61 @@ def reconstruct_open_buys(
 ) -> list[dict[str, Any]]:
     """Reconstrói BUYs abertos a partir de trades em ordem decrescente de tempo.
 
-    Um SELL com metadata de saída por slot (`slot_exit_reason`) fecha apenas a
-    entrada específica que ele referencia (por `slot_buy_trade_id`, ou por preço
-    como fallback) — nunca todas as entradas anteriores. Só um SELL "cego" (sem
-    metadata de slot, ex.: reconciliação manual/exchange) é tratado como
-    flatten global, encerrando a reconstrução naquele ponto.
+    Passe único, cronológico (trades vêm mais recente → mais antigo): créditos
+    de SELL são acumulados conforme encontrados e só podem fechar um BUY que
+    aparece DEPOIS no scan (ou seja, mais antigo de verdade — nunca um BUY
+    mais novo que o próprio SELL, o que violaria causalidade).
+
+    Um SELL com metadata de slot (`slot_exit_reason` + `slot_buy_trade_id`,
+    ou preço como fallback) fecha exatamente a entrada que referencia. Um
+    SELL sem esse metadata ("cego" — reconciliação manual/exchange/legado)
+    soma seu `size` a um pool de volume cego; um BUY é considerado fechado
+    quando esse pool cobre o tamanho do BUY dentro de uma tolerância de
+    0,2% (cobre fees/rounding entre o size nominal da compra e o size real
+    vendido). Isso substitui o antigo "qualquer SELL cego = flatten total
+    do que vier antes" — que descartava entradas legitimamente abertas
+    sempre que UM ÚNICO sell cego mais recente aparecia no ledger, mesmo
+    que ele só tivesse fechado uma entrada específica (medido em produção:
+    ~30 posições BTC e 4 posições DOGE ficaram invisíveis pro bot por causa
+    disso, apesar de ainda abertas/vendíveis).
 
     Em conta compartilhada (`shared_profile_ambiguous=True`), o matching por
     preço fica desabilitado — preços podem colidir entre profiles que dividem
     a mesma subconta KuCoin — mas o matching por `slot_buy_trade_id` continua
     válido, pois o id referencia um trade já filtrado por profile na consulta
-    ao banco. Isso evita "esquecer" entradas antigas ainda abertas sempre que
-    qualquer SELL por slot mais recente acontece na mesma conta.
+    ao banco.
     """
     normalized = [_normalize_trade(trade) for trade in trades]
     allow_price_matching = not shared_profile_ambiguous
 
     slot_sells_by_id: dict[int, int] = {}
     slot_sells_by_price: dict[float, int] = {}
-    slot_sells_blind = 0
-    has_global_sell = False
-
-    for trade in normalized:
-        if trade.get("side") not in SELL_SIDES:
-            continue
-        metadata = trade.get("metadata", {})
-        if metadata.get("slot_exit_reason"):
-            buy_id = metadata.get("slot_buy_trade_id")
-            slot_price = metadata.get("slot_entry_price")
-            if buy_id:
-                key = int(buy_id)
-                slot_sells_by_id[key] = slot_sells_by_id.get(key, 0) + 1
-            elif slot_price and allow_price_matching:
-                try:
-                    key = round(float(slot_price), 2)
-                    slot_sells_by_price[key] = slot_sells_by_price.get(key, 0) + 1
-                except (TypeError, ValueError):
-                    slot_sells_blind += 1
-            else:
-                slot_sells_blind += 1
-        else:
-            has_global_sell = True
-            break
-
+    blind_sell_volume = 0.0
     open_buys: list[dict[str, Any]] = []
+
     for trade in normalized:
         side = trade.get("side")
         if side in SELL_SIDES:
-            if has_global_sell and not trade.get("metadata", {}).get("slot_exit_reason"):
-                break
+            metadata = trade.get("metadata", {})
+            matched_credit = False
+            if metadata.get("slot_exit_reason"):
+                buy_id = metadata.get("slot_buy_trade_id")
+                slot_price = metadata.get("slot_entry_price")
+                if buy_id:
+                    key = int(buy_id)
+                    slot_sells_by_id[key] = slot_sells_by_id.get(key, 0) + 1
+                    matched_credit = True
+                elif slot_price and allow_price_matching:
+                    try:
+                        key = round(float(slot_price), 2)
+                        slot_sells_by_price[key] = slot_sells_by_price.get(key, 0) + 1
+                        matched_credit = True
+                    except (TypeError, ValueError):
+                        pass
+            if not matched_credit:
+                blind_sell_volume += float(trade.get("size", 0) or 0)
             continue
+
         if side != "buy":
             continue
         if _is_excluded_buy(
@@ -111,6 +116,7 @@ def reconstruct_open_buys(
 
         trade_id = trade.get("id")
         price_key = round(float(trade.get("price", 0) or 0), 2)
+        buy_size = float(trade.get("size", 0) or 0)
         consumed = False
 
         if trade_id:
@@ -121,9 +127,11 @@ def reconstruct_open_buys(
         if not consumed and allow_price_matching and slot_sells_by_price.get(price_key, 0) > 0:
             slot_sells_by_price[price_key] -= 1
             consumed = True
-        if not consumed and slot_sells_blind > 0:
-            slot_sells_blind -= 1
-            consumed = True
+        if not consumed and buy_size > 0:
+            tolerance = max(1e-8, buy_size * 0.002)
+            if blind_sell_volume >= buy_size - tolerance:
+                blind_sell_volume = max(0.0, blind_sell_volume - buy_size)
+                consumed = True
         if not consumed:
             open_buys.append(trade)
 
