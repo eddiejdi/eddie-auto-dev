@@ -45,6 +45,35 @@ def test_clean_generated_text_remove_think_and_fences() -> None:
     assert cleaned == "interno Texto final útil."
 
 
+def test_clean_generated_text_remove_script_stage_directions() -> None:
+    raw = (
+        "***Som de Fundo de Locução***\n"
+        "Bom dia. Abrimos a agenda do senador Flávio Bolsonaro no Senado.\n"
+        "Pausa de 30 Seg\n"
+        "Não há compromissos formais confirmados nas fontes oficiais.\n"
+        "[TRILHA SUAVE]\n"
+        "Encerramos este trecho com clareza."
+    )
+    cleaned = tts_tool.clean_generated_text(raw)
+    lowered = cleaned.lower()
+    assert "som de fundo" not in lowered
+    assert "pausa de 30" not in lowered
+    assert "trilha" not in lowered
+    assert "***" not in cleaned
+    assert "Bom dia" in cleaned
+    assert "Encerramos" in cleaned
+    assert tts_tool.contains_script_stage_directions(raw) is True
+    assert tts_tool.contains_script_stage_directions(cleaned) is False
+    assert tts_tool.is_valid_broadcast_text(raw) is False
+
+    mixed = "LOCUTOR: Bom dia a todos. TRILHA: suave. Encerramos este trecho."
+    mixed_clean = tts_tool.clean_generated_text(mixed)
+    assert "LOCUTOR" not in mixed_clean.upper()
+    assert "TRILHA" not in mixed_clean.upper()
+    assert "Bom dia a todos" in mixed_clean
+    assert "Encerramos este trecho" in mixed_clean
+
+
 def test_iter_gpu1_models_preserva_ordem_e_remove_duplicatas() -> None:
     models = tts_tool.iter_gpu1_models(
         "gemma3:1b",

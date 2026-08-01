@@ -77,6 +77,11 @@ TOOL_RISK: dict[str, str] = {
     "trading_news_sentiment": "none",
     "trading_learning_stats": "none",
     "trading_summary": "none",
+    # code_read_file/code_list_files só leem dentro do sandbox de
+    # generated/integrations/ — sem efeito colateral, mesma classe de risco
+    # das outras leituras.
+    "code_read_file": "none",
+    "code_list_files": "none",
     # LOW — grava, mas blast radius local/reversível/best-effort
     "memory_store": "low",
     # HIGH — escreve em sistema externo, expõe existência de credenciais,
@@ -89,6 +94,9 @@ TOOL_RISK: dict[str, str] = {
     "api_events_create": "high",
     "api_checkins_create": "high",
     "db_execute_query": "high",
+    # code_write_file grava arquivo em disco (sandboxed, mas ainda assim
+    # conteúdo gerado por LLM sem revisão prévia) — exige aprovação.
+    "code_write_file": "high",
     # CRITICAL — expõe valor de credencial
     "secrets_get": "critical",
 }

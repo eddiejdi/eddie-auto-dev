@@ -77,6 +77,7 @@ TIME_BUDGET_SECONDS = int(os.environ.get("FT_TIME_BUDGET_SECONDS", "0"))
 # dezenas de segundos nesta GPU — precisa salvar com frequência pra garantir
 # ao menos 1 checkpoint dentro de um orçamento de ~10min.
 SAVE_STEPS = int(os.environ.get("FT_SAVE_STEPS", "2"))
+SAVE_TOTAL_LIMIT = int(os.environ.get("FT_SAVE_TOTAL_LIMIT", "2"))
 
 # Versão condensada da persona homelab — a instrução detalhada de
 # tool-calling propriamente dita fica embutida nos pesos pelo treino, não
@@ -265,8 +266,12 @@ def train(dry_run: bool, do_merge: bool) -> int:
     ds = ds.map(tokenize, batched=True, remove_columns=["text"])
     log.info("Dataset tokenizado: %d exemplos", len(ds))
 
+    # Resume vale sempre que existir checkpoint, não só no modo de pacotes
+    # (TIME_BUDGET_SECONDS): no pipeline cloud o budget é 0, mas um treino
+    # pode morrer no meio (queda de SSH, quota de disco) deixando um
+    # checkpoint pronto — sem isso ele reiniciava do zero sempre.
     resume_ckpt = None
-    if TIME_BUDGET_SECONDS and LORA_OUTPUT.exists():
+    if LORA_OUTPUT.exists():
         checkpoints = sorted(
             LORA_OUTPUT.glob("checkpoint-*"),
             key=lambda p: int(p.name.rsplit("-", 1)[-1]),
@@ -280,7 +285,7 @@ def train(dry_run: bool, do_merge: bool) -> int:
         gradient_accumulation_steps=GRAD_ACCUM, num_train_epochs=EPOCHS,
         learning_rate=LR, warmup_steps=WARMUP, fp16=True, logging_steps=5,
         save_strategy=("steps" if TIME_BUDGET_SECONDS else "no"),
-        save_steps=SAVE_STEPS, save_total_limit=2,
+        save_steps=SAVE_STEPS, save_total_limit=SAVE_TOTAL_LIMIT,
         optim="paged_adamw_8bit", seed=42, report_to="none",
     )
     callbacks = []

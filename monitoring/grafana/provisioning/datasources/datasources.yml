@@ -31,7 +31,7 @@ datasources:
       sslmode: disable
       timescaledb: false
     secureJsonData:
-      password: eddie_memory_2026
+      password: $POSTGRES_PASSWORD
     readOnly: false
 
   - name: BTC Trading PostgreSQL
@@ -48,5 +48,5 @@ datasources:
       sslmode: disable
       timescaledb: false
     secureJsonData:
-      password: eddie_memory_2026
+      password: $POSTGRES_PASSWORD
     readOnly: true

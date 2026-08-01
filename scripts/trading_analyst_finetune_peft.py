@@ -55,23 +55,47 @@ SYSTEM = (
 
 
 def load_examples(dataset_dir: Path) -> list[dict]:
-    """Concatena os JSONL disponíveis (instruction/input/output)."""
+    """Concatena os JSONL disponíveis (instruction/input/output).
+
+    Aceita os canônicos trading_analyst_{controls,window,plan}.jsonl e também
+    aliases de bootstrap (trading_analyst_window_backfill.jsonl, *.jsonl com
+    as mesmas chaves) — o backfill semanal só gera window.
+    """
     examples: list[dict] = []
+    seen_paths: set[Path] = set()
+    seen_row: set[str] = set()
+    candidates: list[Path] = []
     for call_type in CALL_TYPES:
-        path = dataset_dir / f"trading_analyst_{call_type}.jsonl"
-        if not path.exists():
-            log.warning("Ausente: %s", path)
+        candidates.append(dataset_dir / f"trading_analyst_{call_type}.jsonl")
+    # backfill só se não houver window canônico (evita dobrar 90+90)
+    window = dataset_dir / "trading_analyst_window.jsonl"
+    if not window.exists():
+        candidates.append(dataset_dir / "trading_analyst_window_backfill.jsonl")
+    candidates.extend(sorted(dataset_dir.glob("trading_analyst_*.jsonl")))
+
+    for path in candidates:
+        path = path.resolve()
+        if path in seen_paths or not path.exists():
             continue
+        # se já temos window.jsonl, pular *_backfill*
+        if "backfill" in path.name and window.exists():
+            continue
+        seen_paths.add(path)
         n = 0
         for line in path.read_text(encoding="utf-8").splitlines():
             line = line.strip()
             if not line:
                 continue
             obj = json.loads(line)
-            if obj.get("instruction") and obj.get("output"):
-                examples.append(obj)
-                n += 1
-        log.info("call_type=%s: %d exemplos", call_type, n)
+            if not (obj.get("instruction") and obj.get("output")):
+                continue
+            key = line if len(line) < 4000 else (obj["instruction"][:200] + obj["output"][:200])
+            if key in seen_row:
+                continue
+            seen_row.add(key)
+            examples.append(obj)
+            n += 1
+        log.info("%s: %d exemplos (únicos acumulados=%d)", path.name, n, len(examples))
     return examples
 
 

@@ -106,23 +106,64 @@ def test_should_heal_soft_skips_when_bridge_not_newer() -> None:
     assert "não é mais novo" in reason
 
 
-def test_should_heal_still_valid_above_soft() -> None:
+def test_should_heal_still_valid_above_soft_with_active_entities() -> None:
+    """Com entidades ativas e token fresco, não injeta (mesmo bridge mais novo)."""
     heal, reason = selfheal.should_heal(
         FRESH_TOKEN,
         NEWER_RUNTIME,
-        entities_active=0,
+        entities_active=75,
         heals_last_24h=0,
         now_ms=NOW_MS,
         soft_threshold_min=45,
+        entities_total=75,
     )
     assert not heal
     assert "ainda válido" in reason
 
 
+def test_should_heal_zero_entities_above_soft_with_newer_bridge() -> None:
+    """Buraco setup_error/0-ativas: token 'válido' mas integração morta → heal se bridge mais novo."""
+    # t estritamente maior que FRESH_TOKEN (FRESH é NOW-60s; NEWER_RUNTIME é mais velho)
+    fresher_bridge = {
+        "access_token": "a-bridge",
+        "refresh_token": "r-bridge",
+        "expire_time": 7200,
+        "t": NOW_MS - 5_000,
+        "uid": "az1",
+    }
+    heal, reason = selfheal.should_heal(
+        FRESH_TOKEN,
+        fresher_bridge,
+        entities_active=0,
+        heals_last_24h=0,
+        now_ms=NOW_MS,
+        soft_threshold_min=45,
+        entities_total=75,
+    )
+    assert heal, reason
+    assert "0/75" in reason
+    assert "bridge mais novo" in reason
+
+
+def test_should_heal_zero_entities_above_soft_bridge_not_newer() -> None:
+    """0 ativas mas bridge não é mais novo → não inject (reload cobre no main)."""
+    heal, reason = selfheal.should_heal(
+        FRESH_TOKEN,
+        FRESH_TOKEN,
+        entities_active=0,
+        heals_last_24h=0,
+        now_ms=NOW_MS,
+        soft_threshold_min=45,
+        entities_total=75,
+    )
+    assert not heal
+    assert "não é mais novo" in reason
+
+
 @pytest.mark.parametrize(
     ("ha_token", "runtime", "active", "heals", "expected_reason"),
     [
-        (FRESH_TOKEN, FRESH_TOKEN, 0, 0, "ainda válido"),
+        (FRESH_TOKEN, FRESH_TOKEN, 75, 0, "ainda válido"),
         (EXPIRED_TOKEN, None, 0, 0, "ausente/inválido"),
         (EXPIRED_TOKEN, EXPIRED_TOKEN, 0, 0, "não é mais novo"),
         (EXPIRED_TOKEN, FRESH_TOKEN, 0, 24, "rate limit"),
@@ -136,9 +177,41 @@ def test_should_heal_guards(ha_token, runtime, active, heals, expected_reason) -
         heals_last_24h=heals,
         now_ms=NOW_MS,
         soft_threshold_min=45,
+        entities_total=max(active, 1),
     )
     assert not heal
     assert expected_reason in reason
+
+
+def test_should_reload_entry_setup_error() -> None:
+    do, reason = selfheal.should_reload_entry("setup_error", 0, 75, 50.0)
+    assert do
+    assert "setup_error" in reason
+
+
+def test_should_reload_entry_zero_active_with_valid_token() -> None:
+    do, reason = selfheal.should_reload_entry("loaded", 0, 75, 46.0)
+    assert do
+    assert "0/75" in reason
+
+
+def test_should_reload_entry_healthy() -> None:
+    do, reason = selfheal.should_reload_entry("loaded", 64, 75, 50.0)
+    assert not do
+    assert "não necessário" in reason
+
+
+def test_should_reload_entry_expired_token_no_zero_reload() -> None:
+    """Token morto + 0 ativas: reload sozinho não resolve — should_reload False no caso loaded."""
+    do, reason = selfheal.should_reload_entry("loaded", 0, 75, -10.0)
+    assert not do
+
+
+def test_entry_state_code() -> None:
+    assert selfheal.entry_state_code("loaded", "abc") == 0
+    assert selfheal.entry_state_code("setup_error", "abc") == 1
+    assert selfheal.entry_state_code(None, None) == -1
+    assert selfheal.entry_state_code(None, "abc") == 9
 
 
 def test_inject_token_replaces_only_tuya_entry() -> None:
@@ -278,3 +351,35 @@ def test_ensure_fresh_uses_existing_newer_runtime_without_refresh(
 
 def test_default_soft_threshold_is_45() -> None:
     assert selfheal.HEAL_SOFT_THRESHOLD_MIN == 45
+
+
+def test_ensure_fresh_force_refreshes_above_soft(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """force=True tenta refresh mesmo com HA acima do soft (0 entidades / setup_error)."""
+    refreshed = {
+        "access_token": "a-ref",
+        "refresh_token": "r-ref",
+        "expire_time": 7200,
+        "t": NOW_MS + 5_000,
+        "uid": "az1",
+    }
+    called: list[dict] = []
+
+    monkeypatch.setattr(
+        selfheal,
+        "load_tuya_entry_meta",
+        lambda: {"user_code": "Ba0osdh", "endpoint": "https://apigw.tuyaus.com"},
+    )
+    monkeypatch.setattr(selfheal, "force_refresh_token", lambda *a, **k: refreshed)
+    monkeypatch.setattr(selfheal, "persist_runtime_token", lambda t: called.append(t))
+
+    out = selfheal.ensure_fresh_runtime_token(
+        FRESH_TOKEN,
+        FRESH_TOKEN,
+        soft_threshold_min=45,
+        now_ms=NOW_MS,
+        force=True,
+    )
+    assert out == refreshed
+    assert called == [refreshed]

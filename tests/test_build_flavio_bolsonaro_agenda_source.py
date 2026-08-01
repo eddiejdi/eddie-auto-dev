@@ -183,6 +183,68 @@ def test_render_news_paragraph_separa_youtube_aliado() -> None:
     assert "imprensa" in paragraph
 
 
+def test_parse_direitaja_materials_payload_filtra_flavio() -> None:
+    payload = [
+        {
+            "id": 2311,
+            "title": {"rendered": "O Meu amigo Flávio"},
+            "acf": {
+                "description": "Verdade sobre o senador",
+                "category": [{"post_title": "FLÁVIO BOLSONARO"}],
+            },
+        },
+        {
+            "id": 99,
+            "title": {"rendered": "Card genérico sem vínculo"},
+            "acf": {"category": [{"post_title": "CARDS"}]},
+        },
+        {
+            "id": 2644,
+            "title": {"rendered": "Flávio lidera em SP"},
+            "acf": {"category": [{"post_title": "FLÁVIO BOLSONARO"}]},
+        },
+    ]
+    snippets = agenda_source.parse_direitaja_materials_payload(payload, max_items=5)
+    titles = [s.title for s in snippets]
+    assert "O Meu amigo Flávio" in titles
+    assert "Flávio lidera em SP" in titles
+    assert "Card genérico sem vínculo" not in titles
+    assert all(s.outlet == agenda_source.DIREITAJA_OUTLET for s in snippets)
+    assert all("direitaja.com" in s.url for s in snippets)
+
+
+def test_render_news_paragraph_prioriza_direitaja_como_fonte_oficial() -> None:
+    news = (
+        agenda_source.NewsSnippet(
+            title="Flávio lidera em SP",
+            outlet="Direita Já",
+            url="https://direitaja.com/?material=2644",
+        ),
+        agenda_source.NewsSnippet(
+            title="Kim Pain destaca defesa de Flávio Bolsonaro no Senado",
+            outlet="Kim Pain (YouTube)",
+            url="https://www.youtube.com/watch?v=ally1",
+        ),
+        agenda_source.NewsSnippet(
+            title="Flávio Bolsonaro discursa em audiência nos EUA",
+            outlet="G1",
+            url="https://news.example/flavio-eua",
+        ),
+    )
+    paragraph = agenda_source.render_news_paragraph(news)
+    assert paragraph is not None
+    assert "fonte oficial Direita Já (direitaja.com)" in paragraph
+    # render aplica lowercase_first no título
+    low = paragraph.lower()
+    assert "lidera em sp" in low
+    assert paragraph.index("Direita Já") < paragraph.index("YouTube")
+
+
+def test_iter_sources_inclui_direitaja() -> None:
+    urls = agenda_source.iter_sources(())
+    assert agenda_source.DIREITAJA_SITE_URL in urls
+
+
 def test_iter_sources_retorna_urls_unicas() -> None:
     entries = agenda_source.AGENDA_BY_DATE["2026-06-17"]
 
@@ -286,7 +348,10 @@ def test_news_search_queries_focadas_no_senado() -> None:
     deep = agenda_source._news_search_queries(deep=True)
 
     assert len(deep) > len(shallow)
-    assert all("senado" in query.lower() for query in shallow + deep)
+    # Consultas de mandato exigem Senado; hub Direita Já é exceção (site:direitaja.com).
+    non_hub = [q for q in shallow + deep if "direitaja.com" not in q.lower()]
+    assert all("senado" in query.lower() for query in non_hub)
+    assert any("site:direitaja.com" in q.lower() for q in shallow)
     assert not any("política" in query or "RJ when" in query for query in deep)
     assert any("14d" in query for query in deep)
     assert all("7d" in query for query in shallow)

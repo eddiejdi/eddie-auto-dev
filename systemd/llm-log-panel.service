@@ -1,6 +1,6 @@
 [Unit]
-Description=Painel de controle do log de LLM (Fase 1 — fine-tuning trading-analyst)
-After=network-online.target
+Description=Painel de auditoria de prompts LLM (coordinator + trading + PG)
+After=network-online.target ollama-gpu-coordinator.service
 Wants=network-online.target
 
 [Service]
@@ -11,14 +11,17 @@ WorkingDirectory=/apps/crypto-trader/trading
 EnvironmentFile=-/apps/crypto-trader/envfiles/shared-secrets.env
 EnvironmentFile=-/apps/crypto-trader/envfiles/trading-database.env
 EnvironmentFile=-/apps/crypto-trader/envfiles/llm-log-panel.env
+EnvironmentFile=-/etc/default/eddie-common
 
 ExecStart=/usr/bin/python3 /apps/crypto-trader/trading/scripts/llm_log_panel_server.py
 
 # Porta e host do painel (sobrescreva no env file se necessário).
 Environment=LLM_LOG_PANEL_HOST=0.0.0.0
 Environment=LLM_LOG_PANEL_PORT=8092
-# PANEL_API_KEY vem do llm-log-panel.env; sem ela, roda aberto na LAN.
-Environment=SECRETS_AGENT_URL=http://localhost:8088
+# Fonte ao vivo de TODOS os prompts do cluster
+Environment=COORDINATOR_URL=http://192.168.15.2:11437
+# PANEL_API_KEY vem do llm-log-panel.env; sem ela, confia no Authentik proxy.
+Environment=SECRETS_AGENT_URL=http://192.168.15.2:8088
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=HOME=/apps/crypto-trader
 Environment=PYTHONPATH=/apps/crypto-trader/trading/btc_trading_agent

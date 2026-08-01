@@ -9,7 +9,7 @@ Resumo:
 Diagnóstico realizado:
 - Procurei referências a `sentiment` no repositório e confirmei que o exporter persiste em `btc.news_sentiment` e expõe métricas Prometheus (`btc_news_*`).
 - No homelab, verifiquei `systemctl status` e `journalctl` de `rss-sentiment-exporter.service` — o serviço estava ativo, mas havia respostas inválidas do LLM (garbage) e quedas para heurística (sent=0.00 conf=0.25).
-- Confirmei a `DATABASE_URL` usada pelo serviço (`postgresql://postgres:eddie_memory_2026@localhost:5433/btc_trading`) e consultei as últimas linhas em `btc.news_sentiment` (via container `eddie-postgres`).
+- Confirmei a `DATABASE_URL` usada pelo serviço (`postgresql://postgres:$PGPASSWORD@localhost:5433/btc_trading`) e consultei as últimas linhas em `btc.news_sentiment` (via container `eddie-postgres`).
 
 Ação realizada:
 - Atualizei o unit systemd `/etc/systemd/system/rss-sentiment-exporter.service` substituindo:

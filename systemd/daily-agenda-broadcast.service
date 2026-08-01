@@ -9,8 +9,13 @@ User=homelab
 WorkingDirectory=/home/homelab/myClaude
 EnvironmentFile=/etc/default/eddie-common
 Environment=PYTHONUNBUFFERED=1
+# LLM obrigatoriamente via ollama-gpu-coordinator (gerencia VRAM/modelos).
+# Nao apontar AGENDA/OLLAMA para :11434/:11435/:11436 — o router remapeia, mas
+# o coordinator e o unico path de producao.
 Environment=OLLAMA_HOST=http://192.168.15.2:11437
-Environment=OLLAMA_HOST_GPU1=http://192.168.15.2:11435
+Environment=AGENDA_LLM_COORD_HOST=http://192.168.15.2:11437
+Environment=AGENDA_LLM_MODEL=lfm2.5-fast:gpu1
+Environment=AGENDA_LLM_FALLBACK_MODELS=gemma3-fast:gpu1,gemma3:1b,smollm2-iq3:gpu1,phi4-mini:nas
 Environment=AGENDA_YOUTUBE_CHANNEL_ID=UCEyYr2YE1HLDTKT4cnMefmw
 ExecStart=/usr/bin/python3 /home/homelab/myClaude/tools/run_daily_agenda_broadcast.py --mode auto --date today --quality balanced --llm-auto-route --require-approval --upload-youtube --deep-search --timeout 45 --retries 4
 

@@ -1,0 +1,26 @@
+[Unit]
+Description=Painel de ajuste da persona NSFW WhatsApp (treino / system prompt)
+After=network-online.target eddie-whatsapp-bot.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/home/homelab/myClaude
+Environment=WA_PERSONA_PANEL_HOST=0.0.0.0
+Environment=WA_PERSONA_PANEL_PORT=8094
+Environment=WHATSAPP_PERSONA_CONFIG=/home/homelab/myClaude/artifacts/whatsapp_persona/config.json
+Environment=WHATSAPP_PERSONA_MODELFILE=/home/homelab/myClaude/ollama/modelfiles/Modelfile.eddie-persona-free
+Environment=OLLAMA_HOST=http://192.168.15.4:11436
+Environment=PYTHONDONTWRITEBYTECODE=1
+# PANEL_API_KEY opcional — Authentik proxy é a porta de entrada
+ExecStart=/usr/bin/python3 /home/homelab/myClaude/scripts/whatsapp_persona_panel_server.py
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=whatsapp-persona-panel
+
+[Install]
+WantedBy=multi-user.target

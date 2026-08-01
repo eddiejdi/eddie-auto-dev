@@ -1,4 +1,10 @@
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-*/5 * * * * homelab SECRETS_AGENT_API_KEY=188bbf4c1b43ed1730005288f89ad2d0708c071eca142a2b335e026e95e8cee3 DATABASE_URL=postgresql://postgres:eddie_memory_2026@127.0.0.1:5433/btc_trading BTC_AGENT_DIR=/home/homelab/myClaude/btc_trading_agent /usr/bin/python3 /home/homelab/myClaude/btc_trading_agent/kucoin_postgres_sync.py >> /home/homelab/myClaude/btc_trading_agent/logs/kucoin_postgres_sync.log 2>&1
+# Credenciais NÃO ficam neste arquivo — ele é versionado num repo público.
+# Até 2026-07-28 continha a chave do Secrets Agent e a senha do Postgres em
+# claro. Ver docs/INCIDENTS/2026-07-28_SECRETS_IN_PUBLIC_REPO.md.
+#
+# crontab não tem EnvironmentFile, então o próprio comando carrega os arquivos
+# do host antes de executar. `set -a` exporta o que eles definirem.
+*/5 * * * * homelab set -a; . /etc/crypto-agent/secrets-api.env; . /etc/default/eddie-common; set +a; BTC_AGENT_DIR=/home/homelab/myClaude/btc_trading_agent /usr/bin/python3 /home/homelab/myClaude/btc_trading_agent/kucoin_postgres_sync.py >> /home/homelab/myClaude/btc_trading_agent/logs/kucoin_postgres_sync.log 2>&1

@@ -223,7 +223,7 @@ sudo docker exec prometheus wget -qO- http://127.0.0.1:9090/api/v1/targets | \
 ### Posição aberta (PostgreSQL)
 
 ```bash
-PGPASSWORD=eddie_memory_2026 psql -h 127.0.0.1 -U postgres -p 5433 -d btc_trading -c \
+PGPASSWORD="$PGPASSWORD" psql -h 127.0.0.1 -U postgres -p 5433 -d btc_trading -c \
   "SELECT profile, symbol, side, quantity, price, executed_at
    FROM btc.trades
    WHERE symbol = 'DOGE-USDT' AND side = 'buy'

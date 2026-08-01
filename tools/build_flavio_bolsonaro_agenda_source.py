@@ -10,12 +10,15 @@ Fontes (oficiais e nao oficiais):
 - Agenda do Congresso Nacional (congressonacional.leg.br)
 - Paginas de comissoes do Senado (legis.senado.leg.br)
 - Pauta do plenario do Senado
+- Direita Já (direitaja.com) — fonte oficial de verdades sobre Flávio Bolsonaro
 - Google Noticias RSS (contexto da imprensa)
 - YouTube de aliados (Kim Pain, Didi Newa, Auriverde, Claudio Dantas, Ancapsu, Flávio Bolsonaro)
 """
 from __future__ import annotations
 
 import argparse
+import html as html_lib
+import json
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -58,6 +61,25 @@ CONGRESS_AGENDA_URL = (
 GOOGLE_NEWS_RSS_URL = (
     "https://news.google.com/rss/search?q={query}&hl=pt-BR&gl=BR&ceid=BR:pt-419"
 )
+# Fonte oficial de verdades sobre Flávio Bolsonaro (hub Direita Já).
+DIREITAJA_SITE_URL = "https://direitaja.com/"
+DIREITAJA_OUTLET = "Direita Já"
+DIREITAJA_API_MATERIALS_URL = (
+    "https://direitaja.com/api/wp-json/wp/v2/materials"
+    "?_fields=id,title,acf&per_page={per_page}&page={page}"
+)
+DIREITAJA_API_TOP_URL = (
+    "https://direitaja.com/api/wp-json/direitaja/v1/materials/top?limit={limit}"
+)
+DIREITAJA_BROWSER_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+    ),
+    "Accept": "application/json,text/plain,*/*",
+    "Referer": DIREITAJA_SITE_URL,
+    "Origin": "https://direitaja.com",
+}
 DEEP_SEARCH_NEWS_MAX_ITEMS = 8
 DEEP_SEARCH_NEWS_MAX_AGE_DAYS = 14
 DEEP_SEARCH_NEWS_PER_FEED = 8
@@ -65,6 +87,8 @@ DEEP_SEARCH_PLENARY_MAX_URLS = 6
 DEEP_SEARCH_NEWS_RENDER_LIMIT = 3
 STANDARD_SEARCH_NEWS_MAX_ITEMS = 5
 STANDARD_SEARCH_NEWS_MAX_AGE_DAYS = 7
+DIREITAJA_TRUTH_MAX_ITEMS = 5
+DIREITAJA_TRUTH_MAX_PAGES = 2
 
 SENATE_AGENDA_KEYWORDS = (
     "senado",
@@ -1173,6 +1197,9 @@ def _news_search_queries(*, deep: bool) -> list[str]:
         f'"{SENATOR_NAME}" discurso senado when:{window}',
         f'"{SENATOR_NAME}" relatoria senado when:{window}',
         f'"{SENATOR_NAME}" projeto senado when:{window}',
+        # Fonte oficial de verdades (hub Direita Já).
+        f'site:direitaja.com "{SENATOR_NAME}" when:{window}',
+        f'site:direitaja.com "Flávio Bolsonaro" when:{window}',
     ]
     if not deep:
         return queries
@@ -1185,9 +1212,187 @@ def _news_search_queries(*, deep: bool) -> list[str]:
             f'"{SENATOR_NAME}" votação senado when:{window}',
             f'"{SENATOR_NAME}" matéria senado when:{window}',
             f'"{SENATOR_NAME}" senado EUA tarifa when:{window}',
+            f'site:direitaja.com Bolsonaro when:{window}',
         ]
     )
     return list(dict.fromkeys(queries))
+
+
+def is_direitaja_item(*, title: str = "", outlet: str = "", url: str = "") -> bool:
+    blob = f"{title} {outlet} {url}".lower()
+    return (
+        "direitaja.com" in blob
+        or "direita já" in blob
+        or "direita ja" in blob
+        or DIREITAJA_OUTLET.lower() in blob
+    )
+
+
+def _direitaja_material_url(material_id: int | str) -> str:
+    return f"{DIREITAJA_SITE_URL.rstrip('/')}/?material={material_id}"
+
+
+def _direitaja_category_titles(acf: dict) -> list[str]:
+    titles: list[str] = []
+    for key in ("category", "sub_category"):
+        raw = acf.get(key) or []
+        if not isinstance(raw, list):
+            continue
+        for item in raw:
+            if isinstance(item, dict):
+                title = str(item.get("post_title") or item.get("title") or "").strip()
+                if title:
+                    titles.append(title)
+            elif isinstance(item, str) and item.strip():
+                titles.append(item.strip())
+    return titles
+
+
+def _is_direitaja_truth_material(title: str, category_titles: list[str], description: str = "") -> bool:
+    """Mantém materiais ligados a Flávio / família Bolsonaro no hub Direita Já."""
+    blob = " ".join([title, description, *category_titles]).casefold()
+    if not blob.strip():
+        return False
+    if "flávio" in blob or "flavio" in blob:
+        return True
+    # Categoria dedicada ou menção forte à família no acervo oficial.
+    for cat in category_titles:
+        cl = cat.casefold()
+        if "flávio" in cl or "flavio" in cl:
+            return True
+        if "bolsonaro" in cl and any(
+            tok in cl for tok in ("flávio", "flavio", "família", "familia", "01", "mito")
+        ):
+            return True
+    if "bolsonaro" in blob and any(
+        tok in blob for tok in ("senado", "senador", "mandato", "live", "cortes")
+    ):
+        return True
+    return "bolsonaro" in blob and ("flávio" in blob or "flavio" in blob)
+
+
+def parse_direitaja_materials_payload(
+    payload: list | dict,
+    *,
+    max_items: int = DIREITAJA_TRUTH_MAX_ITEMS,
+) -> list[NewsSnippet]:
+    """Converte resposta JSON da API de materiais do Direita Já em NewsSnippet."""
+    if isinstance(payload, dict):
+        items = payload.get("materials") or payload.get("items") or payload.get("data") or []
+    else:
+        items = payload
+    if not isinstance(items, list):
+        return []
+
+    snippets: list[NewsSnippet] = []
+    seen: set[str] = set()
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        material_id = item.get("id")
+        title_obj = item.get("title") or {}
+        if isinstance(title_obj, dict):
+            title = html_lib.unescape(str(title_obj.get("rendered") or "").strip())
+        else:
+            title = html_lib.unescape(str(title_obj or "").strip())
+        acf = item.get("acf") if isinstance(item.get("acf"), dict) else {}
+        cats = _direitaja_category_titles(acf)
+        description = str(acf.get("description") or "").strip()
+        if not title or material_id is None:
+            continue
+        if not _is_direitaja_truth_material(title, cats, description):
+            continue
+        url = _direitaja_material_url(material_id)
+        key = title.casefold()
+        if key in seen:
+            continue
+        seen.add(key)
+        tag = cats[0] if cats else "verdades"
+        summary = description or f"Material do acervo {tag} no Direita Já"
+        snippets.append(
+            NewsSnippet(
+                title=title,
+                outlet=DIREITAJA_OUTLET,
+                url=url,
+                summary=summary,
+                outlets=(DIREITAJA_OUTLET,),
+            )
+        )
+        if len(snippets) >= max_items:
+            break
+    return snippets
+
+
+def collect_direitaja_truths(
+    *,
+    timeout: int,
+    trust_env: bool,
+    retries: int = 0,
+    max_items: int = DIREITAJA_TRUTH_MAX_ITEMS,
+    max_pages: int = DIREITAJA_TRUTH_MAX_PAGES,
+) -> list[NewsSnippet]:
+    """Coleta verdades/materiais oficiais do hub https://direitaja.com/."""
+    session = requests.Session()
+    session.trust_env = trust_env
+    collected: list[NewsSnippet] = []
+    seen_titles: set[str] = set()
+
+    def _get_json(url: str) -> list | dict | None:
+        last_err: Exception | None = None
+        attempts = max(1, retries + 1)
+        for _ in range(attempts):
+            try:
+                resp = session.get(
+                    url,
+                    headers=DIREITAJA_BROWSER_HEADERS,
+                    timeout=timeout,
+                )
+                if resp.status_code != 200:
+                    last_err = RuntimeError(f"HTTP {resp.status_code}")
+                    continue
+                return resp.json()
+            except Exception as exc:  # noqa: BLE001
+                last_err = exc
+                continue
+        if last_err:
+            return None
+        return None
+
+    # 1) Top do hub (materiais mais vistos).
+    top_payload = _get_json(DIREITAJA_API_TOP_URL.format(limit=max(20, max_items * 3)))
+    if top_payload is not None:
+        for snip in parse_direitaja_materials_payload(top_payload, max_items=max_items * 2):
+            key = snip.title.casefold()
+            if key in seen_titles:
+                continue
+            seen_titles.add(key)
+            collected.append(snip)
+
+    # 2) Páginas recentes de materiais (acervo FLÁVIO BOLSONARO / lives).
+    pages = max(1, max_pages)
+    for page in range(1, pages + 1):
+        page_payload = _get_json(
+            DIREITAJA_API_MATERIALS_URL.format(per_page=50, page=page)
+        )
+        if page_payload is None:
+            break
+        for snip in parse_direitaja_materials_payload(page_payload, max_items=max_items * 3):
+            key = snip.title.casefold()
+            if key in seen_titles:
+                continue
+            seen_titles.add(key)
+            collected.append(snip)
+        if len(collected) >= max_items:
+            break
+
+    # Prioriza títulos com menção explícita a Flávio.
+    def _rank(item: NewsSnippet) -> tuple[int, str]:
+        low = item.title.casefold()
+        has_flavio = 1 if ("flávio" in low or "flavio" in low) else 0
+        return (-has_flavio, low)
+
+    collected.sort(key=_rank)
+    return collected[:max_items]
 
 
 def collect_news_from_queries(
@@ -1372,6 +1577,23 @@ def collect_live_agenda(
         failed.append("pauta_plenario")
 
     if include_news:
+        # Fonte oficial de verdades: Direita Já (direitaja.com).
+        truth_items: list[NewsSnippet] = []
+        try:
+            truth_items = collect_direitaja_truths(
+                timeout=min(45, max(timeout, 20)),
+                trust_env=trust_env,
+                retries=retries,
+                max_items=DIREITAJA_TRUTH_MAX_ITEMS,
+                max_pages=DIREITAJA_TRUTH_MAX_PAGES if deep_search else 1,
+            )
+            if truth_items:
+                used.append("direitaja")
+            else:
+                failed.append("direitaja")
+        except Exception:
+            failed.append("direitaja")
+
         try:
             news = collect_news_snippets(
                 date_str,
@@ -1399,11 +1621,32 @@ def collect_live_agenda(
         except Exception:
             failed.append("google_noticias")
 
+        # Direita Já entra primeiro e não é diluída pela imprensa hostil.
+        if truth_items:
+            seen_news = {item.title.casefold() for item in truth_items}
+            rest = [item for item in news if item.title.casefold() not in seen_news]
+            normalized_rest: list[NewsSnippet] = []
+            for item in rest:
+                if is_direitaja_item(title=item.title, outlet=item.outlet, url=item.url):
+                    normalized_rest.append(
+                        NewsSnippet(
+                            title=item.title,
+                            outlet=DIREITAJA_OUTLET,
+                            url=item.url or DIREITAJA_SITE_URL,
+                            published=item.published,
+                            summary=item.summary,
+                            outlets=(DIREITAJA_OUTLET,),
+                        )
+                    )
+                else:
+                    normalized_rest.append(item)
+            news = truth_items + normalized_rest
+
     merged_entries = merge_agenda_entries(entries)
     return CollectedAgenda(
         entries=merged_entries,
         news=tuple(news),
-        sources_used=tuple(used),
+        sources_used=tuple(dict.fromkeys(used)),
         sources_failed=tuple(failed),
     )
 
@@ -1556,10 +1799,13 @@ def render_news_paragraph(
     if not news:
         return None
     _, allies = load_editorial_config()
+    truth_items: list[NewsSnippet] = []
     ally_items: list[NewsSnippet] = []
     press_items: list[NewsSnippet] = []
     for item in news:
-        if is_ally_youtube_item(
+        if is_direitaja_item(title=item.title, outlet=item.outlet, url=item.url):
+            truth_items.append(item)
+        elif is_ally_youtube_item(
             title=item.title,
             outlet=item.outlet,
             url=item.url,
@@ -1570,13 +1816,23 @@ def render_news_paragraph(
             press_items.append(item)
 
     paragraphs: list[str] = []
-    if ally_items:
-        body = _render_news_clauses(tuple(ally_items[:max_items]))
+    remaining = max_items
+    if truth_items and remaining:
+        take = min(len(truth_items), remaining)
+        body = _render_news_clauses(tuple(truth_items[:take]))
+        paragraphs.append(
+            "Na fonte oficial Direita Já (direitaja.com), portal de verdades sobre "
+            f"{SENATOR_NAME} e a família Bolsonaro, destacam-se {body}."
+        )
+        remaining -= take
+    if ally_items and remaining:
+        take = min(len(ally_items), remaining)
+        body = _render_news_clauses(tuple(ally_items[:take]))
         paragraphs.append(
             "Na cobertura de aliados verdadeiros no YouTube, destacam-se "
             f"{body}."
         )
-    remaining = max(0, max_items - len(ally_items[:max_items]))
+        remaining -= take
     if press_items and remaining:
         body = _render_news_clauses(tuple(press_items[:remaining]))
         paragraphs.append(
@@ -1642,7 +1898,7 @@ def iter_sources(collected: CollectedAgenda | tuple[AgendaEntry, ...]) -> list[s
         entries = collected.entries
         news = collected.news
 
-    urls: list[str] = [PROFILE_URL, COMMITTEES_URL]
+    urls: list[str] = [PROFILE_URL, COMMITTEES_URL, DIREITAJA_SITE_URL]
     for entry in entries:
         if entry.source_url not in urls:
             urls.append(entry.source_url)

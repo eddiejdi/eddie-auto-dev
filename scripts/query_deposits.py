@@ -10,7 +10,7 @@ try:
     DB_URL = _sh.get_database_url()
 except Exception:
     # Fallback to env var or cron default if Secrets Agent resolution fails
-    DB_URL = os.environ.get("DATABASE_URL") or "postgresql://postgres:eddie_memory_2026@127.0.0.1:5433/btc_trading"
+    DB_URL = os.environ.get("DATABASE_URL", "")
 
 try:
     import psycopg2

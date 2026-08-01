@@ -135,7 +135,7 @@ sudo -u trading-svc python3 /apps/crypto-trader/trading/btc_trading_agent/tradin
 ### 5. Verificar status do banco de dados
 
 ```bash
-export PGPASSWORD=eddie_memory_2026
+export PGPASSWORD="$PGPASSWORD"
 psql -h 192.168.15.2 -p 5433 -U postgres btc_trading -c "
 SELECT 
   profile,

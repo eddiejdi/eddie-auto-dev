@@ -42,16 +42,27 @@ GPU_CHECK_EVERY = 5          # checar GPU a cada N publicações
 LOG_FILE        = WORKSPACE / "logs" / f"wiki_bulk_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
 QUEUE_FILE      = WORKSPACE / "logs" / "wiki_publish_queue.jsonl"
 
-WIKI_TOKEN = (
-    "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9"
-    ".eyJhcGkiOjMsImdycCI6MSwiaWF0IjoxNzczNTUzNDU0LCJleHAiOjE4MDUwODk0NTQs"
-    "ImF1ZCI6InVybjp3aWtpLmpzIiwiaXNzIjoidXJuOndpa2kuanMifQ"
-    ".fLRuaCR_P5X8__vQpYtMW3ASGN0Bojjm8T9rQ0Sw8rISr_hP2MJUXV3Zb8kqnjjPrXFb"
-    "k8kEYUqeMlvGlEDILbf-sqAs8QxqTlwpIKbBpEqo2Z3fpzupYhcc3C5YXbZ4YToX1yDBV"
-    "_9-l3Om7M80WN8HqvhSfE-TKqvRn9fJgtxRuSKBEiPrpeTWqqI2I1YzBM5sYl9sDhBfEq"
-    "yQql7uzFXecoSyOxd3aQLlw9AmHghHI-2Llst-dy2vCYRC6de-XTucwEG0WlbmnhlwbQen"
-    "NnfS7L-SshD6srl6cE5sG0ltMgbQipiqJ-_UH6Q0iUTjZp85QnBvYp8VUCFGyU8sEA"
-)
+
+def _load_wiki_token() -> str:
+    """Token da API do Wiki.js via Secrets Agent, com fallback de ambiente.
+
+    Antes ficava hardcoded aqui — um JWT de grupo admin (`grp:1`) exposto no
+    repositório público desde 2026-06-18. Ver docs/INCIDENTS/2026-07-28_SECRETS_IN_PUBLIC_REPO.md.
+    """
+    env_token = (os.getenv("WIKI_TOKEN") or "").strip()
+    if env_token:
+        return env_token
+
+    try:
+        sys.path.insert(0, str(WORKSPACE))
+        from tools.secrets_loader import get_field
+
+        return get_field("wikijs/api_key", "password")
+    except Exception as exc:  # noqa: BLE001 — qualquer falha vira erro acionável
+        raise RuntimeError(
+            "Token do Wiki.js indisponível: defina WIKI_TOKEN no ambiente ou "
+            "garanta o secret 'wikijs/api_key' no Secrets Agent"
+        ) from exc
 
 # Thresholds → delay em segundos
 GPU_THRESHOLDS = [
@@ -85,11 +96,26 @@ def http_json(url, payload=None, headers=None, timeout=30):
         return json.loads(r.read().decode())
 
 
+_WIKI_TOKEN_CACHE: str | None = None
+
+
+def wiki_token() -> str:
+    """Resolve o token uma vez por processo.
+
+    Lazy de propósito: `--dry-run` e a fase 1 não publicam nada, então não devem
+    exigir Secrets Agent no ar só para rodar.
+    """
+    global _WIKI_TOKEN_CACHE
+    if _WIKI_TOKEN_CACHE is None:
+        _WIKI_TOKEN_CACHE = _load_wiki_token()
+    return _WIKI_TOKEN_CACHE
+
+
 def wiki_graphql(query, variables=None):
     return http_json(
         WIKI_GQL,
         payload={"query": query, "variables": variables or {}},
-        headers={"Authorization": f"Bearer {WIKI_TOKEN}"},
+        headers={"Authorization": f"Bearer {wiki_token()}"},
     )
 
 

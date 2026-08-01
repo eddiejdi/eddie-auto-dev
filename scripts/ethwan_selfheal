@@ -70,10 +70,14 @@ heal() {
   rate_ok "$level" || { log "rate limit nível $level atingido — não agindo"; return 1; }
   case "$level" in
     1)
-      log "HEAL 1: ethtool EEE off + bounce do link"
+      log "HEAL 1: force 100M + EEE off + bounce do link"
+      FORCE_100M=1 SPEED_MODE=100 /usr/local/bin/eth-wan-stabilize.sh --force-speed 2>/dev/null || true
       ethtool --set-eee "$IFACE" eee off 2>/dev/null || true
+      ethtool -s "$IFACE" speed 100 duplex full autoneg on 2>/dev/null || true
       ip link set "$IFACE" down 2>/dev/null; sleep 2
       ip link set "$IFACE" up 2>/dev/null
+      sleep 2
+      FORCE_100M=1 SPEED_MODE=100 /usr/local/bin/eth-wan-stabilize.sh --force-speed 2>/dev/null || true
       ;;
     2)
       log "HEAL 2: bringup completo ($BRINGUP_SCRIPT)"

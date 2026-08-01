@@ -66,8 +66,7 @@ def _get_database_url_safe() -> str:
             logger.warning(f"⚠️ {e} — usando fallback")
             # Fallback para ambiente local
             _DATABASE_URL_CACHE = os.getenv(
-                "DATABASE_URL",
-                "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading"
+                "DATABASE_URL", ""
             )
     return _DATABASE_URL_CACHE
 

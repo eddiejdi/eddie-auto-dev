@@ -41,23 +41,45 @@ NGINX_ENABLED = Path("/etc/nginx/sites-enabled/wpad")
 PIHOLE_CUSTOM_DNS = Path("/home/homelab/pihole/etc-pihole/custom.list")
 
 PAC_CONTENT = f"""\
-// Proxy Auto-Config (PAC) para rede homelab
-// Gerado automaticamente por scripts/setup_wpad.py
-// Pi-hole: {HOMELAB_IP}:53
-// Proxy: {HOMELAB_IP}:{SQUID_PORT}
+// Proxy Auto-Config (PAC) — homelab automatic discovery
+// Fetch: http://{HOMELAB_IP}/wpad.dat  (also WPAD / DHCP option 252)
+// Internet via Squid; only LAN/loopback stays DIRECT.
+// NOTE: do NOT send captive/connectivity checks as DIRECT — clients
+// without working ISP default route would report "no internet".
+//
+// NOTE: *.rpa4all.com hosts resolve publicly via Cloudflare Tunnel
+// (never to a LAN IP) — do NOT add a dnsDomainIs(host, ".rpa4all.com")
+// fast-path here. Clients without a direct default route (by design,
+// most of them) would try DIRECT to a public IP and fail with
+// ERR_ADDRESS_UNREACHABLE. Let the generic dnsResolve() check below
+// decide — it already routes private-IP results to DIRECT.
+
+function isLocalOrPrivate(host) {{
+    var resolved;
+
+    if (isPlainHostName(host)) return true;
+    if (host == "127.0.0.1" || host == "::1" || host == "localhost") return true;
+    if (host == "{HOMELAB_IP}" || host == "homelab") return true;
+    if (host == "wpad" || host == "wpad.local" || host == "wpad.lan") return true;
+    if (host == "proxy" || host == "proxy.local" || host == "proxy.lan") return true;
+    if (dnsDomainIs(host, ".lan") || dnsDomainIs(host, ".local") || dnsDomainIs(host, ".home.arpa")) return true;
+
+    resolved = dnsResolve(host);
+    if (resolved) {{
+        if (isInNet(resolved, "127.0.0.0", "255.0.0.0")) return true;
+        if (isInNet(resolved, "10.0.0.0", "255.0.0.0")) return true;
+        if (isInNet(resolved, "172.16.0.0", "255.240.0.0")) return true;
+        if (isInNet(resolved, "192.168.0.0", "255.255.0.0")) return true;
+    }}
+    return false;
+}}
+
 function FindProxyForURL(url, host) {{
-    // Acesso direto à rede local (sem proxy)
-    if (isInNet(host, "192.168.0.0", "255.255.0.0"))   return "DIRECT";
-    if (isInNet(host, "10.0.0.0",   "255.0.0.0"))      return "DIRECT";
-    if (isInNet(host, "172.16.0.0", "255.240.0.0"))    return "DIRECT";
-    if (isInNet(host, "127.0.0.0",  "255.0.0.0"))      return "DIRECT";
-
-    // Acesso direto ao homelab
-    if (host == "{HOMELAB_IP}")                          return "DIRECT";
-    if (host == "homelab")                              return "DIRECT";
-
-    // Todo o resto via Squid proxy
-    return "PROXY {HOMELAB_IP}:{SQUID_PORT}; DIRECT";
+    host = host.toLowerCase();
+    if (isLocalOrPrivate(host)) {{
+        return "DIRECT";
+    }}
+    return "PROXY {HOMELAB_IP}:{SQUID_PORT}; PROXY {HOMELAB_IP}:3129; DIRECT";
 }}
 """
 

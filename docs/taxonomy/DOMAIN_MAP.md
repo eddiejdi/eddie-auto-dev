@@ -1,6 +1,6 @@
 # Taxonomy Domain Map
 
-**Generated:** 2026-07-24T20:05:10.616947
+**Generated:** 2026-07-28T10:21:15.171832
 
 Diagrama Mermaid dos hubs de domínio (contagens do grafo).
 

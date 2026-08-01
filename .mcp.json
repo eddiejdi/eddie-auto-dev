@@ -8,21 +8,14 @@
       "env": {
         "HOMELAB_URL": "http://192.168.15.2:8503",
         "SECRETS_AGENT_URL": "http://192.168.15.2:8088",
-        "API_BASE_URL": "http://192.168.15.2:3000",
-        "DATABASE_URL": "postgresql://postgres:eddie_memory_2026@192.168.15.2:5433/btc_trading"
+        "API_BASE_URL": "http://192.168.15.2:3000"
       }
     },
     "telegram": {
       "command": "ssh",
       "args": [
         "homelab",
-        "TG_TOKEN=1105143633:AAHUCLBKxG-NVd7k9RBCcnPOFySfSeUCFbk",
-        "TG_CHAT_ID=948686300",
-        "OLLAMA_BASE=http://127.0.0.1:11434",
-        "VISION_MODEL=moondream:latest",
-        "MEDIA_DIR=/tmp/tg_media",
-        "/home/homelab/myClaude/venv/bin/python3",
-        "/home/homelab/myClaude/telegram_mcp_server.py"
+        "set -a; . /etc/default/eddie-common; set +a; TG_TOKEN=\"$TELEGRAM_BOT_TOKEN\" TG_CHAT_ID=\"$TELEGRAM_CHAT_ID\" OLLAMA_BASE=http://127.0.0.1:11434 VISION_MODEL=moondream:latest MEDIA_DIR=/tmp/tg_media exec /home/homelab/myClaude/venv/bin/python3 /home/homelab/myClaude/telegram_mcp_server.py"
       ]
     },
     "codex-agent": {

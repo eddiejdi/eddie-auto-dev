@@ -2,10 +2,12 @@
 """Coordenador de GPUs Ollama — balanceamento de carga real com 3 endpoints.
 
 Estratégia de roteamento (em ordem de prioridade):
-  1. VRAM fit    — descarta GPUs onde o modelo não cabe
-  2. Affinity    — prefere GPU onde o modelo já está carregado (evita reload)
-  3. Least-load  — entre candidatos elegíveis, escolhe o com menos requisições ativas
-  4. Priority    — GPU0 > GPU1 > NAS como tiebreaker de hardware
+  1. Soft-pin    — sufixo :gpu0/:gpu1/:nas prefere o endpoint, mas faz spill
+                   se ocupado/indisponível (distribui carga entre todas as GPUs)
+  2. VRAM fit    — descarta GPUs onde o modelo não cabe
+  3. Affinity    — prefere GPU onde o modelo já está carregado (evita reload)
+  4. Least-load  — entre candidatos elegíveis, escolhe o com menos requisições ativas
+  5. Priority    — GPU0 > NAS > GPU1 como tiebreaker de hardware
 
 Endpoints:
   GPU0  RTX 3060 12GB  :11434  (proxy métricas :11544)
@@ -60,14 +62,83 @@ STALE_AFTER_SEC = float(os.environ.get(
 ))
 # Cap de acúmulo de chunks de streaming para preview (bytes)
 STREAM_PREVIEW_CAP = int(os.environ.get("GPU_COORD_STREAM_PREVIEW_CAP", str(256 * 1024)))
-# Modelos protegidos de eviction mesmo ociosos (prefixo do nome, csv).
-# trading-analyst é o maior modelo da GPU0 e seria o 1º da fila de despejo;
-# reload de 5GB custaria 30-60s no próximo plano de qualquer perfil.
+# ── Trading: intocável; VRAM livre da 3060 liberada só a auxiliares pequenos ──
+# Política (2026-07):
+#   1. Modelos trading-* NUNCA são evictados.
+#   2. Com trading residente na GPU0, só cabem modelos AUXILIARES PEQUENOS
+#      na VRAM livre (sem despejar o analyst). Modelos grandes (≥7B etc.)
+#      vão para GPU1/NAS.
+#   3. Nunca se abre espaço na GPU0 evictando trading para caber auxiliar.
+#
+# Default cobre: trading-analyst, trading-analyst-phi4, candidates, sentiment…
 PROTECTED_MODELS = tuple(
     p.strip() for p in os.environ.get(
-        "GPU_COORD_PROTECTED_MODELS", "trading-analyst"
+        "GPU_COORD_PROTECTED_MODELS",
+        "trading-analyst,trading-sentiment,trading-",
     ).split(",") if p.strip()
 )
+# Reserva “inteligente” da GPU0: trading prioritário + auxiliares pequenos no resto.
+TRADING_RESERVE_GPU0 = os.environ.get(
+    "GPU_COORD_TRADING_RESERVE_GPU0", "1"
+).strip().lower() not in {"0", "false", "no", "off"}
+TRADING_GPU0_NAME = os.environ.get("GPU_COORD_TRADING_GPU0_NAME", "gpu0-rtx3060")
+# Exclusivo: NÃO rotear agenda/aux para a 3060 (evita timeout do trading-analyst).
+# 2026-07-30: soft-pin spill da agenda enchia a GPU0 e o trading dava connect timeout.
+# GPU_COORD_TRADING_EXCLUSIVE_GPU0=0 reativa auxiliares pequenos na VRAM livre.
+TRADING_EXCLUSIVE_GPU0 = os.environ.get(
+    "GPU_COORD_TRADING_EXCLUSIVE_GPU0", "1"
+).strip().lower() not in {"0", "false", "no", "off"}
+# Teto de VRAM estimada para auxiliar ao lado do trading (~1–2B).
+# gemma3:1b / lfm2.5 / llama3.2:1b cabem; mistral:7b / llama3.1:8b não.
+AUX_MAX_VRAM_MB = max(
+    256, int(os.environ.get("GPU_COORD_AUX_MAX_VRAM_MB", "1800"))
+)
+# Margem de VRAM livre que deve sobrar após carregar o auxiliar (MB).
+# Evita espremer o trading / fragmentar a 3060.
+TRADING_HEADROOM_MB = max(
+    0, int(os.environ.get("GPU_COORD_TRADING_HEADROOM_MB", "1024"))
+)
+
+# Soft-pin: sufixo :gpuN é preferência, não prisão. Se o endpoint pinado está
+# ocupado (active >= threshold) ou unhealthy, o least-load escolhe outra GPU
+# que POSUA o mesmo modelo — spill para GPU0 só se couber como auxiliar pequeno.
+SOFT_PIN = os.environ.get("GPU_COORD_SOFT_PIN", "1").strip().lower() not in {
+    "0", "false", "no", "off",
+}
+SOFT_PIN_BUSY_THRESHOLD = max(
+    1, int(os.environ.get("GPU_COORD_SOFT_PIN_BUSY", "1"))
+)
+# Status HTTP do backend tratados como "ocupado/retriável" (failover p/ outra GPU).
+# GPU1 (NUM_PARALLEL=1) devolve 503 "maximum pending requests exceeded".
+_RETRIABLE_BACKEND_STATUS = frozenset({429, 502, 503, 504})
+
+
+def is_protected_model(name: str) -> bool:
+    """True se o modelo é da família protegida (trading e afins)."""
+    if not name:
+        return False
+    n = name.strip()
+    for prefix in PROTECTED_MODELS:
+        if n.startswith(prefix) or n.split(":")[0].startswith(prefix.rstrip(":")):
+            return True
+    return False
+
+
+def is_trading_request(model: str) -> bool:
+    """Tráfego de trading: sempre elegível na GPU0; prioridade máxima."""
+    return is_protected_model(model)
+
+
+def is_small_auxiliary_model(model: str, *, max_vram_mb: int | None = None) -> bool:
+    """True se o modelo é pequeno o bastante para coexistir com trading na 3060.
+
+    Usa estimativa de VRAM pelo nome (mesma tabela do fit). Nunca classifica
+    a família trading como “auxiliar”.
+    """
+    if not model or is_trading_request(model):
+        return False
+    cap = int(max_vram_mb if max_vram_mb is not None else AUX_MAX_VRAM_MB)
+    return _estimate_vram_mb(model) <= cap
 
 # VRAM estimativas por padrão de nome (MB) — usado quando o modelo não está na VRAM
 _VRAM_ESTIMATES: list[tuple[str, int]] = [
@@ -77,7 +148,14 @@ _VRAM_ESTIMATES: list[tuple[str, int]] = [
     ("70b", 48000),
     # modelos nomeados
     ("trading-analyst", 6500), ("gemma3", 1000), ("smollm", 600),
-    ("moondream", 1700),
+    ("moondream", 1700), ("lfm2", 1100), ("lfm", 1100),
+    ("phi4-mini", 2500), ("phi3", 2200), ("llama3.2", 900),
+    # GPU1 GGUF quant (Q4_0 / IQ3) — pesos ~0.7–0.9GB + KV
+    ("lfm2.5", 900), ("smollm2", 900), ("smollm", 800),
+    # personas Eddie / shared (~llama3.1 8B Q4_K_M) — medido na NAS RTX 2060: ~7535MB
+    ("eddie-persona", 7600), ("shared-homelab", 7600),
+    ("shared-assistant", 7600), ("shared-coder", 7600),
+    ("shared-whatsapp", 7600), ("persona", 7600),
 ]
 
 _STATS_LOCK = threading.Lock()
@@ -294,8 +372,16 @@ class EndpointState:
                 self._model_active[model] = max(0, self._model_active.get(model, 0) - 1)
                 self._model_last_used[model] = time.monotonic()
 
+    def has_protected_resident(self) -> bool:
+        """Há modelo protegido (trading) residente em VRAM neste endpoint?"""
+        with self._lock:
+            return any(is_protected_model(n) for n in self._loaded)
+
     def evictable_models(self) -> list[tuple[float, str]]:
-        """Retorna (vram_mb, name) de modelos ociosos e não-pinados, do maior para o menor."""
+        """Retorna (vram_mb, name) ociosos, não-pinados e NÃO protegidos.
+
+        Trading (e demais PROTECTED_MODELS) é intocável — nunca entra na lista.
+        """
         with self._lock:
             result = []
             for name, vram in self._loaded.items():
@@ -303,7 +389,7 @@ class EndpointState:
                     continue
                 if any(name.endswith(s) for s in (":gpu0", ":gpu1", ":nas")):
                     continue
-                if any(name.startswith(p) for p in PROTECTED_MODELS):
+                if is_protected_model(name):
                     continue
                 result.append((vram, name))
         return sorted(result, reverse=True)
@@ -402,18 +488,54 @@ class EndpointState:
         if self.has_model(model):
             needed_mb = 0
 
-        # VRAM insuficiente com 10% de margem de segurança
+        trading_here = (
+            TRADING_RESERVE_GPU0
+            and self.name == TRADING_GPU0_NAME
+            and self.has_protected_resident()
+        )
+        # GPU0 exclusiva do trading: agenda/soft-pin NUNCA compete com o analyst.
+        if (
+            TRADING_RESERVE_GPU0
+            and TRADING_EXCLUSIVE_GPU0
+            and self.name == TRADING_GPU0_NAME
+            and not is_trading_request(model)
+        ):
+            return float("inf")
+
+        if trading_here and not is_trading_request(model):
+            # Auxiliar pequeno na VRAM livre da 3060 — só se EXCLUSIVE=0.
+            if not is_small_auxiliary_model(model):
+                return float("inf")
+            if needed_mb > 0:
+                min_free = needed_mb * 1.10 + float(TRADING_HEADROOM_MB)
+                if self.vram_free_mb < min_free:
+                    return float("inf")
+
+        # VRAM insuficiente com 10% de margem de segurança (caso geral)
         if self.vram_free_mb < needed_mb * 1.10 and needed_mb > 0:
             return float("inf")
 
         score = 0.0
-        # Penalidade por requisições ativas (10 pts cada)
-        score += self._active * 10.0
+        # Penalidade por requisições ativas (peso alto → least-load real entre GPUs)
+        score += self._active * 12.0
         # Bônus por afinidade de modelo (evita reload de VRAM)
         if self.has_model(model):
             score -= 8.0
-        # Penalidade de prioridade de hardware (GPU0=0, GPU1=0.5, NAS=1.0)
+        # Tráfego de trading: forte preferência pela GPU0 (casa do analyst)
+        if is_trading_request(model) and self.name == TRADING_GPU0_NAME:
+            score -= 20.0
+        # Trading em GPU0 ocupada: ainda assim preferir GPU0 (não ir para NAS)
+        if is_trading_request(model) and self.name == TRADING_GPU0_NAME:
+            score -= min(self._active, 5) * 3.0  # anula parte da pena de active
+        # Auxiliar na 3060 com trading: elegível, mas ligeiramente menos preferido
+        # que GPU1/NAS ociosas (evita saturar a casa do trading sem necessidade).
+        if trading_here and not is_trading_request(model):
+            score += 4.0
+        # Penalidade leve de prioridade de hardware (GPU0=0, NAS=0.5, GPU1=1.0)
+        # Mantida baixa para que endpoint livre em hardware "pior" vença um ocupado.
         score += self.priority * 0.5
+        # Pequena preferência por quem já atendeu menos (espalha carga no longo prazo)
+        score += min(self._total_served, 50) * 0.02
 
         return score
 
@@ -485,7 +607,17 @@ class GPUCluster:
         self._stop.set()
 
     def _unload_model(self, ep: EndpointState, model: str) -> None:
-        """Descarrega um modelo da VRAM de um endpoint via keep_alive=0."""
+        """Descarrega um modelo da VRAM de um endpoint via keep_alive=0.
+
+        Nunca descarrega família trading / PROTECTED_MODELS.
+        """
+        if is_protected_model(model):
+            log.error(
+                "🚫 recusado evict de modelo protegido %s em %s (trading intocável)",
+                model,
+                ep.name,
+            )
+            return
         try:
             body = json.dumps({"model": model, "keep_alive": 0, "prompt": ""}).encode()
             req = urllib.request.Request(
@@ -496,12 +628,28 @@ class GPUCluster:
             )
             with urllib.request.urlopen(req, timeout=15) as resp:
                 resp.read()
-            log.info("🧹 evictado modelo %s de %s (estava na GPU errada)", model, ep.name)
+            log.info("🧹 evictado modelo %s de %s", model, ep.name)
         except Exception as exc:
             log.warning("falha ao evictar %s de %s: %s", model, ep.name, exc)
 
     def _evict_for_space(self, ep: EndpointState, needed_mb: float) -> bool:
-        """Evicta modelos ociosos de ep até needed_mb caber. Retorna True se liberou espaço."""
+        """Evicta modelos ociosos de ep até needed_mb caber. Retorna True se liberou espaço.
+
+        Na GPU0 com trading residente, NÃO tenta abrir espaço por eviction
+        (trading é intocável; auxiliares só usam VRAM já livre).
+        """
+        if (
+            TRADING_RESERVE_GPU0
+            and ep.name == TRADING_GPU0_NAME
+            and ep.has_protected_resident()
+        ):
+            log.debug(
+                "skip eviction-for-space em %s com trading residente (needed=%.0fMB free=%.0fMB)",
+                ep.name,
+                needed_mb,
+                ep.vram_free_mb,
+            )
+            return False
         freed = False
         for vram, model in ep.evictable_models():
             if ep.vram_free_mb >= needed_mb * 1.10:
@@ -530,7 +678,13 @@ class GPUCluster:
                 ep._loaded.pop(model, None)
 
     def _evict_misplaced_models(self) -> None:
-        """Detecta e evicta da VRAM modelos pinados carregados na GPU errada."""
+        """Detecta e evicta da VRAM modelos pinados carregados na GPU errada.
+
+        Com SOFT_PIN ativo o spill intencional carrega :gpu1 na GPU0/NAS —
+        NÃO descarrega nesses casos (senão mata o request no meio da geração).
+        """
+        if SOFT_PIN:
+            return
         for ep in self._endpoints:
             if not ep.healthy:
                 continue
@@ -551,28 +705,14 @@ class GPUCluster:
         ":nas":  "nas-rtx2060",
     }
 
-    def pick(self, model: str, exclude: Optional[set[str]] = None) -> Optional[EndpointState]:
-        """Retorna o melhor endpoint para o modelo. None se nenhum disponível.
-
-        `exclude` permite failover: endpoints que acabaram de falhar no forward.
-        """
-        exclude = exclude or set()
-        # Pinning por sufixo — nunca vaza para outra GPU
-        for suffix, ep_name in self._PIN_SUFFIX.items():
-            if model.endswith(suffix):
-                pinned = next((ep for ep in self._endpoints if ep.name == ep_name), None)
-                if pinned and pinned.healthy and pinned.name not in exclude:
-                    if not pinned.has_model_available(model):
-                        # Não desvia (o pin é intenção explícita), mas avisa —
-                        # senão a falha vira um 404 silencioso no endpoint.
-                        log.warning("model=%s pinado em %s, mas o endpoint não o possui — vai 404",
-                                    model, pinned.name)
-                    log.info("roteando model=%s → %s [pinned] (active=%d vram_free=%.0fMB)",
-                             model, pinned.name, pinned.active_requests, pinned.vram_free_mb)
-                    return pinned
-                log.warning("endpoint pinado %s indisponível para model=%s — sem fallback", ep_name, model)
-                return None
-
+    def _least_load_pick(
+        self,
+        model: str,
+        *,
+        exclude: set[str],
+        prefer: Optional[EndpointState] = None,
+    ) -> Optional[EndpointState]:
+        """Least-load entre endpoints elegíveis (VRAM + catálogo + healthy)."""
         best: Optional[EndpointState] = None
         best_score = float("inf")
 
@@ -580,14 +720,22 @@ class GPUCluster:
             if ep.name in exclude:
                 continue
             s = ep.score(model)
-            log.debug("score %s model=%s → %.1f (active=%d vram_free=%.0fMB)",
-                      ep.name, model, s, ep.active_requests, ep.vram_free_mb)
+            # Soft-pin preference: bônus pequeno no endpoint preferido se elegível
+            if prefer is not None and ep is prefer and s < float("inf"):
+                s -= 3.0
+            log.debug(
+                "score %s model=%s → %.1f (active=%d vram_free=%.0fMB)",
+                ep.name,
+                model,
+                s,
+                ep.active_requests,
+                ep.vram_free_mb,
+            )
             if s < best_score:
                 best_score = s
                 best = ep
 
         if best is None or best_score == float("inf"):
-            # Tenta liberar VRAM evictando ociosos do endpoint com mais espaço livre
             candidate = max(
                 (ep for ep in self._endpoints if ep.healthy and ep.name not in exclude),
                 key=lambda ep: ep.vram_free_mb,
@@ -597,14 +745,95 @@ class GPUCluster:
                 needed = _estimate_vram_mb(model)
                 if self._evict_for_space(candidate, needed):
                     s = candidate.score(model)
+                    if prefer is not None and candidate is prefer and s < float("inf"):
+                        s -= 3.0
                     if s < float("inf"):
                         best, best_score = candidate, s
             if best is None or best_score == float("inf"):
-                log.warning("nenhum endpoint elegível para model=%s (mesmo após eviction)", model)
+                return None
+        return best
+
+    def pick(self, model: str, exclude: Optional[set[str]] = None) -> Optional[EndpointState]:
+        """Retorna o melhor endpoint para o modelo. None se nenhum disponível.
+
+        `exclude` permite failover: endpoints que acabaram de falhar no forward.
+
+        Soft-pin (:gpu0/:gpu1/:nas):
+          - Prefere o endpoint pinado quando saudável e com carga baixa.
+          - Se ocupado/unhealthy/sem modelo, faz spill para qualquer GPU que
+            possua o modelo (distribui carga no cluster).
+          - GPU_COORD_SOFT_PIN=0 restaura pin rígido (sem spill).
+        """
+        exclude = exclude or set()
+        prefer: Optional[EndpointState] = None
+
+        for suffix, ep_name in self._PIN_SUFFIX.items():
+            if not model.endswith(suffix):
+                continue
+            pinned = next((ep for ep in self._endpoints if ep.name == ep_name), None)
+            if pinned is None:
+                log.warning("endpoint pinado %s não configurado para model=%s", ep_name, model)
+                break
+
+            pin_ok = (
+                pinned.healthy
+                and pinned.name not in exclude
+                and pinned.has_model_available(model)
+            )
+            pin_busy = pinned.active_requests >= SOFT_PIN_BUSY_THRESHOLD
+
+            if pin_ok and (not SOFT_PIN or not pin_busy):
+                log.info(
+                    "roteando model=%s → %s [pinned%s] (active=%d vram_free=%.0fMB)",
+                    model,
+                    pinned.name,
+                    "" if not SOFT_PIN else "/soft",
+                    pinned.active_requests,
+                    pinned.vram_free_mb,
+                )
+                return pinned
+
+            if not SOFT_PIN:
+                # Pin rígido legado: sem spill.
+                if pin_ok:
+                    return pinned
+                log.warning(
+                    "endpoint pinado %s indisponível para model=%s — sem fallback (SOFT_PIN=0)",
+                    ep_name,
+                    model,
+                )
                 return None
 
-        log.info("roteando model=%s → %s (score=%.1f active=%d vram_free=%.0fMB)",
-                 model, best.name, best_score, best.active_requests, best.vram_free_mb)
+            # Soft spill: least-load no cluster, ainda preferindo o pin se elegível.
+            prefer = pinned if pin_ok else None
+            reason = (
+                "busy" if pin_ok and pin_busy
+                else "unhealthy" if not pinned.healthy
+                else "excluded" if pinned.name in exclude
+                else "sem-modelo"
+            )
+            log.info(
+                "soft-pin spill model=%s pin=%s reason=%s active=%d — least-load no cluster",
+                model,
+                pinned.name,
+                reason,
+                pinned.active_requests,
+            )
+            break
+
+        best = self._least_load_pick(model, exclude=exclude, prefer=prefer)
+        if best is None:
+            log.warning("nenhum endpoint elegível para model=%s (mesmo após eviction)", model)
+            return None
+
+        log.info(
+            "roteando model=%s → %s (active=%d vram_free=%.0fMB%s)",
+            model,
+            best.name,
+            best.active_requests,
+            best.vram_free_mb,
+            f" prefer={prefer.name}" if prefer else "",
+        )
         return best
 
     def health_info(self) -> dict:
@@ -658,6 +887,20 @@ class GPUCluster:
                 safe = model_name.replace('"', '\\"')
                 lines.append(f'ollama_model_ram_mb{{model="{safe}",endpoint="{ep.name}"}} {vram_mb:.1f}')
 
+        # Contagem de modelos carregados por endpoint (painel "Modelos Carregados").
+        # Um único timeseries por endpoint canônico — sem aliases gpu0/nas que
+        # dobravam painéis no Grafana (2 linhas por placa).
+        lines.append("# HELP ollama_loaded_models Número de modelos residentes em VRAM por endpoint")
+        lines.append("# TYPE ollama_loaded_models gauge")
+        for ep in self._endpoints:
+            n_loaded = len(ep._loaded)
+            lines.append(f'ollama_loaded_models{{endpoint="{ep.name}"}} {n_loaded}')
+
+        lines.append("# HELP gpu_coord_vram_used_mb VRAM usada estimada por endpoint (MB)")
+        lines.append("# TYPE gpu_coord_vram_used_mb gauge")
+        for ep in self._endpoints:
+            lines.append(f'gpu_coord_vram_used_mb{{endpoint="{ep.name}"}} {ep.vram_used_mb:.1f}')
+
         # Histograma de latência por modelo (para histogram_quantile no Grafana)
         lines.append("# HELP ollama_request_duration_seconds Latência de requisição por modelo (s)")
         lines.append("# TYPE ollama_request_duration_seconds histogram")
@@ -669,6 +912,14 @@ class GPUCluster:
                     lines.append(f'ollama_request_duration_seconds_bucket{{model="{safe}",le="{le_str}"}} {cnt}')
                 lines.append(f'ollama_request_duration_seconds_sum{{model="{safe}"}} {_dur_sum[model_name]:.3f}')
                 lines.append(f'ollama_request_duration_seconds_count{{model="{safe}"}} {_dur_count[model_name]}')
+
+        # Contadores de request por modelo/endpoint (substitui ollama_generated_tokens quando ausente)
+        lines.append("# HELP gpu_coord_model_requests_total Requisições por modelo (via coordinator)")
+        lines.append("# TYPE gpu_coord_model_requests_total counter")
+        with _dur_lock:
+            for model_name, cnt in _dur_count.items():
+                safe = model_name.replace('"', '\\"')
+                lines.append(f'gpu_coord_model_requests_total{{model="{safe}"}} {cnt}')
 
         return "\n".join(lines) + "\n"
 
@@ -728,8 +979,9 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
                  streaming: bool) -> bool:
         """Encaminha a requisição para o endpoint escolhido.
 
-        Retorna False se a falha ocorreu antes de qualquer byte ser enviado ao
-        cliente (retriável em outro endpoint); True caso contrário.
+        Retorna False se a falha ocorreu *antes* de qualquer byte ser enviado ao
+        cliente (conexão recusada, 503/429 busy, etc.) — o caller tenta outra GPU.
+        Retorna True se a resposta já foi (ou começou a ser) entregue ao cliente.
         """
         parsed = urllib.parse.urlparse(ep.host)
         host = parsed.hostname
@@ -773,173 +1025,253 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
 
         conn = None
         try:
-            conn = http.client.HTTPConnection(host, port, timeout=REQUEST_TIMEOUT_SEC)
-            headers = {
-                "Content-Type": "application/json",
-                "User-Agent": "gpu-coordinator/2.0",
-                "X-Routed-By": "gpu-coord",
-                "X-GPU-Endpoint": ep.name,
-            }
-            if body:
-                headers["Content-Length"] = str(len(body))
+            try:
+                conn = http.client.HTTPConnection(host, port, timeout=REQUEST_TIMEOUT_SEC)
+                headers = {
+                    "Content-Type": "application/json",
+                    "User-Agent": "gpu-coordinator/2.0",
+                    "X-Routed-By": "gpu-coord",
+                    "X-GPU-Endpoint": ep.name,
+                }
+                if body:
+                    headers["Content-Length"] = str(len(body))
 
-            conn.request(method, path, body=body or None, headers=headers)
-            resp = conn.getresponse()
-        except Exception as exc:
-            # Nada foi enviado ao cliente ainda — falha retriável em outro endpoint
-            elapsed = round(time.monotonic() - t_start, 2)
-            log.warning("conexão com %s falhou (retriável): %s", ep.name, exc)
-            _ring_append({
-                "ts":       datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "model":    model_name,
-                "endpoint": ep.name,
-                "path":     path,
-                "status":   503,
-                "elapsed_s": elapsed,
-                "prompt":   prompt_preview,
-                "response": "",
-                "error":    f"connect: {exc}",
-                "streaming": streaming,
-            })
+                conn.request(method, path, body=body or None, headers=headers)
+                resp = conn.getresponse()
+            except Exception as exc:
+                # Nada foi enviado ao cliente ainda — falha retriável em outro endpoint
+                elapsed = round(time.monotonic() - t_start, 2)
+                log.warning("conexão com %s falhou (retriável): %s", ep.name, exc)
+                _ring_append({
+                    "ts":       datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "model":    model_name,
+                    "endpoint": ep.name,
+                    "path":     path,
+                    "status":   503,
+                    "elapsed_s": elapsed,
+                    "prompt":   prompt_preview,
+                    "response": "",
+                    "error":    f"connect: {exc}",
+                    "streaming": streaming,
+                })
+                return False
+
+            # 503/429/502/504 do Ollama (ex.: GPU1 NUM_PARALLEL=1 "maximum pending")
+            # ANTES de qualquer byte ao cliente → failover para outra GPU.
+            if resp.status in _RETRIABLE_BACKEND_STATUS:
+                resp_body = b""
+                try:
+                    resp_body = resp.read()
+                except Exception:
+                    pass
+                err_txt = ""
+                try:
+                    err_txt = (json.loads(resp_body).get("error") or "")[:200]
+                except Exception:
+                    err_txt = resp_body[:200].decode(errors="replace") if resp_body else ""
+                elapsed = round(time.monotonic() - t_start, 2)
+                log.warning(
+                    "backend busy %s model=%s status=%d (retriável → failover): %s",
+                    ep.name,
+                    model_name,
+                    resp.status,
+                    err_txt,
+                )
+                _ring_append({
+                    "ts": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "model": model_name,
+                    "endpoint": ep.name,
+                    "path": path,
+                    "status": resp.status,
+                    "elapsed_s": elapsed,
+                    "prompt": prompt_preview,
+                    "response": "",
+                    "error": f"retriable busy: {err_txt}",
+                    "streaming": streaming,
+                })
+                with _STATS_LOCK:
+                    global _REQUEST_ERRORS
+                    _REQUEST_ERRORS += 1
+                return False
+
+            # A partir daqui a resposta vai ao cliente — sem failover.
+            resp_preview = ""
+            try:
+                if streaming:
+                    self.send_response(resp.status)
+                    self.send_header(
+                        "Content-Type",
+                        resp.getheader("Content-Type", "application/json"),
+                    )
+                    self.send_header("X-GPU-Endpoint", ep.name)
+                    # Sem Content-Length: fim do body = fechamento da conexão
+                    self.send_header("Connection", "close")
+                    self.close_connection = True
+                    self.end_headers()
+                    chunks: list[bytes] = []
+                    preview_bytes = 0
+                    try:
+                        while True:
+                            chunk = resp.read(4096)
+                            if not chunk:
+                                break
+                            self.wfile.write(chunk)
+                            if preview_bytes < STREAM_PREVIEW_CAP:
+                                chunks.append(chunk)
+                                preview_bytes += len(chunk)
+                        self.wfile.flush()
+                    except (BrokenPipeError, ConnectionResetError):
+                        pass
+                    try:
+                        full = b"".join(chunks).decode(errors="replace")
+                        tokens: list[str] = []
+                        for ln in full.splitlines():
+                            if not ln.strip():
+                                continue
+                            try:
+                                obj = json.loads(ln)
+                            except Exception:
+                                continue
+                            part = obj.get("response") or ""
+                            if not part:
+                                msg = obj.get("message") or {}
+                                if isinstance(msg, dict):
+                                    part = msg.get("content") or ""
+                            if part:
+                                tokens.append(str(part))
+                        resp_preview = _clean_text("".join(tokens))
+                    except Exception:
+                        pass
+                else:
+                    resp_body = resp.read()
+                    self.send_response(resp.status)
+                    self.send_header(
+                        "Content-Type",
+                        resp.getheader("Content-Type", "application/json"),
+                    )
+                    self.send_header("Content-Length", str(len(resp_body)))
+                    self.send_header("X-GPU-Endpoint", ep.name)
+                    self.end_headers()
+                    try:
+                        self.wfile.write(resp_body)
+                    except (BrokenPipeError, ConnectionResetError):
+                        pass
+                    try:
+                        parsed = json.loads(resp_body)
+                        resp_preview = parsed.get("response") or ""
+                        if not resp_preview:
+                            msg = parsed.get("message") or {}
+                            if isinstance(msg, dict):
+                                resp_preview = msg.get("content") or ""
+                        if not resp_preview and isinstance(parsed.get("messages"), list):
+                            for m in reversed(parsed["messages"]):
+                                if isinstance(m, dict) and m.get("content"):
+                                    resp_preview = m["content"]
+                                    break
+                        resp_preview = _clean_text(str(resp_preview or ""))
+                    except Exception:
+                        resp_preview = resp_body[:_PAYLOAD_LOG_CHARS].decode(errors="replace")
+
+                elapsed = round(time.monotonic() - t_start, 2)
+
+                if model_name:
+                    _record_duration(model_name, elapsed)
+
+                _ring_append({
+                    "ts":       datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "model":    model_name,
+                    "endpoint": ep.name,
+                    "path":     path,
+                    "status":   resp.status,
+                    "elapsed_s": elapsed,
+                    "prompt":   prompt_preview,
+                    "response": resp_preview,
+                    "streaming": streaming,
+                })
+                log.info(
+                    "✅ %s model=%s → %s status=%d elapsed=%.1fs prompt_chars=%d resp_chars=%d",
+                    path,
+                    model_name,
+                    ep.name,
+                    resp.status,
+                    elapsed,
+                    len(prompt_preview or ""),
+                    len(resp_preview or ""),
+                )
+
+                if resp.status >= 400:
+                    with _STATS_LOCK:
+                        _REQUEST_ERRORS += 1
+            except Exception as exc:
+                # Resposta já pode ter começado — não retentar em outro endpoint
+                elapsed = round(time.monotonic() - t_start, 2)
+                log.warning("forward para %s falhou durante relay: %s", ep.name, exc)
+                _ring_append({
+                    "ts":       datetime.datetime.now(datetime.timezone.utc).isoformat(),
+                    "model":    model_name,
+                    "endpoint": ep.name,
+                    "path":     path,
+                    "status":   503,
+                    "elapsed_s": elapsed,
+                    "prompt":   prompt_preview,
+                    "response": "",
+                    "error":    str(exc),
+                    "streaming": streaming,
+                })
+                with _STATS_LOCK:
+                    _REQUEST_ERRORS += 1
+                self.close_connection = True
+            return True
+        finally:
+            # Sempre um decrement por increment (sucesso, busy retriável ou connect fail)
             ep.decrement(model_name)
             try:
                 if conn is not None:
                     conn.close()
             except Exception:
                 pass
-            return False
-
-        try:
-            resp_preview = ""
-            if streaming:
-                self.send_response(resp.status)
-                self.send_header("Content-Type", resp.getheader("Content-Type", "application/json"))
-                self.send_header("X-GPU-Endpoint", ep.name)
-                # Sem Content-Length: fim do body sinalizado pelo fechamento da conexão
-                self.send_header("Connection", "close")
-                self.close_connection = True
-                self.end_headers()
-                chunks: list[bytes] = []
-                preview_bytes = 0
-                try:
-                    while True:
-                        chunk = resp.read(4096)
-                        if not chunk:
-                            break
-                        self.wfile.write(chunk)
-                        if preview_bytes < STREAM_PREVIEW_CAP:
-                            chunks.append(chunk)
-                            preview_bytes += len(chunk)
-                    self.wfile.flush()
-                except (BrokenPipeError, ConnectionResetError):
-                    pass
-                try:
-                    full = b"".join(chunks).decode(errors="replace")
-                    # streaming: cada linha é JSON com "response" parcial
-                    tokens = [json.loads(ln).get("response", "") for ln in full.splitlines() if ln.strip()]
-                    resp_preview = _clean_text("".join(tokens))
-                except Exception:
-                    pass
-            else:
-                resp_body = resp.read()
-                self.send_response(resp.status)
-                self.send_header("Content-Type", resp.getheader("Content-Type", "application/json"))
-                self.send_header("Content-Length", str(len(resp_body)))
-                self.send_header("X-GPU-Endpoint", ep.name)
-                self.end_headers()
-                try:
-                    self.wfile.write(resp_body)
-                except (BrokenPipeError, ConnectionResetError):
-                    pass
-                try:
-                    resp_preview = _clean_text(json.loads(resp_body).get("response", ""))
-                except Exception:
-                    resp_preview = resp_body[:_PAYLOAD_LOG_CHARS].decode(errors="replace")
-
-            elapsed = round(time.monotonic() - t_start, 2)
-
-            if model_name:
-                _record_duration(model_name, elapsed)
-
-            _ring_append({
-                "ts":       datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "model":    model_name,
-                "endpoint": ep.name,
-                "path":     path,
-                "status":   resp.status,
-                "elapsed_s": elapsed,
-                "prompt":   prompt_preview,
-                "response": resp_preview,
-                "streaming": streaming,
-            })
-            log.info("✅ %s model=%s → %s status=%d elapsed=%.1fs",
-                     path, model_name, ep.name, resp.status, elapsed)
-
-            if resp.status >= 400:
-                with _STATS_LOCK:
-                    global _REQUEST_ERRORS
-                    _REQUEST_ERRORS += 1
-
-        except Exception as exc:
-            # Resposta já iniciada — não dá para retentar em outro endpoint
-            elapsed = round(time.monotonic() - t_start, 2)
-            log.warning("forward para %s falhou durante relay: %s", ep.name, exc)
-            _ring_append({
-                "ts":       datetime.datetime.now(datetime.timezone.utc).isoformat(),
-                "model":    model_name,
-                "endpoint": ep.name,
-                "path":     path,
-                "status":   503,
-                "elapsed_s": elapsed,
-                "prompt":   prompt_preview,
-                "response": "",
-                "error":    str(exc),
-                "streaming": streaming,
-            })
-            with _STATS_LOCK:
-                _REQUEST_ERRORS += 1
-            self.close_connection = True
-        finally:
-            ep.decrement(model_name)
-            try:
-                conn.close()
-            except Exception:
-                pass
-        return True
 
     def _route_and_forward(self) -> None:
-        """Lê body, escolhe GPU, encaminha."""
+        """Lê body, escolhe GPU, encaminha com failover em busy/conexão."""
         body = self._read_body()
         model = self._extract_model(body)
 
-        # Detecta se cliente quer streaming
+        # Preferir o flag do body; agenda usa stream=false. Default False evita
+        # forçar streaming (que impede failover em 503).
         streaming = False
         try:
-            streaming = json.loads(body).get("stream", True)
+            streaming = bool(json.loads(body).get("stream", False))
         except Exception:
-            pass
+            streaming = False
 
         if _cluster is None:
             self._json_response(503, {"error": "coordinator não inicializado"})
             return
 
-        # Failover: se a conexão com o endpoint escolhido falhar antes de
-        # qualquer byte chegar ao cliente, tenta o próximo elegível.
+        # Failover: conexão falhou OU backend 503 busy (antes de bytes ao cliente).
+        # Não marca unhealthy em busy — a GPU só está com fila cheia.
         tried: set[str] = set()
         for _ in range(len(_cluster._endpoints)):
             ep = _cluster.pick(model, exclude=tried)
             if ep is None:
                 break
-            if self._forward(ep, "POST", self.path, body, streaming):
+            ok = self._forward(ep, "POST", self.path, body, streaming)
+            if ok:
                 return
             tried.add(ep.name)
-            ep.mark_unhealthy("falha de conexão no forward")
-            log.info("failover: tentando outro endpoint para model=%s (excluídos=%s)", model, sorted(tried))
+            log.info(
+                "failover: tentando outro endpoint para model=%s (excluídos=%s)",
+                model,
+                sorted(tried),
+            )
 
         with _STATS_LOCK:
             global _REQUEST_ERRORS
             _REQUEST_ERRORS += 1
-        self._json_response(503, {"error": "nenhum GPU disponível para model=" + model, "tried": sorted(tried)})
+        self._json_response(
+            503,
+            {"error": "nenhum GPU disponível para model=" + model, "tried": sorted(tried)},
+        )
 
     def _passthrough_get(self, host: str) -> None:
         """GET simples passado para um host fixo."""
@@ -1009,13 +1341,20 @@ class CoordinatorHandler(BaseHTTPRequestHandler):
         elif self.path == "/metrics":
             self._text_response(200, _cluster.prometheus_metrics() if _cluster else "", "text/plain; version=0.0.4")
         elif self.path.startswith("/api/requests"):
-            # Ring buffer das últimas requisições com preview de prompt/resposta
+            # Ring buffer das últimas requisições com preview de prompt/resposta.
+            # Sempre HTTP 200 (lista vazia se o ring falhar) — o painel Grafana
+            # Infinity trata 5xx/timeout como status 400 no dashboard inteiro.
             params = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)
             try:
                 limit = max(1, int(params.get("limit", ["50"])[0]))
             except (TypeError, ValueError):
                 limit = 50
-            snapshot = _ring_snapshot()
+            try:
+                snapshot = _ring_snapshot()
+                if not isinstance(snapshot, list):
+                    snapshot = []
+            except Exception:
+                snapshot = []
             entries = snapshot[:limit]
             self.send_response(200)
             self.send_header("Content-Type", "application/json")

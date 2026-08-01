@@ -1,0 +1,57 @@
+##############################################################################
+# Sia Storage Host (hostd) — Docker Compose
+# Homelab: 192.168.15.2  |  Disco: /mnt/storj8tb/sia (mesmo disco fisico do Storj)
+# Rede real: sia_macvlan com IP fixo 192.168.15.252
+# Porta publica e API sao expostas via systemd shims/proxies do host (ver docs/sia-networking.md).
+##############################################################################
+version: "3.8"
+
+services:
+  hostd:
+    image: ghcr.io/siafoundation/hostd:latest
+    container_name: hostd
+    restart: unless-stopped
+    stop_grace_period: 120s
+
+    dns:
+      - 1.1.1.1
+      - 1.0.0.1
+
+    environment:
+      # HOSTD_API_PASSWORD vem do secrets_agent, injetado via EnvironmentFile no host
+      # (NUNCA hardcoded aqui). HOSTD_SEED nao e definido — o wizard `hostd config`
+      # (Fase D, manual/interativo) gera a wallet localmente e a guarda cifrada em /data,
+      # protegida pela API password. Evita que a seed passe em texto plano por env var.
+      - HOSTD_API_PASSWORD=${SIA_API_PASSWORD:?defina SIA_API_PASSWORD via secrets_agent}
+
+    volumes:
+      - hostd-data:/data
+      - /mnt/storj8tb/sia/data:/storage
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:9980/api/state/host"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+    networks:
+      sia_macvlan:
+        ipv4_address: 192.168.15.252
+
+    labels:
+      - "com.homelab.service=sia"
+      - "com.homelab.description=Sia Storage Host (hostd)"
+
+networks:
+  sia_macvlan:
+    external: true
+
+volumes:
+  hostd-data:

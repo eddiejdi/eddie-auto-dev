@@ -14,7 +14,8 @@ RestartSec=5s
 StandardOutput=journal
 StandardError=journal
 Environment="EXTENDED_METRICS_PORT=9106"
-Environment="DATABASE_URL=postgresql://postgress:eddie_memory_2026@localhost:5432/postgres"
+# DSN vem do arquivo do host, fora do git (repo público).
+EnvironmentFile=-/etc/default/eddie-common
 
 # Security
 NoNewPrivileges=true
