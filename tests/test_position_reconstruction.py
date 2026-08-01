@@ -61,11 +61,51 @@ def test_reconstruct_open_buys_consumes_slot_sell_by_trade_id() -> None:
     assert [trade["id"] for trade in open_buys] == [11]
 
 
-def test_reconstruct_open_buys_shared_ambiguous_latest_sell_means_flat() -> None:
+def test_reconstruct_open_buys_shared_ambiguous_blind_sell_closes_by_size_not_flatten() -> None:
+    """Regressão do achado real de produção (2026-08-01, DOGE-USDT shadow):
+
+    Um SELL "cego" (sem slot_exit_reason) fecha exatamente o volume que
+    vendeu — não "tudo que veio antes dele". Antes desse fix, QUALQUER sell
+    cego mais recente (mesmo fechando só 1 entrada) descartava todas as
+    entradas mais antigas do scan, escondendo posições ainda abertas e
+    vendíveis. Aqui o sell de 0.001 fecha só a compra 19 (mesmo tamanho);
+    a compra 18, mais antiga, continua aberta.
+    """
     trades = [
         _trade(20, "sell", 105.0, 0.001),
         _trade(19, "buy", 101.0, 0.001),
         _trade(18, "buy", 100.0, 0.001),
+    ]
+
+    open_buys = reconstruct_open_buys(trades, shared_profile_ambiguous=True)
+
+    assert [trade["id"] for trade in open_buys] == [18]
+
+
+def test_reconstruct_open_buys_blind_sell_never_matches_a_newer_buy() -> None:
+    """Causalidade: um SELL cego só pode fechar BUYs mais antigos que ele —
+    nunca um BUY mais novo (que aconteceu DEPOIS do sell, cronologicamente).
+    """
+    trades = [
+        _trade(23, "buy", 103.0, 0.001),
+        _trade(22, "sell", 105.0, 0.001),
+        _trade(21, "buy", 100.0, 0.001),
+    ]
+
+    open_buys = reconstruct_open_buys(trades, shared_profile_ambiguous=True)
+
+    assert [trade["id"] for trade in open_buys] == [23]
+
+
+def test_reconstruct_open_buys_blind_sell_size_tolerance_covers_fee_rounding() -> None:
+    """Tolerância de 0,2% cobre a diferença real observada em produção entre
+    o size nominal da compra e o size líquido vendido (fees/rounding) — sem
+    isso, esse tipo de venda ficaria permanentemente "curta" e a compra
+    nunca seria dada como fechada.
+    """
+    trades = [
+        _trade(2, "sell", 105.0, 134.5001),
+        _trade(1, "buy", 100.0, 134.6076),
     ]
 
     open_buys = reconstruct_open_buys(trades, shared_profile_ambiguous=True)
