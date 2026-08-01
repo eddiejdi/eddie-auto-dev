@@ -148,14 +148,33 @@ jobs:
             git reset --hard origin/main
 
             echo "🔎 Resolvendo DATABASE_URL do runtime..."
-            TRADING_DATABASE_URL="$(sudo systemctl show crypto-agent@BTC_USDT_aggressive.service -p Environment --value 2>/dev/null | tr ' ' '\n' | sed -n 's/^DATABASE_URL=//p' | tail -n1)"
+            # O DSN saiu dos units em 2026-07-03 e passou a ser resolvido pelo
+            # Secrets Agent/Authentik (shared/database_url). Usamos o mesmo
+            # secrets_helper.get_database_url() que training_db.py usa, para o
+            # deploy e o runtime nunca divergirem de DSN.
+            # secrets-api.env carrega as credenciais do Secrets Agent; é 0640
+            # root:btc-trading e o usuário do deploy lê pelo grupo (sem sudo).
+            set -a
+            . /etc/crypto-agent/secrets-api.env
+            set +a
+            # "< /dev/null" é obrigatório: sem ele o python herda o stdin deste
+            # heredoc e consome o resto do script de deploy, matando-o em silêncio.
+            TRADING_DATABASE_URL="$(python3 -c "import sys; sys.path.insert(0,'btc_trading_agent'); from secrets_helper import get_database_url; print(get_database_url())" 2>/dev/null < /dev/null | tail -n1)"
+
+            # Fallbacks legados: units com Environment=DATABASE_URL e .env local.
+            # Ambos vazios hoje, mantidos para ambientes que ainda os usem.
+            if [ -z "${TRADING_DATABASE_URL}" ]; then
+              TRADING_DATABASE_URL="$(sudo systemctl show crypto-agent@BTC_USDT_aggressive.service -p Environment --value 2>/dev/null | tr ' ' '\n' | sed -n 's/^DATABASE_URL=//p' | tail -n1)"
+            fi
             if [ -z "${TRADING_DATABASE_URL}" ]; then
               TRADING_DATABASE_URL="$(grep '^DATABASE_URL=' btc_trading_agent/.env 2>/dev/null | cut -d= -f2-)"
             fi
             if [ -z "${TRADING_DATABASE_URL}" ]; then
-              echo "❌ DATABASE_URL do trading não encontrado"
+              echo "❌ DATABASE_URL do trading não encontrado (Secrets Agent + fallbacks legados)"
               exit 1
             fi
+            # Nunca ecoar o DSN: só esquema e tamanho.
+            echo "✅ DSN resolvido (${TRADING_DATABASE_URL%%://*}, ${#TRADING_DATABASE_URL} chars)"
 
             echo "🗄️ Aplicando migration do trading schema..."
             python3 scripts/migrate_trading_profile_schema.py \
