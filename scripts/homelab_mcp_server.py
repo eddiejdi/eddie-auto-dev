@@ -14,6 +14,8 @@ Configuração via variáveis de ambiente:
     DATABASE_URL          - Connection string PostgreSQL (Estou Aqui / governance)
     TRADING_DATABASE_URL  - Connection string PostgreSQL do trading agent (btc_trading DB)
     CHROMA_DB_PATH        - Path do ChromaDB (default: /home/homelab/myClaude/chroma_db)
+    CODE_SANDBOX_DIR      - Sandbox de code_write_file/code_read_file/code_list_files
+                            (default: <repo>/generated/integrations)
 """
 import importlib.util
 import json
@@ -22,6 +24,7 @@ import os
 import sys
 import uuid
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Optional
 
 # Adiciona raiz do projeto ao path para imports de tools/
@@ -1389,6 +1392,138 @@ def trading_summary(symbol: str = "BTC-USDT", profile: str = "default") -> str:
         "active_trade_window": (window.get("rows") or [{}])[0],
         "latest_ai_controls": (ctrl.get("rows") or [{}])[0],
     }, ensure_ascii=False, indent=2)
+
+
+# ═══════════════════════  CODE / INTEGRATIONS  ═════════════════════════════
+#
+# Dá aos agentes (incl. o bot do WhatsApp via mcp_tool_bridge.py) a
+# capacidade de criar/ler/listar código dentro de um sandbox dedicado —
+# NUNCA no resto do repositório. Escrita é sempre "high" (aprovação Telegram
+# via governança); leitura/listagem são "none" (auto-executam).
+#
+# Por que sandbox e não escrita livre no repo: o modelo que recebe essas
+# ferramentas roda sem supervisão de código (não é o Claude Code numa sessão
+# revisada) — permitir path arbitrário seria RCE-por-WhatsApp. O sandbox
+# confina o blast radius a um diretório descartável/versionável à parte, e
+# quem quiser promover algo gerado para o repo de verdade faz isso manualmente.
+
+CODE_SANDBOX_DIR = Path(
+    os.environ.get(
+        "CODE_SANDBOX_DIR",
+        str(Path(__file__).resolve().parent.parent / "generated" / "integrations"),
+    )
+).resolve()
+
+# Extensões permitidas — nada de binário, nada com permissão de execução
+# implícita perigosa (.sh fica de fora de propósito: shell gerado por LLM sem
+# revisão humana antes de rodar é a receita de um incidente).
+_CODE_ALLOWED_SUFFIXES = frozenset({
+    ".py", ".js", ".ts", ".json", ".yaml", ".yml", ".md", ".txt",
+    ".toml", ".cfg", ".ini", ".sql", ".html", ".css",
+})
+_CODE_MAX_BYTES = 200_000
+
+
+def _code_sandbox_path(rel_path: str) -> Path:
+    """Resolve rel_path DENTRO do sandbox; levanta ValueError em qualquer
+    tentativa de escapar dele (`..`, symlink, path absoluto etc.)."""
+    rel_path = (rel_path or "").strip().lstrip("/")
+    if not rel_path:
+        raise ValueError("path vazio")
+    CODE_SANDBOX_DIR.mkdir(parents=True, exist_ok=True)
+    candidate = (CODE_SANDBOX_DIR / rel_path).resolve()
+    if candidate != CODE_SANDBOX_DIR and CODE_SANDBOX_DIR not in candidate.parents:
+        raise ValueError(f"path fora do sandbox de integrações: {rel_path}")
+    return candidate
+
+
+@mcp.tool()
+def code_write_file(path: str, content: str, description: str = "") -> str:
+    """Cria ou sobrescreve um arquivo de código dentro do sandbox de
+    integrações (generated/integrations/ no repo, configurável via
+    CODE_SANDBOX_DIR). Use para prototipar scripts, integrações ou
+    snippets pedidos pelo dono — NUNCA escreve fora desse diretório
+    (path traversal é bloqueado) e não executa nada, só grava texto.
+
+    Args:
+        path: caminho relativo dentro do sandbox (ex: "meu_script.py",
+              "clima/openweather_client.py").
+        content: conteúdo completo do arquivo (texto).
+        description: uma linha explicando o que o arquivo faz (fica no log).
+    """
+    try:
+        target = _code_sandbox_path(path)
+    except ValueError as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
+
+    if target.suffix.lower() not in _CODE_ALLOWED_SUFFIXES:
+        return json.dumps({
+            "ok": False,
+            "error": f"extensão '{target.suffix}' não permitida no sandbox "
+                     f"(aceitas: {sorted(_CODE_ALLOWED_SUFFIXES)})",
+        })
+
+    encoded = (content or "").encode("utf-8")
+    if len(encoded) > _CODE_MAX_BYTES:
+        return json.dumps({
+            "ok": False,
+            "error": f"conteúdo muito grande ({len(encoded)} bytes > {_CODE_MAX_BYTES})",
+        })
+
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(content or "", encoding="utf-8")
+    logger.info("code_write_file: %s (%d bytes) — %s", target, len(encoded), description[:200])
+    return json.dumps({
+        "ok": True,
+        "path": str(target.relative_to(CODE_SANDBOX_DIR)),
+        "bytes": len(encoded),
+        "description": description[:200],
+    }, ensure_ascii=False)
+
+
+@mcp.tool()
+def code_read_file(path: str) -> str:
+    """Lê um arquivo já criado no sandbox de integrações (generated/integrations/).
+
+    Args:
+        path: caminho relativo dentro do sandbox.
+    """
+    try:
+        target = _code_sandbox_path(path)
+    except ValueError as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
+    if not target.is_file():
+        return json.dumps({"ok": False, "error": "arquivo não encontrado"})
+    text = target.read_text(encoding="utf-8", errors="replace")
+    return json.dumps({
+        "ok": True,
+        "path": str(target.relative_to(CODE_SANDBOX_DIR)),
+        "content": text[:20_000],
+        "truncated": len(text) > 20_000,
+    }, ensure_ascii=False)
+
+
+@mcp.tool()
+def code_list_files(subdir: str = "") -> str:
+    """Lista os arquivos já criados no sandbox de integrações
+    (generated/integrations/), opcionalmente dentro de um subdiretório.
+
+    Args:
+        subdir: subdiretório relativo dentro do sandbox (vazio = raiz inteira).
+    """
+    try:
+        base = _code_sandbox_path(subdir) if subdir else CODE_SANDBOX_DIR
+    except ValueError as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
+    CODE_SANDBOX_DIR.mkdir(parents=True, exist_ok=True)
+    if not base.exists():
+        return json.dumps({"ok": True, "files": []})
+    files = sorted(
+        str(p.relative_to(CODE_SANDBOX_DIR))
+        for p in base.rglob("*")
+        if p.is_file()
+    )
+    return json.dumps({"ok": True, "sandbox": str(CODE_SANDBOX_DIR), "files": files}, ensure_ascii=False)
 
 
 # ═══════════════════════════  ENTRYPOINT  ═════════════════════════════════
