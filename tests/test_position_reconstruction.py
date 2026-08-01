@@ -86,6 +86,54 @@ def test_reconstruct_open_buys_shared_ambiguous_keeps_recent_buy_streak_only() -
     assert [trade["id"] for trade in open_buys] == [25, 24]
 
 
+def test_reconstruct_open_buys_shared_ambiguous_partial_slot_sell_keeps_older_entries() -> None:
+    """Regressão: um SELL por slot em conta compartilhada não pode "esquecer"
+    entradas mais antigas que ele não fechou — só um SELL cego (sem
+    slot_exit_reason) representa flatten global."""
+    trades = [
+        _trade(
+            33,
+            "sell",
+            110.0,
+            0.001,
+            metadata={
+                "slot_exit_reason": "PER_SLOT_TP",
+                "slot_buy_trade_id": 32,
+                "slot_entry_price": 103.0,
+            },
+        ),
+        _trade(32, "buy", 103.0, 0.001),
+        _trade(31, "buy", 102.0, 0.001),
+        _trade(30, "buy", 100.0, 0.001),
+    ]
+
+    open_buys = reconstruct_open_buys(trades, shared_profile_ambiguous=True)
+
+    assert [trade["id"] for trade in open_buys] == [31, 30]
+
+
+def test_reconstruct_open_buys_shared_ambiguous_disables_price_matching() -> None:
+    """Em conta compartilhada, sells por slot sem slot_buy_trade_id não podem
+    casar por preço — preços podem colidir com buys de outro profile na mesma
+    subconta. Nesse caso o slot vira 'blind' e consome a compra mais antiga
+    disponível na ordem de varredura, não uma por coincidência de preço."""
+    trades = [
+        _trade(
+            43,
+            "sell",
+            110.0,
+            0.001,
+            metadata={"slot_exit_reason": "PER_SLOT_TP", "slot_entry_price": 100.0},
+        ),
+        _trade(42, "buy", 103.0, 0.001),
+        _trade(41, "buy", 100.0, 0.001),
+    ]
+
+    open_buys = reconstruct_open_buys(trades, shared_profile_ambiguous=True)
+
+    assert [trade["id"] for trade in open_buys] == [41]
+
+
 def test_reconstruct_open_buys_preserves_dry_run_flag() -> None:
     """dry_run do BUY original deve ser propagado para o entry dict.
 
