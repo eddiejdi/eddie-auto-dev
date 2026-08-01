@@ -149,8 +149,17 @@ completada via fallback documentado
 
 ## Pendências Não Fechadas
 
-- **Pod RunPod ainda rodando** após `done` (`CLOUD_FT_AUTO_TERMINATE=0`) —
-  decisão de terminar ou não ficou em aberto com o dono.
+- ~~**Pod RunPod ainda rodando** após `done`~~ **Resolvido 2026-07-31**:
+  `CLOUD_FT_AUTO_TERMINATE=1` virou o default (drop-in
+  `systemd/cloud-ft-orchestrator.service.d/auto-terminate.conf`, commit
+  `0a769c6` em `homelab-cloud-ft`) — o pipeline agora encerra o pod
+  sozinho ao chegar em `phase=done`, sem depender de alguém lembrar.
+  Seguro porque o sync incremental por job já copia cada `lora_adapters`
+  pro homelab antes disso. O pod desta sessão (`48w7capyr9jmjm`), que
+  tinha ficado ~3h ocioso, foi encerrado manualmente via
+  `DELETE /v1/pods/{id}` (confirmado `404 pod not found`); o orquestrador
+  detectou a ausência no polling seguinte e voltou pra `phase=idle`
+  sozinho.
 - Deploy do `jobs.json`/`run_job.sh`/`pod_disk_hygiene.sh` canônicos foi
   feito no bundle atual do pod; bundles futuros (`prepare_bundles.sh`
   rodando de novo) já pegam a versão certa automaticamente via
