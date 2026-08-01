@@ -446,15 +446,17 @@ def test_dropin_environment_never_shadowed_by_models_env() -> None:
     )
 
 
-def test_ollama_fallback_host_never_matches_primary_host_in_dropins() -> None:
-    """`*_FALLBACK_HOST` não pode apontar pro mesmo endereço do `*_HOST` primário.
+def test_ollama_fallback_host_always_routes_through_coordinator_in_dropins() -> None:
+    """`*_FALLBACK_HOST` tem que apontar pro MESMO coordenador (:11437) do `*_HOST`.
 
-    O coordenador (:11437) é pausado toda hora pelo job de fine-tune
-    (whatsapp_toolcall_chunked_train.sh). Se o fallback também apontar pra
-    ele, primário e fallback caem juntos e os crypto-agent@* ficam sem
-    nenhum caminho pra IA durante a pausa — o "fallback" nunca ajuda.
-    ollama-gpu1.service (:11435) não é parado por esse job; é o fallback
-    correto (ver deploy_btc_trading_profiles.sh e zz-direct-ollama.conf).
+    O coordenador decide sozinho qual GPU usar por modelo/saúde/carga e faz
+    failover interno (ex.: NAS tem trading-analyst desde 2026-08-01 — se o
+    GPU0 cai, ele roteia pra lá automaticamente). Um agente com
+    FALLBACK_HOST apontando direto pra uma GPU, por fora do coordenador,
+    tira a serialização anti-503-storm do incidente 2026-07-24 e quebra a
+    visibilidade centralizada. O coordenador em si nunca deve cair — se
+    cair, conserte quem o derrubou (ver whatsapp_toolcall_chunked_train.sh),
+    não dê um desvio pros agentes.
     """
     offenders: list[str] = []
     for rel_dir in _allowed_dirs():
@@ -462,6 +464,13 @@ def test_ollama_fallback_host_never_matches_primary_host_in_dropins() -> None:
             continue
         for conf in sorted((REPO_ROOT / "systemd" / rel_dir).glob("*.conf")):
             text = conf.read_text(encoding="utf-8")
+            if "<from_bitwarden>" in text:
+                # Template não instalado pelo deploy (contém segredos
+                # placeholder) — deploy_btc_trading_profiles.sh reescreve os
+                # OLLAMA_*_HOST via sed no arquivo vivo do host, então os
+                # valores literais aqui divergem de propósito. Ver header do
+                # próprio common.conf.
+                continue
             hosts: dict[str, str] = {}
             for name, value in re.findall(
                 r'^Environment="?(OLLAMA_[A-Z_]*_HOST)="?([^"\s]+)"?\s*$',
@@ -474,10 +483,13 @@ def test_ollama_fallback_host_never_matches_primary_host_in_dropins() -> None:
                     continue
                 primary_name = name.replace("_FALLBACK_HOST", "_HOST")
                 primary_value = hosts.get(primary_name)
-                if primary_value is not None and primary_value == value:
-                    offenders.append(f"{rel_dir}/{conf.name}: {name}={value} == {primary_name}")
+                if primary_value is not None and primary_value != value:
+                    offenders.append(
+                        f"{rel_dir}/{conf.name}: {name}={value} != {primary_name}={primary_value}"
+                    )
 
     assert not offenders, (
-        "FALLBACK_HOST igual ao HOST primário — fallback inútil quando o "
-        "primário cai. Offenders: " + "; ".join(offenders)
+        "FALLBACK_HOST diferente do HOST primário — tira o roteamento do "
+        "coordenador central e reabre o risco de 503-storm do incidente "
+        "2026-07-24. Offenders: " + "; ".join(offenders)
     )

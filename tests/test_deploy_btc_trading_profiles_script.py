@@ -12,23 +12,21 @@ def _load_script() -> str:
     return SCRIPT_PATH.read_text(encoding="utf-8")
 
 
-def test_script_routes_ollama_fallback_host_away_from_coordinator() -> None:
-    """FALLBACK_HOST não pode apontar pro mesmo endereço do HOST primário.
+def test_script_routes_ollama_fallback_host_through_coordinator() -> None:
+    """FALLBACK_HOST tem que apontar pro MESMO coordenador do HOST primário.
 
-    O coordenador (:11437) é pausado toda hora pelo job de fine-tune; se o
-    fallback também apontar pra ele, primário e fallback caem juntos e os
-    agentes ficam cegos ~10-15min/hora sem nenhum caminho alternativo.
-    A NAS (:11436, roda trading-analyst — mesmo modelo do GPU0) não é
-    pausada por esse job — é o fallback correto. GPU1 (:11435) fica
-    reservado pra persona/WhatsApp, não é usado como fallback de trading.
+    O coordenador (:11437) nunca deve ser derrubado (ver
+    whatsapp_toolcall_chunked_train.sh) — ele decide sozinho qual GPU usar
+    por modelo/saúde/carga e faz failover interno pra NAS/GPU1 quando o
+    GPU0 cai (NAS tem trading-analyst desde 2026-08-01, mesmo Modelfile do
+    GPU0). Um FALLBACK_HOST apontando direto numa GPU por fora do
+    coordenador tira a serialização anti-503-storm do incidente 2026-07-24.
     """
     content = _load_script()
-    assert "Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.4:11436" in content
-    assert "Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.4:11436" in content
-    assert "Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11437" not in content
-    assert "Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11437" not in content
-    # Primário continua no coordenador — só o fallback muda.
+    assert "Environment=OLLAMA_TRADE_PARAMS_FALLBACK_HOST=http://192.168.15.2:11437" in content
+    assert "Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11437" in content
     assert "Environment=OLLAMA_TRADE_PARAMS_HOST=http://192.168.15.2:11437" in content
+    assert "Environment=OLLAMA_TRADE_WINDOW_HOST=http://192.168.15.2:11437" in content
     assert "Environment=OLLAMA_TRADE_WINDOW_HOST=http://192.168.15.2:11437" in content
 
 
