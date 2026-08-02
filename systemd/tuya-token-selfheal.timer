@@ -3,9 +3,9 @@ Description=Roda o self-heal do token Tuya a cada 5 minutos
 After=network-online.target
 
 [Timer]
-OnBootSec=2min
-OnUnitActiveSec=5min
+OnCalendar=*:00/5
 Persistent=true
+RandomizedDelaySec=10
 Unit=tuya-token-selfheal.service
 
 [Install]
