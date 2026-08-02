@@ -570,6 +570,60 @@ groups:
   folder: Eddie Alerts
   interval: 1m
   rules:
+  - uid: alert-btc-loop-error
+    title: BTC Trading Agent Loop Error
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: btc_trading_loop_errors_5m
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 600
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 0
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+          expression: B
+    for: 1m
+    labels:
+      severity: critical
+      category: trading
+      coin: BTC
+    annotations:
+      summary: Trading agent BTC em crash loop ({{ $labels.profile }})
+      description: 'Detectados erros de loop nos últimos 5 min. Verificar: journalctl -u crypto-agent@BTC_USDT_{{ $labels.profile }} -n 50'
+    noDataState: OK
+    execErrState: OK
   - uid: alert-btc-agent-down
     title: BTC Trading Agent Down
     condition: C
@@ -1558,6 +1612,64 @@ groups:
       description: 'Variação: {{ $values.A }}%. Possível pump - considerar take profit.'
     noDataState: OK
     execErrState: OK
+- orgId: 1
+  name: Infrastructure - Ollama GPU
+  folder: Eddie Alerts
+  interval: 1m
+  rules:
+  - uid: alert-ollama-selfheal-ratelimit
+    title: Ollama Selfheal Rate-Limited
+    isPaused: false
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 3600
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: max(increase(ollama_gpu_selfheal_restarts_total[1h])) >= 3
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        expression: B
+        conditions:
+        - evaluator:
+            params:
+            - 0.5
+            type: gt
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+    for: 0s
+    labels:
+      severity: critical
+      category: ollama
+    annotations:
+      summary: Selfheal atingiu limite de restarts (3/hora)
+      description: 'Uma ou ambas GPUs precisaram de 3+ restarts na última hora. Intervenção manual necessária — possível problema de hardware ou VRAM.'
+    noDataState: OK
+    execErrState: Alerting
 - orgId: 1
   name: Infrastructure - Storj
   folder: Eddie Alerts
