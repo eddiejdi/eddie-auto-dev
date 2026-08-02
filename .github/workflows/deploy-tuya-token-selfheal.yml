@@ -46,7 +46,7 @@ jobs:
 
           echo "✅ Units instaladas"
           systemctl status tuya-token-selfheal.timer --no-pager | grep -E "Active|Trigger"
-          test "$(systemctl show tuya-token-selfheal.timer -p NextElapseOnCalendar --value)" != ""
+          test "$(systemctl show tuya-token-selfheal.timer -p NextElapseUSecRealtime --value)" != "0"
 
       - name: Smoke test (execução única + métricas)
         run: |
