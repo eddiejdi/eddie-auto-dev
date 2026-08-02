@@ -1558,3 +1558,126 @@ groups:
       description: 'Variação: {{ $values.A }}%. Possível pump - considerar take profit.'
     noDataState: OK
     execErrState: OK
+- orgId: 1
+  name: Infrastructure - Storj
+  folder: Eddie Alerts
+  interval: 1m
+  rules:
+
+  # storj_api_stale_seconds mede a idade do payload em cache servido pelo
+  # exporter (tools/storj_exporter.py). Sob operação normal fica em ~0.
+  # Um valor crescente indica que a API local do node parou de responder
+  # (macvlan/ARP, container preso, etc.) e o exporter está mascarando isso
+  # com o cache de até 15 min para não gerar No Data falso no dashboard.
+  # Este alerta pega esse tipo de outage silenciosamente, independente da
+  # causa raiz específica (ver incidentes de 2026-08-01: ARP flapping e
+  # depois arp_ignore=2 em storj-host0).
+  - uid: alert-storj-api-stale
+    title: Storj API Dados Desatualizados
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: storj_api_stale_seconds
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 120
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: gt
+            params:
+            - 60
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 1m
+    labels:
+      severity: warning
+      category: storj
+    annotations:
+      summary: Storj API servindo cache há mais de 60s
+      description: 'storj_api_stale_seconds = {{ $values.A }}s. A API local do node (14002) parou de responder; o exporter está servindo o último payload bom. Checar storj-host-shim, storj-api-proxy e ip neigh show 192.168.15.250.'
+    noDataState: OK
+    execErrState: OK
+
+  # api_up=0 sustentado além do TTL de cache (15min) = outage real, não
+  # apenas stale. Complementa o alerta acima quando o cache também expira.
+  - uid: alert-storj-api-down
+    title: Storj API Fora do Ar
+    condition: C
+    data:
+    - refId: A
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: dfc0w4yioe4u8e
+      model:
+        expr: storj_api_up
+        instant: true
+        refId: A
+    - refId: B
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        expression: A
+        reducer: last
+        refId: B
+        type: reduce
+    - refId: C
+      relativeTimeRange:
+        from: 300
+        to: 0
+      datasourceUid: __expr__
+      model:
+        type: threshold
+        refId: C
+        conditions:
+        - evaluator:
+            type: lt
+            params:
+            - 1
+          operator:
+            type: and
+          reducer:
+            type: last
+          query:
+            params:
+            - B
+        expression: B
+    for: 5m
+    labels:
+      severity: critical
+      category: storj
+    annotations:
+      summary: Storj API fora do ar há mais de 5 minutos
+      description: 'storj_api_up = {{ $values.A }}. Scrape do exporter chegando, mas a API local do node não responde nem via cache. Intervenção manual provável.'
+    noDataState: OK
+    execErrState: OK
