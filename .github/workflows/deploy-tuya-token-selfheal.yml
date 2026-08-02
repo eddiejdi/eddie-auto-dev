@@ -26,6 +26,16 @@ jobs:
 
           python3 -m py_compile tools/homelab/tuya_token_selfheal.py
 
+          # Guard anti-regressão (incidente 2026-08-02): agendamento
+          # monotônico (OnBootSec/OnUnitActiveSec) sobrevive a daemon-reload
+          # mas morre em reboot (NextElapse=infinity) — o self-heal nunca
+          # volta a rodar e o token Tuya expira em ~2h. Exigir wall-clock.
+          if grep -qE '^On(BootSec|UnitActiveSec)=' systemd/tuya-token-selfheal.timer; then
+            echo "❌ Timer reintroduziu agendamento monotônico — exige OnCalendar=" >&2
+            exit 1
+          fi
+          grep -q '^OnCalendar=' systemd/tuya-token-selfheal.timer
+
           sudo install -D -m 0755 tools/homelab/tuya_token_selfheal.py /usr/local/bin/tuya_token_selfheal.py
           sudo install -D -m 0644 systemd/tuya-token-selfheal.service /etc/systemd/system/tuya-token-selfheal.service
           sudo install -D -m 0644 systemd/tuya-token-selfheal.timer /etc/systemd/system/tuya-token-selfheal.timer
@@ -36,6 +46,7 @@ jobs:
 
           echo "✅ Units instaladas"
           systemctl status tuya-token-selfheal.timer --no-pager | grep -E "Active|Trigger"
+          test "$(systemctl show tuya-token-selfheal.timer -p NextElapseOnCalendar --value)" != ""
 
       - name: Smoke test (execução única + métricas)
         run: |

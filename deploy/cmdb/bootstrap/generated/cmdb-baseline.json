@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-01T22:28:51.582744+00:00",
-  "repo_root": "/workspace/eddie-auto-dev",
+  "generated_at": "2026-08-02T15:39:27.224149+00:00",
+  "repo_root": "/tmp/opencode/tuya-fix-wt",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
