@@ -70,6 +70,18 @@ era falta de plano pago**:
    clique real. **Fix**: gatilhos com `for: 00:00:00.5` (só dispara
    quando o novo estado fica estável por meio segundo).
 
+7. **`mode: single` descartando cliques rápidos** — a automação foi
+   criada com `mode: single`, que **descarta** qualquer disparo que
+   aconteça enquanto uma execução ainda está rodando. Como cada rodada
+   da cena leva ~2-3 s (comandos duplicados + delays de 1 s), o segundo
+   clique físico feito nessa janela era simplesmente ignorado → a cena
+   "parava" ao acionar mais de 1 vez, e só voltava naturalmente quando
+   os cliques paravam (sem reset manual). **Fix (2026-08-02)**:
+   `mode: queued` com `max: 6` — cliques consecutivos agora são
+   enfileirados, cada execução reavalia o estado (fita+spot) do ciclo no
+   início, e o avanço de estado passa a ocorrer 1 passo por clique, por
+   mais rápido que o usuário clique.
+
 ## Dispositivos migrados para Tuya Local
 
 | Papel | Entidade HA | device_id Tuya (na doc, pode rotacionar) | IP local |
@@ -199,7 +211,8 @@ Arquivo: `automations.yaml` do Home Assistant (`homeassistant` container,
     - action: switch.turn_off
       target:
         entity_id: switch.spot_quarto
-  mode: single
+  mode: queued
+  max: 6
 ```
 
 Notas de design:
@@ -214,6 +227,11 @@ Notas de design:
   tiver funcionado.
 - O gatilho usa `for: 00:00:00.5` em vez de "qualquer mudança de estado"
   para filtrar o bounce do relé físico (ver causa #6 acima).
+- O `mode: queued` + `max: 6` permite cliques rápidos consecutivos: cada
+  disparo é enfileirado (até 6) e cada execução reavalia o estado no
+  início, então o ciclo avança 1 passo por clique mesmo se o usuário
+  acionar várias vezes devagar demais para o `single` original aceitar
+  (causa #7, fix 2026-08-02).
 
 ## Self-heal de `local_key` (tuya-local-key-selfheal)
 
