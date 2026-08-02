@@ -3554,6 +3554,19 @@ class TelegramBot:
         
         print(f"[{datetime.now().strftime('%H:%M:%S')}] Bot: {response[:50]}...")
     
+
+    async def _route_approval_callback(self, cb: dict) -> None:
+        """Rota um callback_query de aprovacao (approval-gate) para a logica de
+        decisao. O gateway roda com TG_POLL=0 e concentra o processamento na
+        funcao handle_telegram_callback_query()."""
+        try:
+            from specialized_agents.approval_gateway import handle_telegram_callback_query
+        except ImportError:
+            import sys, os
+            sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+            from specialized_agents.approval_gateway import handle_telegram_callback_query
+        handle_telegram_callback_query(cb)
+
     async def run(self):
         """Loop principal"""
         print("=" * 50)
@@ -3708,6 +3721,13 @@ class TelegramBot:
                                 await self.handle_message(update["message"])
                             except Exception as msg_error:
                                 print(f"[Erro] Processando mensagem: {msg_error}")
+                                import traceback
+                                traceback.print_exc()
+                        elif "callback_query" in update:
+                            try:
+                                await self._route_approval_callback(update["callback_query"])
+                            except Exception as cb_error:
+                                print(f"[Erro] Processando callback: {cb_error}")
                                 import traceback
                                 traceback.print_exc()
                     # Pausa breve entre ciclos sem updates
