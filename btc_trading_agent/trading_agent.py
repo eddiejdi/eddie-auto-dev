@@ -3790,6 +3790,8 @@ class BitcoinTradingAgent(
                     "price": price,
                     "size": size,
                     "ts": ts,
+                    "trade_id": buy.get("id"),
+                    "order_id": buy.get("order_id"),
                     "target_sell": target_sell,
                     "trailing_high": price,
                     "target_sell_reason": target_sell_reason,
@@ -5332,6 +5334,11 @@ class BitcoinTradingAgent(
                         order_id = result.get("orderId")
                         if order_id:
                             trade_metadata = {"source": "kucoin_live", "orderId": order_id}
+                            subaccount = str(
+                                self.config.get("kucoin_subaccount_name") or ""
+                            ).strip()
+                            if subaccount:
+                                trade_metadata["kucoin_subaccount"] = subaccount
                         
                         # Atualizar posição (aproximado)
                         size = amount_usdt / price * (1 - TRADING_FEE_PCT)
@@ -5465,6 +5472,11 @@ class BitcoinTradingAgent(
                         order_id = result.get("orderId")
                         if order_id:
                             trade_metadata = {"source": "kucoin_live", "orderId": order_id}
+                            subaccount = str(
+                                self.config.get("kucoin_subaccount_name") or ""
+                            ).strip()
+                            if subaccount:
+                                trade_metadata["kucoin_subaccount"] = subaccount
                         logger.info(f"🔴 SELL {size:.6f} BTC @ ${price:,.2f} "
                                   f"(PnL: ${pnl:.2f} / {pnl_pct:.2f}% net, fees=${sell_fee+buy_fee:.4f})")
 

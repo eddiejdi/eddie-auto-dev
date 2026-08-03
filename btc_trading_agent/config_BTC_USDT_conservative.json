@@ -69,6 +69,7 @@
     "max_daily_loss_usd": 10
   },
   "profile": "conservative",
+  "kucoin_subaccount_name": "BTCConservative",
   "_optimizer_notes": {
     "source": "Phase 1 mini-optimizer 1min candles (54k candles, 41 days)",
     "based_on": "P1 #2: +$4.28 (R$21.96), 51T, 75% WR, SL=3%, TP=2%, EMA13/50",

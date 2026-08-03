@@ -154,6 +154,8 @@ class TestRestorePositionTargetSell:
 
         assert len(agent.state.entries) == 3
         # Ordem cronológica após reversed()
+        assert agent.state.entries[0]["trade_id"] == 1
+        assert agent.state.entries[0]["order_id"] == "order-1"
         assert agent.state.entries[0]["target_sell"] == pytest.approx(80_523.5)
         assert agent.state.entries[1]["target_sell"] == pytest.approx(81_040.0)
         assert agent.state.entries[2]["target_sell"] == pytest.approx(81_557.75)

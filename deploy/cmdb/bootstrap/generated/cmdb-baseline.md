@@ -1,9 +1,9 @@
 # CMDB Baseline
 
-- Generated at: `2026-08-03T02:44:13.312882+00:00`
+- Generated at: `2026-08-03T11:23:23.908897+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `211`
+- Repo services discovered: `210`
 - Critical services flagged for MVP: `85`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
@@ -13,14 +13,14 @@
 - `identity`: 4
 - `monitoring`: 19
 - `network`: 23
-- `operations`: 115
+- `operations`: 114
 - `storage`: 39
 - `trading`: 11
 
 ## Trading profile instances (`12`)
 
-- `BTC_USDT_aggressive` → `BTC-USDT` / `aggressive` (live, metrics `:9095`) — `master TRADE (kucoin/homelab)`
-- `BTC_USDT_conservative` → `BTC-USDT` / `conservative` (live, metrics `:9094`) — `master TRADE (kucoin/homelab)`
+- `BTC_USDT_aggressive` → `BTC-USDT` / `aggressive` (live, metrics `:9095`) — `subconta (BTCAgressive)`
+- `BTC_USDT_conservative` → `BTC-USDT` / `conservative` (live, metrics `:9094`) — `subconta (BTCConservative)`
 - `BTC_USDT_shadow` → `BTC-USDT` / `shadow` (live, metrics `:9099`) — `subconta (BTCAgressive)`
 - `DOGE_USDT_aggressive` → `DOGE-USDT` / `aggressive` (live, metrics `:9114`) — `master TRADE (kucoin/homelab) — mesma conta do SOL`
 - `DOGE_USDT_conservative` → `DOGE-USDT` / `conservative` (live, metrics `:9113`) — `master TRADE (kucoin/homelab) — mesma conta do SOL`
@@ -155,7 +155,7 @@
 - target_device: `homelab`
 
 ### `crypto-agent@BTC_USDT_aggressive.service`
-- Descrição: Trading agent BTC-USDT perfil aggressive (live) — master TRADE (kucoin/homelab).
+- Descrição: Trading agent BTC-USDT perfil aggressive (live) — subconta (BTCAgressive).
 - source: `scripts/cmdb/generate_cmdb_baseline.py`
 - domain: `trading`
 - symbol: `BTC-USDT`
@@ -165,14 +165,14 @@
 - live_mode: `True`
 - metrics_port: `9095`
 - api_port: `None`
-- kucoin_account: `master TRADE (kucoin/homelab)`
+- kucoin_account: `subconta (BTCAgressive)`
 - systemd_instance: `BTC_USDT_aggressive`
 - prometheus_job: `crypto-exporter-btc_usdt_aggressive`
 - activate_script: `None`
 - auto_generated: `True`
 
 ### `crypto-exporter@BTC_USDT_aggressive.service`
-- Descrição: Trading exporter BTC-USDT perfil aggressive (live) — master TRADE (kucoin/homelab).
+- Descrição: Trading exporter BTC-USDT perfil aggressive (live) — subconta (BTCAgressive).
 - source: `scripts/cmdb/generate_cmdb_baseline.py`
 - domain: `trading`
 - symbol: `BTC-USDT`
@@ -182,14 +182,14 @@
 - live_mode: `True`
 - metrics_port: `9095`
 - api_port: `None`
-- kucoin_account: `master TRADE (kucoin/homelab)`
+- kucoin_account: `subconta (BTCAgressive)`
 - systemd_instance: `BTC_USDT_aggressive`
 - prometheus_job: `crypto-exporter-btc_usdt_aggressive`
 - activate_script: `None`
 - auto_generated: `True`
 
 ### `crypto-agent@BTC_USDT_conservative.service`
-- Descrição: Trading agent BTC-USDT perfil conservative (live) — master TRADE (kucoin/homelab).
+- Descrição: Trading agent BTC-USDT perfil conservative (live) — subconta (BTCConservative).
 - source: `scripts/cmdb/generate_cmdb_baseline.py`
 - domain: `trading`
 - symbol: `BTC-USDT`
@@ -199,14 +199,14 @@
 - live_mode: `True`
 - metrics_port: `9094`
 - api_port: `None`
-- kucoin_account: `master TRADE (kucoin/homelab)`
+- kucoin_account: `subconta (BTCConservative)`
 - systemd_instance: `BTC_USDT_conservative`
 - prometheus_job: `crypto-exporter-btc_usdt_conservative`
 - activate_script: `None`
 - auto_generated: `True`
 
 ### `crypto-exporter@BTC_USDT_conservative.service`
-- Descrição: Trading exporter BTC-USDT perfil conservative (live) — master TRADE (kucoin/homelab).
+- Descrição: Trading exporter BTC-USDT perfil conservative (live) — subconta (BTCConservative).
 - source: `scripts/cmdb/generate_cmdb_baseline.py`
 - domain: `trading`
 - symbol: `BTC-USDT`
@@ -216,7 +216,7 @@
 - live_mode: `True`
 - metrics_port: `9094`
 - api_port: `None`
-- kucoin_account: `master TRADE (kucoin/homelab)`
+- kucoin_account: `subconta (BTCConservative)`
 - systemd_instance: `BTC_USDT_conservative`
 - prometheus_job: `crypto-exporter-btc_usdt_conservative`
 - activate_script: `None`
