@@ -235,7 +235,7 @@ def _poll_tg() -> list[dict[str, Any]]:
     res = _tg("getUpdates", {
         "offset":          _tg_offset,
         "timeout":         TG_LONG_POLL,
-        "allowed_updates": ["callback_query", "message"],
+        "allowed_updates": ["callback_query"],
     }, timeout=TG_LONG_POLL + 5)
     return res or []
 
@@ -346,7 +346,7 @@ def _resolve(prefix: str) -> str | None:
             (prefix + "%",)
         )
         row = cur.fetchone(); cur.close(); c.close()
-        return row[0] if row else None
+        return row["intent_id"] if row else None
     except Exception:
         return None
 
@@ -354,6 +354,28 @@ def _resolve(prefix: str) -> str | None:
 # ══════════════════════════════════════════════════════════════════════════
 # Handlers
 # ══════════════════════════════════════════════════════════════════════════
+
+def _ensure_configured() -> None:
+    """Reinicializa a config do gateway a partir do ambiente quando chamada a partir
+    de outro processo (ex: o bot). No processo do bot nao ha _DB_DSN/_BOT_URL/_CHAT
+    preenchidos; busca do env tal como _boot faz."""
+    global _DB_DSN, _BOT_URL, _CHAT
+    if not (_DB_DSN and _BOT_URL and _CHAT):
+        _boot()
+    if not (_DB_DSN and _BOT_URL and _CHAT):
+        raise RuntimeError("approval_gateway: env obrigatorio (DATABASE_URL, TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID) ausente")
+
+
+def handle_telegram_callback_query(cb: dict[str, Any]) -> None:
+    """Entry-point publico para o eddie-telegram-bot rotear callback_query de aprovacao.
+
+    O bot e o UNICO long-poll do token (config TG_POLL=0). Ao receber um
+    callback_query, ele chama esta funcao para decidir/atualizar o Action
+    Journal, mantendo a logica de decisao unica aqui no gateway.
+    """
+    _ensure_configured()
+    _on_callback(cb)
+
 
 def _on_callback(cb: dict[str, Any]) -> None:
     cb_id  = cb.get("id", "")
@@ -440,7 +462,7 @@ def _on_text(msg: dict[str, Any]) -> None:
     if not row:
         return
 
-    iid = row[0]
+    iid = row["intent_id"]
     label = "approved" if is_ok else "rejected"
     _decide(iid, label, f"@{usr} (texto)")
     mid = _intent_to_msg.get(iid)
