@@ -216,6 +216,40 @@ KNOWN_ISSUES: list[dict[str, Any]] = [
     },
 ]
 
+# G18: padrões de falha extras versionados fora do código (JSON na NAS).
+# Novo padrão de incidente não exige deploy do orchestrator — basta editar o
+# arquivo e o orchestrator re-lê a cada detecção.
+LTFS_KNOWN_ISSUES_EXTRA_FILE = Path(
+    os.getenv("LTFS_KNOWN_ISSUES_EXTRA_FILE", "/etc/ltfs-recovery/known_issues.extra.json")
+)
+
+
+def _load_known_issues() -> list[dict[str, Any]]:
+    """Concatena KNOWN_ISSUES embutido com padrões extras do arquivo externo.
+
+    O arquivo externo pode adicionar issues novas ou substituir uma embutida
+    (mesmo "id" — a entrada externa vence).
+    """
+    merged = list(KNOWN_ISSUES)
+    try:
+        if not LTFS_KNOWN_ISSUES_EXTRA_FILE.exists():
+            return merged
+        extra = json.loads(LTFS_KNOWN_ISSUES_EXTRA_FILE.read_text())
+        if not isinstance(extra, list):
+            raise ValueError("arquivo de issues extras deve ser uma lista JSON")
+        by_id = {issue["id"]: issue for issue in merged}
+        for issue in extra:
+            if not isinstance(issue, dict) or "id" not in issue or "patterns" not in issue:
+                raise ValueError(f"issue extra invalida: {issue!r}")
+            by_id[issue["id"]] = issue
+        return list(by_id.values())
+    except Exception as exc:
+        # Falha no arquivo extra não pode derrubar a detecção base
+        print(f"WARN: falha lendo {LTFS_KNOWN_ISSUES_EXTRA_FILE}: {exc}", file=sys.stderr)
+        return merged
+
+
+
 
 def _run_command(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
     if DEBUG:
@@ -1066,15 +1100,16 @@ def diagnose_known_issue(now: datetime | None = None) -> Dict[str, Any]:
     )
 
     open_cursors = _list_recovery_cursors()
+    issues = _load_known_issues()
     matched: dict[str, Any] | None = _cursor_recovery_issue(state, open_cursors)
     if matched is None:
-        for issue in KNOWN_ISSUES:
+        for issue in issues:
             if any(pattern.lower() in corpus.lower() for pattern in issue["patterns"]):
                 matched = issue
                 break
 
     if matched is None and not state["mounted"] and state["mount_expected"]:
-        matched = next(issue for issue in KNOWN_ISSUES if issue["id"] == "mount_missing")
+        matched = next(issue for issue in issues if issue["id"] == "mount_missing")
 
     details = {
         "state": state,

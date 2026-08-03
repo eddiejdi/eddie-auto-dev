@@ -1,20 +1,20 @@
 {
-  "generated_at": "2026-08-03T02:23:30.846545+00:00",
-  "repo_root": "/workspace/eddie-auto-dev",
+  "generated_at": "2026-08-03T01:01:42.685033+00:00",
+  "repo_root": "/home/edenilson/.traycer/worktrees/eddiejdi__eddie-auto-dev/traycer-plucky-rabbit",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 202,
+    "repo_services": 211,
     "trading_instances": 12,
-    "critical_services": 78,
+    "critical_services": 85,
     "domains": {
       "identity": 4,
       "monitoring": 19,
       "network": 23,
-      "operations": 113,
-      "storage": 32,
+      "operations": 115,
+      "storage": 39,
       "trading": 11
     }
   },
@@ -29,7 +29,7 @@
       "live_mode": true,
       "metrics_port": 9095,
       "api_port": null,
-      "kucoin_account": "subconta (BTCAgressive)",
+      "kucoin_account": "master TRADE (kucoin/homelab)",
       "activate_script": null
     },
     {
@@ -42,7 +42,7 @@
       "live_mode": true,
       "metrics_port": 9094,
       "api_port": null,
-      "kucoin_account": "subconta (BTCConservative)",
+      "kucoin_account": "master TRADE (kucoin/homelab)",
       "activate_script": null
     },
     {
@@ -974,10 +974,26 @@
       "candidate_system": "GLPI review"
     },
     {
+      "name": "faster-whisper-api.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/faster-whisper-api.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
       "name": "final-boot-status-agent.service",
       "domain": "operations",
       "kind": "systemd",
       "source": "tools/systemd/final-boot-status-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "fix-staging-perms.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/fix-staging-perms.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -1582,10 +1598,50 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "ltfs-cache-flush.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-cache-flush.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ltfs-catalog-verify.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-catalog-verify.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ltfs-catalog-verify.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-catalog-verify.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "ltfs-deep-recovery.service",
       "domain": "storage",
       "kind": "systemd",
       "source": "systemd/ltfs-deep-recovery.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ltfs-journal-replicate.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-journal-replicate.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ltfs-journal-replicate.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-journal-replicate.timer",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -1698,6 +1754,22 @@
       "domain": "storage",
       "kind": "systemd",
       "source": "systemd/storj-macvlan-watchdog.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "tape-log-spool-drain-nextcloud.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/tape-log-spool-drain-nextcloud.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "tape-log-spool-drain-nextcloud.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/tape-log-spool-drain-nextcloud.timer",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -2475,9 +2547,44 @@
         "critical": true
       },
       {
+        "name": "ltfs-cache-flush.timer",
+        "domain": "storage",
+        "source": "systemd/ltfs-cache-flush.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ltfs-catalog-verify.service",
+        "domain": "storage",
+        "source": "systemd/ltfs-catalog-verify.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ltfs-catalog-verify.timer",
+        "domain": "storage",
+        "source": "systemd/ltfs-catalog-verify.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
         "name": "ltfs-deep-recovery.service",
         "domain": "storage",
         "source": "systemd/ltfs-deep-recovery.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ltfs-journal-replicate.service",
+        "domain": "storage",
+        "source": "systemd/ltfs-journal-replicate.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ltfs-journal-replicate.timer",
+        "domain": "storage",
+        "source": "systemd/ltfs-journal-replicate.timer",
         "kind": "systemd",
         "critical": true
       },
@@ -2576,6 +2683,20 @@
         "name": "storj-macvlan-watchdog.timer",
         "domain": "storage",
         "source": "systemd/storj-macvlan-watchdog.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "tape-log-spool-drain-nextcloud.service",
+        "domain": "storage",
+        "source": "systemd/tape-log-spool-drain-nextcloud.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "tape-log-spool-drain-nextcloud.timer",
+        "domain": "storage",
+        "source": "systemd/tape-log-spool-drain-nextcloud.timer",
         "kind": "systemd",
         "critical": true
       },
@@ -2795,7 +2916,7 @@
     {
       "name": "crypto-agent@BTC_USDT_aggressive.service",
       "source": "scripts/cmdb/generate_cmdb_baseline.py",
-      "description": "Trading agent BTC-USDT perfil aggressive (live) \u2014 subconta (BTCAgressive).",
+      "description": "Trading agent BTC-USDT perfil aggressive (live) \u2014 master TRADE (kucoin/homelab).",
       "domain": "trading",
       "symbol": "BTC-USDT",
       "profile": "aggressive",
@@ -2804,7 +2925,7 @@
       "live_mode": true,
       "metrics_port": 9095,
       "api_port": null,
-      "kucoin_account": "subconta (BTCAgressive)",
+      "kucoin_account": "master TRADE (kucoin/homelab)",
       "systemd_instance": "BTC_USDT_aggressive",
       "prometheus_job": "crypto-exporter-btc_usdt_aggressive",
       "activate_script": null,
@@ -2814,7 +2935,7 @@
     {
       "name": "crypto-exporter@BTC_USDT_aggressive.service",
       "source": "scripts/cmdb/generate_cmdb_baseline.py",
-      "description": "Trading exporter BTC-USDT perfil aggressive (live) \u2014 subconta (BTCAgressive).",
+      "description": "Trading exporter BTC-USDT perfil aggressive (live) \u2014 master TRADE (kucoin/homelab).",
       "domain": "trading",
       "symbol": "BTC-USDT",
       "profile": "aggressive",
@@ -2823,7 +2944,7 @@
       "live_mode": true,
       "metrics_port": 9095,
       "api_port": null,
-      "kucoin_account": "subconta (BTCAgressive)",
+      "kucoin_account": "master TRADE (kucoin/homelab)",
       "systemd_instance": "BTC_USDT_aggressive",
       "prometheus_job": "crypto-exporter-btc_usdt_aggressive",
       "activate_script": null,
@@ -2833,7 +2954,7 @@
     {
       "name": "crypto-agent@BTC_USDT_conservative.service",
       "source": "scripts/cmdb/generate_cmdb_baseline.py",
-      "description": "Trading agent BTC-USDT perfil conservative (live) \u2014 subconta (BTCConservative).",
+      "description": "Trading agent BTC-USDT perfil conservative (live) \u2014 master TRADE (kucoin/homelab).",
       "domain": "trading",
       "symbol": "BTC-USDT",
       "profile": "conservative",
@@ -2842,7 +2963,7 @@
       "live_mode": true,
       "metrics_port": 9094,
       "api_port": null,
-      "kucoin_account": "subconta (BTCConservative)",
+      "kucoin_account": "master TRADE (kucoin/homelab)",
       "systemd_instance": "BTC_USDT_conservative",
       "prometheus_job": "crypto-exporter-btc_usdt_conservative",
       "activate_script": null,
@@ -2852,7 +2973,7 @@
     {
       "name": "crypto-exporter@BTC_USDT_conservative.service",
       "source": "scripts/cmdb/generate_cmdb_baseline.py",
-      "description": "Trading exporter BTC-USDT perfil conservative (live) \u2014 subconta (BTCConservative).",
+      "description": "Trading exporter BTC-USDT perfil conservative (live) \u2014 master TRADE (kucoin/homelab).",
       "domain": "trading",
       "symbol": "BTC-USDT",
       "profile": "conservative",
@@ -2861,7 +2982,7 @@
       "live_mode": true,
       "metrics_port": 9094,
       "api_port": null,
-      "kucoin_account": "subconta (BTCConservative)",
+      "kucoin_account": "master TRADE (kucoin/homelab)",
       "systemd_instance": "BTC_USDT_conservative",
       "prometheus_job": "crypto-exporter-btc_usdt_conservative",
       "activate_script": null,

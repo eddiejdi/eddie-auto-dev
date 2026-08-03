@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Drains complete rpa4all-snapshot dirs from /mnt/raid1/backups to LTFS tape via CIFS.
 # Skips .tmp.* (incomplete backup runs). Logs each file transferred.
+# Uses global tape lock via tape-exclusive-wrap to serialize with other writers.
 set -euo pipefail
 
 BACKUPS_SRC="${BACKUPS_SRC:-/mnt/raid1/backups}"

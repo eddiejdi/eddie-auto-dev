@@ -1,0 +1,12 @@
+[Unit]
+Description=Hourly drain of Nextcloud buffered logs to tape pipeline
+After=network-online.target
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+RandomizedDelaySec=10m
+Unit=tape-log-spool-drain-nextcloud.service
+
+[Install]
+WantedBy=timers.target
