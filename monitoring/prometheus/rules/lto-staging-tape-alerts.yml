@@ -1,0 +1,152 @@
+groups:
+  - name: rpa4all-lto-staging-alerts
+    interval: 60s
+    rules:
+      # Staging disk space alerts
+      - alert: NextcloudLTOStagingDiskSpaceCritical
+        expr: |
+          (node_filesystem_size_bytes{mountpoint="/mnt/raid1/lto6-cache"} - node_filesystem_free_bytes{mountpoint="/mnt/raid1/lto6-cache"})
+          / node_filesystem_size_bytes{mountpoint="/mnt/raid1/lto6-cache"} * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          component: nextcloud-lto-staging
+        annotations:
+          summary: "Nextcloud LTO staging disk space critical (>90%)"
+          description: |
+            Staging disk at {{ $labels.instance }} /mnt/raid1/lto6-cache is at {{ $value | printf "%.1f" }}% capacity.
+            Nextcloud uploads will fail with HTTP 507 Insufficient Storage.
+            Run cleanup or expand disk immediately.
+
+      - alert: NextcloudLTOStagingDiskSpaceWarning
+        expr: |
+          (node_filesystem_size_bytes{mountpoint="/mnt/raid1/lto6-cache"} - node_filesystem_free_bytes{mountpoint="/mnt/raid1/lto6-cache"})
+          / node_filesystem_size_bytes{mountpoint="/mnt/raid1/lto6-cache"} * 100 > 80
+        for: 15m
+        labels:
+          severity: warning
+          component: nextcloud-lto-staging
+        annotations:
+          summary: "Nextcloud LTO staging disk space warning (>80%)"
+          description: |
+            Staging disk at {{ $labels.instance }} /mnt/raid1/lto6-cache is at {{ $value | printf "%.1f" }}% capacity.
+            Plan cleanup or disk expansion soon.
+
+      # LTFS tape capacity alerts (from nas_ltfs_* metrics)
+      - alert: LTFS_TapeCapacityCritical
+        expr: |
+          (nas_ltfs_used_bytes / nas_ltfs_size_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          component: lto-tape
+        annotations:
+          summary: "LTFS tape capacity critical (>90%)"
+          description: |
+            Tape {{ $labels.mountpoint }} on {{ $labels.instance }} is at {{ $value | printf "%.1f" }}% capacity.
+            Flush jobs will fail. Rotate tape immediately.
+
+      - alert: LTFS_TapeCapacityWarning
+        expr: |
+          (nas_ltfs_used_bytes / nas_ltfs_size_bytes) * 100 > 80
+        for: 15m
+        labels:
+          severity: warning
+          component: lto-tape
+        annotations:
+          summary: "LTFS tape capacity warning (>80%)"
+          description: |
+            Tape {{ $labels.mountpoint }} on {{ $labels.instance }} is at {{ $value | printf "%.1f" }}% capacity.
+            Plan tape rotation soon.
+
+      # LTFS service health
+      - alert: LTFS_ServiceDown
+        expr: nas_ltfs_service_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: lto-tape
+        annotations:
+          summary: "LTFS service down"
+          description: |
+            LTFS service {{ $labels.service }} on {{ $labels.instance }} is down.
+            No flush operations possible. Check NAS and drive.
+
+      - alert: LTFS_MountDown
+        expr: nas_ltfs_mount_up == 0
+        for: 2m
+        labels:
+          severity: critical
+          component: lto-tape
+        annotations:
+          summary: "LTFS mount down"
+          description: |
+            LTFS mount {{ $labels.mountpoint }} on {{ $labels.instance }} is not mounted.
+            Flush jobs will fail. Check LTFS service and CIFS mount.
+
+      - alert: LTFS_ReadOnlyMode
+        expr: nas_ltfs_read_only == 1
+        for: 1m
+        labels:
+          severity: critical
+          component: lto-tape
+        annotations:
+          summary: "LTFS mount in read-only mode"
+          description: |
+            LTFS mount {{ $labels.mountpoint }} on {{ $labels.instance }} dropped to read-only.
+            Data may be at risk. Investigate immediately (check journal for 'Dropping to read-only mode').
+
+      # Flush job monitoring
+      - alert: LTFS_CacheFlushJobFailed
+        expr: |
+          increase(ltfs_cache_flush_runs_total{status="error"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          component: lto-flush
+        annotations:
+          summary: "LTFS cache flush job failed"
+          description: |
+            Cache flush job failed on {{ $labels.instance }} in the last hour.
+            Check journal for ltfs-cache-flush.service.
+
+      - alert: LTFS_CacheFlushJobStale
+        expr: |
+          time() - ltfs_cache_flush_last_run_timestamp > 7200
+        for: 5m
+        labels:
+          severity: warning
+          component: lto-flush
+        annotations:
+          summary: "LTFS cache flush job stale (>2h)"
+          description: |
+            No successful cache flush run in the last 2 hours on {{ $labels.instance }}.
+            Timer may be stuck or jobs failing silently.
+
+      # Catalog verification
+      - alert: LTFS_CatalogVerificationFailed
+        expr: |
+          increase(ltfs_catalog_verify_total{status="failed"}[24h]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          component: lto-catalog
+        annotations:
+          summary: "LTFS catalog verification failed"
+          description: |
+            Catalog verification found inconsistencies on {{ $labels.instance }}.
+            Check ltfs-catalog-verify.service journal.
+
+      # Log drain
+      - alert: TapeLogSpoolDrainFailed
+        expr: |
+          increase(tape_log_spool_drain_runs_total{status="error"}[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          component: tape-logs
+        annotations:
+          summary: "Tape log spool drain failed"
+          description: |
+            Log drain for route {{ $labels.route }} failed on {{ $labels.instance }}.
+            Logs may accumulate in staging.

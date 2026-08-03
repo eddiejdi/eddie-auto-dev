@@ -8,9 +8,9 @@ ConditionPathIsMountPoint=/mnt/lto6-smb-proof
 [Service]
 Type=oneshot
 User=root
-ExecStart=/usr/local/sbin/lto6-drain-backups
+ExecStart=/usr/local/bin/tape-exclusive-wrap -- /usr/local/sbin/lto6-drain-backups
 StandardOutput=journal
 StandardError=journal
 TimeoutStartSec=7200
-# Prevent competing with LTFS cache flush
+# Prevent competing with LTFS cache flush (also uses global lock, but keep as safety)
 ExecStartPre=/bin/bash -c "systemctl is-active ltfs-cache-flush.service && { echo 'ltfs-cache-flush running, waiting'; exit 1; } || true"

@@ -1,0 +1,25 @@
+[Unit]
+Description=Drain buffered logs for Nextcloud tape pipeline
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Environment=ROUTE_NAME=nextcloud
+Environment=ROUTE_TARGET_ROOT=/mnt/pretape/lto6-cache/logs
+Environment=DESTINATION=journald
+Environment=RETENTION_DAYS=7
+Environment=MAX_FILE_SIZE_MB=100
+ExecStart=/usr/local/bin/tape-log-spool-drain \
+  --route nextcloud \
+  --target-root /mnt/pretape/lto6-cache/logs \
+  --destination journald \
+  --retention-days 7 \
+  --max-file-size-mb 100 \
+  --rotate
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

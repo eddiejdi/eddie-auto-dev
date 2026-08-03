@@ -1,0 +1,12 @@
+[Unit]
+Description=Daily LTFS catalog verification
+After=network-online.target
+
+[Timer]
+OnCalendar=daily
+Persistent=true
+RandomizedDelaySec=1h
+Unit=ltfs-catalog-verify.service
+
+[Install]
+WantedBy=timers.target

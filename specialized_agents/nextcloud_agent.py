@@ -35,6 +35,7 @@ import logging
 import os
 import re
 import xml.etree.ElementTree as ET
+from pathlib import Path
 from typing import Any
 from urllib.parse import unquote, urlparse
 
@@ -852,11 +853,21 @@ async def _nextcloud_storage_diagnostics() -> dict[str, Any]:
         diagnostics["write_probe"] = {"ok": False, "error": str(exc)}
 
     try:
-        rc, out, err = await _run_occ("files_external:list")
-        diagnostics["files_external"] = {
+        rc, out, err = await _run_occ("files_external:list", "--output=json")
+        fe = {
             "ok": rc == 0,
             "output": (out or err)[:2000],
         }
+        if rc == 0:
+            try:
+                mounts = json.loads(out or "[]")
+                fe["details"] = _validate_files_external(mounts)
+                fe["ok"] = fe["details"]["ok"]
+            except json.JSONDecodeError:
+                # Occ antigo não suporta --output=json; fallback para parsing simples
+                fe["ok"] = rc == 0
+                fe["fallback"] = "occ sem --output=json — validação estruturada pulada"
+        diagnostics["files_external"] = fe
     except Exception as exc:
         diagnostics["files_external"] = {"ok": False, "error": str(exc)}
 
@@ -865,6 +876,141 @@ async def _nextcloud_storage_diagnostics() -> dict[str, Any]:
         for section in ("lto_mount", "write_probe", "files_external")
     )
     return diagnostics
+
+
+# ─── Validação files_external (G14) ───────────────────────────────────────────
+
+def _validate_files_external(mounts: list[dict]) -> dict:
+    """Valida mounts externos do Nextcloud.
+
+    Regras (gap G14):
+      - mount_point deve existir (não vazio)
+      - enabled deve ser True
+      - applicable deve conter "All" (senão o mount não vale para todos)
+      - backend deve ser resolvido (ex.: Local/LTFS ou SMB)
+    """
+    issues: list[str] = []
+    mounts_ok = 0
+    for m in mounts:
+        mp = m.get("mount_point") or m.get("mountPoint") or ""
+        enabled = m.get("enabled", True)
+        applicable = m.get("applicable") or []
+        backend = m.get("backend") or m.get("storage_backend") or "?"
+        if not mp:
+            issues.append("mount sem mount_point")
+            continue
+        if enabled is False:
+            issues.append(f"{mp}: desabilitado")
+            continue
+        if applicable and "All" not in applicable:
+            issues.append(f"{mp}: applicable={applicable} (sem All)")
+            continue
+        mounts_ok += 1
+
+    return {
+        "ok": not issues and mounts_ok > 0,
+        "total": len(mounts),
+        "mounts_ok": mounts_ok,
+        "issues": issues,
+    }
+
+
+# ─── Último flush bem-sucedido (G17) ──────────────────────────────────────────
+
+_FLUSH_METRICS_STATE = Path("/var/lib/ltfs-cache-flush/metrics_state.json")
+
+
+def _last_flush_info() -> dict:
+    """Retorna info do último flush do worker (metrics_state.json, G17)."""
+    try:
+        if not _FLUSH_METRICS_STATE.exists():
+            return {"ok": False, "error": "metrics_state.json não existe (flush nunca rodou?)"}
+        data = json.loads(_FLUSH_METRICS_STATE.read_text())
+        return {
+            "ok": True,
+            "last_run": data.get("last_run"),
+            "last_status": data.get("last_status"),
+            "files_flushed": data.get("files_flushed", 0),
+            "files_failed": data.get("files_failed", 0),
+            "bytes_flushed": data.get("bytes_flushed", 0),
+            "duration_seconds": data.get("duration_seconds", 0),
+            "fresh": _is_flush_fresh(data.get("last_run")),
+        }
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def _is_flush_fresh(last_run: str | None, max_age_min: int = 60) -> bool:
+    """Flush recente = last_run dentro de max_age_min."""
+    if not last_run:
+        return False
+    try:
+        from datetime import datetime, timezone
+
+        dt = datetime.fromisoformat(last_run.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        age_min = (datetime.now(timezone.utc) - dt).total_seconds() / 60
+        return 0 <= age_min <= max_age_min
+    except (ValueError, TypeError):
+        return False
+
+
+# ─── Auto-allowlist brute-force (G11) ─────────────────────────────────────────
+
+_NC_BRUTE_FORCE_ALLOWLIST = tuple(
+    dict.fromkeys(
+        filter(
+            None,
+            (
+                item.strip()
+                for item in os.getenv(
+                    "NEXTCLOUD_BRUTE_FORCE_ALLOWLIST",
+                    "192.168.15.150/32",  # TANK Android
+                ).split(",")
+            ),
+        )
+    )
+)
+
+async def _brute_force_ensure_allowlist(dry_run: bool = False) -> dict[str, Any]:
+    """Garante que IPs/CIDRs conhecidos (TANK etc.) estão na allowlist do brute-force.
+
+    Previne o incidente de 2026-04-23 (TANK bloqueado por TooManyRequests),
+    sincronizando a allowlist em cada execução de diagnóstico.
+    """
+    results: dict[str, Any] = {
+        "allowlist": list(_NC_BRUTE_FORCE_ALLOWLIST),
+        "actions": [],
+        "ok": True,
+    }
+    if not _NC_BRUTE_FORCE_ALLOWLIST:
+        results["ok"] = True
+        results["note"] = "Nenhum CIDR configurado (NEXTCLOUD_BRUTE_FORCE_ALLOWLIST)"
+        return results
+
+    # Lê allowlist atual
+    rc, out, err = await _run_occ("security:bruteforce:whitelist")
+    if rc != 0:
+        results["ok"] = False
+        results["error"] = out or err
+        return results
+    current = out or err
+
+    for cidr in _NC_BRUTE_FORCE_ALLOWLIST:
+        if cidr in current:
+            results["actions"].append({"cidr": cidr, "status": "already_present"})
+            continue
+        if dry_run:
+            results["actions"].append({"cidr": cidr, "status": "would_add"})
+            continue
+        add_rc, add_out, add_err = await _run_occ("security:bruteforce:whitelist", cidr)
+        if add_rc == 0:
+            results["actions"].append({"cidr": cidr, "status": "added"})
+        else:
+            results["ok"] = False
+            results["actions"].append({"cidr": cidr, "status": "failed", "error": add_out or add_err})
+    return results
 
 
 # ─── Dispatcher de ações ──────────────────────────────────────────────────────
@@ -966,7 +1112,18 @@ async def _dispatch(action: str, params: dict[str, Any], dry_run: bool) -> Any:
             return {"rc": rc, "raw": out or err}
 
     if action == "admin.storage_diagnostics":
-        return await _nextcloud_storage_diagnostics()
+        diagnostics = await _nextcloud_storage_diagnostics()
+        # G11: mantém allowlist brute-force sincronizada (TANK etc.)
+        try:
+            diagnostics["brute_force_allowlist"] = await _brute_force_ensure_allowlist(dry_run=dry_run)
+        except Exception as exc:  # nunca quebrar o diagnóstico por causa da allowlist
+            diagnostics["brute_force_allowlist"] = {"ok": False, "error": str(exc)}
+        # G17: observabilidade do último flush
+        try:
+            diagnostics["last_flush"] = _last_flush_info()
+        except Exception as exc:
+            diagnostics["last_flush"] = {"ok": False, "error": str(exc)}
+        return diagnostics
 
     if action == "admin.logs":
         lines = int(params.get("lines", 50))

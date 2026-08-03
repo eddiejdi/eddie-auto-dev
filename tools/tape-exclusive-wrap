@@ -1,0 +1,53 @@
+#!/bin/sh
+# tape-exclusive-wrap — Wrapper que garante exclusividade global de fita antes de executar comando.
+#
+# Uso: tape-exclusive-wrap -- <comando> [args...]
+#
+# Adquire /run/lock/tape-global.lock (flock) e executa o comando.
+# Usado por ltfs-cache-flush, lto6-drain-backups, ltfs_checkpoint_writer
+# para serializar todos os writers na fita LTFS.
+
+set -eu
+
+LOCK_FILE="/run/lock/tape-global.lock"
+LOCK_TIMEOUT=600  # 10 minutos
+
+mkdir -p "$(dirname "$LOCK_FILE")"
+
+# Parse args: tudo após '--' é o comando
+CMD_ARGS=()
+FOUND_SEP=0
+for arg in "$@"; do
+    if [ "$FOUND_SEP" -eq 1 ]; then
+        CMD_ARGS+=("$arg")
+    elif [ "$arg" = "--" ]; then
+        FOUND_SEP=1
+    fi
+done
+
+if [ ${#CMD_ARGS[@]} -eq 0 ]; then
+    echo "Uso: $0 -- <comando> [args...]" >&2
+    exit 1
+fi
+
+# Abre lock file
+exec 9>"$LOCK_FILE"
+
+# Tenta adquirir lock exclusivo com timeout
+elapsed=0
+while ! flock -n 9; do
+    if [ "$elapsed" -ge "$LOCK_TIMEOUT" ]; then
+        echo "$(date -Iseconds) [tape-exclusive-wrap] ERRO: lock global de fita não adquirido após ${LOCK_TIMEOUT}s" >&2
+        exit 1
+    fi
+    echo "$(date -Iseconds) [tape-exclusive-wrap] Aguardando lock global de fita... (${elapsed}s)" >&2
+    sleep 5
+    elapsed=$((elapsed + 5))
+done
+
+# Registra PID no lock
+printf '{"pid":%d,"operation":"%s","started_at":"%s"}\n' "$$" "${CMD_ARGS[0]}" "$(date -Iseconds)" >&9
+
+# Executa comando (fecha fd 9 para não vazar para subprocesso)
+exec 9>&-
+exec "${CMD_ARGS[@]}"

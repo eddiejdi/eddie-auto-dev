@@ -1,0 +1,21 @@
+[Unit]
+Description=LTFS Catalog Verification — validates catalog.jsonl and samples tape SHA256
+After=ltfs-cache-flush.service
+Wants=ltfs-cache-flush.service
+ConditionPathExists=/var/lib/ltfs-cache-flush/catalog.jsonl
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/ltfs-catalog-verify \
+  --catalog /var/lib/ltfs-cache-flush/catalog.jsonl \
+  --placements /var/lib/ltfs-cache-flush/placements.json \
+  --tape-root /mnt/lto6-smb-proof/backups \
+  --sample-percent 10 --sample-max 100 \
+  --metrics-file /var/lib/ltfs-cache-flush/catalog_verify_metrics.prom
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=3600
+
+[Install]
+WantedBy=multi-user.target

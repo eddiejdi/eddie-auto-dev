@@ -34,6 +34,7 @@ Variáveis de ambiente:
 """
 
 import argparse
+import fcntl
 import hashlib
 import json
 import logging
@@ -43,9 +44,9 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
-# ─── Configuração ────────────────────────────────────────────────────────────
+# ─── Configuração ──────────────────────────────────────────────────────────────
 
 BACKUPS_SRC    = os.environ.get("BACKUPS_SRC",    "/mnt/raid1/backups")
 TAPE_TARGET    = os.environ.get("TAPE_TARGET",    "/mnt/lto6-smb-proof/backups")
@@ -56,6 +57,10 @@ NAS_LTFS_SVC    = os.environ.get("NAS_LTFS_SVC",    "ltfs-lto6.service")
 LTFS_DEVICE     = os.environ.get("LTFS_DEVICE",     "/dev/sg0")
 JOURNAL_DIR     = Path(os.environ.get("LTFS_JOURNAL_DIR", "/var/lib/ltfs-journal"))
 
+# Global tape lock for serialization with other writers (ltfs-cache-flush, lto6-drain-backups)
+GLOBAL_TAPE_LOCK = Path("/run/lock/tape-global.lock")
+GLOBAL_TAPE_LOCK_TIMEOUT = int(os.environ.get("GLOBAL_TAPE_LOCK_TIMEOUT", "600"))
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [ltfs-checkpoint] %(levelname)s %(message)s",
@@ -63,8 +68,51 @@ logging.basicConfig(
 )
 log = logging.getLogger("ltfs-checkpoint")
 
+# ─── Global Tape Lock ──────────────────────────────────────────────────────────
 
-# ─── Helpers de tempo ────────────────────────────────────────────────────────
+_GLOBAL_TAPE_LOCK_FD: Optional[int] = None
+
+
+def _acquire_global_tape_lock() -> bool:
+    """Adquire lock global de fita (flock em /run/lock/tape-global.lock)."""
+    global _GLOBAL_TAPE_LOCK_FD
+    try:
+        GLOBAL_TAPE_LOCK.parent.mkdir(parents=True, exist_ok=True)
+        fd = GLOBAL_TAPE_LOCK.open("w").fileno()
+        start = time.time()
+        while True:
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                _GLOBAL_TAPE_LOCK_FD = fd
+                log.info("Lock global de fita adquirido: %s", GLOBAL_TAPE_LOCK)
+                return True
+            except BlockingIOError:
+                if time.time() - start >= GLOBAL_TAPE_LOCK_TIMEOUT:
+                    log.error("Timeout aguardando lock global de fita (%ds)", GLOBAL_TAPE_LOCK_TIMEOUT)
+                    os.close(fd)
+                    return False
+                log.info("Aguardando lock global de fita... (%.0fs)", time.time() - start)
+                time.sleep(1)
+    except Exception as e:
+        log.error("Falha ao adquirir lock global: %s", e)
+        return False
+
+
+def _release_global_tape_lock() -> None:
+    """Libera lock global de fita."""
+    global _GLOBAL_TAPE_LOCK_FD
+    if _GLOBAL_TAPE_LOCK_FD is not None:
+        try:
+            fcntl.flock(_GLOBAL_TAPE_LOCK_FD, fcntl.LOCK_UN)
+            os.close(_GLOBAL_TAPE_LOCK_FD)
+            log.info("Lock global de fita liberado")
+        except Exception as e:
+            log.warning("Erro ao liberar lock global: %s", e)
+        finally:
+            _GLOBAL_TAPE_LOCK_FD = None
+
+
+# ─── Helpers de tempo ──────────────────────────────────────────────────────────
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
@@ -528,7 +576,16 @@ def cmd_run(args) -> int:
     _save_journal(journal_path, journal)
     log.info("Journal criado: %s", journal_path)
 
-    return _process_session(journal, journal_path, src_dir, tape_target, recovery=False)
+    # Adquire lock global de fita antes de processar (escrita na fita)
+    if not _acquire_global_tape_lock():
+        journal["status"] = "failed"
+        _save_journal(journal_path, journal)
+        return 1
+
+    try:
+        return _process_session(journal, journal_path, src_dir, tape_target, recovery=False)
+    finally:
+        _release_global_tape_lock()
 
 
 def cmd_recover(args) -> int:
@@ -559,29 +616,38 @@ def cmd_recover(args) -> int:
         _save_journal(journal_path, journal)
         log.info("%d arquivo(s) resetado(s) para 'pending'", reset_count)
 
-    # ltfsck se fita inconsistente
-    if not _nas_ltfs_is_active():
-        log.warning("LTFS não está ativo na NAS — executando ltfsck --full-recovery")
-        if not nas_run_ltfsck():
-            log.error("ltfsck falhou — intervenção manual necessária")
-            journal["status"] = "failed"
-            _save_journal(journal_path, journal)
-            return 2
-        if not nas_start_ltfs():
-            log.error("Não foi possível montar a fita após ltfsck")
-            journal["status"] = "failed"
-            _save_journal(journal_path, journal)
-            return 2
-        if not cifs_remount():
-            log.error("Não foi possível remontar CIFS após ltfsck")
-            journal["status"] = "failed"
-            _save_journal(journal_path, journal)
-            return 2
+    # Adquire lock global de fita para operações de recovery que tocam na fita
+    if not _acquire_global_tape_lock():
+        journal["status"] = "failed"
+        _save_journal(journal_path, journal)
+        return 1
 
-    src_dir = Path(journal["source_dir"])
-    tape_target = Path(journal["tape_target"])
+    try:
+        # ltfsck se fita inconsistente
+        if not _nas_ltfs_is_active():
+            log.warning("LTFS não está ativo na NAS — executando ltfsck --full-recovery")
+            if not nas_run_ltfsck():
+                log.error("ltfsck falhou — intervenção manual necessária")
+                journal["status"] = "failed"
+                _save_journal(journal_path, journal)
+                return 2
+            if not nas_start_ltfs():
+                log.error("Não foi possível montar a fita após ltfsck")
+                journal["status"] = "failed"
+                _save_journal(journal_path, journal)
+                return 2
+            if not cifs_remount():
+                log.error("Não foi possível remontar CIFS após ltfsck")
+                journal["status"] = "failed"
+                _save_journal(journal_path, journal)
+                return 2
 
-    return _process_session(journal, journal_path, src_dir, tape_target, recovery=True)
+        src_dir = Path(journal["source_dir"])
+        tape_target = Path(journal["tape_target"])
+
+        return _process_session(journal, journal_path, src_dir, tape_target, recovery=True)
+    finally:
+        _release_global_tape_lock()
 
 
 def cmd_status(args) -> int:
