@@ -1,17 +1,17 @@
 # CMDB Baseline
 
-- Generated at: `2026-08-02T15:46:23.454213+00:00`
+- Generated at: `2026-08-03T02:04:33.773410+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `201`
-- Critical services flagged for MVP: `77`
+- Repo services discovered: `202`
+- Critical services flagged for MVP: `78`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
 - `identity`: 4
-- `monitoring`: 18
+- `monitoring`: 19
 - `network`: 23
 - `operations`: 113
 - `storage`: 32
@@ -19,8 +19,8 @@
 
 ## Trading profile instances (`12`)
 
-- `BTC_USDT_aggressive` → `BTC-USDT` / `aggressive` (live, metrics `:9095`) — `master TRADE (kucoin/homelab)`
-- `BTC_USDT_conservative` → `BTC-USDT` / `conservative` (live, metrics `:9094`) — `master TRADE (kucoin/homelab)`
+- `BTC_USDT_aggressive` → `BTC-USDT` / `aggressive` (live, metrics `:9095`) — `subconta (BTCAgressive)`
+- `BTC_USDT_conservative` → `BTC-USDT` / `conservative` (live, metrics `:9094`) — `subconta (BTCConservative)`
 - `BTC_USDT_shadow` → `BTC-USDT` / `shadow` (live, metrics `:9099`) — `subconta (BTCAgressive)`
 - `DOGE_USDT_aggressive` → `DOGE-USDT` / `aggressive` (live, metrics `:9114`) — `master TRADE (kucoin/homelab) — mesma conta do SOL`
 - `DOGE_USDT_conservative` → `DOGE-USDT` / `conservative` (live, metrics `:9113`) — `master TRADE (kucoin/homelab) — mesma conta do SOL`
@@ -54,6 +54,7 @@
 - `grafana-selfheal.service` (monitoring, systemd) from `systemd/grafana-selfheal.service`
 - `job-monitor.service` (monitoring, systemd) from `systemd/job-monitor.service`
 - `monitoring-containers-bootstrap.service` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.service`
+- `nas-ram-exporter.service` (monitoring, systemd) from `systemd/nas-ram-exporter.service`
 - `rss-sentiment-exporter.service` (monitoring, systemd) from `systemd/rss-sentiment-exporter.service`
 - `storj-exporter.service` (monitoring, systemd) from `deploy/storj-exporter.service`
 - `storj-payout-monitor.service` (monitoring, systemd) from `systemd/storj-payout-monitor.service`
@@ -77,7 +78,6 @@
 - `protonvpn-boot-selfheal.service` (network, systemd) from `systemd/protonvpn-boot-selfheal.service`
 - `protonvpn-routing-watchdog-fix.service` (network, systemd) from `deploy/vpn/protonvpn-routing-watchdog-fix.service`
 - `protonvpn-routing-watchdog.service` (network, systemd) from `deploy/vpn/protonvpn-routing-watchdog.service`
-- `protonvpn-unit-selfheal.service` (network, systemd) from `systemd/protonvpn-unit-selfheal.service`
 
 ## Serviços anotados manualmente
 
@@ -155,7 +155,7 @@
 - target_device: `homelab`
 
 ### `crypto-agent@BTC_USDT_aggressive.service`
-- Descrição: Trading agent BTC-USDT perfil aggressive (live) — master TRADE (kucoin/homelab).
+- Descrição: Trading agent BTC-USDT perfil aggressive (live) — subconta (BTCAgressive).
 - source: `scripts/cmdb/generate_cmdb_baseline.py`
 - domain: `trading`
 - symbol: `BTC-USDT`
@@ -165,14 +165,14 @@
 - live_mode: `True`
 - metrics_port: `9095`
 - api_port: `None`
-- kucoin_account: `master TRADE (kucoin/homelab)`
+- kucoin_account: `subconta (BTCAgressive)`
 - systemd_instance: `BTC_USDT_aggressive`
 - prometheus_job: `crypto-exporter-btc_usdt_aggressive`
 - activate_script: `None`
 - auto_generated: `True`
 
 ### `crypto-exporter@BTC_USDT_aggressive.service`
-- Descrição: Trading exporter BTC-USDT perfil aggressive (live) — master TRADE (kucoin/homelab).
+- Descrição: Trading exporter BTC-USDT perfil aggressive (live) — subconta (BTCAgressive).
 - source: `scripts/cmdb/generate_cmdb_baseline.py`
 - domain: `trading`
 - symbol: `BTC-USDT`
@@ -182,14 +182,14 @@
 - live_mode: `True`
 - metrics_port: `9095`
 - api_port: `None`
-- kucoin_account: `master TRADE (kucoin/homelab)`
+- kucoin_account: `subconta (BTCAgressive)`
 - systemd_instance: `BTC_USDT_aggressive`
 - prometheus_job: `crypto-exporter-btc_usdt_aggressive`
 - activate_script: `None`
 - auto_generated: `True`
 
 ### `crypto-agent@BTC_USDT_conservative.service`
-- Descrição: Trading agent BTC-USDT perfil conservative (live) — master TRADE (kucoin/homelab).
+- Descrição: Trading agent BTC-USDT perfil conservative (live) — subconta (BTCConservative).
 - source: `scripts/cmdb/generate_cmdb_baseline.py`
 - domain: `trading`
 - symbol: `BTC-USDT`
@@ -199,14 +199,14 @@
 - live_mode: `True`
 - metrics_port: `9094`
 - api_port: `None`
-- kucoin_account: `master TRADE (kucoin/homelab)`
+- kucoin_account: `subconta (BTCConservative)`
 - systemd_instance: `BTC_USDT_conservative`
 - prometheus_job: `crypto-exporter-btc_usdt_conservative`
 - activate_script: `None`
 - auto_generated: `True`
 
 ### `crypto-exporter@BTC_USDT_conservative.service`
-- Descrição: Trading exporter BTC-USDT perfil conservative (live) — master TRADE (kucoin/homelab).
+- Descrição: Trading exporter BTC-USDT perfil conservative (live) — subconta (BTCConservative).
 - source: `scripts/cmdb/generate_cmdb_baseline.py`
 - domain: `trading`
 - symbol: `BTC-USDT`
@@ -216,7 +216,7 @@
 - live_mode: `True`
 - metrics_port: `9094`
 - api_port: `None`
-- kucoin_account: `master TRADE (kucoin/homelab)`
+- kucoin_account: `subconta (BTCConservative)`
 - systemd_instance: `BTC_USDT_conservative`
 - prometheus_job: `crypto-exporter-btc_usdt_conservative`
 - activate_script: `None`

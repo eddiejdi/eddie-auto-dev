@@ -601,6 +601,89 @@ class TrainingDatabase:
                 (json.dumps(merged_metadata), trade_id),
             )
 
+    def get_reconciliable_open_buys(
+        self,
+        symbol: str,
+        profile: str,
+        subaccount: str,
+        *,
+        limit: int = 50,
+    ) -> List[Dict]:
+        """Retorna BUYs live abertos que podem ser readotados pelo runtime.
+
+        A subconta é obrigatória para a chamada. Registros legados sem essa
+        metadata ainda podem ser readotados pelo profile configurado, mas a
+        identidade da subconta é gravada somente depois da validação do saldo.
+        """
+        with self._get_conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+            cur.execute(
+                f"""
+                SELECT id, order_id, price, size, funds, timestamp, metadata
+                FROM {SCHEMA}.trades
+                WHERE symbol = %s
+                  AND profile = %s
+                  AND side = 'buy'
+                  AND dry_run = FALSE
+                  AND status != 'closed'
+                  AND order_id IS NOT NULL
+                  AND order_id != ''
+                  AND COALESCE(metadata->>'runtime_position_restored', 'false') != 'true'
+                  AND (
+                      metadata->>'kucoin_subaccount' IS NULL
+                      OR metadata->>'kucoin_subaccount' = %s
+                  )
+                ORDER BY timestamp DESC
+                LIMIT %s
+                """,
+                (symbol, profile, subaccount, max(1, int(limit))),
+            )
+            return [dict(row) for row in cur.fetchall()]
+
+    def mark_open_buy_restored(
+        self,
+        trade_id: int,
+        symbol: str,
+        profile: str,
+        subaccount: str,
+        order_id: str,
+    ) -> bool:
+        """Persiste a readopção de um BUY, validando toda a identidade dele."""
+        metadata = {
+            "kucoin_subaccount": subaccount,
+            "runtime_position_restored": True,
+            "runtime_position_restored_at": time.time(),
+        }
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                UPDATE {SCHEMA}.trades
+                SET metadata = COALESCE(metadata, '{{}}'::jsonb) || %s::jsonb
+                WHERE id = %s
+                  AND symbol = %s
+                  AND profile = %s
+                  AND order_id = %s
+                  AND side = 'buy'
+                  AND dry_run = FALSE
+                  AND status != 'closed'
+                  AND COALESCE(metadata->>'runtime_position_restored', 'false') != 'true'
+                  AND (
+                      metadata->>'kucoin_subaccount' IS NULL
+                      OR metadata->>'kucoin_subaccount' = %s
+                  )
+                """,
+                (
+                    json.dumps(metadata),
+                    trade_id,
+                    symbol,
+                    profile,
+                    order_id,
+                    subaccount,
+                ),
+            )
+            return cur.rowcount == 1
+
     def close_open_buys(self, symbol: str, profile: str, dry_run: bool, reason: str) -> int:
         """Marca todos os buys abertos como 'closed' com a razão indicada.
         Retorna o número de linhas afetadas.

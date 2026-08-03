@@ -661,6 +661,192 @@ class TestReconcilePositionWithExchange:
         assert "mais" in message.lower()
         assert "BTC" in message
 
+    def test_exchange_excess_restores_exact_persistent_buy_for_configured_subaccount(self):
+        """O saldo extra só readota o BUY identificado por profile/subconta/order.
+
+        Regressão do incidente BTC conservative: a ordem antiga permaneceu no
+        ledger, mas ficou fora de state.entries após uma reconciliação anterior.
+        """
+        recent = _entry(63_228.65, 0.0002369969942423253)
+        recent.update({"trade_id": 3831, "order_id": "recent-order"})
+        agent = _make_agent(
+            position=recent["size"],
+            entries=[recent],
+            dry_run=False,
+            live_cfg={"kucoin_subaccount_name": "BTCConservative"},
+        )
+        agent.db.get_reconciliable_open_buys.return_value = [{
+            "id": 3619,
+            "order_id": "6a5fa9cb0e7dfc0007432e07",
+            "price": 66_461.35,
+            "size": 0.00022546938935185637,
+            "timestamp": 1_784_647_085.0,
+            "metadata": {"target_sell_price": 67_325.35},
+        }]
+        agent.db.mark_open_buy_restored.return_value = True
+
+        with (
+            patch.object(
+                kucoin_api,
+                "get_sub_account_balances",
+                return_value=[{
+                    "sub_name": "BTCConservative",
+                    "account_type": "trade",
+                    "currency": "BTC",
+                    "available": 0.00046246638359418165,
+                }],
+            ),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange()
+
+        assert result == 0
+        assert len(agent.state.entries) == 2
+        restored = agent.state.entries[-1]
+        assert restored["trade_id"] == 3619
+        assert restored["order_id"] == "6a5fa9cb0e7dfc0007432e07"
+        assert restored["size"] == pytest.approx(0.00022546938935185637)
+        assert restored["target_sell"] == pytest.approx(67_325.35)
+        agent.db.mark_open_buy_restored.assert_called_once_with(
+            3619,
+            "BTC-USDT",
+            "conservative",
+            "BTCConservative",
+            "6a5fa9cb0e7dfc0007432e07",
+        )
+        mock_alert.assert_not_called()
+
+    def test_exchange_excess_without_subaccount_never_adopts_persistent_buy(self):
+        entries = [_entry(90_000, 0.001)]
+        agent = _make_agent(entries=entries, dry_run=False, live_cfg={})
+
+        with (
+            patch.object(kucoin_api, "get_balance", return_value=0.002),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange()
+
+        assert result == 0
+        assert len(agent.state.entries) == 1
+        agent.db.get_reconciliable_open_buys.assert_not_called()
+        agent.db.mark_open_buy_restored.assert_not_called()
+        mock_alert.assert_called_once()
+
+    def test_exchange_excess_with_multiple_candidates_remains_an_alert(self):
+        entries = [_entry(90_000, 0.001)]
+        agent = _make_agent(
+            entries=entries,
+            dry_run=False,
+            live_cfg={"kucoin_subaccount_name": "BTCConservative"},
+        )
+        agent.db.get_reconciliable_open_buys.return_value = [
+            {"id": 10, "order_id": "order-a", "price": 90_000, "size": 0.001},
+            {"id": 11, "order_id": "order-b", "price": 90_000, "size": 0.001},
+        ]
+
+        with (
+            patch.object(
+                kucoin_api,
+                "get_sub_account_balances",
+                return_value=[{
+                    "sub_name": "BTCConservative",
+                    "account_type": "trade",
+                    "currency": "BTC",
+                    "available": 0.002,
+                }],
+            ),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange()
+
+        assert result == 0
+        assert len(agent.state.entries) == 1
+        agent.db.mark_open_buy_restored.assert_not_called()
+        mock_alert.assert_called_once()
+
+    def test_persistent_claim_failure_keeps_excess_as_alert(self):
+        entries = [_entry(90_000, 0.001)]
+        agent = _make_agent(
+            entries=entries,
+            dry_run=False,
+            live_cfg={"kucoin_subaccount_name": "BTCConservative"},
+        )
+        agent.db.get_reconciliable_open_buys.return_value = [
+            {"id": 10, "order_id": "order-a", "price": 90_000, "size": 0.001},
+        ]
+        agent.db.mark_open_buy_restored.return_value = False
+
+        with (
+            patch.object(
+                kucoin_api,
+                "get_sub_account_balances",
+                return_value=[{
+                    "sub_name": "BTCConservative",
+                    "account_type": "trade",
+                    "currency": "BTC",
+                    "available": 0.002,
+                }],
+            ),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange()
+
+        assert result == 0
+        assert len(agent.state.entries) == 1
+        mock_alert.assert_called_once()
+
+    def test_configured_subaccount_uses_available_balance_not_total_balance(self):
+        entries = [_entry(90_000, 0.001)]
+        agent = _make_agent(
+            entries=entries,
+            dry_run=False,
+            live_cfg={"kucoin_subaccount_name": "BTCConservative"},
+        )
+
+        with (
+            patch.object(
+                kucoin_api,
+                "get_sub_account_balances",
+                return_value=[{
+                    "sub_name": "BTCConservative",
+                    "account_type": "trade",
+                    "currency": "BTC",
+                    "balance": 0.002,
+                    "available": 0.001,
+                }],
+            ),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange()
+
+        assert result == 0
+        agent.db.get_reconciliable_open_buys.assert_not_called()
+        mock_alert.assert_not_called()
+
+    def test_configured_subaccount_zero_balance_closes_phantom_entries(self):
+        entries = [_entry(90_000, 0.001)]
+        agent = _make_agent(
+            entries=entries,
+            dry_run=False,
+            live_cfg={"kucoin_subaccount_name": "BTCConservative"},
+        )
+
+        with patch.object(
+            kucoin_api,
+            "get_sub_account_balances",
+            return_value=[{
+                "sub_name": "BTCConservative",
+                "account_type": "trade",
+                "currency": "BTC",
+                "balance": 0.0,
+                "available": 0.0,
+            }],
+        ):
+            result = agent._reconcile_position_with_exchange(current_price=90_000.0)
+
+        assert result == 1
+        assert agent.state.entries == []
+
     def test_db_greater_than_exchange_closes_most_recent_slots_first(self):
         entries = [
             _entry(88_000, 0.001),  # mais antigo — deve sobreviver

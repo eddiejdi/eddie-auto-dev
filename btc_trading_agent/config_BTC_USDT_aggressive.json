@@ -69,6 +69,7 @@
     "max_daily_loss_usd": 15
   },
   "profile": "aggressive",
+  "kucoin_subaccount_name": "BTCAgressive",
   "guardrails_active": true,
   "guardrails_min_sell_pnl_pct": 0.003,
   "guardrails_positive_only_sells": true,

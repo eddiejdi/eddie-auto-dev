@@ -513,6 +513,116 @@ class PositionManagerMixin:
 
     # ── Reconciliação de posição com a exchange ──────────────────────────────
 
+    def _restore_persistent_reconciliation_candidate(
+        self,
+        real_balance: float,
+        db_position: float,
+        tolerance: float,
+        profile: str,
+        subaccount: str,
+    ) -> bool:
+        """Readota um único BUY persistente que explica o excesso na exchange.
+
+        A readopção só é segura quando o profile tem subconta configurada e um
+        único BUY aberto, identificado por order_id, explica o saldo excedente.
+        Essa regra evita atribuir saldo de outro profile quando os agentes usam
+        a mesma conta KuCoin.
+        """
+        if not subaccount:
+            return False
+
+        excess = real_balance - db_position
+        if excess <= tolerance:
+            return False
+
+        try:
+            candidates = self.db.get_reconciliable_open_buys(
+                self.symbol, profile, subaccount,
+            )
+        except Exception as exc:
+            logger.warning("[reconcile] Persistent candidate lookup failed: %s", exc)
+            return False
+
+        # Reconciliações pós-compra/pós-venda rodam em background. Serializar a
+        # seleção e a readopção impede que dois threads anexem o mesmo BUY.
+        with self._trade_lock:
+            entries = list(getattr(self.state, "entries", []) or [])
+            represented_ids = {
+                int(entry["trade_id"])
+                for entry in entries
+                if entry.get("trade_id") is not None
+            }
+            represented_orders = {
+                str(entry["order_id"])
+                for entry in entries
+                if entry.get("order_id")
+            }
+            matching = []
+            for candidate in candidates:
+                trade_id = candidate.get("id")
+                order_id = str(candidate.get("order_id") or "")
+                size = float(candidate.get("size", 0) or 0)
+                entry_price = float(candidate.get("price", 0) or 0)
+                if not trade_id or not order_id or size <= 0 or entry_price <= 0:
+                    continue
+                if int(trade_id) in represented_ids or order_id in represented_orders:
+                    continue
+                if abs(excess - size) <= tolerance:
+                    matching.append(candidate)
+
+            if len(matching) != 1:
+                return False
+
+            candidate = matching[0]
+            trade_id = int(candidate["id"])
+            order_id = str(candidate["order_id"])
+            entry_price = float(candidate["price"])
+            try:
+                persisted = self.db.mark_open_buy_restored(
+                    trade_id, self.symbol, profile, subaccount, order_id,
+                )
+            except Exception as exc:
+                logger.warning("[reconcile] Persistent candidate claim failed: %s", exc)
+                return False
+            if not persisted:
+                return False
+
+            metadata = candidate.get("metadata") or {}
+            if not isinstance(metadata, dict):
+                metadata = {}
+            entries.append({
+                "price": entry_price,
+                "size": float(candidate["size"]),
+                "ts": float(candidate.get("timestamp", 0) or time.time()),
+                "trade_id": trade_id,
+                "order_id": order_id,
+                "target_sell": float(metadata.get("target_sell_price") or 0),
+                "target_sell_reason": str(metadata.get("target_sell_reason") or ""),
+                "trailing_high": entry_price,
+                "dry_run": False,
+            })
+            self.state.entries = entries
+            total_size = sum(float(entry.get("size", 0) or 0) for entry in entries)
+            total_cost = sum(
+                float(entry.get("size", 0) or 0) * float(entry.get("price", 0) or 0)
+                for entry in entries
+            )
+            self.state.position = total_size
+            self.state.entry_price = total_cost / total_size if total_size > 0 else 0.0
+            self._sync_position_tracking()
+        logger.warning(
+            "[reconcile] Restored persistent BUY #%s for %s/%s: %.8f %s "
+            "(order_id=%s, exchange excess=%.8f)",
+            trade_id,
+            self.symbol,
+            profile,
+            float(candidate["size"]),
+            self.symbol.split("-")[0],
+            order_id,
+            excess,
+        )
+        return True
+
     def _reconcile_position_with_exchange(self, current_price: float = 0.0) -> int:
         """Reconcilia os slots do DB com o saldo real de BTC na exchange.
 
@@ -526,10 +636,10 @@ class PositionManagerMixin:
         o mais antigo, até que DB == saldo real ± tolerância.
 
         Na direção oposta (exchange > DB — a exchange tem MAIS moeda do que o
-        DB conhece), NÃO criamos entries sintéticas automaticamente: em conta
-        compartilhada entre profiles, atribuir esse saldo ao profile errado
-        corrompe PnL/histórico de outro agente. Esse caso só dispara um alerta
-        Telegram para investigação manual.
+        DB conhece), somente readota um BUY persistente quando profile,
+        subconta, order_id e tamanho do excesso formam uma identidade única.
+        Qualquer caso ambíguo só dispara alerta Telegram para investigação
+        manual.
 
         Chamado:
         - Em background quando sell falha com código 200004 (Balance insufficient)
@@ -538,7 +648,7 @@ class PositionManagerMixin:
 
         Returns:
             Número de slots fechados por reconciliação (0 = tudo consistente,
-            ou exchange > DB — nesse caso apenas alertado, não contado aqui).
+            readopção persistente ou exchange > DB apenas alertado).
         """
         if self.state.dry_run:
             return 0
@@ -549,20 +659,51 @@ class PositionManagerMixin:
         if not entries:
             return 0
 
+        profile = self._current_profile() if callable(getattr(self, "_current_profile", None)) else "default"
         try:
-            from kucoin_api import get_balance
-            real_balance = get_balance(base_currency)
+            live_cfg = self._load_live_config()
+        except Exception:
+            live_cfg = getattr(self, "config", {}) or {}
+        subaccount = (
+            str(live_cfg.get("kucoin_subaccount_name") or "").strip()
+            if isinstance(live_cfg, dict) else ""
+        )
+
+        try:
+            if subaccount:
+                from kucoin_api import get_sub_account_balances
+
+                matching_balances = [
+                    account
+                    for account in get_sub_account_balances()
+                    if account.get("sub_name") == subaccount
+                    and account.get("account_type") == "trade"
+                    and account.get("currency") == base_currency
+                ]
+                if not matching_balances:
+                    raise RuntimeError(
+                        f"saldo {base_currency} da subconta {subaccount} indisponível"
+                    )
+                real_balance = sum(
+                    float(account.get("available", 0) or 0)
+                    for account in matching_balances
+                )
+            else:
+                from kucoin_api import get_balance
+                real_balance = get_balance(base_currency)
         except Exception as exc:
             logger.warning("⚠️ Reconciliação: falha ao consultar saldo KuCoin — %s", exc)
             return 0
-
-        profile = self._current_profile() if callable(getattr(self, "_current_profile", None)) else "default"
 
         db_position = sum(float(e.get("size", 0) or 0) for e in entries)
         # Tolerância de 0.5% ou 1 satoshi — evita falsos positivos por arredondamento
         tolerance = max(db_position * 0.005, 0.000_000_01)
 
         if real_balance > db_position + tolerance:
+            if self._restore_persistent_reconciliation_candidate(
+                real_balance, db_position, tolerance, profile, subaccount,
+            ):
+                return 0
             excess = real_balance - db_position
             logger.warning(
                 "⚠️ [reconcile] Exchange tem mais %s do que o DB conhece (%s/%s): "
