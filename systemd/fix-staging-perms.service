@@ -1,0 +1,19 @@
+[Unit]
+Description=Fix Nextcloud LTO staging permissions and bind mount
+Documentation=https://github.com/rpa4all/eddie-auto-dev
+DefaultDependencies=no
+After=local-fs.target
+Before=nextcloud-app.service ltfs-cache-flush.service
+Requires=local-fs.target
+
+[Service]
+Type=oneshot
+User=root
+ExecStart=/usr/local/bin/fix-staging-perms
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=60
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

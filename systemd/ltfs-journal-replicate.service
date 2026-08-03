@@ -1,0 +1,17 @@
+[Unit]
+Description=Replica o journal LTFS para a NAS após cada sessão de flush
+Documentation=docs/NEXTCLOUD_LTO_FLOW_REVIEW_2026-08-02.md
+After=ltfs-cache-flush.service lto6-drain-backups.service ltfs-checkpoint-drain.service
+RequiresMountsFor=/mnt/lto6-smb-proof
+ConditionPathIsDirectory=/var/lib/ltfs-journal
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/ltfs_journal_replicate.py
+Environment=JRNL_REPLICA_NAS=rsync://root@192.168.15.4/volume1/ltfs/journal
+# JRNL_REPLICA_EXTRA=rsync://user@host/path
+Restart=on-failure
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target

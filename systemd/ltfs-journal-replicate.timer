@@ -1,0 +1,11 @@
+[Unit]
+Description=Agenda replicação do journal LTFS para NAS (retry caso oneshot não dispare)
+Documentation=docs/NEXTCLOUD_LTO_FLOW_REVIEW_2026-08-02.md
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=6h
+RandomizedDelaySec=1h
+
+[Install]
+WantedBy=timers.target

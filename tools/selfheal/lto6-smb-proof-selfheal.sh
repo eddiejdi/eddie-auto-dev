@@ -18,6 +18,17 @@ fi
 
 logger -t "$LOG" "mount is down — clearing stale processes"
 
+# Guard (G9): se um writer de fita está ativo (flush/drain/checkpoint), não
+# matar processos — o flush pode estar escrevendo na fita via CIFS. Apenas
+# agendar novo drain e sair; o mount será remontado pelo próximo ciclo.
+for svc in ltfs-cache-flush.service lto6-drain-backups.service lto6-checkpoint-drain.service; do
+    if systemctl is-active --quiet "$svc" 2>/dev/null; then
+        logger -t "$LOG" "WARN: $svc ativo — pulando kill/remount para não interromper escrita na fita"
+        systemctl start lto6-drain-backups.service 2>/dev/null || true
+        exit 0
+    fi
+done
+
 # Matar drain e rsync que podem estar em D< sobre o mount stale.
 # SIGKILL em D< não é processado até o kernel liberar o I/O — por isso
 # também reiniciamos smbd na NAS para fechar a TCP e desbloquear o kernel.

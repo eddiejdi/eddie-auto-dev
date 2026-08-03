@@ -1,0 +1,13 @@
+[Unit]
+Description=Timer for LTFS cache flush (every 30 minutes)
+After=network-online.target
+Wants=network-online.target
+
+[Timer]
+OnCalendar=*:0/30
+AccuracySec=1min
+Persistent=true
+Unit=ltfs-cache-flush.service
+
+[Install]
+WantedBy=timers.target
