@@ -10,11 +10,21 @@ Group=homelab
 WorkingDirectory=/apps/crypto-trader/tools
 EnvironmentFile=/etc/default/eddie-common
 Environment=PYTHONUNBUFFERED=1
-Environment=OLLAMA_GPU0_HOST=http://192.168.15.2:11434
+Environment=OLLAMA_GPU0_HOST=http://192.0.15.2:11434
 Environment=OLLAMA_GPU1_HOST=http://192.168.15.2:11435
+Environment=OLLAMA_NAS_HOST=http://192.168.15.4:11436
+Environment=OLLAMA_NAS_RAM_EXPORTER_HOST=http://192.168.15.4:11447
 Environment=GPU_COORD_PORT=11437
 Environment=GPU_COORD_BUSY_WAIT_SEC=10
 Environment=GPU_COORD_REQUEST_TIMEOUT_SEC=180
+Environment=GPU_COORD_SOFT_PIN=1
+Environment=GPU_COORD_SOFT_PIN_BUSY=1
+Environment=GPU_COORD_TRADING_EXCLUSIVE_GPU0=1
+Environment=GPU_COORD_AUX_MAX_VRAM_MB=1800
+Environment=GPU_COORD_TRADING_HEADROOM_MB=1024
+Environment=GPU_COORD_NAS_RAM_MARGIN_MB=400
+Environment=GPU_COORD_NAS_RAM_MODEL_OVERHEAD_MB=500
+Environment=GPU_COORD_NAS_MIN_FREE_RAM_MB=900
 ExecStart=/usr/bin/python3 /apps/crypto-trader/tools/ollama_gpu_coordinator.py --port 11437
 Restart=always
 RestartSec=5

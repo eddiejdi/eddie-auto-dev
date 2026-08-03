@@ -56,6 +56,18 @@ HEALTH_TIMEOUT_SEC = float(os.environ.get("GPU_COORD_HEALTH_TIMEOUT_SEC", "3"))
 EVICT_THRESHOLD_MB = int(os.environ.get("GPU_COORD_EVICT_THRESHOLD_MB", "2048"))
 # Falhas consecutivas de poll antes de marcar endpoint como unhealthy
 FAIL_THRESHOLD = int(os.environ.get("GPU_COORD_FAIL_THRESHOLD", "2"))
+# ── RAM do host (endpoints com exporter dedicado, ex. NAS) ──────────────────
+# VRAM não é o gargalo em endpoints como a NAS (RTX 2060 8GB, com sobra) — RAM
+# do sistema é (8GB total, sem swap). Ollama só evicta por pressão de VRAM,
+# nunca por RAM do host, então o coordenador cobre essa lacuna consultando um
+# exporter dedicado (netdata da NAS só escuta em 127.0.0.1, inacessível daqui).
+# Ver docs/variables-taxonomy/NAS_RAM_EXPORTER.md.
+NAS_RAM_EXPORTER_HOST = os.environ.get(
+    "OLLAMA_NAS_RAM_EXPORTER_HOST", "http://192.168.15.4:11447"
+)
+RAM_SAFETY_MARGIN_MB = int(os.environ.get("GPU_COORD_NAS_RAM_MARGIN_MB", "400"))
+RAM_OVERHEAD_PER_MODEL_MB = int(os.environ.get("GPU_COORD_NAS_RAM_MODEL_OVERHEAD_MB", "500"))
+RAM_EVICT_THRESHOLD_MB = int(os.environ.get("GPU_COORD_NAS_MIN_FREE_RAM_MB", "900"))
 # Poll bem-sucedido mais antigo que isso ⇒ estado stale ⇒ endpoint não-elegível
 STALE_AFTER_SEC = float(os.environ.get(
     "GPU_COORD_STALE_AFTER_SEC", str(max(POLL_INTERVAL_SEC * 3, 30.0))
@@ -148,7 +160,7 @@ _VRAM_ESTIMATES: list[tuple[str, int]] = [
     ("70b", 48000),
     # modelos nomeados
     ("trading-analyst", 6500), ("gemma3", 1000), ("smollm", 600),
-    ("moondream", 1700), ("lfm2", 1100), ("lfm", 1100),
+    ("moondream", 1700), ("lfm2.5-vl", 500), ("lfm2", 1100), ("lfm", 1100),
     ("phi4-mini", 2500), ("phi3", 2200), ("llama3.2", 900),
     # GPU1 GGUF quant (Q4_0 / IQ3) — pesos ~0.7–0.9GB + KV
     ("lfm2.5", 900), ("smollm2", 900), ("smollm", 800),
@@ -295,11 +307,15 @@ def _estimate_vram_mb(model: str) -> int:
 class EndpointState:
     """Estado em tempo real de um endpoint Ollama (thread-safe)."""
 
-    def __init__(self, name: str, host: str, vram_total_mb: int, priority: int):
+    def __init__(self, name: str, host: str, vram_total_mb: int, priority: int,
+                 ram_exporter_host: Optional[str] = None):
         self.name = name
         self.host = host
         self.vram_total_mb = vram_total_mb
         self.priority = priority
+        # Só configurado para endpoints cujo gargalo real é RAM do host, não
+        # VRAM (hoje só a NAS) — ver RAM_SAFETY_MARGIN_MB acima.
+        self.ram_exporter_host = ram_exporter_host
 
         self._lock = threading.Lock()
         self._active: int = 0
@@ -313,6 +329,9 @@ class EndpointState:
         self._last_ok_poll: float = 0.0
         self._consec_fails: int = 0
         self._total_served: int = 0
+        self._ram_total_mb: float = 0.0
+        # None = desconhecido (exporter nunca respondeu) → fail-open, não bloqueia roteamento
+        self._ram_available_mb: Optional[float] = None
 
     # ── propriedades ──────────────────────────────────────────────────────────
 
@@ -432,6 +451,28 @@ class EndpointState:
 
         if self._healthy:
             self._poll_tags()
+            self.poll_ram()
+
+    def poll_ram(self) -> None:
+        """Atualiza RAM disponível do host via exporter dedicado (só NAS hoje).
+
+        Falha aqui não derruba o endpoint (fail-open) — só deixa a checagem de
+        RAM pausada (valor anterior preservado) até o próximo poll bem-sucedido.
+        """
+        if not self.ram_exporter_host:
+            return
+        try:
+            req = urllib.request.Request(
+                f"{self.ram_exporter_host}/ram",
+                headers={"User-Agent": "gpu-coordinator/2.0"},
+            )
+            with urllib.request.urlopen(req, timeout=HEALTH_TIMEOUT_SEC) as resp:
+                data = json.loads(resp.read())
+            with self._lock:
+                self._ram_total_mb = float(data.get("mem_total_mb") or 0.0)
+                self._ram_available_mb = float(data.get("mem_available_mb") or 0.0)
+        except Exception as exc:
+            log.debug("poll_ram %s falhou (checagem de RAM pausada): %s", self.name, exc)
 
     def _poll_tags(self) -> None:
         """Atualiza o catálogo de modelos que o endpoint possui (/api/tags).
@@ -515,6 +556,13 @@ class EndpointState:
         if self.vram_free_mb < needed_mb * 1.10 and needed_mb > 0:
             return float("inf")
 
+        # RAM do host (só endpoints com exporter dedicado — hoje só a NAS).
+        # Modelo já residente não precisa de RAM extra (sem novo runner).
+        if self.ram_exporter_host and self._ram_available_mb is not None:
+            ram_needed_mb = 0 if self.has_model(model) else RAM_OVERHEAD_PER_MODEL_MB
+            if self._ram_available_mb < ram_needed_mb + RAM_SAFETY_MARGIN_MB:
+                return float("inf")
+
         score = 0.0
         # Penalidade por requisições ativas (peso alto → least-load real entre GPUs)
         score += self._active * 12.0
@@ -540,7 +588,7 @@ class EndpointState:
         return score
 
     def info(self) -> dict:
-        return {
+        d = {
             "name": self.name,
             "host": self.host,
             "healthy": self.healthy,
@@ -554,6 +602,12 @@ class EndpointState:
             "available_models_known": self._available_known,
             "available_models_count": len(self._available),
         }
+        if self.ram_exporter_host:
+            d["ram_total_mb"] = round(self._ram_total_mb, 1)
+            d["ram_available_mb"] = (
+                round(self._ram_available_mb, 1) if self._ram_available_mb is not None else None
+            )
+        return d
 
 
 # ── Cluster ───────────────────────────────────────────────────────────────────
@@ -663,19 +717,58 @@ class GPUCluster:
         return freed
 
     def _evict_under_pressure(self) -> None:
-        """Evicta proativamente o maior modelo ocioso quando VRAM livre < EVICT_THRESHOLD_MB."""
+        """Evicta proativamente o maior modelo ocioso sob pressão de VRAM ou,
+        em endpoints com exporter dedicado (ex. NAS), de RAM do host."""
         for ep in self._endpoints:
-            if not ep.healthy or ep.vram_free_mb >= EVICT_THRESHOLD_MB:
+            if not ep.healthy:
+                continue
+            vram_pressure = ep.vram_free_mb < EVICT_THRESHOLD_MB
+            ram_pressure = (
+                ep.ram_exporter_host is not None
+                and ep._ram_available_mb is not None
+                and ep._ram_available_mb < RAM_EVICT_THRESHOLD_MB
+            )
+            if not (vram_pressure or ram_pressure):
                 continue
             evictable = ep.evictable_models()
             if not evictable:
                 continue
             vram, model = evictable[0]
-            log.info("⚡ pressão VRAM %s (livre=%.0fMB < %dMB) — evictando %s (%.0fMB)",
-                     ep.name, ep.vram_free_mb, EVICT_THRESHOLD_MB, model, vram)
+            if vram_pressure:
+                log.info("⚡ pressão VRAM %s (livre=%.0fMB < %dMB) — evictando %s (%.0fMB)",
+                         ep.name, ep.vram_free_mb, EVICT_THRESHOLD_MB, model, vram)
+            else:
+                log.info("⚡ pressão RAM %s (livre=%.0fMB < %dMB) — evictando %s (%.0fMB VRAM)",
+                         ep.name, ep._ram_available_mb, RAM_EVICT_THRESHOLD_MB, model, vram)
             self._unload_model(ep, model)
             with ep._lock:
                 ep._loaded.pop(model, None)
+
+    def _ensure_ram_headroom(self, ep: EndpointState, model: str) -> None:
+        """Libera RAM do host evictando modelos ociosos até haver folga para `model`.
+
+        Só atua em endpoints com ram_exporter_host configurado (hoje só a NAS,
+        cujo gargalo real é RAM sem swap — VRAM sobra). Chamado no caminho de
+        soft-pin, que ignora score()/VRAM e roteia direto para o endpoint
+        pinado — sem isso, um modelo novo (:nas) poderia estourar a RAM do
+        host antes do próximo poll. Best-effort: exporter fora do ar não
+        bloqueia o roteamento (fail-open).
+        """
+        if not ep.ram_exporter_host or ep.has_model(model):
+            return
+        needed = RAM_OVERHEAD_PER_MODEL_MB + RAM_SAFETY_MARGIN_MB
+        if ep._ram_available_mb is None or ep._ram_available_mb >= needed:
+            return
+        for _, name in ep.evictable_models():
+            if ep._ram_available_mb is not None and ep._ram_available_mb >= needed:
+                break
+            log.info("💾 RAM baixa em %s (%.0fMB < %.0fMB) — evictando %s antes de rotear %s",
+                     ep.name, ep._ram_available_mb or 0.0, needed, name, model)
+            self._unload_model(ep, name)
+            with ep._lock:
+                ep._loaded.pop(name, None)
+            time.sleep(1.5)  # dá tempo do runner encerrar antes de reconsultar RAM
+            ep.poll_ram()
 
     def _evict_misplaced_models(self) -> None:
         """Detecta e evicta da VRAM modelos pinados carregados na GPU errada.
@@ -783,6 +876,7 @@ class GPUCluster:
             pin_busy = pinned.active_requests >= SOFT_PIN_BUSY_THRESHOLD
 
             if pin_ok and (not SOFT_PIN or not pin_busy):
+                self._ensure_ram_headroom(pinned, model)
                 log.info(
                     "roteando model=%s → %s [pinned%s] (active=%d vram_free=%.0fMB)",
                     model,
@@ -1399,11 +1493,14 @@ def main() -> None:
     parser.add_argument("--gpu0", default=os.environ.get("OLLAMA_GPU0_HOST", "http://192.168.15.2:11434"))
     parser.add_argument("--gpu1", default=os.environ.get("OLLAMA_GPU1_HOST", "http://192.168.15.2:11435"))
     parser.add_argument("--nas",  default=os.environ.get("OLLAMA_NAS_HOST",  "http://192.168.15.4:11436"))
+    parser.add_argument("--nas-ram-exporter",
+                         default=os.environ.get("OLLAMA_NAS_RAM_EXPORTER_HOST", "http://192.168.15.4:11447"))
     args = parser.parse_args()
 
     endpoints = [
         EndpointState("gpu0-rtx3060", args.gpu0, vram_total_mb=12 * 1024, priority=0),  # ~170 GFLOPS FP32
-        EndpointState("nas-rtx2060",  args.nas,  vram_total_mb=8 * 1024,  priority=1),  # ~57 GFLOPS FP32
+        EndpointState("nas-rtx2060",  args.nas,  vram_total_mb=8 * 1024,  priority=1,   # ~57 GFLOPS FP32
+                       ram_exporter_host=args.nas_ram_exporter),  # gargalo real é RAM do host, não VRAM
         EndpointState("gpu1-gtx1050", args.gpu1, vram_total_mb=2 * 1024,  priority=2),  # ~19 GFLOPS FP32
     ]
 

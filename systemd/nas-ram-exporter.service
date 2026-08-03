@@ -1,0 +1,28 @@
+[Unit]
+Description=NAS RAM Exporter — expõe RAM disponível para coordenador de GPUs
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/apps/eddie-auto-dev/tools
+EnvironmentFile=/etc/default/eddie-common
+Environment=PYTHONUNBUFFERED=1
+Environment=NAS_RAM_EXPORTER_PORT=11447
+ExecStart=/usr/bin/python3 /apps/eddie-auto-dev/tools/nas_ram_exporter.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=nas-ram-exporter
+
+# Segurança: só precisa de /proc/meminfo (já montado)
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target
