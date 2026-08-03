@@ -1,0 +1,36 @@
+# faster-whisper-api.service — STT local (transcrição de áudio)
+# Política: whisper/aux nunca despejam trading — roda em CPU por padrão
+# (WHISPER_DEVICE=cuda só com folga de VRAM comprovada na GPU0).
+#
+# Instalação:
+#   sudo cp systemd/faster-whisper-api.service /etc/systemd/system/
+#   sudo systemctl daemon-reload && sudo systemctl enable --now faster-whisper-api
+
+[Unit]
+Description=Faster Whisper API — transcrição de áudio local (porta 8087)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=5
+
+User=homelab
+Group=homelab
+
+Environment=WHISPER_MODEL=small
+Environment=WHISPER_DEVICE=cpu
+Environment=WHISPER_COMPUTE_TYPE=int8
+Environment=WHISPER_CACHE_DIR=/home/homelab/models/whisper
+Environment=WHISPER_HOST=0.0.0.0
+Environment=WHISPER_PORT=8087
+
+ExecStart=/home/homelab/myClaude/venv/bin/python /home/homelab/eddie-auto-dev/scripts/faster_whisper_api.py
+
+# CPU/IO sem competir com trading (GPU0) nem com o coordinator
+CPUWeight=50
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
