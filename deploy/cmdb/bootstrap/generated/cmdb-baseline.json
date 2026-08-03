@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-08-03T01:01:42.685033+00:00",
-  "repo_root": "/home/edenilson/.traycer/worktrees/eddiejdi__eddie-auto-dev/traycer-plucky-rabbit",
+  "generated_at": "2026-08-03T03:20:03.883542+00:00",
+  "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 211,
+    "repo_services": 210,
     "trading_instances": 12,
     "critical_services": 85,
     "domains": {
       "identity": 4,
       "monitoring": 19,
       "network": 23,
-      "operations": 115,
+      "operations": 114,
       "storage": 39,
       "trading": 11
     }
@@ -29,7 +29,7 @@
       "live_mode": true,
       "metrics_port": 9095,
       "api_port": null,
-      "kucoin_account": "master TRADE (kucoin/homelab)",
+      "kucoin_account": "subconta (BTCAgressive)",
       "activate_script": null
     },
     {
@@ -42,7 +42,7 @@
       "live_mode": true,
       "metrics_port": 9094,
       "api_port": null,
-      "kucoin_account": "master TRADE (kucoin/homelab)",
+      "kucoin_account": "subconta (BTCConservative)",
       "activate_script": null
     },
     {
@@ -970,14 +970,6 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/ethwan-selfheal.service",
-      "recommended_owner": "application",
-      "candidate_system": "GLPI review"
-    },
-    {
-      "name": "faster-whisper-api.service",
-      "domain": "operations",
-      "kind": "systemd",
-      "source": "systemd/faster-whisper-api.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -2916,7 +2908,7 @@
     {
       "name": "crypto-agent@BTC_USDT_aggressive.service",
       "source": "scripts/cmdb/generate_cmdb_baseline.py",
-      "description": "Trading agent BTC-USDT perfil aggressive (live) \u2014 master TRADE (kucoin/homelab).",
+      "description": "Trading agent BTC-USDT perfil aggressive (live) \u2014 subconta (BTCAgressive).",
       "domain": "trading",
       "symbol": "BTC-USDT",
       "profile": "aggressive",
@@ -2925,7 +2917,7 @@
       "live_mode": true,
       "metrics_port": 9095,
       "api_port": null,
-      "kucoin_account": "master TRADE (kucoin/homelab)",
+      "kucoin_account": "subconta (BTCAgressive)",
       "systemd_instance": "BTC_USDT_aggressive",
       "prometheus_job": "crypto-exporter-btc_usdt_aggressive",
       "activate_script": null,
@@ -2935,7 +2927,7 @@
     {
       "name": "crypto-exporter@BTC_USDT_aggressive.service",
       "source": "scripts/cmdb/generate_cmdb_baseline.py",
-      "description": "Trading exporter BTC-USDT perfil aggressive (live) \u2014 master TRADE (kucoin/homelab).",
+      "description": "Trading exporter BTC-USDT perfil aggressive (live) \u2014 subconta (BTCAgressive).",
       "domain": "trading",
       "symbol": "BTC-USDT",
       "profile": "aggressive",
@@ -2944,7 +2936,7 @@
       "live_mode": true,
       "metrics_port": 9095,
       "api_port": null,
-      "kucoin_account": "master TRADE (kucoin/homelab)",
+      "kucoin_account": "subconta (BTCAgressive)",
       "systemd_instance": "BTC_USDT_aggressive",
       "prometheus_job": "crypto-exporter-btc_usdt_aggressive",
       "activate_script": null,
@@ -2954,7 +2946,7 @@
     {
       "name": "crypto-agent@BTC_USDT_conservative.service",
       "source": "scripts/cmdb/generate_cmdb_baseline.py",
-      "description": "Trading agent BTC-USDT perfil conservative (live) \u2014 master TRADE (kucoin/homelab).",
+      "description": "Trading agent BTC-USDT perfil conservative (live) \u2014 subconta (BTCConservative).",
       "domain": "trading",
       "symbol": "BTC-USDT",
       "profile": "conservative",
@@ -2963,7 +2955,7 @@
       "live_mode": true,
       "metrics_port": 9094,
       "api_port": null,
-      "kucoin_account": "master TRADE (kucoin/homelab)",
+      "kucoin_account": "subconta (BTCConservative)",
       "systemd_instance": "BTC_USDT_conservative",
       "prometheus_job": "crypto-exporter-btc_usdt_conservative",
       "activate_script": null,
@@ -2973,7 +2965,7 @@
     {
       "name": "crypto-exporter@BTC_USDT_conservative.service",
       "source": "scripts/cmdb/generate_cmdb_baseline.py",
-      "description": "Trading exporter BTC-USDT perfil conservative (live) \u2014 master TRADE (kucoin/homelab).",
+      "description": "Trading exporter BTC-USDT perfil conservative (live) \u2014 subconta (BTCConservative).",
       "domain": "trading",
       "symbol": "BTC-USDT",
       "profile": "conservative",
@@ -2982,7 +2974,7 @@
       "live_mode": true,
       "metrics_port": 9094,
       "api_port": null,
-      "kucoin_account": "master TRADE (kucoin/homelab)",
+      "kucoin_account": "subconta (BTCConservative)",
       "systemd_instance": "BTC_USDT_conservative",
       "prometheus_job": "crypto-exporter-btc_usdt_conservative",
       "activate_script": null,

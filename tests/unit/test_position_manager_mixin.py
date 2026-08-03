@@ -1,19 +1,48 @@
 """Testes unitários para PositionManagerMixin."""
 from __future__ import annotations
 
+import os
 import sys
 import threading
 import time
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-sys.path.insert(0, str(__import__("pathlib").Path(__file__).parent.parent.parent / "btc_trading_agent"))
+# ====================== SETUP: antes do import dos módulos ======================
+# Configura env vars para que _load_credentials() não tente o secrets-agent
+# e não envie alertas Telegram. O módulo deve carregar com credenciais vazias.
+os.environ.setdefault("KUCOIN_API_KEY", "test_key_abc123")
+os.environ.setdefault("KUCOIN_API_SECRET", "test_secret_xyz789")
+os.environ.setdefault("KUCOIN_API_PASSPHRASE", "x")
+os.environ.setdefault("SECRETS_AGENT_API_KEY", "")  # desativa tentativa ao secrets-agent
 
-import kucoin_api
-import position_manager_mixin
-from position_manager_mixin import PositionManagerMixin
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / "btc_trading_agent"))
+
+# Remover mocks parciais instalados por outros testes
+sys.modules.pop("kucoin_api", None)
+sys.modules.pop("secrets_helper", None)
+sys.modules.pop("position_manager_mixin", None)
+
+# Importar com mock das funções de I/O para evitar side effects
+with (
+    patch("secrets_helper.get_secret", return_value=None),
+    patch(
+        "secrets_helper.get_kucoin_credentials_with_source",
+        return_value=(
+            os.environ.get("KUCOIN_API_KEY", ""),
+            os.environ.get("KUCOIN_API_SECRET", ""),
+            os.environ.get("KUCOIN_API_PASSPHRASE", ""),
+            "env",
+        ),
+    ),
+    patch("requests.post"),  # mock do _send_telegram_alert
+):
+    import kucoin_api
+    import position_manager_mixin
+    from position_manager_mixin import PositionManagerMixin
 
 _FEE = 0.001
 
