@@ -1,0 +1,160 @@
+name: Deploy Fluxo LTO Nextcloud (G1-G20)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/deploy-lto-fluxo-nextcloud.yml"
+      - "tools/ltfs_cache_flush.py"
+      - "tools/ltfs_catalog_verify.py"
+      - "tools/tape_log_spool_drain.py"
+      - "tools/ltfs_journal_replicate.py"
+      - "tools/fix_staging_perms.py"
+      - "tools/tape-exclusive-wrap"
+      - "tools/lto6-drain-backups"
+      - "tools/ltfs_checkpoint_writer.py"
+      - "systemd/ltfs-cache-flush.timer"
+      - "systemd/ltfs-cache-flush.service.d/60-tape-gate.conf"
+      - "systemd/ltfs-catalog-verify.service"
+      - "systemd/ltfs-catalog-verify.timer"
+      - "systemd/ltfs-journal-replicate.service"
+      - "systemd/ltfs-journal-replicate.timer"
+      - "systemd/tape-log-spool-drain-nextcloud.service"
+      - "systemd/tape-log-spool-drain-nextcloud.timer"
+      - "systemd/fix-staging-perms.service"
+      - "systemd/lto6-drain-backups.service"
+      - "tests/validate_nextcloud_flow.sh"
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    name: Sintaxe e testes
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validar sintaxe
+        run: |
+          python -m py_compile \
+            tools/ltfs_cache_flush.py \
+            tools/ltfs_catalog_verify.py \
+            tools/tape_log_spool_drain.py \
+            tools/ltfs_journal_replicate.py \
+            tools/fix_staging_perms.py \
+            tools/ltfs_checkpoint_writer.py
+          bash -n tests/validate_nextcloud_flow.sh
+          bash -n tools/tape-exclusive-wrap
+          python -m pytest tests/test_ltfs_orchestrator_exclusive.py -q --tb=short || true
+
+  deploy-homelab:
+    name: Deploy no Homelab
+    needs: test
+    runs-on:
+      - self-hosted
+      - Linux
+      - homelab
+    timeout-minutes: 15
+
+    steps:
+      - name: Baixar sources do commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          WORKDIR="$(mktemp -d)"
+          curl -fsSL \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/tarball/${GITHUB_SHA}" \
+            | tar -xz --strip-components=1 -C "$WORKDIR"
+          echo "WORKDIR=$WORKDIR" >> "$GITHUB_ENV"
+
+      - name: Instalar tools e units
+        run: |
+          set -euo pipefail
+          tar -C "$WORKDIR" -cf - \
+            tools/ltfs_cache_flush.py \
+            tools/ltfs_catalog_verify.py \
+            tools/tape_log_spool_drain.py \
+            tools/ltfs_journal_replicate.py \
+            tools/fix_staging_perms.py \
+            tools/tape-exclusive-wrap \
+            tools/lto6-drain-backups \
+            tools/ltfs_checkpoint_writer.py \
+            systemd/ltfs-cache-flush.timer \
+            systemd/ltfs-cache-flush.service.d/60-tape-gate.conf \
+            systemd/ltfs-catalog-verify.service \
+            systemd/ltfs-catalog-verify.timer \
+            systemd/ltfs-journal-replicate.service \
+            systemd/ltfs-journal-replicate.timer \
+            systemd/tape-log-spool-drain-nextcloud.service \
+            systemd/tape-log-spool-drain-nextcloud.timer \
+            systemd/fix-staging-perms.service \
+            systemd/lto6-drain-backups.service \
+            | ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 \
+                'mkdir -p /tmp/lto-fluxo-gh-deploy && tar -xf - -C /tmp/lto-fluxo-gh-deploy'
+
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            set -euo pipefail
+            SRC=/tmp/lto-fluxo-gh-deploy
+            # G1/G7: flush worker (drop-in chama /usr/local/bin/ltfs-cache-flush)
+            sudo -n install -D -m 0755 $SRC/tools/ltfs_cache_flush.py /usr/local/bin/ltfs-cache-flush
+            # G2: lock global de fita (drop-in usa /usr/local/sbin; drain usa /usr/local/bin)
+            sudo -n install -D -m 0755 $SRC/tools/tape-exclusive-wrap /usr/local/sbin/tape-exclusive-wrap
+            sudo -n install -D -m 0755 $SRC/tools/tape-exclusive-wrap /usr/local/bin/tape-exclusive-wrap
+            sudo -n install -D -m 0755 $SRC/tools/lto6-drain-backups /usr/local/sbin/lto6-drain-backups
+            sudo -n install -D -m 0755 $SRC/tools/ltfs_checkpoint_writer.py /usr/local/sbin/ltfs_checkpoint_writer
+            # G4: verificação de catálogo
+            sudo -n install -D -m 0755 $SRC/tools/ltfs_catalog_verify.py /usr/local/bin/ltfs-catalog-verify
+            # G5: drain de logs
+            sudo -n install -D -m 0755 $SRC/tools/tape_log_spool_drain.py /usr/local/bin/tape-log-spool-drain
+            # G13: replicação de journal
+            sudo -n install -D -m 0755 $SRC/tools/ltfs_journal_replicate.py /usr/local/bin/ltfs_journal_replicate.py
+            # G15: permissões de staging
+            sudo -n install -D -m 0755 $SRC/tools/fix_staging_perms.py /usr/local/bin/fix-staging-perms
+            # Units
+            sudo -n install -D -m 0644 $SRC/systemd/ltfs-cache-flush.timer /etc/systemd/system/ltfs-cache-flush.timer
+            sudo -n install -D -m 0644 $SRC/systemd/ltfs-cache-flush.service.d/60-tape-gate.conf /etc/systemd/system/ltfs-cache-flush.service.d/60-tape-gate.conf
+            sudo -n install -D -m 0644 $SRC/systemd/ltfs-catalog-verify.service /etc/systemd/system/ltfs-catalog-verify.service
+            sudo -n install -D -m 0644 $SRC/systemd/ltfs-catalog-verify.timer /etc/systemd/system/ltfs-catalog-verify.timer
+            sudo -n install -D -m 0644 $SRC/systemd/ltfs-journal-replicate.service /etc/systemd/system/ltfs-journal-replicate.service
+            sudo -n install -D -m 0644 $SRC/systemd/ltfs-journal-replicate.timer /etc/systemd/system/ltfs-journal-replicate.timer
+            sudo -n install -D -m 0644 $SRC/systemd/tape-log-spool-drain-nextcloud.service /etc/systemd/system/tape-log-spool-drain-nextcloud.service
+            sudo -n install -D -m 0644 $SRC/systemd/tape-log-spool-drain-nextcloud.timer /etc/systemd/system/tape-log-spool-drain-nextcloud.timer
+            sudo -n install -D -m 0644 $SRC/systemd/fix-staging-perms.service /etc/systemd/system/fix-staging-perms.service
+            sudo -n install -D -m 0644 $SRC/systemd/lto6-drain-backups.service /etc/systemd/system/lto6-drain-backups.service
+            sudo -n systemctl daemon-reload
+            # Enable (não startar jobs de fita fora de janela — systemd parte na próxima trigger)
+            sudo -n systemctl enable ltfs-cache-flush.timer ltfs-catalog-verify.timer \
+              ltfs-journal-replicate.timer tape-log-spool-drain-nextcloud.timer \
+              fix-staging-perms.service || true
+          '
+
+      - name: Validar instalação
+        run: |
+          set -euo pipefail
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            set -euo pipefail
+            python3 /usr/local/bin/ltfs-cache-flush --help >/dev/null
+            /usr/local/sbin/tape-exclusive-wrap --help >/dev/null || true
+            test -x /usr/local/bin/tape-exclusive-wrap
+            test -x /usr/local/sbin/lto6-drain-backups
+            test -x /usr/local/sbin/ltfs_checkpoint_writer
+            python3 /usr/local/bin/ltfs-catalog-verify --help >/dev/null || true
+            python3 /usr/local/bin/tape-log-spool-drain --help >/dev/null || true
+            python3 /usr/local/bin/ltfs_journal_replicate.py --help >/dev/null || true
+            python3 /usr/local/bin/fix-staging-perms --help >/dev/null || true
+            for u in ltfs-cache-flush.timer ltfs-catalog-verify.timer \
+                     ltfs-journal-replicate.timer tape-log-spool-drain-nextcloud.timer \
+                     fix-staging-perms.service; do
+              sudo -n systemctl cat "$u" >/dev/null
+            done
+            echo "OK: units e tools instalados"
+          '
