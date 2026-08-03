@@ -1,20 +1,20 @@
 # CMDB Baseline
 
-- Generated at: `2026-08-02T16:24:09.812940+00:00`
+- Generated at: `2026-08-03T00:24:40.179218+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
-- Repo services discovered: `201`
-- Critical services flagged for MVP: `77`
+- Repo services discovered: `211`
+- Critical services flagged for MVP: `85`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
 - `identity`: 4
-- `monitoring`: 18
+- `monitoring`: 19
 - `network`: 23
-- `operations`: 113
-- `storage`: 32
+- `operations`: 115
+- `storage`: 39
 - `trading`: 11
 
 ## Trading profile instances (`12`)
@@ -54,6 +54,7 @@
 - `grafana-selfheal.service` (monitoring, systemd) from `systemd/grafana-selfheal.service`
 - `job-monitor.service` (monitoring, systemd) from `systemd/job-monitor.service`
 - `monitoring-containers-bootstrap.service` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.service`
+- `nas-ram-exporter.service` (monitoring, systemd) from `systemd/nas-ram-exporter.service`
 - `rss-sentiment-exporter.service` (monitoring, systemd) from `systemd/rss-sentiment-exporter.service`
 - `storj-exporter.service` (monitoring, systemd) from `deploy/storj-exporter.service`
 - `storj-payout-monitor.service` (monitoring, systemd) from `systemd/storj-payout-monitor.service`
@@ -77,7 +78,6 @@
 - `protonvpn-boot-selfheal.service` (network, systemd) from `systemd/protonvpn-boot-selfheal.service`
 - `protonvpn-routing-watchdog-fix.service` (network, systemd) from `deploy/vpn/protonvpn-routing-watchdog-fix.service`
 - `protonvpn-routing-watchdog.service` (network, systemd) from `deploy/vpn/protonvpn-routing-watchdog.service`
-- `protonvpn-unit-selfheal.service` (network, systemd) from `systemd/protonvpn-unit-selfheal.service`
 
 ## Serviços anotados manualmente
 

@@ -1,20 +1,20 @@
 {
-  "generated_at": "2026-08-02T16:24:09.812940+00:00",
+  "generated_at": "2026-08-03T00:24:40.179218+00:00",
   "repo_root": "/home/edenilson/.traycer/worktrees/eddiejdi__eddie-auto-dev/traycer-plucky-rabbit",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 201,
+    "repo_services": 211,
     "trading_instances": 12,
-    "critical_services": 77,
+    "critical_services": 85,
     "domains": {
       "identity": 4,
-      "monitoring": 18,
+      "monitoring": 19,
       "network": 23,
-      "operations": 113,
-      "storage": 32,
+      "operations": 115,
+      "storage": 39,
       "trading": 11
     }
   },
@@ -322,6 +322,14 @@
       "domain": "monitoring",
       "kind": "systemd",
       "source": "systemd/monitoring-containers-bootstrap.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "nas-ram-exporter.service",
+      "domain": "monitoring",
+      "kind": "systemd",
+      "source": "systemd/nas-ram-exporter.service",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -966,10 +974,26 @@
       "candidate_system": "GLPI review"
     },
     {
+      "name": "faster-whisper-api.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/faster-whisper-api.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
       "name": "final-boot-status-agent.service",
       "domain": "operations",
       "kind": "systemd",
       "source": "tools/systemd/final-boot-status-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "fix-staging-perms.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/fix-staging-perms.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
@@ -1574,10 +1598,50 @@
       "candidate_system": "NetBox service model"
     },
     {
+      "name": "ltfs-cache-flush.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-cache-flush.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ltfs-catalog-verify.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-catalog-verify.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ltfs-catalog-verify.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-catalog-verify.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
       "name": "ltfs-deep-recovery.service",
       "domain": "storage",
       "kind": "systemd",
       "source": "systemd/ltfs-deep-recovery.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ltfs-journal-replicate.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-journal-replicate.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "ltfs-journal-replicate.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/ltfs-journal-replicate.timer",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -1690,6 +1754,22 @@
       "domain": "storage",
       "kind": "systemd",
       "source": "systemd/storj-macvlan-watchdog.timer",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "tape-log-spool-drain-nextcloud.service",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/tape-log-spool-drain-nextcloud.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "tape-log-spool-drain-nextcloud.timer",
+      "domain": "storage",
+      "kind": "systemd",
+      "source": "systemd/tape-log-spool-drain-nextcloud.timer",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -2159,6 +2239,13 @@
         "critical": true
       },
       {
+        "name": "nas-ram-exporter.service",
+        "domain": "monitoring",
+        "source": "systemd/nas-ram-exporter.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
         "name": "rss-sentiment-exporter.service",
         "domain": "monitoring",
         "source": "systemd/rss-sentiment-exporter.service",
@@ -2460,9 +2547,44 @@
         "critical": true
       },
       {
+        "name": "ltfs-cache-flush.timer",
+        "domain": "storage",
+        "source": "systemd/ltfs-cache-flush.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ltfs-catalog-verify.service",
+        "domain": "storage",
+        "source": "systemd/ltfs-catalog-verify.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ltfs-catalog-verify.timer",
+        "domain": "storage",
+        "source": "systemd/ltfs-catalog-verify.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
         "name": "ltfs-deep-recovery.service",
         "domain": "storage",
         "source": "systemd/ltfs-deep-recovery.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ltfs-journal-replicate.service",
+        "domain": "storage",
+        "source": "systemd/ltfs-journal-replicate.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "ltfs-journal-replicate.timer",
+        "domain": "storage",
+        "source": "systemd/ltfs-journal-replicate.timer",
         "kind": "systemd",
         "critical": true
       },
@@ -2561,6 +2683,20 @@
         "name": "storj-macvlan-watchdog.timer",
         "domain": "storage",
         "source": "systemd/storj-macvlan-watchdog.timer",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "tape-log-spool-drain-nextcloud.service",
+        "domain": "storage",
+        "source": "systemd/tape-log-spool-drain-nextcloud.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "tape-log-spool-drain-nextcloud.timer",
+        "domain": "storage",
+        "source": "systemd/tape-log-spool-drain-nextcloud.timer",
         "kind": "systemd",
         "critical": true
       },
