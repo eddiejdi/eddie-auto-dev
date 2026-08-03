@@ -207,6 +207,76 @@ def test_should_reload_entry_expired_token_no_zero_reload() -> None:
     assert not do
 
 
+def test_partial_degraded_below_missing_threshold() -> None:
+    """Faltando poucas entidades (< PARTIAL_DEGRADED_MIN_MISSING) não é degradação."""
+    assert not selfheal.partial_degraded(80, 82)
+
+
+def test_partial_degraded_at_threshold() -> None:
+    assert selfheal.partial_degraded(72, 82)
+
+
+def test_partial_degraded_zero_active_not_covered() -> None:
+    """0 ativas é coberto por should_reload_entry/should_heal separadamente."""
+    assert not selfheal.partial_degraded(0, 82)
+
+
+def test_next_partial_degraded_streak_increments_and_resets() -> None:
+    streak = selfheal.next_partial_degraded_streak(0, 72, 82)
+    assert streak == 1
+    streak = selfheal.next_partial_degraded_streak(streak, 72, 82)
+    assert streak == 2
+    # Recuperou (missing < threshold) → zera.
+    streak = selfheal.next_partial_degraded_streak(streak, 82, 82)
+    assert streak == 0
+
+
+def test_should_reload_entry_healthy_regression_case() -> None:
+    """Caso do teste original (64/75): 11 faltando, mas streak=0 (default) — não reloada.
+
+    Confirma que o novo gatilho não regride o comportamento pré-existente
+    quando o chamador não rastreou nenhuma checagem anterior.
+    """
+    do, reason = selfheal.should_reload_entry("loaded", 64, 75, 50.0)
+    assert not do
+    assert "não necessário" in reason
+
+
+def test_should_reload_entry_partial_degraded_not_yet_sustained() -> None:
+    """72/82 (10 faltando, acima do threshold de missing) mas só 1 checagem — ainda não reloada."""
+    do, reason = selfheal.should_reload_entry(
+        "loaded", 72, 82, 50.0, partial_degraded_streak=1
+    )
+    assert not do
+
+
+def test_should_reload_entry_partial_degraded_sustained_reloads() -> None:
+    """72/82 por PARTIAL_DEGRADED_STREAK_THRESHOLD checagens seguidas → reload.
+
+    Este é o incidente 2026-08-02: entry 'loaded', token ainda válido (50 min,
+    acima do soft threshold), 10 entidades faltando — nenhuma regra anterior
+    disparava e ficou travado ~2h até coincidir com o próximo refresh.
+    """
+    do, reason = selfheal.should_reload_entry(
+        "loaded",
+        72,
+        82,
+        50.0,
+        partial_degraded_streak=selfheal.PARTIAL_DEGRADED_STREAK_THRESHOLD,
+    )
+    assert do
+    assert "faltando" in reason
+    assert "72/82" in reason
+
+
+def test_should_reload_entry_partial_degraded_ignores_small_gap() -> None:
+    """80/82 (2 faltando, abaixo de PARTIAL_DEGRADED_MIN_MISSING) não reloada mesmo com streak alto."""
+    do, reason = selfheal.should_reload_entry(
+        "loaded", 80, 82, 50.0, partial_degraded_streak=10
+    )
+    assert not do
+
+
 def test_entry_state_code() -> None:
     assert selfheal.entry_state_code("loaded", "abc") == 0
     assert selfheal.entry_state_code("setup_error", "abc") == 1

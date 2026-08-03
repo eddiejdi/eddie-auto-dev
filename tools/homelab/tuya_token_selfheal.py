@@ -13,6 +13,11 @@ Modos de falha cobertos (jul/2026):
    reload da config entry (self-heal antigo *não* cobria — só olhava token).
 3. 0/N entidades ativas com token aparentemente válido → reload; se bridge
    tiver token mais novo, injeta mesmo acima do soft threshold.
+4. Degradação parcial sustentada (ex.: 72/82) — nem 0 ativas nem token
+   perto de expirar, então os modos 1-3 não disparam. Descoberta em
+   2026-08-02: ficou travado ~2h até o próximo refresh proativo por
+   coincidência. Reload se faltarem >= PARTIAL_DEGRADED_MIN_MISSING
+   entidades por PARTIAL_DEGRADED_STREAK_THRESHOLD checagens seguidas.
 
 Fluxo:
 1. Se o access token (HA ou bridge) está abaixo do limiar soft, **força
@@ -68,6 +73,14 @@ TUYA_SELFHEAL_HOT_WAIT_S = int(os.environ.get("TUYA_SELFHEAL_HOT_WAIT_S", "90"))
 # Heal proativo quando o access token do HA está prestes a expirar (minutos).
 # 0 = só com token já expirado (remaining <= 0).
 HEAL_SOFT_THRESHOLD_MIN = float(os.environ.get("HEAL_SOFT_THRESHOLD_MIN", "45"))
+# Degradação parcial (nem 0 ativas, nem token perto de expirar): quantas
+# entidades faltando já valem a pena investigar, e por quantas checagens
+# seguidas isso precisa persistir antes de reload (evita heal por blip
+# transiente de 1-2 dispositivos offline).
+PARTIAL_DEGRADED_MIN_MISSING = int(os.environ.get("PARTIAL_DEGRADED_MIN_MISSING", "5"))
+PARTIAL_DEGRADED_STREAK_THRESHOLD = int(
+    os.environ.get("PARTIAL_DEGRADED_STREAK_THRESHOLD", "3")
+)
 # Client ID público da integração Tuya do Home Assistant core.
 TUYA_CLIENT_ID = os.environ.get("TUYA_CLIENT_ID", "HA_3y9q4ak7g4ephrvke")
 # site-packages do venv que tem tuya_sharing (bridge).
@@ -119,17 +132,47 @@ def valid_runtime_token(token_info: object) -> bool:
     return isinstance(token_info, dict) and REQUIRED_TOKEN_FIELDS.issubset(token_info)
 
 
+def partial_degraded(entities_active: int, entities_total: int) -> bool:
+    """True se faltam >= PARTIAL_DEGRADED_MIN_MISSING entidades (mas não todas).
+
+    Zero ativas já é coberto por ``should_reload_entry``/``should_heal``
+    separadamente; isto cobre o meio-termo (ex.: 72/82) que nenhum dos dois
+    detectava.
+    """
+    if entities_total <= 0 or entities_active <= 0:
+        return False
+    return (entities_total - entities_active) >= PARTIAL_DEGRADED_MIN_MISSING
+
+
+def next_partial_degraded_streak(
+    prev_streak: int, entities_active: int, entities_total: int
+) -> int:
+    """Incrementa o streak de degradação parcial ou zera se saudável."""
+    return prev_streak + 1 if partial_degraded(entities_active, entities_total) else 0
+
+
 def should_reload_entry(
     entry_state: str | None,
     entities_active: int,
     entities_total: int,
     remaining_min: float,
+    *,
+    partial_degraded_streak: int = 0,
 ) -> tuple[bool, str]:
     """Decide se a config entry Tuya deve ser recarregada (sem injetar token).
 
     Cobre o buraco do incidente 2026-07-25: entry em ``setup_error`` por
     timeout da API Tuya, token ainda com dezenas de minutos, 0 entidades
     ativas — o heal de token recusava com "ainda válido" e ninguém reloadava.
+
+    Também cobre o buraco do incidente 2026-08-02: degradação parcial
+    sustentada (ex.: 72/82) — nem 0 ativas nem token perto de expirar, então
+    nenhuma das regras acima disparava; ficou travado ~2h até coincidir com
+    o próximo refresh proativo. ``partial_degraded_streak`` é o nº de
+    checagens consecutivas (rastreado pelo chamador via state persistido)
+    em que a entry já estava faltando >= PARTIAL_DEGRADED_MIN_MISSING
+    entidades; só reloada ao atingir PARTIAL_DEGRADED_STREAK_THRESHOLD, para
+    não reagir a um blip transiente de 1-2 dispositivos offline.
     """
     state = (entry_state or "").strip().lower()
     if state == "setup_error":
@@ -146,6 +189,16 @@ def should_reload_entry(
             True,
             f"0/{entities_total} ativas com token ainda válido "
             f"({remaining_min:.0f} min) — reload da entry",
+        )
+    if (
+        partial_degraded(entities_active, entities_total)
+        and partial_degraded_streak >= PARTIAL_DEGRADED_STREAK_THRESHOLD
+    ):
+        missing = entities_total - entities_active
+        return (
+            True,
+            f"{missing} entidades faltando ({entities_active}/{entities_total}) "
+            f"há {partial_degraded_streak} checagens seguidas — reload da entry",
         )
     return False, "reload não necessário"
 
@@ -442,6 +495,10 @@ def render_prom(metrics: dict[str, float | int]) -> str:
         "tuya_bridge_token_remaining_minutes": ("gauge", "Minutos até expirar o token runtime do bridge"),
         "tuya_entities_active": ("gauge", "Entidades Tuya disponíveis no HA"),
         "tuya_entities_total": ("gauge", "Entidades Tuya habilitadas na entry"),
+        "tuya_partial_degraded_streak": (
+            "gauge",
+            "Checagens consecutivas com degradação parcial (>= PARTIAL_DEGRADED_MIN_MISSING faltando)",
+        ),
     }
     lines = []
     for name, value in metrics.items():
@@ -782,6 +839,7 @@ def load_state() -> dict:
             "reloads_total": 0,
             "last_heal_timestamp": 0,
             "heal_history": [],
+            "partial_degraded_streak": 0,
         }
 
 
@@ -827,6 +885,7 @@ def _prom_snapshot(
         "tuya_bridge_token_remaining_minutes": round(
             token_remaining_minutes(runtime_token) if runtime_token else -1, 1
         ),
+        "tuya_partial_degraded_streak": state.get("partial_degraded_streak", 0),
         "tuya_entities_active": (status or {}).get("entities_active", 0),
         "tuya_entities_total": (status or {}).get("entities_total", 0),
     }
@@ -837,6 +896,7 @@ def main() -> int:
     state["runs_total"] += 1
     state["heal_history"] = prune_heal_history(state.get("heal_history", []))
     state.setdefault("reloads_total", 0)
+    state.setdefault("partial_degraded_streak", 0)
 
     status = ha_tuya_status_with_retry()
     runtime_token = load_runtime_token()
@@ -862,6 +922,11 @@ def main() -> int:
     integration_dead = (
         status.get("entities_total", 0) > 0 and status.get("entities_active", 0) == 0
     ) or (status.get("entry_state") or "").lower() == "setup_error"
+    state["partial_degraded_streak"] = next_partial_degraded_streak(
+        state.get("partial_degraded_streak", 0),
+        status["entities_active"],
+        status["entities_total"],
+    )
 
     # Antes de decidir heal: renova o runtime token se o HA está na janela soft
     # OU se a integração está morta (0 ativas / setup_error).
@@ -885,6 +950,7 @@ def main() -> int:
         status["entities_active"],
         status["entities_total"],
         ha_remaining,
+        partial_degraded_streak=state["partial_degraded_streak"],
     )
     # Reload só faz sentido se o token no storage ainda pode autenticar.
     # Token já morto → pular direto para inject (reload só gasta tempo).

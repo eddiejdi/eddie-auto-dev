@@ -30,3 +30,5 @@ Complementa (não substitui) o **monitor** `tuya-token-renewer` — ver
 | `HEAL_SOFT_THRESHOLD_MIN` | `45` | Minutos restantes do access token do HA abaixo dos quais o selfheal renova proativamente e injeta. `0` = só com token já expirado. |
 | `TUYA_CLIENT_ID` | `HA_3y9q4ak7g4ephrvke` | Client ID público da integração Tuya do HA core (refresh Sharing API). |
 | `TUYA_SHARING_SITE` | `/home/homelab/myClaude/.venv/lib/python3.12/site-packages` | site-packages com `tuya_sharing` (venv do pandaplus-bridge). |
+| `PARTIAL_DEGRADED_MIN_MISSING` | `5` | Nº mínimo de entidades faltando (nem 0 ativas, nem token perto de expirar) para considerar degradação parcial — abaixo disso é tratado como blip normal de 1-2 dispositivos offline. |
+| `PARTIAL_DEGRADED_STREAK_THRESHOLD` | `3` | Checagens consecutivas (a cada 5 min) com degradação parcial sustentada antes de disparar reload da entry. Descoberto 2026-08-02: sem isso, um caso 72/82 ficou travado ~2h até o próximo refresh proativo coincidir e corrigir por acaso. |
