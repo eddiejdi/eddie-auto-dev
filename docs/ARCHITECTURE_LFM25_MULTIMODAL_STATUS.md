@@ -166,4 +166,25 @@ Environment=GPU_COORD_NAS_MIN_FREE_RAM_MB=900
 
 ---
 
-**Próxima revisão:** após deploy na NAS e teste do VL-450M (meta: 2026-08-05)
+**Deploy concluído:** 2026-08-02  
+**PR:** https://github.com/eddiejdi/eddie-auto-dev/pull/296
+
+## ⚠️ Upgrade Ollama — Incidente 2026-08-02
+
+**Tentativa de upgrade para v0.32.5:** ❌ Falhou
+
+O binário canário disponível estava incompleto — faltava o `llama-server`:
+```
+error starting llama-server: llama-server binary not found
+```
+
+**Ação tomada:** Rollback automático para v0.17.6 ✅
+
+**Lições aprendidas:**
+- Não usar binários canary/incompletos em produção
+- Validar integridade dos arquivos antes de substituir
+- Script `upgrade-ollama.sh` precisa verificar presença de `llama-server` pós-download
+
+**Próxima tentativa:** Baixar release oficial completa do GitHub (tarball completo, não build local).
+
+**Próxima revisão:** após upgrade Ollama bem-sucedido e teste do VL-450M (meta: 2026-08-05)
