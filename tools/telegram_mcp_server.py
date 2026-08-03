@@ -41,6 +41,7 @@ TG_FILE    = f"https://api.telegram.org/file/bot{TG_TOKEN}"
 OLLAMA_BASE    = os.environ.get("OLLAMA_BASE", "http://192.168.15.2:11434")
 TEXT_MODEL     = os.environ.get("TEXT_MODEL", "phi4-mini:latest")
 VISION_MODEL   = os.environ.get("VISION_MODEL", "moondream:latest")
+STT_URL        = os.environ.get("STT_URL", "http://127.0.0.1:8087/transcribe")
 MEDIA_DIR      = Path(os.environ.get("MEDIA_DIR", "/tmp/tg_media"))
 MEDIA_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -93,6 +94,23 @@ async def ollama_chat(client: httpx.AsyncClient, model: str, prompt: str,
 def _vision_available(client: httpx.AsyncClient) -> bool:
     # verificado dinamicamente no primeiro uso
     return True
+
+
+async def stt_transcribe(client: httpx.AsyncClient, audio_path: Path) -> str:
+    """Transcreve áudio via faster-whisper API (STT local)."""
+    try:
+        with open(audio_path, "rb") as f:
+            data = f.read()
+        r = await client.post(
+            STT_URL,
+            files={"file": (audio_path.name, data)},
+            timeout=httpx.Timeout(300.0, connect=10.0),
+        )
+        if r.status_code != 200:
+            return f"[stt error: HTTP {r.status_code}]"
+        return (r.json().get("text") or "").strip()
+    except Exception as e:
+        return f"[stt error: {e}]"
 
 
 def _parse_message(msg: dict) -> dict:
@@ -227,7 +245,21 @@ async def _analyze_message(client: httpx.AsyncClient, parsed: dict,
         path = await tg_download(client, parsed["file_id"])
         if path:
             parsed["local_path"] = str(path)
-            parsed["ai_analysis"] = f"[áudio {parsed.get('duration', '?')}s — transcrição requer whisper]"
+            transcript = await stt_transcribe(client, path)
+            if transcript.startswith("[stt error"):
+                parsed["ai_analysis"] = (
+                    f"[áudio {parsed.get('duration', '?')}s — transcrição indisponível: {transcript}]"
+                )
+            else:
+                parsed["ai_analysis"] = (
+                    f"[áudio {parsed.get('duration', '?')}s — transcrição]: {transcript}"
+                )
+                parsed["transcript"] = transcript
+                intent_prompt = (
+                    f"Transcrição de mensagem de voz: '{transcript[:400]}'\n"
+                    "Em uma frase: qual é a intenção/pedido do usuário?"
+                )
+                parsed["intent"] = await ollama_chat(client, TEXT_MODEL, intent_prompt)
 
     return parsed
 
