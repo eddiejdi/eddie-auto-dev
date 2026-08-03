@@ -187,4 +187,38 @@ error starting llama-server: llama-server binary not found
 
 **Próxima tentativa:** Baixar release oficial completa do GitHub (tarball completo, não build local).
 
-**Próxima revisão:** após upgrade Ollama bem-sucedido e teste do VL-450M (meta: 2026-08-05)
+## ✅ Upgrade Ollama v0.32.5 — Concluído 2026-08-03
+
+**Causa raiz do incidente anterior:** não era a versão em si — era um binário canário/local incompleto usado nos primeiros testes. O asset oficial `ollama-linux-amd64.tar.zst` da release `v0.32.5` no GitHub é válido e completo (1.42GB, `sha256` consistente, inclui `bin/ollama` + `lib/ollama/*.so`, com CUDA `cuda_v12`/`cuda_v13` e Vulkan). URLs assinadas do GitHub (`release-assets.githubusercontent.com`) expiram em ~1h — downloads muito lentos podem falhar por expiração da URL, não por asset inexistente.
+
+**Descoberta importante:** desde ~v0.31, o Ollama usa layout de biblioteca dividida (`bin/ollama` dinamicamente ligado a `lib/ollama/*.so`), igual ao que já existia em produção em `/usr/local/lib/ollama/`. Não é mais um binário estático único — **substituir só `/usr/local/bin/ollama` sem sincronizar `/usr/local/lib/ollama/` quebra o serviço**.
+
+**Processo de validação usado (nenhuma etapa pulada):**
+1. Validado via GitHub API que o asset `ollama-linux-amd64.tar.zst` da v0.32.5 existe e tem `content-length` correto
+2. Download completo no servidor (1.422.353.729 bytes, batendo exato com o header) — versões anteriores tinham sido interrompidas por timeout/URL expirada
+3. Extraído e validado: binários são ELF válidos, `llama-server` presente (o incidente anterior tinha binário canário sem esse arquivo)
+4. **Testado isolado** (porta 11439, `systemd-run`/processo à parte, sem tocar produção) — `LFM2.5-VL-450M` carregou e gerou texto corretamente (erro `output_norm` ausente da v0.17.6 confirmado resolvido)
+5. **Aplicado em produção com cautela em 2 etapas:**
+   - Backup completo de `/usr/local/bin/ollama` + `/usr/local/lib/ollama/` (4.3GB) antes de qualquer mudança
+   - Binário trocado via `mv` atômico (evita erro `Text file busy` ao trocar arquivo em uso por processo já rodando)
+   - **GPU1 primeiro** (não-crítico): reiniciado, validado `lfm2.5-fast:gpu1` (produção) intacto, depois `LFM2.5-VL-450M` testado com CUDA real — funcionando
+   - **GPU0 por último** (trading-analyst ao vivo): checada exposição de trading antes (posição pequena ~$47, 0 trades em 7d, modo shadow) — reiniciado, `trading-analyst` recarregou em VRAM (~25s de load) e respondeu corretamente
+
+**Status final (2026-08-03 08:52 -03):**
+
+| Serviço | Versão | Status |
+|---------|--------|--------|
+| ollama (GPU0, RTX 3060) | v0.32.5 | ✅ `trading-analyst` residente, respondendo |
+| ollama-gpu1 (GTX 1050) | v0.32.5 | ✅ `lfm2.5-fast:gpu1` residente + `LFM2.5-VL-450M` testado |
+| ollama-gpu-coordinator | — | ✅ saudável, 3 endpoints ativos |
+
+**Backup para rollback (se necessário):**
+```bash
+sudo cp /usr/local/bin/ollama.backup.pre_v0325_20260803_084135 /usr/local/bin/ollama
+sudo rsync -a --delete /usr/local/lib/ollama.backup.pre_v0325_20260803_084135/ /usr/local/lib/ollama/
+sudo systemctl restart ollama ollama-gpu1
+```
+
+**Pendência:** `LFM2.5-VL-450M` ainda não está integrado como substituto do Moondream no fluxo de análise de imagem do Telegram — só foi validado tecnicamente. Isso é trabalho futuro separado.
+
+**Próxima revisão:** integrar VL-450M no pipeline de imagens do Telegram substituindo Moondream.
