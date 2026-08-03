@@ -258,8 +258,13 @@ def secrets_health() -> str:
     """Verifica se o Secrets Agent está online e saudável."""
     result = _http_get(f"{SECRETS_AGENT_URL}/secrets", headers=_secrets_headers())
     if result.get("ok"):
-        count = len(result.get("data", []))
-        return json.dumps({"ok": True, "status": "online", "secrets_count": count}, indent=2)
+        data = result.get("data") or {}
+        count = data.get("count") if isinstance(data, dict) else None
+        if not isinstance(count, int):
+            items = data.get("items", []) if isinstance(data, dict) else []
+            count = len(items)
+        return json.dumps({"ok": True, "status": "online", "secrets_count": count,
+                           "backend_status": data.get("backend_status")}, indent=2)
     return json.dumps({"ok": False, "status": "offline", "error": result.get("error", "")}, indent=2)
 
 
@@ -809,8 +814,9 @@ def journal_query(
         SELECT intent_id, agent_id, action_type, description, target,
                risk_level, status, approved_by, outcome,
                created_at, completed_at
-        FROM agent_audit_log
+        FROM agent_actions
         WHERE {where}
+        ORDER BY created_at DESC
         LIMIT %s
     """
     params.append(limit)
