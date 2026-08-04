@@ -147,8 +147,11 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
 
-            echo "🔎 Resolvendo DATABASE_URL do runtime..."
-            TRADING_DATABASE_URL="$(sudo systemctl show crypto-agent@BTC_USDT_aggressive.service -p Environment --value 2>/dev/null | tr ' ' '\n' | sed -n 's/^DATABASE_URL=//p' | tail -n1)"
+            echo "🔎 Resolvendo DATABASE_URL via Secrets Agent (como o runtime)..."
+            SECRETS_AGENT_API_KEY="$(sudo systemctl show crypto-agent@BTC_USDT_aggressive.service -p Environment --value 2>/dev/null | tr ' ' '\n' | sed -n 's/^SECRETS_AGENT_API_KEY=//p' | tail -n1)"
+            if [ -n "${SECRETS_AGENT_API_KEY}" ]; then
+              TRADING_DATABASE_URL="$(SECRETS_AGENT_API_KEY="${SECRETS_AGENT_API_KEY}" python3 -c 'from btc_trading_agent.secrets_helper import get_database_url; print(get_database_url(), end="")' 2>/dev/null || true)"
+            fi
             if [ -z "${TRADING_DATABASE_URL}" ]; then
               TRADING_DATABASE_URL="$(grep '^DATABASE_URL=' btc_trading_agent/.env 2>/dev/null | cut -d= -f2-)"
             fi
