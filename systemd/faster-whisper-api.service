@@ -23,7 +23,7 @@ Environment=WHISPER_MODEL=small
 Environment=WHISPER_DEVICE=cpu
 Environment=WHISPER_COMPUTE_TYPE=int8
 Environment=WHISPER_CACHE_DIR=/home/homelab/models/whisper
-Environment=WHISPER_HOST=0.0.0.0
+Environment=WHISPER_HOST=127.0.0.1
 Environment=WHISPER_PORT=8087
 
 ExecStart=/home/homelab/myClaude/venv/bin/python /home/homelab/eddie-auto-dev/scripts/faster_whisper_api.py
