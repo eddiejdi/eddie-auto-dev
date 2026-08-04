@@ -570,6 +570,52 @@ class TrainingDatabase:
                 UPDATE {SCHEMA}.trades SET pnl = %s, pnl_pct = %s WHERE id = %s
             """, (pnl, pnl_pct, trade_id))
 
+    def update_trade_fill(
+        self,
+        trade_id: int,
+        size: float,
+        price: float,
+        *,
+        funds: Optional[float] = None,
+    ) -> bool:
+        """Corrige size/price de um trade com o fill real da exchange.
+
+        O size gravado no momento da ordem é uma estimativa
+        (``funds / ticker``): o dealSize real só é conhecido consultando os
+        fills. Sem essa correção o DB fica com size menor que o saldo real e o
+        SELL — que vende ``entries[].size`` — deixa dust a cada ciclo.
+
+        Restrito a trades live e não fechados: um trade já fechado teve o PnL
+        calculado sobre o size antigo, e reescrever o size sem recalcular o PnL
+        deixaria os dois inconsistentes.
+
+        Returns:
+            True se a linha foi atualizada.
+        """
+        if size <= 0 or price <= 0:
+            return False
+
+        sets = ["size = %s", "price = %s"]
+        params: List[Any] = [size, price]
+        if funds is not None and funds > 0:
+            sets.append("funds = %s")
+            params.append(funds)
+        params.append(trade_id)
+
+        with self._get_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f"""
+                UPDATE {SCHEMA}.trades
+                SET {', '.join(sets)}
+                WHERE id = %s
+                  AND dry_run = FALSE
+                  AND status != 'closed'
+                """,
+                tuple(params),
+            )
+            return cur.rowcount == 1
+
     def merge_trade_metadata(self, trade_id: int, metadata: Dict[str, Any]) -> None:
         """Mescla chaves de metadata em um trade existente."""
         if not metadata:
