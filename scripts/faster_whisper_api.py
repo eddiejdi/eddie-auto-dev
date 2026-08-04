@@ -113,7 +113,11 @@ async def transcribe(
     fd, tmp_path = tempfile.mkstemp(suffix=suffix, prefix="whisper_")
     try:
         with os.fdopen(fd, "wb") as out:
-            out.write(await file.read())
+            while True:
+                chunk = await file.read(1024 * 1024)
+                if not chunk:
+                    break
+                out.write(chunk)
         try:
             result = _run_transcription(tmp_path, language, task, word_timestamps)
         except Exception as exc:
