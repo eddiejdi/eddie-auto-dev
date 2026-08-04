@@ -22,18 +22,25 @@ jobs:
             - 'agents_inbox/**'
 
   responder-integration:
+    name: Agent Responder Integration Test
     needs: changes
-    if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
+    if: ${{ !cancelled() }}
     runs-on:
     - self-hosted
     - linux
     - homelab
     steps:
+    - name: Skip (sem mudanças relevantes)
+      if: ${{ github.event_name != 'workflow_dispatch' && needs.changes.outputs.responder != 'true' }}
+      run: echo "Sem mudanças em scripts/test_agent_responder.sh, specialized_agents/ ou agents_inbox/ — check satisfeito (sem execução)."
     - uses: actions/checkout@v4
+      if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
     - name: Ensure jq installed
+      if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
       run: "if ! command -v jq >/dev/null; then\n  sudo apt-get update && sudo apt-get\
         \ install -y jq\nfi\n"
     - name: Ensure specialized-agents API is available
+      if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
       env:
         API_URL: http://127.0.0.1:8503
       run: |
@@ -71,6 +78,7 @@ jobs:
         test -f /tmp/specialized-agents-api-ci.log && cat /tmp/specialized-agents-api-ci.log >&2 || true
         exit 1
     - name: Check in-process responder (pre-check)
+      if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
       env:
         API_URL: http://127.0.0.1:8503
       run: "set -euo pipefail\necho \"Checking in-process responder via $API_URL/communication/test\"\
@@ -86,6 +94,7 @@ jobs:
         \ | length' || true\n  # show the temporary responder log if present\n  test\
         \ -f /tmp/responder.log && cat /tmp/responder.log || true\n  exit 1\nfi\n"
     - name: Run agent responder integration script
+      if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
       env:
         API_URL: http://127.0.0.1:8503
       run: "set -euo pipefail\necho \"Running responder integration test against $API_URL\"\

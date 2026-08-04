@@ -161,6 +161,9 @@ _VRAM_ESTIMATES: list[tuple[str, int]] = [
     # modelos nomeados
     ("trading-analyst", 6500), ("gemma3", 1000), ("smollm", 600),
     ("moondream", 1700), ("lfm2.5-vl", 500), ("lfm2", 1100), ("lfm", 1100),
+    # aliases canônicos de visão (vision-*)
+    ("vision-moondream", 1700), ("vision-vl", 500), ("vision-gemma3", 1000),
+    ("vision", 1700),
     ("phi4-mini", 2500), ("phi3", 2200), ("llama3.2", 900),
     # GPU1 GGUF quant (Q4_0 / IQ3) — pesos ~0.7–0.9GB + KV
     ("lfm2.5", 900), ("smollm2", 900), ("smollm", 800),
