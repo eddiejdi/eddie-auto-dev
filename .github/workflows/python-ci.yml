@@ -5,13 +5,6 @@ on:
   pull_request:
     branches: [ main ]
     types: [opened, synchronize, reopened]
-    paths:
-      - 'btc_trading_agent/**'
-      - 'clear_trading_agent/**'
-      - 'site/index.html'
-      - 'tests/**'
-      - 'tests/unit/**'
-      - '.github/workflows/python-ci.yml'
 
 jobs:
   python-tests:
