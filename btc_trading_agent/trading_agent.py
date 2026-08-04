@@ -5358,6 +5358,10 @@ class BitcoinTradingAgent(
                         "ts": time.time(),
                         "target_sell": 0.0,         # filled after tp_target is computed below
                         "trailing_high": price,     # per-slot trailing high start
+                        # order_id identifica o slot para a reconciliação de fill e
+                        # para o dedup de readopção (_restore_persistent_
+                        # reconciliation_candidate lê entry["order_id"]).
+                        "order_id": order_id,
                     })
                     self._sync_position_tracking()
                     # Resetar rastreamento de vale após BUY executado (nova referência de fundo)
@@ -5421,6 +5425,16 @@ class BitcoinTradingAgent(
                         self.state.entries[-1]["trade_id"] = trade_id
                     # FIX #1: Reset trailing high on new position
                     self.state.trailing_high = price
+
+                    # Corrige size/price com o fill real antes de qualquer venda
+                    # usar entries[].size — evita o dust de cada ciclo.
+                    if not self.state.dry_run and order_id:
+                        threading.Thread(
+                            target=self._reconcile_buy_fill,
+                            args=(order_id, trade_id, price, size),
+                            daemon=True,
+                            name=f"buy-fill-reconcile-{trade_id}",
+                        ).start()
 
                     # Reconciliação pós-compra: detecta slots fantasma acumulados
                     # antes desta compra (race condition com outro agente)
@@ -5562,6 +5576,114 @@ class BitcoinTradingAgent(
 
     # _check_per_slot_exits → migrado para PositionManagerMixin
     # _execute_slot_sell → migrado para PositionManagerMixin
+
+    def _reconcile_buy_fill(
+        self,
+        order_id: str,
+        trade_id: int,
+        estimated_price: float,
+        estimated_size: float,
+    ) -> None:
+        """Busca o fill real do BUY e corrige size/price no DB e em state.entries.
+
+        O size gravado no BUY é estimado (``funds / ticker``) e fica menor que o
+        dealSize real por dois motivos: a fee é cobrada em USDT (o BTC é
+        creditado bruto) e ``ticker`` não é o preço de execução. Como o SELL
+        vende ``entries[].size``, cada ciclo deixava dust na exchange — origem
+        dos falsos positivos de reconciliação.
+
+        Corrigir apenas o DB não basta: sem atualizar ``entries[].size`` o SELL
+        continuaria vendendo o valor estimado. Ambos são corrigidos aqui.
+
+        Roda em background thread após BUY real (nunca em dry_run).
+        """
+        time.sleep(3)
+        try:
+            fill = get_fills_for_order(order_id, self.symbol)
+            if not fill:
+                logger.warning(
+                    "⚠️ [buy-fill-reconcile] Fills não encontrados para order=%s "
+                    "(trade_id=%s) — mantendo estimativa",
+                    order_id, trade_id,
+                )
+                return
+
+            actual_size = float(fill["fill_size"])
+            actual_price = float(fill["fill_price"])
+            actual_funds = float(fill.get("fill_funds") or 0) or None
+            if actual_size <= 0 or actual_price <= 0:
+                return
+
+            size_delta = actual_size - estimated_size
+
+            # entries[] é mutado por outras threads (vendas, reconciliação de
+            # posição). Sem o lock, o read-modify-write abaixo é um TOCTOU —
+            # mesmo raciocínio de _reconcile_position_with_exchange.
+            with self._trade_lock:
+                entries = list(getattr(self.state, "entries", []) or [])
+                target_idx = None
+                for idx, entry in enumerate(entries):
+                    if entry.get("trade_id") == trade_id or (
+                        order_id and entry.get("order_id") == order_id
+                    ):
+                        target_idx = idx
+                        break
+
+                if target_idx is None:
+                    # Slot já vendido/removido antes do fill aparecer na API.
+                    # Corrigir o DB ainda é correto (registro histórico), mas
+                    # não há entry para ajustar.
+                    logger.info(
+                        "ℹ️ [buy-fill-reconcile] Slot do trade_id=%s não está mais "
+                        "em entries — corrigindo apenas o DB",
+                        trade_id,
+                    )
+                else:
+                    entries[target_idx]["size"] = actual_size
+                    entries[target_idx]["price"] = actual_price
+                    self.state.entries = entries
+
+                    total_size = sum(float(e.get("size", 0) or 0) for e in entries)
+                    total_cost = sum(
+                        float(e.get("size", 0) or 0) * float(e.get("price", 0) or 0)
+                        for e in entries
+                    )
+                    self.state.position = total_size
+                    self.state.entry_price = (
+                        total_cost / total_size if total_size > 0 else 0.0
+                    )
+                    self._sync_position_tracking()
+
+            updated = self.db.update_trade_fill(
+                trade_id, actual_size, actual_price, funds=actual_funds,
+            )
+            self.db.merge_trade_metadata(trade_id, {
+                "fill_reconciled": True,
+                "fill_price":      actual_price,
+                "fill_size":       actual_size,
+                "fill_fee":        fill.get("fill_fee"),
+                "fee_currency":    fill.get("fee_currency"),
+                "fee_rate":        fill.get("fee_rate"),
+                "liquidity":       fill.get("liquidity"),
+                "estimated_size":  estimated_size,
+                "estimated_price": estimated_price,
+                "size_correction": round(size_delta, 8),
+                "price_slippage":  round(actual_price - estimated_price, 4),
+            })
+
+            logger.info(
+                "🔍 [buy-fill-reconcile] order=%s fills=%s "
+                "size=%.8f (est=%.8f corr=%+.8f) "
+                "price=$%.4f (est=$%.4f slip=$%+.4f) db_updated=%s",
+                order_id, fill.get("fills_count"),
+                actual_size, estimated_size, size_delta,
+                actual_price, estimated_price, actual_price - estimated_price,
+                updated,
+            )
+        except Exception as exc:
+            logger.warning(
+                "⚠️ [buy-fill-reconcile] Falhou para order=%s: %s", order_id, exc,
+            )
 
     def _reconcile_sell_fill(
         self,
