@@ -99,13 +99,12 @@ def _vision_available(client: httpx.AsyncClient) -> bool:
 async def stt_transcribe(client: httpx.AsyncClient, audio_path: Path) -> str:
     """Transcreve áudio via faster-whisper API (STT local)."""
     try:
-        with open(audio_path, "rb") as f:
-            data = f.read()
-        r = await client.post(
-            STT_URL,
-            files={"file": (audio_path.name, data)},
-            timeout=httpx.Timeout(300.0, connect=10.0),
-        )
+        with audio_path.open("rb") as f:
+            r = await client.post(
+                STT_URL,
+                files={"file": (audio_path.name, f)},
+                timeout=httpx.Timeout(300.0, connect=10.0),
+            )
         if r.status_code != 200:
             return f"[stt error: HTTP {r.status_code}]"
         return (r.json().get("text") or "").strip()
