@@ -14,6 +14,7 @@ import sys
 import threading
 import types
 
+import pytest
 import unittest.mock as _mock
 
 
@@ -76,7 +77,10 @@ from trading_agent import BitcoinTradingAgent
 REAL_TICKER = 63_400.95
 REAL_FILL_PRICE = 63_443.5
 REAL_DEAL_SIZE = 0.00023643
-EST_SIZE = 15.0 / REAL_TICKER * (1 - 0.001)  # fórmula atual: 0.00023635...
+# Estimativa atual: funds/ticker (fee em USDT — BTC bruto). Histórico pré-fix
+# usava *(1-fee) e gerava dust; o reconcile continua corrigindo para dealSize.
+EST_SIZE = 15.0 / REAL_TICKER
+LEGACY_EST_SIZE = 15.0 / REAL_TICKER * (1 - 0.001)  # 0.00023635… (pré-#303)
 ORDER_ID = "6a7132756b3c7c0007927616"
 TRADE_ID = 3833
 
@@ -112,6 +116,7 @@ def _agent(entries=None, *, position=None) -> BitcoinTradingAgent:
     )
     agent.db = _mock.MagicMock()
     agent.db.update_trade_fill.return_value = True
+    agent._reconcile_position_with_exchange = _mock.MagicMock(return_value=0)
     return agent
 
 
@@ -150,12 +155,15 @@ def test_entry_size_corrected_to_real_deal_size() -> None:
 
 
 def test_dust_eliminated_end_to_end() -> None:
-    """O que o SELL venderia passa a casar com o que a exchange creditou."""
-    agent = _agent()
-    dust_antes = REAL_DEAL_SIZE - agent.state.entries[0]["size"]
-    assert dust_antes > 0  # a estimativa subestima
+    """O que o SELL venderia passa a casar com o que a exchange creditou.
 
-    _run(agent, _fill())
+    Usa a estimativa legada *(1-fee), que subestimava o size e gerava dust.
+    """
+    agent = _agent(entries=[_entry(size=LEGACY_EST_SIZE)])
+    dust_antes = REAL_DEAL_SIZE - agent.state.entries[0]["size"]
+    assert dust_antes > 0  # a estimativa legada subestima
+
+    _run(agent, _fill(), est_size=LEGACY_EST_SIZE)
 
     assert REAL_DEAL_SIZE - agent.state.entries[0]["size"] == 0
 
@@ -176,7 +184,9 @@ def test_db_updated_with_fill_and_metadata() -> None:
     assert meta["fill_reconciled"] is True
     assert meta["fill_size"] == REAL_DEAL_SIZE
     assert meta["estimated_size"] == EST_SIZE
-    assert meta["size_correction"] > 0
+    # Com funds/ticker, slippage de preço pode deixar a correção ±; o
+    # importante é gravar o dealSize real, não o sinal da correção.
+    assert meta["size_correction"] == round(REAL_DEAL_SIZE - EST_SIZE, 8)
     assert meta["fee_currency"] == "USDT"
 
 
@@ -269,3 +279,31 @@ def test_holds_trade_lock_while_mutating_entries() -> None:
     _run(agent, _fill())
 
     assert observed == ["acquired", "released"]
+
+
+def test_position_reconcile_runs_after_fill_success() -> None:
+    """Pós-compra: reconciliação DB×exchange só depois do fill (evita falso excesso)."""
+    agent = _agent()
+
+    _run(agent, _fill())
+
+    agent._reconcile_position_with_exchange.assert_called_once_with(REAL_TICKER)
+
+
+def test_position_reconcile_runs_even_when_fill_missing() -> None:
+    agent = _agent()
+
+    _run(agent, {})
+
+    agent._reconcile_position_with_exchange.assert_called_once_with(REAL_TICKER)
+
+
+def test_legacy_fee_estimate_is_corrected_upward() -> None:
+    """Regressão do dust: size com *(1-fee) sobe para o dealSize real."""
+    agent = _agent(entries=[_entry(size=LEGACY_EST_SIZE)])
+
+    _run(agent, _fill(), est_size=LEGACY_EST_SIZE)
+
+    assert agent.state.entries[0]["size"] == REAL_DEAL_SIZE
+    meta = agent.db.merge_trade_metadata.call_args[0][1]
+    assert meta["size_correction"] > 0

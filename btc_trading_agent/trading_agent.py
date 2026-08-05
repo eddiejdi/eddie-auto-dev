@@ -5318,9 +5318,13 @@ class BitcoinTradingAgent(
                     trade_metadata = None
 
                     if self.state.dry_run:
-                        # Simulação (desconta fee como no trade real)
-                        size = amount_usdt / price * (1 - TRADING_FEE_PCT)
-                        logger.info(f"🔵 [DRY] BUY #{self.state.position_count+1} {size:.6f} BTC @ ${price:,.2f} (${amount_usdt:.2f}, fee={TRADING_FEE_PCT*100:.1f}%)")
+                        # Fee da KuCoin é cobrada em USDT — o BTC creditado é bruto
+                        # (funds/price). Não subtrair TRADING_FEE_PCT do size.
+                        size = amount_usdt / price
+                        logger.info(
+                            f"🔵 [DRY] BUY #{self.state.position_count+1} {size:.6f} BTC "
+                            f"@ ${price:,.2f} (${amount_usdt:.2f}, fee={TRADING_FEE_PCT*100:.1f}% USDT)"
+                        )
                     else:
                         # Trade real
                         result = place_market_order(self.symbol, "buy", funds=amount_usdt)
@@ -5340,8 +5344,9 @@ class BitcoinTradingAgent(
                             if subaccount:
                                 trade_metadata["kucoin_subaccount"] = subaccount
                         
-                        # Atualizar posição (aproximado)
-                        size = amount_usdt / price * (1 - TRADING_FEE_PCT)
+                        # Estimativa provisória até _reconcile_buy_fill corrigir com
+                        # o dealSize real. Fee em USDT → size ≈ funds/ticker (bruto).
+                        size = amount_usdt / price
                         logger.info(f"🟢 BUY #{self.state.position_count+1} {size:.6f} BTC @ ${price:,.2f}")
                     
                     # Multi-posição: acumular com preço médio ponderado
@@ -5426,25 +5431,28 @@ class BitcoinTradingAgent(
                     # FIX #1: Reset trailing high on new position
                     self.state.trailing_high = price
 
-                    # Corrige size/price com o fill real antes de qualquer venda
-                    # usar entries[].size — evita o dust de cada ciclo.
-                    if not self.state.dry_run and order_id:
-                        threading.Thread(
-                            target=self._reconcile_buy_fill,
-                            args=(order_id, trade_id, price, size),
-                            daemon=True,
-                            name=f"buy-fill-reconcile-{trade_id}",
-                        ).start()
-
-                    # Reconciliação pós-compra: detecta slots fantasma acumulados
-                    # antes desta compra (race condition com outro agente)
+                    # Cada BUY live DEVE reconciliar o fill real (dealSize/price)
+                    # e só depois comparar saldo DB×exchange. Sem order_id ainda
+                    # roda a reconciliação de posição (depósitos/slots fantasma).
                     if not self.state.dry_run:
-                        threading.Thread(
-                            target=self._reconcile_position_with_exchange,
-                            args=(price,),
-                            daemon=True,
-                            name="reconcile-post-buy",
-                        ).start()
+                        if order_id:
+                            threading.Thread(
+                                target=self._reconcile_buy_fill,
+                                args=(order_id, trade_id, price, size),
+                                daemon=True,
+                                name=f"buy-fill-reconcile-{trade_id}",
+                            ).start()
+                        else:
+                            logger.warning(
+                                "⚠️ BUY sem order_id — fill reconcile impossível; "
+                                "rodando só reconciliação de posição"
+                            )
+                            threading.Thread(
+                                target=self._reconcile_position_with_exchange,
+                                args=(price,),
+                                daemon=True,
+                                name="reconcile-post-buy",
+                            ).start()
 
                 elif signal.action == "SELL":
                     # Use _calculate_trade_size for fee check (force bypasses)
@@ -5586,14 +5594,18 @@ class BitcoinTradingAgent(
     ) -> None:
         """Busca o fill real do BUY e corrige size/price no DB e em state.entries.
 
-        O size gravado no BUY é estimado (``funds / ticker``) e fica menor que o
-        dealSize real por dois motivos: a fee é cobrada em USDT (o BTC é
-        creditado bruto) e ``ticker`` não é o preço de execução. Como o SELL
-        vende ``entries[].size``, cada ciclo deixava dust na exchange — origem
-        dos falsos positivos de reconciliação.
+        O size gravado no BUY é estimado (``funds / ticker``). O dealSize real
+        só aparece nos fills: a fee é cobrada em USDT (BTC creditado bruto) e o
+        ticker não é o preço de execução. Como o SELL vende ``entries[].size``,
+        cada ciclo sem essa correção deixa dust na exchange — origem dos falsos
+        positivos de reconciliação.
 
         Corrigir apenas o DB não basta: sem atualizar ``entries[].size`` o SELL
         continuaria vendendo o valor estimado. Ambos são corrigidos aqui.
+
+        Após o fill (ou se o fill falhar), dispara a reconciliação de posição
+        com a exchange — evita o alerta falso de "excesso" que ocorria quando
+        a comparação DB×exchange rodava em paralelo antes do size real.
 
         Roda em background thread após BUY real (nunca em dry_run).
         """
@@ -5684,6 +5696,16 @@ class BitcoinTradingAgent(
             logger.warning(
                 "⚠️ [buy-fill-reconcile] Falhou para order=%s: %s", order_id, exc,
             )
+        finally:
+            # Sempre re-checar DB×exchange depois do fill (ou da falha): a
+            # comparação pré-fill usava size estimado e gerava falso excesso.
+            try:
+                self._reconcile_position_with_exchange(estimated_price)
+            except Exception as exc:
+                logger.warning(
+                    "⚠️ [buy-fill-reconcile] post-fill position reconcile failed "
+                    "order=%s: %s", order_id, exc,
+                )
 
     def _reconcile_sell_fill(
         self,
