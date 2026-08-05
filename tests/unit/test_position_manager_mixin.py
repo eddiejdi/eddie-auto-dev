@@ -44,6 +44,22 @@ with (
     import position_manager_mixin
     from position_manager_mixin import PositionManagerMixin
 
+# Unit tests never hit the live exchange. The self-hosted runner has real
+# KuCoin credentials in the ambient env; if a mock is missed, the code used to
+# call the API, get 401, return 0, and fail assertions opaquely. Fail loud.
+_original_signed_request = getattr(kucoin_api, "_signed_request", None)
+
+
+def _block_live_kucoin(*_args, **_kwargs):
+    raise AssertionError(
+        "live KuCoin HTTP blocked in unit tests — mock get_balance / "
+        "get_sub_account_balances (got a call to _signed_request)"
+    )
+
+
+if _original_signed_request is not None:
+    kucoin_api._signed_request = _block_live_kucoin  # type: ignore[assignment]
+
 _FEE = 0.001
 
 
