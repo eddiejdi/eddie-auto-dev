@@ -7,6 +7,7 @@ import threading
 import time
 from pathlib import Path
 from types import SimpleNamespace
+from contextlib import ExitStack
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -19,12 +20,23 @@ os.environ.setdefault("KUCOIN_API_SECRET", "test_secret_xyz789")
 os.environ.setdefault("KUCOIN_API_PASSPHRASE", "x")
 os.environ.setdefault("SECRETS_AGENT_API_KEY", "")  # desativa tentativa ao secrets-agent
 
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "btc_trading_agent"))
+# Força o checkout do repo — no runner self-hosted o path de produção
+# (/apps/crypto-trader/trading/btc_trading_agent) pode aparecer no sys.path e
+# fazer o pytest carregar position_manager_mixin desatualizado (só get_balance).
+_BTC_AGENT_DIR = (Path(__file__).resolve().parents[2] / "btc_trading_agent").resolve()
+sys.path[:] = [str(_BTC_AGENT_DIR)] + [
+    p for p in sys.path if "crypto-trader" not in str(p).replace("\\", "/")
+]
 
-# Remover mocks parciais instalados por outros testes
-sys.modules.pop("kucoin_api", None)
-sys.modules.pop("secrets_helper", None)
-sys.modules.pop("position_manager_mixin", None)
+# Remover mocks parciais e módulos já importados de outros paths
+for _mod in (
+    "kucoin_api",
+    "secrets_helper",
+    "position_manager_mixin",
+    "slot_exit_policy",
+    "trading_agent",
+):
+    sys.modules.pop(_mod, None)
 
 # Importar com mock das funções de I/O para evitar side effects
 with (
@@ -44,6 +56,12 @@ with (
     import position_manager_mixin
     from position_manager_mixin import PositionManagerMixin
 
+_loaded = Path(position_manager_mixin.__file__).resolve()
+assert _loaded.parent == _BTC_AGENT_DIR, (
+    f"position_manager_mixin carregado de {_loaded}, esperado sob {_BTC_AGENT_DIR}. "
+    "No runner self-hosted isso indica path de produção vazando para o pytest."
+)
+
 # Unit tests never hit the live exchange. The self-hosted runner has real
 # KuCoin credentials in the ambient env; if a mock is missed, the code used to
 # call the API, get 401, return 0, and fail assertions opaquely. Fail loud.
@@ -61,6 +79,15 @@ if _original_signed_request is not None:
     kucoin_api._signed_request = _block_live_kucoin  # type: ignore[assignment]
 
 _FEE = 0.001
+
+
+def _subaccount_balance_patches(items):
+    """Context managers: subconta + fallback get_balance (runtime legado)."""
+    available_sum = sum(float(i.get("available", 0) or 0) for i in items)
+    return [
+        patch.object(kucoin_api, "get_sub_account_balances", return_value=items),
+        patch.object(kucoin_api, "get_balance", return_value=available_sum),
+    ]
 
 
 # ── Builders ─────────────────────────────────────────────────────────────────
@@ -730,19 +757,18 @@ class TestReconcilePositionWithExchange:
         }]
         agent.db.mark_open_buy_restored.return_value = True
 
-        with (
-            patch.object(
-                kucoin_api,
-                "get_sub_account_balances",
-                return_value=[{
-                    "sub_name": "BTCConservative",
-                    "account_type": "trade",
-                    "currency": "BTC",
-                    "available": 0.00046246638359418165,
-                }],
-            ),
-            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
-        ):
+        bal = [{
+            "sub_name": "BTCConservative",
+            "account_type": "trade",
+            "currency": "BTC",
+            "available": 0.00046246638359418165,
+        }]
+        with ExitStack() as stack:
+            for cm in _subaccount_balance_patches(bal):
+                stack.enter_context(cm)
+            mock_alert = stack.enter_context(
+                patch.object(position_manager_mixin, "_send_telegram_alert")
+            )
             result = agent._reconcile_position_with_exchange()
 
         assert result == 0
@@ -789,19 +815,18 @@ class TestReconcilePositionWithExchange:
             {"id": 11, "order_id": "order-b", "price": 90_000, "size": 0.001},
         ]
 
-        with (
-            patch.object(
-                kucoin_api,
-                "get_sub_account_balances",
-                return_value=[{
-                    "sub_name": "BTCConservative",
-                    "account_type": "trade",
-                    "currency": "BTC",
-                    "available": 0.002,
-                }],
-            ),
-            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
-        ):
+        bal = [{
+            "sub_name": "BTCConservative",
+            "account_type": "trade",
+            "currency": "BTC",
+            "available": 0.002,
+        }]
+        with ExitStack() as stack:
+            for cm in _subaccount_balance_patches(bal):
+                stack.enter_context(cm)
+            mock_alert = stack.enter_context(
+                patch.object(position_manager_mixin, "_send_telegram_alert")
+            )
             result = agent._reconcile_position_with_exchange()
 
         assert result == 0
@@ -821,19 +846,18 @@ class TestReconcilePositionWithExchange:
         ]
         agent.db.mark_open_buy_restored.return_value = False
 
-        with (
-            patch.object(
-                kucoin_api,
-                "get_sub_account_balances",
-                return_value=[{
-                    "sub_name": "BTCConservative",
-                    "account_type": "trade",
-                    "currency": "BTC",
-                    "available": 0.002,
-                }],
-            ),
-            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
-        ):
+        bal = [{
+            "sub_name": "BTCConservative",
+            "account_type": "trade",
+            "currency": "BTC",
+            "available": 0.002,
+        }]
+        with ExitStack() as stack:
+            for cm in _subaccount_balance_patches(bal):
+                stack.enter_context(cm)
+            mock_alert = stack.enter_context(
+                patch.object(position_manager_mixin, "_send_telegram_alert")
+            )
             result = agent._reconcile_position_with_exchange()
 
         assert result == 0
@@ -848,20 +872,19 @@ class TestReconcilePositionWithExchange:
             live_cfg={"kucoin_subaccount_name": "BTCConservative"},
         )
 
-        with (
-            patch.object(
-                kucoin_api,
-                "get_sub_account_balances",
-                return_value=[{
-                    "sub_name": "BTCConservative",
-                    "account_type": "trade",
-                    "currency": "BTC",
-                    "balance": 0.002,
-                    "available": 0.001,
-                }],
-            ),
-            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
-        ):
+        bal = [{
+            "sub_name": "BTCConservative",
+            "account_type": "trade",
+            "currency": "BTC",
+            "balance": 0.002,
+            "available": 0.001,
+        }]
+        with ExitStack() as stack:
+            for cm in _subaccount_balance_patches(bal):
+                stack.enter_context(cm)
+            mock_alert = stack.enter_context(
+                patch.object(position_manager_mixin, "_send_telegram_alert")
+            )
             result = agent._reconcile_position_with_exchange()
 
         assert result == 0
@@ -876,17 +899,16 @@ class TestReconcilePositionWithExchange:
             live_cfg={"kucoin_subaccount_name": "BTCConservative"},
         )
 
-        with patch.object(
-            kucoin_api,
-            "get_sub_account_balances",
-            return_value=[{
-                "sub_name": "BTCConservative",
-                "account_type": "trade",
-                "currency": "BTC",
-                "balance": 0.0,
-                "available": 0.0,
-            }],
-        ):
+        bal = [{
+            "sub_name": "BTCConservative",
+            "account_type": "trade",
+            "currency": "BTC",
+            "balance": 0.0,
+            "available": 0.0,
+        }]
+        with ExitStack() as stack:
+            for cm in _subaccount_balance_patches(bal):
+                stack.enter_context(cm)
             result = agent._reconcile_position_with_exchange(current_price=90_000.0)
 
         assert result == 1
