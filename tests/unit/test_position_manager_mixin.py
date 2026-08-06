@@ -1,12 +1,13 @@
 """Testes unitários para PositionManagerMixin."""
 from __future__ import annotations
 
+import importlib.util
 import os
 import sys
 import threading
 import time
 from pathlib import Path
-from types import SimpleNamespace
+from types import ModuleType, SimpleNamespace
 from contextlib import ExitStack
 from unittest.mock import MagicMock, patch
 
@@ -20,46 +21,71 @@ os.environ.setdefault("KUCOIN_API_SECRET", "test_secret_xyz789")
 os.environ.setdefault("KUCOIN_API_PASSPHRASE", "x")
 os.environ.setdefault("SECRETS_AGENT_API_KEY", "")  # desativa tentativa ao secrets-agent
 
-# Força o checkout do repo — no runner self-hosted o path de produção
-# (/apps/crypto-trader/trading/btc_trading_agent) pode aparecer no sys.path e
-# fazer o pytest carregar position_manager_mixin desatualizado (só get_balance).
+# No runner self-hosted o path de produção (/apps/crypto-trader/trading/...)
+# vaza no sys.path e o import normal de position_manager_mixin carrega o
+# runtime legado. Carregamos os módulos POR ARQUIVO do checkout.
 _BTC_AGENT_DIR = (Path(__file__).resolve().parents[2] / "btc_trading_agent").resolve()
-sys.path[:] = [str(_BTC_AGENT_DIR)] + [
-    p for p in sys.path if "crypto-trader" not in str(p).replace("\\", "/")
+assert _BTC_AGENT_DIR.is_dir(), f"btc_trading_agent ausente: {_BTC_AGENT_DIR}"
+
+# Remove path de produção e qualquer entrada residual dos módulos
+sys.path[:] = [
+    str(_BTC_AGENT_DIR),
+    *[
+        p
+        for p in sys.path
+        if "crypto-trader" not in str(p).replace("\\", "/")
+        and str(Path(p).resolve()) != str(_BTC_AGENT_DIR)
+    ],
 ]
+for _mod in list(sys.modules):
+    if _mod in {
+        "kucoin_api",
+        "secrets_helper",
+        "position_manager_mixin",
+        "slot_exit_policy",
+        "trading_agent",
+    } or _mod.startswith("btc_trading_agent"):
+        sys.modules.pop(_mod, None)
 
-# Remover mocks parciais e módulos já importados de outros paths
-for _mod in (
-    "kucoin_api",
-    "secrets_helper",
-    "position_manager_mixin",
-    "slot_exit_policy",
-    "trading_agent",
-):
-    sys.modules.pop(_mod, None)
 
-# Importar com mock das funções de I/O para evitar side effects
-with (
-    patch("secrets_helper.get_secret", return_value=None),
-    patch(
-        "secrets_helper.get_kucoin_credentials_with_source",
-        return_value=(
-            os.environ.get("KUCOIN_API_KEY", ""),
-            os.environ.get("KUCOIN_API_SECRET", ""),
-            os.environ.get("KUCOIN_API_PASSPHRASE", ""),
-            "env",
-        ),
-    ),
-    patch("requests.post"),  # mock do _send_telegram_alert
-):
-    import kucoin_api
-    import position_manager_mixin
-    from position_manager_mixin import PositionManagerMixin
+def _load_checkout_module(name: str) -> ModuleType:
+    """Importa um .py do checkout por caminho absoluto (ignora sys.path)."""
+    path = _BTC_AGENT_DIR / f"{name}.py"
+    assert path.is_file(), f"módulo ausente no checkout: {path}"
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
+    mod = importlib.util.module_from_spec(spec)
+    sys.modules[name] = mod
+    spec.loader.exec_module(mod)
+    return mod
+
+
+# Stub secrets_helper no sys.modules antes de carregar kucoin_api (evita
+# secrets-agent / path de produção durante o import).
+_secrets_stub = ModuleType("secrets_helper")
+_secrets_stub.get_secret = lambda *a, **k: None  # type: ignore[attr-defined]
+_secrets_stub.get_kucoin_credentials_with_source = (  # type: ignore[attr-defined]
+    lambda *a, **k: (
+        os.environ.get("KUCOIN_API_KEY", ""),
+        os.environ.get("KUCOIN_API_SECRET", ""),
+        os.environ.get("KUCOIN_API_PASSPHRASE", ""),
+        "env",
+    )
+)
+_secrets_stub.clear_secret_cache = lambda: None  # type: ignore[attr-defined]
+sys.modules["secrets_helper"] = _secrets_stub
+
+# Importar com mock de I/O (Telegram) e carregar módulos do checkout por arquivo
+with patch("requests.post"):
+    # Dependências primeiro (position_manager_mixin importa kucoin_api / slot_exit_policy)
+    kucoin_api = _load_checkout_module("kucoin_api")
+    _load_checkout_module("slot_exit_policy")
+    position_manager_mixin = _load_checkout_module("position_manager_mixin")
+    PositionManagerMixin = position_manager_mixin.PositionManagerMixin
 
 _loaded = Path(position_manager_mixin.__file__).resolve()
 assert _loaded.parent == _BTC_AGENT_DIR, (
-    f"position_manager_mixin carregado de {_loaded}, esperado sob {_BTC_AGENT_DIR}. "
-    "No runner self-hosted isso indica path de produção vazando para o pytest."
+    f"position_manager_mixin carregado de {_loaded}, esperado sob {_BTC_AGENT_DIR}."
 )
 
 # Unit tests never hit the live exchange. The self-hosted runner has real
