@@ -21,8 +21,13 @@ CHECK_INTERVAL="${CHECK_INTERVAL:-15}"
 FROZEN_THRESHOLD="${FROZEN_THRESHOLD:-120}"
 GENERATE_TIMEOUT="${GENERATE_TIMEOUT:-30}"
 MAX_RESTARTS_HOUR="${MAX_RESTARTS_HOUR:-3}"
+CPU_ONLY_CONFIRMATIONS="${CPU_ONLY_CONFIRMATIONS:-3}"
+CPU_ONLY_MIN_MODEL_BYTES="${CPU_ONLY_MIN_MODEL_BYTES:-2147483648}"
+POST_RESTART_DELAY="${POST_RESTART_DELAY:-15}"
+CPU_ONLY_RECOVERY_TIMEOUT="${CPU_ONLY_RECOVERY_TIMEOUT:-120}"
+CPU_ONLY_RECOVERY_POLL="${CPU_ONLY_RECOVERY_POLL:-5}"
 
-STATE_DIR="/var/lib/ollama-selfheal"
+STATE_DIR="${STATE_DIR:-/var/lib/ollama-selfheal}"
 LOG_TAG="ollama-gpu-selfheal"
 
 # --- Inicialização -----------------------------------------------
@@ -31,6 +36,7 @@ for gpu in gpu0 gpu1; do
     [ -f "$STATE_DIR/${gpu}_last_ok" ]    || date +%s > "$STATE_DIR/${gpu}_last_ok"
     [ -f "$STATE_DIR/${gpu}_restarts" ]   || echo "0" > "$STATE_DIR/${gpu}_restarts"
     [ -f "$STATE_DIR/${gpu}_restart_ts" ] || echo "0" > "$STATE_DIR/${gpu}_restart_ts"
+    [ -f "$STATE_DIR/${gpu}_cpu_only_consecutive" ] || echo "0" > "$STATE_DIR/${gpu}_cpu_only_consecutive"
 done
 
 log() { logger -t "$LOG_TAG" -p "daemon.${1}" "${2}"; }
@@ -52,11 +58,53 @@ probe_generate() {
     echo "$resp" | grep -q '"done":true'
 }
 
+probe_model() {
+    local host="$1" model="$2" family
+    family=$(curl -sf --max-time 3 "${host}/api/ps" 2>/dev/null \
+        | python3 -c '
+import json, sys
+name = sys.argv[1]
+for model in json.load(sys.stdin).get("models", []):
+    if model.get("name") == name:
+        details = model.get("details") or {}
+        print(details.get("family") or "")
+        break
+' "$model" 2>/dev/null || true)
+
+    if [ "$family" = "nomic-bert" ]; then
+        curl -sf --max-time "$GENERATE_TIMEOUT" \
+            -d "{\"model\":\"${model}\",\"prompt\":\"ping\"}" \
+            "${host}/api/embeddings" 2>/dev/null | grep -q '"embedding"'
+    else
+        probe_generate "$host" "$model"
+    fi
+}
+
 # Descobrir modelo ativo num host
 active_model() {
     local host="$1"
     curl -sf --max-time 3 "${host}/api/ps" 2>/dev/null \
         | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['models'][0]['name'] if d.get('models') else '')" 2>/dev/null || echo ""
+}
+
+# Retorna nome, tamanho total e VRAM do primeiro modelo grande carregado.
+large_model_runtime() {
+    local host="$1"
+    curl -sf --max-time 3 "${host}/api/ps" 2>/dev/null \
+        | python3 -c '
+import json, sys
+minimum = int(sys.argv[1])
+for model in json.load(sys.stdin).get("models", []):
+    size = int(model.get("size") or 0)
+    if size >= minimum:
+        print(model.get("name", "unknown"), size, int(model.get("size_vram") or 0))
+        break
+' "$CPU_ONLY_MIN_MODEL_BYTES" 2>/dev/null || true
+}
+
+gpu_physical_available() {
+    local idx="$1"
+    nvidia-smi -i "$idx" --query-gpu=name --format=csv,noheader >/dev/null 2>&1
 }
 
 # --- Selfheal ----------------------------------------------------
@@ -87,11 +135,84 @@ do_restart() {
         echo "$now"   > "$ts_file"
         log "info" "${gpu}: restart OK (${count}/${MAX_RESTARTS_HOUR} na última hora)"
         # Dar tempo para o modelo carregar
-        sleep 15
+        sleep "$POST_RESTART_DELAY"
         return 0
     else
         log "crit" "${gpu}: falha no restart de ${service}"
         return 1
+    fi
+}
+
+# Detecta modelo grande executando sem nenhuma camada na VRAM. O retorno é
+# "cpu_only consecutive"; somente GPU0 é elegível para esta recuperação.
+check_cpu_only() {
+    local gpu="$1" host="$2" service="$3"
+    local count_file="$STATE_DIR/${gpu}_cpu_only_consecutive"
+    local count=0 runtime model size size_vram recovered deadline
+
+    if [ "$gpu" != "gpu0" ]; then
+        echo "0 0"
+        return
+    fi
+
+    runtime=$(large_model_runtime "$host")
+    if [ -z "$runtime" ]; then
+        echo "0" > "$count_file"
+        echo "0 0"
+        return
+    fi
+    read -r model size size_vram <<< "$runtime"
+
+    if ! [[ "$size" =~ ^[0-9]+$ && "$size_vram" =~ ^[0-9]+$ ]] || (( size_vram > 0 )); then
+        echo "0" > "$count_file"
+        echo "0 0"
+        return
+    fi
+
+    # size_vram=0 confirma CPU-only, mas GPU ausente exige intervenção manual.
+    if ! gpu_physical_available 0; then
+        echo "0" > "$count_file"
+        log "crit" "gpu0: ${model} CPU-only (size=${size}, size_vram=0), mas nvidia-smi não vê a GPU — restart automático bloqueado"
+        echo "1 0"
+        return
+    fi
+
+    count=$(cat "$count_file" 2>/dev/null || echo 0)
+    count=$((count + 1))
+    echo "$count" > "$count_file"
+    log "warning" "gpu0: ${model} CPU-only (size=${size}, size_vram=0), confirmação ${count}/${CPU_ONLY_CONFIRMATIONS}"
+
+    if (( count < CPU_ONLY_CONFIRMATIONS )); then
+        echo "1 $count"
+        return
+    fi
+
+    log "crit" "gpu0: CPU-only confirmado em ${count} ciclos — iniciando selfheal"
+    recovered=0
+    if do_restart "$gpu" "$service"; then
+        deadline=$(( $(date +%s) + CPU_ONLY_RECOVERY_TIMEOUT ))
+        while true; do
+            runtime=$(large_model_runtime "$host")
+            if [ -n "$runtime" ]; then
+                read -r model size size_vram <<< "$runtime"
+                if [[ "$size_vram" =~ ^[0-9]+$ ]] && (( size_vram > 0 )); then
+                    recovered=1
+                    log "info" "gpu0: selfheal CPU-only bem-sucedido — ${model} voltou à VRAM (${size_vram} bytes)"
+                    break
+                fi
+            fi
+            (( $(date +%s) >= deadline )) && break
+            sleep "$CPU_ONLY_RECOVERY_POLL"
+        done
+    fi
+
+    # Exige novamente três confirmações antes de outra tentativa.
+    echo "0" > "$count_file"
+    if (( recovered == 1 )); then
+        echo "0 0"
+    else
+        log "crit" "gpu0: restart não recuperou execução em VRAM — mantendo alerta CPU-only"
+        echo "1 0"
     fi
 }
 
@@ -162,6 +283,8 @@ write_metrics() {
     local gpu0_restarts="$5" gpu1_restarts="$6"
     local gpu0_model="$7" gpu1_model="$8"
     local gpu0_responsive="$9" gpu1_responsive="${10}"
+    local gpu0_cpu_only="${11}" gpu1_cpu_only="${12}"
+    local gpu0_cpu_only_count="${13}" gpu1_cpu_only_count="${14}"
 
     > "$TMP_FILE"
 
@@ -185,6 +308,10 @@ write_metrics() {
 # TYPE ollama_gpu_temperature_celsius gauge
 # HELP ollama_gpu_power_watts GPU power draw
 # TYPE ollama_gpu_power_watts gauge
+# HELP ollama_gpu_cpu_only Model is loaded entirely on CPU
+# TYPE ollama_gpu_cpu_only gauge
+# HELP ollama_gpu_cpu_only_consecutive Consecutive CPU-only detections
+# TYPE ollama_gpu_cpu_only_consecutive gauge
 HEADER
 
     local idx=0
@@ -211,6 +338,13 @@ HEADER
         echo "ollama_gpu_memory_total_mib${hw} ${mem_total}" >> "$TMP_FILE"
         echo "ollama_gpu_temperature_celsius${hw} ${temp}" >> "$TMP_FILE"
         echo "ollama_gpu_power_watts${hw} ${power}" >> "$TMP_FILE"
+        if [ "$gpu" = "gpu0" ]; then
+            echo "ollama_gpu_cpu_only${hw} ${gpu0_cpu_only}" >> "$TMP_FILE"
+            echo "ollama_gpu_cpu_only_consecutive${hw} ${gpu0_cpu_only_count}" >> "$TMP_FILE"
+        else
+            echo "ollama_gpu_cpu_only${hw} ${gpu1_cpu_only}" >> "$TMP_FILE"
+            echo "ollama_gpu_cpu_only_consecutive${hw} ${gpu1_cpu_only_count}" >> "$TMP_FILE"
+        fi
 
         idx=$((idx + 1))
     done
@@ -223,7 +357,7 @@ HEADER
 # --- Loop principal -----------------------------------------------
 check_gpu() {
     local gpu="$1" host="$2" service="$3"
-    local now up=0 responsive=0 frozen_secs=0
+    local now up=0 responsive=0 frozen_secs=0 cpu_only=0 cpu_only_count=0
     now=$(date +%s)
 
     # 1) Probe leve
@@ -233,8 +367,9 @@ check_gpu() {
         local model
         model=$(active_model "$host")
         if [ -n "$model" ]; then
+            read -r cpu_only cpu_only_count <<< "$(check_cpu_only "$gpu" "$host" "$service")"
             # 3) Probe pesado
-            if probe_generate "$host" "$model"; then
+            if (( cpu_only == 0 )) && probe_model "$host" "$model"; then
                 responsive=1
                 echo "$now" > "$STATE_DIR/${gpu}_last_ok"
             else
@@ -262,7 +397,7 @@ check_gpu() {
     frozen_secs=$((now - last_ok))
 
     # 4) Selfheal se frozen > threshold
-    if (( frozen_secs > FROZEN_THRESHOLD )) && (( up == 1 )); then
+    if (( frozen_secs > FROZEN_THRESHOLD )) && (( up == 1 )) && (( cpu_only == 0 )); then
         log "crit" "${gpu}: frozen há ${frozen_secs}s (threshold=${FROZEN_THRESHOLD}s) — iniciando selfheal"
         if do_restart "$gpu" "$service"; then
             # Re-probe após restart
@@ -270,7 +405,7 @@ check_gpu() {
                 up=1
                 local m
                 m=$(active_model "$host")
-                if [ -n "$m" ] && probe_generate "$host" "$m"; then
+                if [ -n "$m" ] && probe_model "$host" "$m"; then
                     responsive=1
                     echo "$(date +%s)" > "$STATE_DIR/${gpu}_last_ok"
                     frozen_secs=0
@@ -291,7 +426,7 @@ check_gpu() {
     local model_name
     model_name=$(active_model "$host" 2>/dev/null || echo "none")
 
-    echo "$up $responsive $frozen_secs $restarts $model_name"
+    echo "$up $responsive $frozen_secs $restarts $cpu_only $cpu_only_count $model_name"
 }
 
 main_loop() {
@@ -299,15 +434,16 @@ main_loop() {
 
     while true; do
         local gpu0_result gpu1_result
-        gpu0_result=$(check_gpu "gpu0" "$GPU0_HOST" "$GPU0_SERVICE") || gpu0_result="0 0 0 0 none"
-        gpu1_result=$(check_gpu "gpu1" "$GPU1_HOST" "$GPU1_SERVICE") || gpu1_result="0 0 0 0 none"
+        gpu0_result=$(check_gpu "gpu0" "$GPU0_HOST" "$GPU0_SERVICE") || gpu0_result="0 0 0 0 0 0 none"
+        gpu1_result=$(check_gpu "gpu1" "$GPU1_HOST" "$GPU1_SERVICE") || gpu1_result="0 0 0 0 0 0 none"
 
-        read -r g0_up g0_resp g0_frozen g0_restarts g0_model <<< "${gpu0_result:-0 0 0 0 none}" || true
-        read -r g1_up g1_resp g1_frozen g1_restarts g1_model <<< "${gpu1_result:-0 0 0 0 none}" || true
+        read -r g0_up g0_resp g0_frozen g0_restarts g0_cpu_only g0_cpu_count g0_model <<< "${gpu0_result:-0 0 0 0 0 0 none}" || true
+        read -r g1_up g1_resp g1_frozen g1_restarts g1_cpu_only g1_cpu_count g1_model <<< "${gpu1_result:-0 0 0 0 0 0 none}" || true
 
         write_metrics "$g0_up" "$g1_up" "$g0_frozen" "$g1_frozen" \
                       "$g0_restarts" "$g1_restarts" "${g0_model:-none}" "${g1_model:-none}" \
-                      "$g0_resp" "$g1_resp" || true
+                      "$g0_resp" "$g1_resp" "$g0_cpu_only" "$g1_cpu_only" \
+                      "$g0_cpu_count" "$g1_cpu_count" || true
 
         # Safeguard: gerenciar real_workload se estiver consumindo GPU1 excessivamente
         manage_real_workload || true || true
@@ -317,26 +453,29 @@ main_loop() {
 }
 
 # --- Entrypoint ---------------------------------------------------
-case "${1:-}" in
-    --test)
-        echo "=== GPU0 ($GPU0_HOST) ==="
-        check_gpu "gpu0" "$GPU0_HOST" "$GPU0_SERVICE"
-        echo "=== GPU1 ($GPU1_HOST) ==="
-        check_gpu "gpu1" "$GPU1_HOST" "$GPU1_SERVICE"
-        cat "$PROM_FILE" 2>/dev/null || echo "(sem métricas ainda)"
-        ;;
-    --once)
-        gpu0_result=$(check_gpu "gpu0" "$GPU0_HOST" "$GPU0_SERVICE")
-        gpu1_result=$(check_gpu "gpu1" "$GPU1_HOST" "$GPU1_SERVICE")
-        read -r g0_up g0_resp g0_frozen g0_restarts g0_model <<< "$gpu0_result"
-        read -r g1_up g1_resp g1_frozen g1_restarts g1_model <<< "$gpu1_result"
-        write_metrics "$g0_up" "$g1_up" "$g0_frozen" "$g1_frozen" \
-                      "$g0_restarts" "$g1_restarts" "${g0_model:-none}" "${g1_model:-none}" \
-                      "$g0_resp" "$g1_resp"
-        echo "Métricas escritas em $PROM_FILE"
-        cat "$PROM_FILE"
-        ;;
-    *)
-        main_loop
-        ;;
-esac
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+    case "${1:-}" in
+        --test)
+            echo "=== GPU0 ($GPU0_HOST) ==="
+            check_gpu "gpu0" "$GPU0_HOST" "$GPU0_SERVICE"
+            echo "=== GPU1 ($GPU1_HOST) ==="
+            check_gpu "gpu1" "$GPU1_HOST" "$GPU1_SERVICE"
+            cat "$PROM_FILE" 2>/dev/null || echo "(sem métricas ainda)"
+            ;;
+        --once)
+            gpu0_result=$(check_gpu "gpu0" "$GPU0_HOST" "$GPU0_SERVICE")
+            gpu1_result=$(check_gpu "gpu1" "$GPU1_HOST" "$GPU1_SERVICE")
+            read -r g0_up g0_resp g0_frozen g0_restarts g0_cpu_only g0_cpu_count g0_model <<< "$gpu0_result"
+            read -r g1_up g1_resp g1_frozen g1_restarts g1_cpu_only g1_cpu_count g1_model <<< "$gpu1_result"
+            write_metrics "$g0_up" "$g1_up" "$g0_frozen" "$g1_frozen" \
+                          "$g0_restarts" "$g1_restarts" "${g0_model:-none}" "${g1_model:-none}" \
+                          "$g0_resp" "$g1_resp" "$g0_cpu_only" "$g1_cpu_only" \
+                          "$g0_cpu_count" "$g1_cpu_count"
+            echo "Métricas escritas em $PROM_FILE"
+            cat "$PROM_FILE"
+            ;;
+        *)
+            main_loop
+            ;;
+    esac
+fi
