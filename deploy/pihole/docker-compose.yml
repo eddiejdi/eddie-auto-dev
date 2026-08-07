@@ -1,0 +1,40 @@
+# Pi-hole — aligned with production anti-drift contract (2026-08-07)
+# - network_mode: host
+# - Web UI :8053 only (nginx owns :80/:443)
+# - Named volumes pihole_config / pihole_dnsmasq (live data under storj docker volumes)
+#
+# Prefer: /usr/local/sbin/pihole-run.sh (systemd pihole.service)
+# Compose is the declarative twin for operators using `docker compose`.
+#
+# Secrets: set WEBPASSWORD via environment or /etc/pihole/container.env — never commit.
+
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      TZ: "America/Sao_Paulo"
+      WEBPASSWORD: "${WEBPASSWORD:-}"
+      FTLCONF_dns_listeningMode: "single"
+      FTLCONF_dns_upstreams: "1.1.1.1;1.0.0.1;8.8.8.8;8.8.4.4"
+      # Web UI port 8053 — nginx uses 80/443
+      FTLCONF_webserver_port: "8053"
+      FTLCONF_dhcp_active: "false"
+      FTLCONF_dns_interface: "eth-onboard"
+      PIHOLE_DOMAIN: "local"
+      FTL_CMD: "no-daemon"
+    volumes:
+      - pihole_config:/etc/pihole
+      - pihole_dnsmasq:/etc/dnsmasq.d
+    cap_add:
+      - NET_ADMIN
+
+volumes:
+  pihole_config:
+    external: true
+    name: pihole_config
+  pihole_dnsmasq:
+    external: true
+    name: pihole_dnsmasq

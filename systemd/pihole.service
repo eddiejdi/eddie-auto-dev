@@ -1,0 +1,19 @@
+[Unit]
+Description=Pi-hole Container (anti-drift run script)
+After=network-online.target docker.service docker.socket
+Requires=docker.service docker.socket
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+# Wait for docker daemon
+ExecStartPre=/bin/bash -c 'for i in $(seq 1 30); do docker info >/dev/null 2>&1 && exit 0; sleep 2; done; exit 1'
+ExecStart=/usr/local/sbin/pihole-run.sh
+ExecStop=/usr/bin/docker stop pihole
+TimeoutStartSec=120
+Restart=on-failure
+RestartSec=15
+
+[Install]
+WantedBy=multi-user.target
