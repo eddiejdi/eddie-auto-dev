@@ -296,12 +296,29 @@ sync_prometheus_config() {
   fi
 }
 
+# GNU install falha com "same file" quando src e dst são o mesmo path
+# (ex.: REPO_ROOT=/home/homelab/myClaude e MYCLAUDE_SCRIPTS_DIR=$REPO_ROOT/scripts).
+install_file_if_different() {
+  local src="$1"
+  local dst="$2"
+  local src_real dst_real
+  require_file "${src}"
+  # -m: dest pode ainda não existir; só compara path canônico
+  src_real="$(realpath -m "${src}")"
+  dst_real="$(realpath -m "${dst}")"
+  if [[ "${src_real}" == "${dst_real}" ]]; then
+    echo "  ℹ️  trading_daily_report.py já está em ${dst_real} (src==dst; skip install)"
+    return 0
+  fi
+  sudo install -d -m 0755 "$(dirname "${dst}")"
+  sudo install -m 0644 "${src}" "${dst}"
+  echo "  ✅ $(basename "${src}") → ${dst}"
+}
+
 sync_myClaude_trading_scripts() {
   if [[ -d "${MYCLAUDE_SCRIPTS_DIR}" ]]; then
-    sudo install -d -m 0755 "${MYCLAUDE_SCRIPTS_DIR}"
-    sudo install -m 0644 "${REPO_ROOT}/scripts/trading_daily_report.py" \
+    install_file_if_different "${REPO_ROOT}/scripts/trading_daily_report.py" \
       "${MYCLAUDE_SCRIPTS_DIR}/trading_daily_report.py"
-    echo "  ✅ trading_daily_report.py → ${MYCLAUDE_SCRIPTS_DIR}"
   fi
 }
 
