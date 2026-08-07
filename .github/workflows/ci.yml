@@ -145,7 +145,9 @@ jobs:
 
             echo "📥 Atualizando código..."
             git fetch origin main
-            git reset --hard origin/main
+            # -B main: garante nome da branch local = main (reset --hard sozinho
+            # deixa HEAD no SHA certo mas pode manter branch feature antiga).
+            git checkout -B main origin/main
 
             echo "🔎 Resolvendo DATABASE_URL via Secrets Agent (como o runtime)..."
             SECRETS_AGENT_API_KEY="$(sudo grep '^SECRETS_AGENT_API_KEY=' /etc/crypto-agent/secrets-api.env 2>/dev/null | cut -d= -f2-)"
