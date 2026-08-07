@@ -1,6 +1,6 @@
 # CMDB Baseline
 
-- Generated at: `2026-08-07T11:21:20.417666+00:00`
+- Generated at: `2026-08-07T15:55:29.577348+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
 - Repo services discovered: `211`
@@ -13,9 +13,8 @@
 - `identity`: 4
 - `monitoring`: 19
 - `network`: 23
-- `operations`: 115
 - `storage`: 39
-- `trading`: 11
+- `trading`: 126
 
 ## Trading profile instances (`12`)
 
