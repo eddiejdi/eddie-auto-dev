@@ -166,7 +166,8 @@ def test_should_heal_zero_entities_above_soft_bridge_not_newer() -> None:
         (FRESH_TOKEN, FRESH_TOKEN, 75, 0, "ainda válido"),
         (EXPIRED_TOKEN, None, 0, 0, "ausente/inválido"),
         (EXPIRED_TOKEN, EXPIRED_TOKEN, 0, 0, "não é mais novo"),
-        (EXPIRED_TOKEN, FRESH_TOKEN, 0, 24, "rate limit"),
+        # Soft-threshold / proativo ainda respeita rate limit (HA ainda válido).
+        (NEAR_EXPIRY_TOKEN, NEWER_RUNTIME, 75, 24, "rate limit"),
     ],
 )
 def test_should_heal_guards(ha_token, runtime, active, heals, expected_reason) -> None:
@@ -183,8 +184,55 @@ def test_should_heal_guards(ha_token, runtime, active, heals, expected_reason) -
     assert expected_reason in reason
 
 
+def test_should_heal_expired_bypasses_rate_limit() -> None:
+    """Incidente 2026-08-08: budget cheio não pode bloquear inject com HA morto + bridge fresco."""
+    heal, reason = selfheal.should_heal(
+        EXPIRED_TOKEN,
+        FRESH_TOKEN,
+        entities_active=82,
+        heals_last_24h=24,
+        now_ms=NOW_MS,
+        soft_threshold_min=45,
+        entities_total=82,
+    )
+    assert heal, reason
+    assert "expirado" in reason
+    assert "rate-limit bypass" in reason
+
+
+def test_should_heal_soft_still_rate_limited_when_budget_full() -> None:
+    """Proativo (soft) continua barrado com budget cheio — só expired faz bypass."""
+    heal, reason = selfheal.should_heal(
+        NEAR_EXPIRY_TOKEN,
+        NEWER_RUNTIME,
+        entities_active=75,
+        heals_last_24h=24,
+        now_ms=NOW_MS,
+        soft_threshold_min=45,
+        entities_total=75,
+    )
+    assert not heal
+    assert "rate limit" in reason
+
+
+def test_reload_counts_toward_heal_budget_only_on_recovery() -> None:
+    """Reload zumbi (já havia ativas) não conta; 0→N conta."""
+    assert not selfheal.reload_counts_toward_heal_budget(82, 82)
+    assert not selfheal.reload_counts_toward_heal_budget(10, 82)
+    assert selfheal.reload_counts_toward_heal_budget(0, 82)
+    assert selfheal.reload_counts_toward_heal_budget(0, 1)
+    assert not selfheal.reload_counts_toward_heal_budget(0, 0)
+
+
 def test_should_reload_entry_setup_error() -> None:
     do, reason = selfheal.should_reload_entry("setup_error", 0, 75, 50.0)
+    assert do
+    assert "setup_error" in reason
+
+
+def test_should_reload_entry_setup_error_with_active_entities() -> None:
+    """setup_error + entidades ativas: ainda pode reloadar (mas não queima budget no main)."""
+    do, reason = selfheal.should_reload_entry("setup_error", 82, 82, 50.0)
     assert do
     assert "setup_error" in reason
 
