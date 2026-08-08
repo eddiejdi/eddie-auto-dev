@@ -3005,7 +3005,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Saldo BTC disponível na KuCoin (conta main). Recompensas de mineração KuMining são creditadas nesta conta.",
+      "description": "Saldo BTC total nas sub-contas de trading (BTCAgressive + BTCConservative). Recompensas de mineração KuMining são creditadas nestas contas.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3067,7 +3067,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (account_type)\n    account_type, balance, available, synced_at\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type = 'main'\n  ORDER BY account_type, synced_at DESC\n)\nSELECT balance AS value FROM latest WHERE account_type = 'main'",
+          "rawSql": "WITH latest AS (\n  SELECT account_type, balance, available, synced_at\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  ORDER BY synced_at DESC\n  LIMIT 2\n)\nSELECT\n  NOW() AS time,\n  SUM(balance) AS \"Saldo BTC\"\nFROM latest",
           "refId": "A"
         }
       ],
@@ -3141,7 +3141,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH period_ends AS (\n  SELECT\n    (ARRAY_AGG(balance ORDER BY synced_at DESC))[1] AS end_bal,\n    (ARRAY_AGG(balance ORDER BY synced_at ASC))[1] AS start_bal\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type = 'main'\n    AND synced_at BETWEEN $__timeFrom() AND $__timeTo()\n)\nSELECT COALESCE(end_bal - start_bal, 0)::numeric(12,8) AS value FROM period_ends",
+          "rawSql": "WITH btc_snapshots AS (\n  SELECT synced_at, SUM(balance) AS total_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  GROUP BY synced_at\n),\nperiod_ends AS (\n  SELECT\n    (ARRAY_AGG(total_balance ORDER BY synced_at DESC))[1] AS end_bal,\n    (ARRAY_AGG(total_balance ORDER BY synced_at ASC))[1] AS start_bal\n  FROM btc_snapshots\n  WHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n)\nSELECT\n  NOW() AS time,\n  end_bal - start_bal AS \"Ganhos BTC\"\nFROM period_ends",
           "refId": "A"
         }
       ],
@@ -3215,7 +3215,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH btc_delta AS (\n  SELECT\n    (ARRAY_AGG(balance ORDER BY synced_at DESC))[1]\n    - (ARRAY_AGG(balance ORDER BY synced_at ASC))[1] AS btc_earned\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type = 'main'\n    AND synced_at BETWEEN $__timeFrom() AND $__timeTo()\n),\nlatest_price AS (\n  SELECT price_usdt\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type = 'main'\n  ORDER BY synced_at DESC LIMIT 1\n)\nSELECT ROUND(COALESCE(b.btc_earned * p.price_usdt, 0)::numeric, 2) AS value\nFROM btc_delta b CROSS JOIN latest_price p",
+          "rawSql": "WITH btc_snapshots AS (\n  SELECT synced_at, SUM(balance) AS total_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  GROUP BY synced_at\n),\nbtc_delta AS (\n  SELECT\n    (ARRAY_AGG(total_balance ORDER BY synced_at DESC))[1]\n    - (ARRAY_AGG(total_balance ORDER BY synced_at ASC))[1] AS btc_earned\n  FROM btc_snapshots\n  WHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n),\nbtc_price AS (\n  SELECT price_usdt\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n    AND price_usdt IS NOT NULL\n  ORDER BY synced_at DESC\n  LIMIT 1\n)\nSELECT\n  NOW() AS time,\n  btc_earned * btc_price.price_usdt AS \"Ganhos USDT\"\nFROM btc_delta, btc_price",
           "refId": "A"
         }
       ],
@@ -3362,7 +3362,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  synced_at AS \"time\",\n  balance AS \"Saldo BTC\"\nFROM btc.exchange_balance_snapshots\nWHERE currency = 'BTC'\n  AND account_type = 'main'\n  AND synced_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY 1",
+          "rawSql": "SELECT\n  synced_at AS \"time\",\n  SUM(balance) AS \"Saldo BTC\"\nFROM btc.exchange_balance_snapshots\nWHERE currency = 'BTC'\n  AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  AND synced_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY synced_at\nORDER BY synced_at",
           "refId": "A",
           "timeColumns": [
             "time"
@@ -3465,7 +3465,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH ordered AS (\n  SELECT\n    synced_at,\n    balance,\n    LAG(balance) OVER (ORDER BY synced_at) AS prev_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type = 'main'\n    AND synced_at BETWEEN $__timeFrom() AND $__timeTo()\n)\nSELECT\n  synced_at AS \"time\",\n  COALESCE(balance - prev_balance, 0)::numeric(12,8) AS \"Ganho BTC\"\nFROM ordered\nWHERE prev_balance IS NOT NULL\nORDER BY 1",
+          "rawSql": "WITH ordered AS (\n  SELECT\n    synced_at,\n    SUM(balance) AS total_balance,\n    LAG(SUM(balance)) OVER (ORDER BY synced_at) AS prev_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  GROUP BY synced_at\n)\nSELECT\n  synced_at AS \"time\",\n  total_balance - COALESCE(prev_balance, total_balance) AS \"Ganhos BTC\"\nFROM ordered\nWHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND total_balance - COALESCE(prev_balance, total_balance) > 0\nORDER BY synced_at",
           "refId": "A",
           "timeColumns": [
             "time"
@@ -3506,7 +3506,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Saldo USDT disponível para transferir da conta main para a conta de trading.",
+      "description": "USDT disponível na conta main para transferência.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3568,7 +3568,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (account_type)\n    account_type, balance, available\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'USDT'\n    AND account_type = 'main'\n  ORDER BY account_type, synced_at DESC\n)\nSELECT available AS value FROM latest WHERE account_type = 'main'",
+          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (account_type)\n    account_type, available\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'USDT'\n    AND account_type = 'main'\n  ORDER BY account_type, synced_at DESC\n)\nSELECT\n  NOW() AS time,\n  available AS \"USDT Disponível\"\nFROM latest",
           "refId": "A"
         }
       ],
