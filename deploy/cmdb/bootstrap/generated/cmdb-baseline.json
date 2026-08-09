@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-08-09T14:29:37.225924+00:00",
+  "generated_at": "2026-08-09T16:30:14.503379+00:00",
   "repo_root": "/home/edenilson/.traycer/worktrees/eddiejdi__eddie-auto-dev/traycer-daring-raven",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 213,
+    "repo_services": 215,
     "trading_instances": 12,
     "critical_services": 87,
     "domains": {
       "identity": 4,
       "monitoring": 19,
       "network": 25,
-      "operations": 115,
+      "operations": 117,
       "storage": 39,
       "trading": 11
     }
@@ -1402,6 +1402,22 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/specialized_agents-dashboard.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "telegram-alarm-manager.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/telegram-alarm-manager.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "telegram-alarm-manager.timer",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/telegram-alarm-manager.timer",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
