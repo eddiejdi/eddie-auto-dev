@@ -2,15 +2,19 @@
 # Smart Training Script - Treina apenas quando o sistema está ocioso
 # Verifica carga do sistema, memória e conexões antes de treinar
 
+set -euo pipefail
+
 LOG_FILE="/var/log/python-training.log"
 LOCK_FILE="/tmp/training.lock"
 LAST_TRAIN_FILE="/tmp/last_training_time"
 MIN_INTERVAL_HOURS=4
 
+cleanup() { rm -f "$LOCK_FILE"; }
+trap cleanup EXIT INT TERM
+
 log() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE"
 }
-
 # Verificar se já existe um treinamento em andamento
 if [ -f "$LOCK_FILE" ]; then
     log "Treinamento já em andamento, saindo..."
