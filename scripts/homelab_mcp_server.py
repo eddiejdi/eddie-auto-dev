@@ -509,6 +509,11 @@ _VALID_RISK_LEVELS   = {"none", "low", "medium", "high", "critical"}
 _VALID_ACTION_TYPES  = {"restart", "deploy", "modify", "delete", "create", "query", "config", "other"}
 _VALID_STATUSES      = {"pending", "approved", "rejected", "in_progress", "done", "failed", "expired"}
 
+# Ações que SEMPRE exigem aprovação humana, mesmo com risk_level low/none.
+# Deploy e restart podem causar downtime ou alterar ambiente de produção.
+_ALWAYS_GATE_ACTION_TYPES: set[str] = {"deploy", "restart"}
+_FORCE_MIN_RISK_FOR_GATED = "medium"
+
 
 def _db_write(sql: str, params: tuple) -> dict:
     """Executa SQL de escrita no PostgreSQL do homelab (INSERT/UPDATE)."""
@@ -612,6 +617,17 @@ def intent_declare(
     except json.JSONDecodeError:
         return json.dumps({"ok": False, "error": "context não é JSON válido."}, ensure_ascii=False)
 
+    # ── Guard: ações de deploy/restart SEMPRE exigem aprovação humana ────
+    # Mesmo que o agente declare risk_level='low' ou 'none', deploy e restart
+    # são forçados para risk_level mínimo 'medium' para garantir que o humano
+    # seja notificado via Telegram antes de qualquer alteração em produção.
+    _risk_order = {"none": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
+    if action_type in _ALWAYS_GATE_ACTION_TYPES:
+        min_risk_idx = _risk_order[_FORCE_MIN_RISK_FOR_GATED]
+        current_risk_idx = _risk_order.get(risk_level, 0)
+        if current_risk_idx < min_risk_idx:
+            risk_level = _FORCE_MIN_RISK_FOR_GATED
+
     intent_id = f"intent-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
     initial_status = "approved" if risk_level in _AUTO_APPROVE_LEVELS else "pending"
 
@@ -637,11 +653,14 @@ def intent_declare(
         return json.dumps(result, ensure_ascii=False)
 
     row = result["rows"][0] if result["rows"] else {}
+    risk_forced = action_type in _ALWAYS_GATE_ACTION_TYPES and initial_status == "pending"
     return json.dumps({
         "ok": True,
         "intent_id": intent_id,
         "status": initial_status,
         "auto_approved": initial_status == "approved",
+        "risk_level": risk_level,
+        "risk_forced": risk_forced,
         "message": (
             "Auto-aprovado — pode prosseguir." if initial_status == "approved"
             else "Aguardando aprovação humana. Chame intent_check_status() antes de executar."
@@ -729,6 +748,41 @@ def intent_complete(
     """
     final_status = "done" if success else "failed"
     now = datetime.now(timezone.utc)
+
+    # ── Guard: não permitir complete sem aprovação prévia ────────────────
+    # Antes desta correção, qualquer agente podia chamar intent_complete()
+    # num intent 'pending' e marcá-lo como 'done' sem aprovação humana.
+    # Agora só permitimos complete se o status atual for 'approved'.
+    current = _db_read_one(
+        "SELECT status, risk_level FROM agent_actions WHERE intent_id = %s",
+        (intent_id,),
+    )
+    if not current["ok"]:
+        return json.dumps(current, ensure_ascii=False)
+    if current["row"] is None:
+        return json.dumps({"ok": False, "error": f"intent_id não encontrado: {intent_id}"}, ensure_ascii=False)
+
+    current_status = current["row"]["status"]
+    risk = current["row"].get("risk_level", "medium")
+
+    if current_status == "pending" and risk not in _AUTO_APPROVE_LEVELS:
+        return json.dumps({
+            "ok": False,
+            "error": (
+                f"Intent '{intent_id}' está 'pending' e requer aprovação humana "
+                f"(risk={risk}). Aguarde intent_check_status() retornar 'approved' "
+                "antes de chamar intent_complete()."
+            ),
+            "status": current_status,
+            "risk_level": risk,
+        }, ensure_ascii=False, indent=2)
+
+    if current_status in ("rejected", "expired"):
+        return json.dumps({
+            "ok": False,
+            "error": f"Intent '{intent_id}' já foi {current_status} — não pode ser completado.",
+            "status": current_status,
+        }, ensure_ascii=False, indent=2)
 
     result = _db_write(
         """
