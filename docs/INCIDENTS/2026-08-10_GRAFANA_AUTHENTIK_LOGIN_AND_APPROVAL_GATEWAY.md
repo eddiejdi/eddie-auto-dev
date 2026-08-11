@@ -207,6 +207,48 @@ Deve migrar para `secureJsonData` + env no deploy.
 
 ---
 
+## 7. Cloudflare 1033 — túnel `cloudflared-rpa4all` sem conexão com a edge
+
+**Sintoma:** vários hosts (`auth`, `grafana`, `openwebui`, `wiki`) respondiam
+`HTTP 530` com `error code: 1033`; `nextcloud` respondia só em janelas em que alguma
+conexão do túnel estava viva. As **origens estavam saudáveis** (localhost 200/302).
+
+**Causa:** o túnel tinha **0 conexões com a edge** do Cloudflare — `/ready` em
+`127.0.0.1:20241` retornava `503 {"readyConnections":0}` e o processo `cloudflared`
+(pid estável, 0 restarts) estava **wedged** (0 sockets, 0% CPU). O túnel vinha
+**flapando** (`165` registros vs `150` perdas; 4 conexões caíam juntas a cada ~30min).
+Sem conexão pronta, a edge devolve 530/1033.
+
+**Por que não se recuperou:** o guardian
+`cloudflared-tunnel-guardian.service/.timer` **não estava disparando** — o timer
+(`OnBootSec/OnUnitActiveSec`) ficava `elapsed` (`Trigger: n/a`, sem atividade desde
+12:22), então ninguém reiniciava o cloudflared wedged.
+
+### Correções aplicadas
+
+1. **Restart imediato** do túnel:
+   `sudo systemctl restart cloudflared-rpa4all.service` → `/ready` 200 com 4 conexões
+   e hosts públicos sem 1033.
+2. **Timer do guardian corrigido** para `OnCalendar=*:*:0/30` (determinístico; o
+   `OnBootSec/OnUnitActiveSec` ficava desarmado). Agora roda a cada 30s e detecta
+   `readyConnections=0` → reinicia o cloudflared (rate-limite: máx 2/h, cooldown 600s).
+3. **`CF_NETS` ampliado** em `/usr/local/sbin/cloudflared-vpn-routes.sh` para cobrir a
+   edge do túnel (`198.41.0.0/16`, `162.158.0.0/15`, `162.159.0.0/16`) — evita que um
+   IP de edge fora do bypass caia na tabela ProtonVPN (205) e derrube a conexão.
+
+### Observações / próximos passos
+
+- O flap periódico estava correlacionado com os múltiplos timers de rota
+  (protonvpn-routing-watchdog ~1min, best-server 30min, domain-vpn-refresh 4h,
+  cloudflared-vpn-routes 90s). O guardian (30s) agora reasserta as rotas de forma
+  idempotente, cobrindo essas janelas.
+- **Opcional:** trocar `protocol: http2` → `quic` em `/etc/cloudflared/config.yml`
+  para resiliência a resets de conexão TCP de longa duração (requer restart + validação).
+- O ICMP proxy está desabilitado (GID do `_rpa4all` fora do `ping_group_range`) — não
+  afeta o túnel, apenas `cloudflared tunnel ping`.
+
+---
+
 ## Arquivos alterados (commit)
 
 | Arquivo | Mudança |
@@ -238,5 +280,7 @@ Deploy (homelab):
 - [x] Atualizar scripts que hardcodam `ak-homelab-authentik-api-2026` (helpers de resolução).
 - [x] Investigar `authentik-ldap-outpost` unhealthy → container recriado com token correto.
 - [x] Atualizar entrada no vault `authentik/api_token` (local_vault re-gravado).
+- [x] Cloudflare 1033: túnel restaurado, guardian timer determinístico (30s) e `CF_NETS` ampliado.
 - [ ] Migrar datasource/dashboard Grafana do Authentik para `secureJsonData` + env
       (hoje embutem o token antigo; não embutir o novo por política).
+- [ ] (Opcional) `protocol: quic` no cloudflared p/ resiliência a resets TCP.
