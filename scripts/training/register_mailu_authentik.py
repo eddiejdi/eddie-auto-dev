@@ -12,6 +12,25 @@ import json
 import time
 from typing import Optional, Dict, Any
 
+
+def _ak_token() -> str:
+    """Resolve o token da API do Authentik sem hardcodar segredo."""
+    t = os.environ.get("AUTHENTIK_TOKEN", "").strip()
+    if t:
+        return t
+    try:
+        import re
+        match = re.search(
+            r'AUTHENTIK_TOKEN="?([^"\n]+)"?',
+            open("/etc/systemd/system/secrets_agent.service.d/override.conf").read(),
+        )
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return ""
+
+
 # Colors for output
 class Colors:
     GREEN = '\033[92m'
@@ -97,9 +116,9 @@ def get_token() -> Optional[str]:
             print_success(f"Token lido de {token_file}")
             return token
     
-    # Try known token
-    token = "ak-homelab-authentik-api-2026"  # Known token from previous setup
-    print_info(f"Usando token padrão conhecido")
+    # Token resolvido via env/override.conf/secrets_agent (sem hardcodar)
+    token = _ak_token()
+    print_info(f"Usando token resolvido (env/override/secrets_agent)")
     return token
 
 def get_groups(token: str) -> Dict[str, str]:

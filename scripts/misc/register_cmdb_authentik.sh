@@ -5,7 +5,8 @@ set -euo pipefail
 
 AUTH_URL="https://auth.rpa4all.com"
 API_V3="${AUTHENTIK_API_BASE:-http://127.0.0.1:9000/api/v3}"
-TOKEN="${AUTHENTIK_TOKEN:-ak-homelab-authentik-api-2026}"
+# Token resolvido via env/override.conf/secrets_agent (sem hardcodar)
+TOKEN="${AUTHENTIK_TOKEN:-$(sed -n 's/.*AUTHENTIK_TOKEN="*\([^"\n]*\)"*.*/\1/p' /etc/systemd/system/secrets_agent.service.d/override.conf 2>/dev/null | head -1)}"
 
 APP_NAME="CMDB Portal"
 APP_SLUG="cmdb-portal"

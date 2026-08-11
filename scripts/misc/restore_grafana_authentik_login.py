@@ -21,7 +21,27 @@ SSH_KEY = os.path.expanduser("~/.ssh/id_rsa")
 # Credenciais Authentik (do AUTHENTIK_SSO_WIREGUARD_SETUP.md)
 AUTHENTIK_URL = "https://auth.rpa4all.com"
 AUTHENTIK_CLIENT_ID = "authentik-grafana"
-AUTHENTIK_API_TOKEN = "ak-homelab-authentik-api-2026"
+
+
+def _ak_token() -> str:
+    """Resolve o token da API do Authentik sem hardcodar segredo."""
+    t = os.environ.get("AUTHENTIK_TOKEN", "").strip()
+    if t:
+        return t
+    try:
+        import re
+        match = re.search(
+            r'AUTHENTIK_TOKEN="?([^"\n]+)"?',
+            open("/etc/systemd/system/secrets_agent.service.d/override.conf").read(),
+        )
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return ""
+
+
+AUTHENTIK_API_TOKEN = _ak_token()
 
 # Vars Grafana para OAuth2 com Authentik
 GRAFANA_OAUTH_VARS = {

@@ -18,7 +18,8 @@ BOLD='\033[1m'
 # Configuration
 AUTH_URL="https://auth.rpa4all.com"
 API_V3="${AUTH_URL}/api/v3"
-TOKEN="${AUTHENTIK_TOKEN:-ak-homelab-authentik-api-2026}"
+# Token resolvido via env/override.conf/secrets_agent (sem hardcodar)
+TOKEN="${AUTHENTIK_TOKEN:-$(sed -n 's/.*AUTHENTIK_TOKEN="*\([^"\n]*\)"*.*/\1/p' /etc/systemd/system/secrets_agent.service.d/override.conf 2>/dev/null | head -1)}"
 USER_AGENT="Mozilla/5.0 (Linux; X11) AppleWebKit/537.36"
 
 MAILU_DOMAIN="${MAILU_DOMAIN:-mail.rpa4all.com}"

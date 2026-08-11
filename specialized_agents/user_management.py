@@ -31,9 +31,28 @@ logger = logging.getLogger(__name__)
 
 # ── Configuração ───────────────────────────────────────────────────────────
 AUTHENTIK_URL = os.getenv("AUTHENTIK_URL", "http://localhost:9000")
-AUTHENTIK_TOKEN = os.getenv(
-    "AUTHENTIK_TOKEN", "ak-homelab-authentik-api-2026"
-)
+
+
+def _ak_token() -> str:
+    """Resolve o token da API do Authentik sem hardcodar segredo:
+    env AUTHENTIK_TOKEN → override.conf do secrets_agent (homelab)."""
+    t = os.environ.get("AUTHENTIK_TOKEN", "").strip()
+    if t:
+        return t
+    try:
+        import re
+        match = re.search(
+            r'AUTHENTIK_TOKEN="?([^"\n]+)"?',
+            open("/etc/systemd/system/secrets_agent.service.d/override.conf").read(),
+        )
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return ""
+
+
+AUTHENTIK_TOKEN = _ak_token()
 DATABASE_URL = os.getenv(
     "DATABASE_URL", ""
 )

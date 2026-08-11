@@ -100,8 +100,25 @@ class AuthentikManager:
 
 def main():
     import os
+    import re
     url = os.environ.get("AUTHENTIK_URL", "https://auth.rpa4all.com")
-    token = os.environ.get("AUTHENTIK_TOKEN", "ak-homelab-authentik-api-2026")
+
+    def _ak_token() -> str:
+        t = os.environ.get("AUTHENTIK_TOKEN", "").strip()
+        if t:
+            return t
+        try:
+            match = re.search(
+                r'AUTHENTIK_TOKEN="?([^"\n]+)"?',
+                open("/etc/systemd/system/secrets_agent.service.d/override.conf").read(),
+            )
+            if match:
+                return match.group(1)
+        except Exception:
+            pass
+        return ""
+
+    token = _ak_token()
     
     manager = AuthentikManager(url, token)
     

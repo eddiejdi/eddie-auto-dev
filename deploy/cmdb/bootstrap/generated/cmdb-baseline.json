@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-08-03T11:53:48.315667+00:00",
+  "generated_at": "2026-08-11T00:39:42.236890+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 210,
+    "repo_services": 211,
     "trading_instances": 12,
     "critical_services": 85,
     "domains": {
       "identity": 4,
       "monitoring": 19,
       "network": 23,
-      "operations": 114,
+      "operations": 115,
       "storage": 39,
       "trading": 11
     }
@@ -1002,6 +1002,14 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/github-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "ha-tuya-boot-sync.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/ha-tuya-boot-sync.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },

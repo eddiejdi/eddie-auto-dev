@@ -3710,6 +3710,14 @@ class TelegramBot:
                                 print(f"[Erro] Processando mensagem: {msg_error}")
                                 import traceback
                                 traceback.print_exc()
+                        elif "callback_query" in update:
+                            try:
+                                import specialized_agents.approval_gateway as _agw
+                                _agw.handle_telegram_callback_query(update["callback_query"])
+                            except Exception as cb_error:
+                                print(f"[Erro] Processando callback_query: {cb_error}")
+                                import traceback
+                                traceback.print_exc()
                     # Pausa breve entre ciclos sem updates
                     if not updates:
                         await asyncio.sleep(0.3)

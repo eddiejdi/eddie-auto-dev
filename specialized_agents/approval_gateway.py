@@ -355,6 +355,27 @@ def _resolve(prefix: str) -> str | None:
 # Handlers
 # ══════════════════════════════════════════════════════════════════════════
 
+_boot_done = False
+
+
+def handle_telegram_callback_query(cb: dict[str, Any]) -> bool:
+    """Entry-point chamado pelo eddie-telegram-bot (que faz long-poll do mesmo
+    token Telegram) para rotear os callbacks/reply-marks dos botões de
+    aprovação. Sem isso, os botões ✅/❌ do Telegram nunca resolvem o intent
+    (o gateway roda com polling desativado via APPROVAL_GATEWAY_TG_POLL=0).
+    Retorna True se o callback foi processado."""
+    global _boot_done
+    if not _boot_done and not _boot():
+        return False
+    _boot_done = True
+    try:
+        _on_callback(cb)
+        return True
+    except Exception as exc:
+        log.error("handle_telegram_callback_query: %s", exc)
+        return False
+
+
 def _on_callback(cb: dict[str, Any]) -> None:
     cb_id  = cb.get("id", "")
     data   = cb.get("data", "")

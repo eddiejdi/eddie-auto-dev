@@ -2,7 +2,8 @@
 # Script para gerenciar usuários via CLI
 
 AUTHENTIK_URL="${AUTHENTIK_URL:-https://auth.rpa4all.com}"
-AUTHENTIK_TOKEN="${AUTHENTIK_TOKEN:-ak-homelab-authentik-api-2026}"
+# Token resolvido via env/override.conf do secrets_agent/secrets_agent API (sem hardcodar)
+: "${AUTHENTIK_TOKEN:-$(sed -n 's/.*AUTHENTIK_TOKEN="*\([^"\n]*\)"*.*/\1/p' /etc/systemd/system/secrets_agent.service.d/override.conf 2>/dev/null | head -1)}"
 
 # Cores
 GREEN='\033[0;32m'

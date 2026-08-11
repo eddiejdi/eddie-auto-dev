@@ -9,7 +9,27 @@ import urllib.request
 from typing import Any
 
 AUTHENTIK_URL = os.environ.get("AUTHENTIK_URL", "https://auth.rpa4all.com").rstrip("/")
-AUTHENTIK_TOKEN = os.environ.get("AUTHENTIK_TOKEN", "ak-homelab-authentik-api-2026")
+
+
+def _ak_token() -> str:
+    """Resolve o token da API do Authentik sem hardcodar segredo."""
+    t = os.environ.get("AUTHENTIK_TOKEN", "").strip()
+    if t:
+        return t
+    try:
+        import re
+        match = re.search(
+            r'AUTHENTIK_TOKEN="?([^"\n]+)"?',
+            open("/etc/systemd/system/secrets_agent.service.d/override.conf").read(),
+        )
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return ""
+
+
+AUTHENTIK_TOKEN = _ak_token()
 NEXTCLOUD_URL = os.environ.get("NEXTCLOUD_URL", "https://nextcloud.rpa4all.com").rstrip("/")
 CLIENT_ID = os.environ.get("AUTHENTIK_NEXTCLOUD_CLIENT_ID", "authentik-nextcloud")
 CLIENT_SECRET = os.environ.get("AUTHENTIK_NEXTCLOUD_CLIENT_SECRET", "nextcloud-sso-secret-2026")

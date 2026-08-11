@@ -3,12 +3,33 @@
 from __future__ import annotations
 
 import json
+import os
+import re
 import sys
 import urllib.request
 import urllib.error
 
 BASE = "http://localhost:9000"
-TOKEN = "ak-homelab-authentik-api-2026"
+
+
+def _ak_token() -> str:
+    """Resolve o token da API do Authentik sem hardcodar segredo."""
+    t = os.environ.get("AUTHENTIK_TOKEN", "").strip()
+    if t:
+        return t
+    try:
+        match = re.search(
+            r'AUTHENTIK_TOKEN="?([^"\n]+)"?',
+            open("/etc/systemd/system/secrets_agent.service.d/override.conf").read(),
+        )
+        if match:
+            return match.group(1)
+    except Exception:
+        pass
+    return ""
+
+
+TOKEN = _ak_token()
 HEADERS = {
     "Authorization": f"Bearer {TOKEN}",
     "Content-Type": "application/json",
