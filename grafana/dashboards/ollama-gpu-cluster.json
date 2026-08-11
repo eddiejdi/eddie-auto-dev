@@ -38,7 +38,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "sum(ollama_loaded_models{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=~\"gpu0-rtx3060|gpu1-gtx1050|nas-rtx2060\"})",
+          "expr": "sum(ollama_loaded_models{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=~\"gpu0-rtx3060|gpu1-gtx1050|nas-rtx2060\"})",
           "instant": true,
           "refId": "A"
         }
@@ -83,7 +83,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "sum(ollama_model_ram_mb{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\"}) / 1024",
+          "expr": "sum(ollama_model_ram_mb{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\"}) / 1024",
           "instant": true,
           "refId": "A",
           "legendFormat": "{{endpoint}} · {{model}}"
@@ -129,7 +129,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"gpu0-rtx3060\"}",
+          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"gpu0-rtx3060\"}",
           "instant": true,
           "refId": "A"
         }
@@ -174,7 +174,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"gpu1-gtx1050\"}",
+          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"gpu1-gtx1050\"}",
           "instant": true,
           "refId": "A"
         }
@@ -219,7 +219,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"nas-rtx2060\"}",
+          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"nas-rtx2060\"}",
           "instant": true,
           "refId": "A"
         }
@@ -264,7 +264,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "sum(gpu_coord_healthy{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\"})",
+          "expr": "sum(gpu_coord_healthy{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\"})",
           "instant": true,
           "refId": "A"
         }
@@ -303,7 +303,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "ollama_model_ram_mb{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\"}",
+          "expr": "ollama_model_ram_mb{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\"}",
           "instant": true,
           "legendFormat": "{{endpoint}} · {{model}}",
           "refId": "A"
@@ -345,7 +345,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "ollama_loaded_models{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"gpu0-rtx3060\"}",
+          "expr": "ollama_loaded_models{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"gpu0-rtx3060\"}",
           "legendFormat": "GPU0 RTX 3060",
           "refId": "A"
         },
@@ -354,7 +354,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "ollama_loaded_models{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"gpu1-gtx1050\"}",
+          "expr": "ollama_loaded_models{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"gpu1-gtx1050\"}",
           "legendFormat": "GPU1 GTX 1050",
           "refId": "B"
         },
@@ -363,7 +363,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "ollama_loaded_models{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"nas-rtx2060\"}",
+          "expr": "ollama_loaded_models{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"nas-rtx2060\"}",
           "legendFormat": "NAS RTX 2060",
           "refId": "C"
         }
@@ -404,7 +404,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "gpu_coord_active_requests{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"gpu0-rtx3060\"}",
+          "expr": "gpu_coord_active_requests{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"gpu0-rtx3060\"}",
           "legendFormat": "GPU0 RTX 3060",
           "refId": "A"
         },
@@ -413,7 +413,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "gpu_coord_active_requests{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"gpu1-gtx1050\"}",
+          "expr": "gpu_coord_active_requests{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"gpu1-gtx1050\"}",
           "legendFormat": "GPU1 GTX 1050",
           "refId": "B"
         },
@@ -422,7 +422,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "gpu_coord_active_requests{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"nas-rtx2060\"}",
+          "expr": "gpu_coord_active_requests{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"nas-rtx2060\"}",
           "legendFormat": "NAS RTX 2060",
           "refId": "C"
         }
@@ -463,7 +463,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"gpu0-rtx3060\"}",
+          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"gpu0-rtx3060\"}",
           "legendFormat": "GPU0 RTX3060 (12GB)",
           "refId": "A"
         },
@@ -472,7 +472,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"gpu1-gtx1050\"}",
+          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"gpu1-gtx1050\"}",
           "legendFormat": "GPU1 GTX1050 (2GB)",
           "refId": "B"
         },
@@ -481,7 +481,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\",endpoint=\"nas-rtx2060\"}",
+          "expr": "gpu_coord_vram_free_mb{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\",endpoint=\"nas-rtx2060\"}",
           "legendFormat": "NAS RTX2060 (8GB)",
           "refId": "C"
         }
@@ -688,7 +688,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "sum(rate(gpu_coord_total_requests_served{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\"}[5m])) by (endpoint)",
+          "expr": "sum(rate(gpu_coord_total_requests_served{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\"}[5m])) by (endpoint)",
           "legendFormat": "{{endpoint}}",
           "refId": "A"
         }
@@ -729,7 +729,7 @@
             "type": "prometheus",
             "uid": "dfc0w4yioe4u8e"
           },
-          "expr": "histogram_quantile(0.95, sum(rate(ollama_request_duration_seconds_bucket{job=\"ollama-gpu-coordinator\",instance=\"127.0.0.1:11437\"}[5m])) by (model, le))",
+          "expr": "histogram_quantile(0.95, sum(rate(ollama_request_duration_seconds_bucket{job=\"ollama-gpu-coordinator\",instance=\"172.17.0.1:11437\"}[5m])) by (model, le))",
           "legendFormat": "{{model}}",
           "refId": "A"
         }
