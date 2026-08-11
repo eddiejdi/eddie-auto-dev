@@ -242,8 +242,17 @@ Sem conexão pronta, a edge devolve 530/1033.
   (protonvpn-routing-watchdog ~1min, best-server 30min, domain-vpn-refresh 4h,
   cloudflared-vpn-routes 90s). O guardian (30s) agora reasserta as rotas de forma
   idempotente, cobrindo essas janelas.
-- **Opcional:** trocar `protocol: http2` → `quic` em `/etc/cloudflared/config.yml`
-  para resiliência a resets de conexão TCP de longa duração (requer restart + validação).
+- **`protocol: quic` aplicado** em `/etc/cloudflared/config.yml` (resiliência a resets
+  de conexão TCP de longa duração) — validado: 4 conexões `protocol: quic` no
+  `/ready` e hosts sem 1033.
+- **Alertas Prometheus + Alertmanager configurados** (2026-08-10):
+  - `/home/homelab/monitoring/prometheus/cloudflared-tunnel-rules.yml` com
+    `CloudflareTunnelDown` (critical, `cloudflared_tunnel_guardian_up == 0` por 3m) e
+    `CloudflareTunnelFlapping` (warning, `cloudflared_tunnel_guardian_cf_failures > 0`
+    por 2m); registrado em `rule_files` do `prometheus.yml`.
+  - Rota no Alertmanager: `category: network` → receiver `telegram` (chat 948686300).
+  - `sed -i` recria inode do arquivo → Docker bind mount ficou no inode antigo; foi
+    preciso `docker restart prometheus` para re-montar. Atenção para futuras edições.
 - O ICMP proxy está desabilitado (GID do `_rpa4all` fora do `ping_group_range`) — não
   afeta o túnel, apenas `cloudflared tunnel ping`.
 
@@ -281,6 +290,7 @@ Deploy (homelab):
 - [x] Investigar `authentik-ldap-outpost` unhealthy → container recriado com token correto.
 - [x] Atualizar entrada no vault `authentik/api_token` (local_vault re-gravado).
 - [x] Cloudflare 1033: túnel restaurado, guardian timer determinístico (30s) e `CF_NETS` ampliado.
+- [x] `protocol: quic` aplicado no cloudflared (validado).
+- [x] Alertas Prometheus (tunnel down/flap) + rota Alertmanager `category: network` → telegram.
 - [ ] Migrar datasource/dashboard Grafana do Authentik para `secureJsonData` + env
       (hoje embutem o token antigo; não embutir o novo por política).
-- [ ] (Opcional) `protocol: quic` no cloudflared p/ resiliência a resets TCP.
