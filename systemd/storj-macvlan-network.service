@@ -14,7 +14,7 @@ Restart=on-failure
 RestartSec=15
 StartLimitIntervalSec=120
 StartLimitBurst=5
-ExecStart=/bin/sh -c "/usr/bin/docker network inspect storj_macvlan >/dev/null 2>&1 || /usr/bin/docker network create -d macvlan --subnet=192.168.15.0/24 --gateway=192.168.15.1 --ip-range=192.168.15.250/32 -o parent=eth-wan storj_macvlan"
+ExecStart=/bin/sh -c "/usr/bin/docker network inspect storj_macvlan >/dev/null 2>&1 || /usr/bin/docker network create -d macvlan --subnet=192.168.15.0/24 --gateway=192.168.15.1 --ip-range=192.168.15.250/32 -o parent=enx00e04c596710 storj_macvlan"
 ExecStartPost=/bin/sh -c "systemctl --no-block try-restart storj-host-shim.service || true"
 ExecStop=/bin/true
 

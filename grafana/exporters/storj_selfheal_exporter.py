@@ -117,7 +117,7 @@ DEFAULT_NODES = [
         api_url="http://127.0.0.1:14002/api/sno",
         container_name="storagenode",
         expected_external_address="191.202.237.52:28967",
-        config_path="/mnt/disk3/storj/data/config.yaml",
+        config_path="/mnt/storj8tb/storj/data/config.yaml",
         probe_host="192.168.15.250",
         probe_port=28967,
         port_forward_command="bash /home/homelab/eddie-auto-dev/grafana/exporters/storj_sync_port_forward.sh",
@@ -126,7 +126,7 @@ DEFAULT_NODES = [
         sync_public_address_command=(
             "python3 /home/homelab/eddie-auto-dev/grafana/exporters/"
             "storj_sync_public_address.py --container storagenode "
-            "--config /mnt/disk3/storj/data/config.yaml --port 28967"
+            "--config /mnt/storj8tb/storj/data/config.yaml --port 28967"
         ),
     )
 ]

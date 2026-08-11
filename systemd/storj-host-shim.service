@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=oneshot
 RemainAfterExit=yes
 # Cada linha falha de forma visível — sem swallow silencioso com ponto-e-vírgula
-ExecStart=/bin/sh -c 'ip link show storj-host0 >/dev/null 2>&1 || ip link add storj-host0 link eth-wan type macvlan mode bridge'
+ExecStart=/bin/sh -c 'ip link show storj-host0 >/dev/null 2>&1 || ip link add storj-host0 link enx00e04c596710 type macvlan mode bridge'
 ExecStart=/bin/sh -c 'ip addr show dev storj-host0 | grep -q 192.168.15.251/32 || ip addr add 192.168.15.251/32 dev storj-host0'
 ExecStart=/bin/sh -c 'ip link set storj-host0 up'
 ExecStart=/bin/sh -c 'ip route show 192.168.15.250/32 | grep -q storj-host0 || ip route add 192.168.15.250/32 dev storj-host0'

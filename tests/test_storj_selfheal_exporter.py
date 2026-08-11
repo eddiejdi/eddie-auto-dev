@@ -54,7 +54,7 @@ def default_node() -> StorjNodeDef:
         sync_public_address_command=(
             "python3 /home/homelab/eddie-auto-dev/grafana/exporters/"
             "storj_sync_public_address.py --container storagenode "
-            "--config /mnt/disk3/storj/data/config.yaml --port 28967"
+            "--config /mnt/storj8tb/storj/data/config.yaml --port 28967"
         ),
     )
 
