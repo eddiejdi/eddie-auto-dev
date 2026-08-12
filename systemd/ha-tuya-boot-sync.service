@@ -1,0 +1,17 @@
+[Unit]
+Description=HA Tuya/SmartLife Boot Sync — garante container HA de pé + reload da integração Tuya após boot
+After=network.target docker.service homelab-lan-gateway.service
+Wants=docker.service
+ConditionPathExists=/var/run/docker.sock
+
+[Service]
+Type=oneshot
+User=homelab
+ExecStart=/usr/bin/python3 /home/homelab/ha-tuya-boot-sync.py
+TimeoutStartSec=360
+StandardOutput=journal
+StandardError=journal
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
