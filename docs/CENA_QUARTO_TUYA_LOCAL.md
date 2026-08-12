@@ -74,9 +74,9 @@ era falta de plano pago**:
 
 | Papel | Entidade HA | device_id Tuya (na doc, pode rotacionar) | IP local |
 |---|---|---|---|
-| Interruptor (gatilho) | `switch.luz_interruptor_quarto` | ver `.storage/core.config_entries` | 192.168.15.106 |
+| Interruptor (gatilho) | `switch.luz_interruptor_quarto` | ver `.storage/core.config_entries` | ~~192.168.15.106~~ → **192.168.15.111** (mudou após 2026-08-12, ver incidente) |
 | Spot | `switch.spot_quarto` | idem | 192.168.15.149 |
-| Fita | `switch.luz_fita_quarto` | idem | 192.168.15.191 |
+| Fita | `switch.luz_fita_quarto` | idem | ~~192.168.15.191~~ → **192.168.15.195** (mudou após 2026-08-12, ver incidente) |
 
 Perfil de dispositivo usado no `tuya_local`: `somgom_single_switch`
 (interruptor) e `aubess_1gang_switch` (spot e fita) — ambos com DPS
@@ -255,3 +255,39 @@ rodadas seguidas sem falha) após: correção do bridge travado, migração
 dos 3 dispositivos para local, remoção do linkage nativo da Tuya,
 self-heal de `local_key` instalado, e debounce de 500ms no gatilho do
 interruptor. Teste físico do interruptor confirmado pelo usuário.
+
+## Incidente 2026-08-12 — cena parada após reboot do host
+
+**Sintoma:** cena não respondia ao interruptor físico; `switch.luz_interruptor_quarto`
+e `switch.luz_fita_quarto` ficaram `unavailable` após o reboot do homelab em
+2026-08-11 09:21 (último trigger da automação: 10/08 09:20).
+
+**Causas raiz (3, em cadeia):**
+
+1. **`.storage/core.config_entries` virou `root:root`** (HA grava como root no
+   container) e o `tuya-local-key-selfheal.service` rodava como `homelab` →
+   `PermissionError` em toda execução desde 11/08, impossibilitando atualizar
+   `local_key` rotacionadas. **Fix:** `User=homelab` → `User=root` no unit
+   (`systemd/tuya-local-key-selfheal.service`) + `apply_colorations` daemon-reload.
+   Validado: exit 0, métrica `tuya_local_key_selfheal_healthy=1`.
+2. **DHCP renumerou módulos após o reboot** — a Fita, registrada em
+   `192.168.15.191`, passou a responder em **`192.168.15.195`** e o
+   **Interruptor em `192.168.15.111`** (antes `.106`; MAC `18:de:50:23:87:c3`
+   localizado via ARP). O `tuya_local` conecta por IP fixo do config e não
+   redescobre. **Fix:** `data.host` dos config entries atualizados (fita `.195`,
+   interruptor `.111`) + restart do HA (reload sozinho não re-lê o storage).
+   As chaves armazenadas **continuavam válidas** — era só IP.
+3. **Suite e Tomada do Escritório** seguem `unavailable`: nenhuma chave
+   (armazenada ou da nuvem sharing) fala com elas em nenhum IP/versão da LAN —
+   módulos offline ou re-pareados no app com `device_id` novo. **Pendente:**
+   re-parear/reconectar fisicamente. O self-heal (agora funcional) absorve a
+   nova local_key automaticamente quando voltarem.
+
+**Desfecho (validado em 2026-08-12):** com fita `.195` e interruptor `.111` o
+ciclo de 4 cliques foi re-testado via API e passou inteiro (interruptor on →
+spot+fita ligados; off → só fita; on → só spot; off → tudo apagado), um
+trigger por clique (`last_triggered` avançando a cada mudança estável).
+
+**Backups do storage antes dos patches:**
+`core.config_entries.bak-cena-20260812152118` (fita) e
+`core.config_entries.bak-cena-int-20260812153033` (interruptor)
