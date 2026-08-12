@@ -18,7 +18,7 @@ Hooks Pi: `.pi/extensions/rpa4all-hooks/` (bridge para `tools/hooks` + `tools/co
 
 1. **Sem LLM chinês** (Qwen, DeepSeek, ERNIE, ChatGLM, etc.) — política 2026-07-01. Preferir Llama, Mistral, Gemma, Phi.
 2. **PostgreSQL** na porta **5433** (schema `btc`); SQLite proibido para trading.
-2b. **Trading intocável no cluster LLM**: modelos `trading-*` nunca são evictados. Com analyst residente, a **GPU0 (3060)** ainda pode receber **só auxiliares pequenos** na VRAM livre (≤~1.8GB est., com headroom) — sem despejar trading. Modelos grandes vão para **GPU1 + NAS** (`GPU_COORD_TRADING_RESERVE_GPU0`, `GPU_COORD_AUX_MAX_VRAM_MB`).
+2b. **Trading intocável no cluster LLM**: modelos `trading-*` nunca são evictados. O analyst (`trading-analyst:latest`) reside no **NAS (RTX 2060 SUPER, `:11436`)** desde 2026-08-12 (decisão documentada em `docs/DECISION_TRADING_ANALYST_NAS_2026-08-12.md` — decode mais rápido por bandwidth e sem risco de migração em live). Sempre que um modelo `trading-*` estiver residente num endpoint, aquele endpoint não pode despejá-lo nem receber auxiliar que o compita (`GPU_COORD_PROTECTED_MODELS`, `GPU_COORD_TRADING_RESERVE_GPU0`).
 3. **Fita LTO**: nunca `ltfsck`/`mkltfs`/`sg_raw` diretos — usar orchestrator `ltfs_recovery.py`.
 4. **Sem force-push** em `main`; sem `rm -rf` / `git reset --hard` sem ordem explícita do usuário.
 5. **Secrets**: vault/Authentik/env — nunca hardcode em código.

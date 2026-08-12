@@ -52,12 +52,34 @@ trap cleanup EXIT
 # 1) Dataset contrafactual (só-leitura; python do sistema tem psycopg2)
 echo "--- [1/5] dataset ---"
 if "$SYS_PY" "$BASE/trading_analyst_backfill_window_dataset.py" \
-     --symbol BTC-USDT --min-flat-pnl 0.10 --out "$BASE/data"; then
+     --symbol BTC-USDT --min-flat-pnl 0.05 --days 120 --out "$BASE/data"; then
   cp "$BASE/data/trading_analyst_window_backfill.jsonl" "$BASE/data/trading_analyst_window.jsonl"
   DSN="$(wc -l < "$BASE/data/trading_analyst_window.jsonl")"
-  echo "dataset: $DSN exemplos"
+  echo "dataset backfill window: $DSN exemplos"
 else
   fail "dataset"; exit 1
+fi
+
+# 1b) Builder online (llm_calls + PnL realizado) para controls/plan — mesmo
+#     DATABASE_URL já exportado acima. Só-read; não falha o retreino se um
+#     call_type não atingir o mínimo (o backfill window já garante o volume).
+#     O builder também gera trading_analyst_window.jsonl (PnL real) — salvamos
+#     como _online para não sobrescrever o backfill contrafactual (maior volume).
+if "$SYS_PY" "$BASE/trading_analyst_finetune_dataset_builder.py" \
+     --days 120 --min-pnl 0.0 --min-samples 50 --out "$BASE/data" 2>&1 | tee -a "$LOG"; then
+  mv -f "$BASE/data/trading_analyst_window.jsonl" "$BASE/data/trading_analyst_window_online.jsonl"
+  for ct in controls window plan; do
+    f="$BASE/data/trading_analyst_${ct}.jsonl"
+    [[ "$ct" == "window" ]] && f="$BASE/data/trading_analyst_window_online.jsonl"
+    if [[ -f "$f" ]]; then
+      n="$(wc -l < "$f")"
+      DSN=$((DSN + n))
+      echo "dataset ${ct}: +$n exemplos"
+    fi
+  done
+  echo "dataset total: $DSN exemplos"
+else
+  fail "dataset-online"; exit 1
 fi
 
 # 2) Treino QLoRA com a 3060 livre (para ollama+coordinator; trap religa)
