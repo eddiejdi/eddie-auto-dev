@@ -6,10 +6,10 @@ Bridge between **Pi coding agent** lifecycle events and the existing Claude Code
 
 | Pi event | Python scripts |
 |----------|----------------|
-| `before_agent_start` | `tools/copilot_hooks/inject_memory_context.py` |
+| `before_agent_start` | `inject_memory_context.py` + `inject_wiki_context.py --mode=session` (índice wiki no system prompt) |
 | `tool_call` | `pre_tool_guardrails.py`, `variable|table|api_registry_validate.py`, `record_stopped.py` |
 | `tool_result` | `post_edit_validate.py`, `ai_response_analyzer.py` |
-| `agent_settled` | `block_incomplete_stop.py`, `restore_stopped.py` |
+| `agent_settled` | `block_incomplete_stop.py`, `restore_stopped.py`; se bloqueado → `inject_wiki_context.py --mode=block` |
 
 Rules stay in Python (single source of truth). TypeScript only maps payloads and translates:
 
