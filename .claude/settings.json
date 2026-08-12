@@ -5,6 +5,17 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/copilot_hooks/inject_wiki_context.py --mode=session",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "hooks": [
@@ -107,6 +118,15 @@
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/block_incomplete_stop.py",
             "timeout": 30
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/copilot_hooks/inject_wiki_context.py --mode=block",
+            "timeout": 15
           }
         ]
       },

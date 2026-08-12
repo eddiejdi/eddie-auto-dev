@@ -52,6 +52,7 @@ export async function runPythonHook(
     cwd: string;
     timeoutMs: number;
     env?: Record<string, string | undefined>;
+    args?: string[];
   },
 ): Promise<HookDecision> {
   const repoRoot = findRepoRoot(options.cwd);
@@ -75,7 +76,7 @@ export async function runPythonHook(
   };
 
   return await new Promise((resolveDecision) => {
-    const child = spawn("python3", [scriptPath], {
+    const child = spawn("python3", [scriptPath, ...(options.args ?? [])], {
       cwd: repoRoot,
       env,
       stdio: ["pipe", "pipe", "pipe"],
@@ -230,6 +231,18 @@ export const POST_TOOL_HOOKS: Array<{ script: string; timeoutMs: number }> = [
 export const MEMORY_HOOK = {
   script: "tools/copilot_hooks/inject_memory_context.py",
   timeoutMs: 5_000,
+};
+
+export const WIKI_SESSION_HOOK = {
+  script: "tools/copilot_hooks/inject_wiki_context.py",
+  args: ["--mode=session"],
+  timeoutMs: 15_000,
+};
+
+export const WIKI_BLOCK_HOOK = {
+  script: "tools/copilot_hooks/inject_wiki_context.py",
+  args: ["--mode=block"],
+  timeoutMs: 15_000,
 };
 
 export const STOP_HOOKS: Array<{ script: string; timeoutMs: number }> = [
