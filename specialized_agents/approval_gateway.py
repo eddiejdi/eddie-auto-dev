@@ -316,10 +316,10 @@ def _expire_stale() -> int:
             UPDATE agent_actions
             SET status='expired', resolved_at=NOW(), approved_by='timeout'
             WHERE status='pending'
-              AND created_at < NOW() - INTERVAL '%s minutes'
+              AND created_at < NOW() - make_interval(mins => %s)
             RETURNING intent_id
         """, (INTENT_EXP_MIN,))
-        expired = [r[0] for r in cur.fetchall()]
+        expired = [r["intent_id"] for r in cur.fetchall()]
         c.commit(); cur.close(); c.close()
         for iid in expired:
             mid = _intent_to_msg.get(iid)
@@ -335,19 +335,46 @@ def _expire_stale() -> int:
 # Resolução de intent_id a partir do prefixo no callback_data
 # ══════════════════════════════════════════════════════════════════════════
 
+def _row_intent_id(row: Any) -> str | None:
+    """Lê intent_id de RealDictRow ou tupla — r[0] quebra com RealDictCursor."""
+    if row is None:
+        return None
+    if isinstance(row, dict):
+        val = row.get("intent_id")
+        return str(val) if val else None
+    try:
+        return str(row["intent_id"])
+    except Exception:
+        pass
+    try:
+        return str(row[0]) if row[0] else None
+    except Exception:
+        return None
+
+
 def _resolve(prefix: str) -> str | None:
+    prefix = (prefix or "").strip()
+    if not prefix:
+        return None
     for iid in _dispatched:
-        if iid[:48] == prefix or iid.startswith(prefix):
+        if iid[:48] == prefix or iid.startswith(prefix) or prefix.startswith(iid):
             return iid
     try:
         c = _conn(); cur = c.cursor()
         cur.execute(
-            "SELECT intent_id FROM agent_actions WHERE intent_id LIKE %s LIMIT 1",
-            (prefix + "%",)
+            """
+            SELECT intent_id FROM agent_actions
+            WHERE intent_id = %s
+               OR intent_id LIKE %s
+            ORDER BY CASE WHEN intent_id = %s THEN 0 ELSE 1 END, created_at DESC
+            LIMIT 1
+            """,
+            (prefix, prefix + "%", prefix),
         )
         row = cur.fetchone(); cur.close(); c.close()
-        return row[0] if row else None
-    except Exception:
+        return _row_intent_id(row)
+    except Exception as exc:
+        log.error("resolve(%s): %s", prefix, exc)
         return None
 
 
@@ -440,7 +467,9 @@ def _on_text(msg: dict[str, Any]) -> None:
     if not row:
         return
 
-    iid = row[0]
+    iid = _row_intent_id(row)
+    if not iid:
+        return
     label = "approved" if is_ok else "rejected"
     _decide(iid, label, f"@{usr} (texto)")
     mid = _intent_to_msg.get(iid)

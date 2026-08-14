@@ -174,6 +174,36 @@ def test_reconstruct_open_buys_shared_ambiguous_disables_price_matching() -> Non
     assert [trade["id"] for trade in open_buys] == [41]
 
 
+def test_reconstruct_open_buys_skips_status_closed() -> None:
+    trades = [
+        _trade(3, "buy", 103.0, 0.001),
+        {**_trade(2, "buy", 102.0, 0.001), "status": "closed"},
+        _trade(1, "buy", 100.0, 0.001),
+    ]
+
+    open_buys = reconstruct_open_buys(trades)
+
+    assert [trade["id"] for trade in open_buys] == [3, 1]
+
+
+def test_reconstruct_open_buys_skips_closed_reason_even_if_executed() -> None:
+    """Restart não pode ressuscitar slot já marcado reconciled_phantom."""
+    trades = [
+        _trade(
+            5,
+            "buy",
+            103.0,
+            0.001,
+            metadata={"source": "kucoin_live", "closed_reason": "reconciled_phantom"},
+        ),
+        {**_trade(4, "buy", 102.0, 0.001), "status": "executed"},
+    ]
+
+    open_buys = reconstruct_open_buys(trades)
+
+    assert [trade["id"] for trade in open_buys] == [4]
+
+
 def test_reconstruct_open_buys_preserves_dry_run_flag() -> None:
     """dry_run do BUY original deve ser propagado para o entry dict.
 

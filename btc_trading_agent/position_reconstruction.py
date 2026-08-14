@@ -30,7 +30,16 @@ def _normalize_trade(trade: dict[str, Any]) -> dict[str, Any]:
         "timestamp": float(trade.get("timestamp", 0) or 0),
         "metadata": _parse_metadata(trade.get("metadata")),
         "dry_run": bool(trade.get("dry_run", False)),
+        "status": str(trade.get("status") or "").lower(),
     }
+
+
+def _is_closed_or_phantom_buy(trade: dict[str, Any]) -> bool:
+    """BUY já encerrado no ledger — não pode voltar como slot no restore."""
+    if str(trade.get("status") or "").lower() == "closed":
+        return True
+    reason = str((trade.get("metadata") or {}).get("closed_reason") or "").strip()
+    return bool(reason)
 
 
 def _is_excluded_buy(trade: dict[str, Any], *, exclude_external_deposits: bool) -> bool:
@@ -108,6 +117,8 @@ def reconstruct_open_buys(
 
         if side != "buy":
             continue
+        if _is_closed_or_phantom_buy(trade):
+            continue
         if _is_excluded_buy(
             trade,
             exclude_external_deposits=exclude_external_deposits,
@@ -148,3 +159,59 @@ def summarize_open_buys(open_buys: list[dict[str, Any]]) -> tuple[float, float]:
         for trade in open_buys
     )
     return total_btc, (total_cost / total_btc)
+
+
+def compute_exposure_budget(
+    *,
+    quote_balance: float,
+    base_qty: float,
+    price: float,
+    max_position_pct: float,
+) -> dict[str, float]:
+    """Equity da subconta e teto de exposição total.
+
+    ``equity = quote + base*price``. O cap é ``equity * max_position_pct``
+    comparado com a exposição **total** (todo o base), não com um slot.
+    """
+    quote = max(float(quote_balance or 0.0), 0.0)
+    base = max(float(base_qty or 0.0), 0.0)
+    px = max(float(price or 0.0), 0.0)
+    pct = max(float(max_position_pct or 0.0), 0.0)
+    open_exposure = base * px
+    equity = quote + open_exposure
+    max_total = equity * pct
+    return {
+        "quote_balance": quote,
+        "base_qty": base,
+        "open_exposure": open_exposure,
+        "equity": equity,
+        "max_position_pct": pct,
+        "max_total_exposure": max_total,
+        "remaining_exposure": max(max_total - open_exposure, 0.0),
+    }
+
+
+def infer_logical_slots(
+    *,
+    exchange_qty: float,
+    entries: list[dict[str, Any]] | None,
+    dust: float = 1e-8,
+) -> int:
+    """Slots lógicos a partir do saldo exchange e das entries conhecidas.
+
+    Não inventa entries nem vende. Se a carteira tem mais base do que o
+    ledger, o número de slots sobe para refletir a ocupação real.
+    """
+    qty = max(float(exchange_qty or 0.0), 0.0)
+    known = [
+        entry
+        for entry in (entries or [])
+        if float(entry.get("size", 0) or 0) > 0
+    ]
+    if qty <= dust and not known:
+        return 0
+    if not known:
+        return 1 if qty > dust else 0
+    typical = sum(float(entry.get("size", 0) or 0) for entry in known) / len(known)
+    inferred = int(round(qty / typical)) if typical > 0 else len(known)
+    return max(len(known), inferred, 1 if qty > dust else 0)

@@ -17,6 +17,7 @@ import time
 from typing import Any, Dict
 
 from kucoin_api import place_market_order, _send_telegram_alert
+from position_reconstruction import infer_logical_slots
 from slot_exit_policy import (
     PerSlotExitPlanner,
     SignalSellContext,
@@ -36,21 +37,95 @@ class PositionManagerMixin:
     _per_slot_exit_planner = PerSlotExitPlanner()
     _signal_sell_policy_resolver = SignalSellPolicyResolver()
 
+    def _min_tradeable_dust(self) -> float:
+        """Pó abaixo do mínimo negociável da exchange."""
+        try:
+            live_cfg = self._load_live_config()
+        except Exception:
+            live_cfg = getattr(self, "config", {}) or {}
+        if not isinstance(live_cfg, dict):
+            live_cfg = {}
+        return float(live_cfg.get("min_tradeable_balance", 0.00001) or 0.00001)
+
+    def _read_subaccount_spot_balances(self, quote_cur: str) -> tuple[float, float]:
+        """Saldo disponível (quote, base) da subconta TRADE configurada.
+
+        Sem subconta, usa a conta TRADE autenticada. Não vende nada.
+        """
+        base_cur = str(self.symbol).split("-")[0]
+        try:
+            live_cfg = self._load_live_config()
+        except Exception:
+            live_cfg = getattr(self, "config", {}) or {}
+        subaccount = (
+            str(live_cfg.get("kucoin_subaccount_name") or "").strip()
+            if isinstance(live_cfg, dict)
+            else ""
+        )
+        if subaccount:
+            from kucoin_api import get_sub_account_balances
+
+            rows = get_sub_account_balances()
+
+            def _sum(currency: str) -> float:
+                return sum(
+                    float(account.get("available", 0) or 0)
+                    for account in rows
+                    if account.get("sub_name") == subaccount
+                    and account.get("account_type") == "trade"
+                    and account.get("currency") == currency
+                )
+
+            return _sum(quote_cur), _sum(base_cur)
+
+        from kucoin_api import get_balance
+
+        return float(get_balance(quote_cur) or 0.0), float(get_balance(base_cur) or 0.0)
+
+    def _align_position_to_exchange(self, price: float = 0.0) -> None:
+        """Copia o saldo base da subconta para ``state.position`` sem flatten.
+
+        Entries extra não são inventadas e nenhuma ordem é enviada.
+        """
+        if getattr(self.state, "dry_run", False):
+            self._sync_position_tracking()
+            return
+
+        quote_cur = str(self.symbol).split("-")[1]
+        try:
+            _quote, base_qty = self._read_subaccount_spot_balances(quote_cur)
+        except Exception as exc:
+            logger.debug("Position align skipped (balance read failed): %s", exc)
+            self._sync_position_tracking()
+            return
+
+        dust = self._min_tradeable_dust()
+        tracked = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
+        aligned = 0.0 if base_qty < dust else max(float(base_qty), 0.0)
+        if abs(aligned - tracked) > max(dust, tracked * 0.005):
+            logger.info(
+                "📐 Position aligned to subaccount: tracked=%.8f -> exchange=%.8f "
+                "(no flatten, no synthetic entries)",
+                tracked,
+                aligned,
+            )
+        self.state.position = aligned
+        if price > 0:
+            self.state.position_value = aligned * float(price)
+        self._sync_position_tracking()
+
     def _sync_position_tracking(self) -> None:
         """Mantém contagem bruta e slot lógico coerentes com a posição atual."""
         entries = list(getattr(self.state, "entries", []) or [])
         raw_entry_count = len(entries)
         position = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
-        entry_price = max(float(getattr(self.state, "entry_price", 0.0) or 0.0), 0.0)
-        has_open_position = position > 0 and (raw_entry_count > 0 or entry_price > 0)
         self.state.position_count = raw_entry_count
         self.state.raw_entry_count = raw_entry_count
-        if not has_open_position:
-            self.state.logical_position_slots = 0
-        elif raw_entry_count > 0:
-            self.state.logical_position_slots = raw_entry_count
-        else:
-            self.state.logical_position_slots = 1
+        self.state.logical_position_slots = infer_logical_slots(
+            exchange_qty=position,
+            entries=entries,
+            dust=self._min_tradeable_dust(),
+        )
 
     def _check_per_slot_exits(self, price: float) -> bool:
         """Verifica saída independente por slot: TP, trailing, SL e max_hold_hours."""

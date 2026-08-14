@@ -209,6 +209,50 @@ class TestSyncPositionTracking:
         agent._sync_position_tracking()
         assert agent.state.logical_position_slots == 1
 
+    def test_untracked_exchange_qty_raises_logical_slots(self):
+        entries = [_entry(65_000, 0.00023)]
+        agent = _make_agent(position=0.00269, entries=entries)
+        agent._sync_position_tracking()
+        assert agent.state.raw_entry_count == 1
+        assert agent.state.logical_position_slots >= 11
+
+
+class TestAlignPositionToExchange:
+
+    def test_dry_run_does_not_touch_exchange(self):
+        agent = _make_agent(position=0.001, dry_run=True, entries=[_entry(65_000, 0.001)])
+        agent._align_position_to_exchange(65_000.0)
+        assert agent.state.position == pytest.approx(0.001)
+
+    def test_live_copies_subaccount_base_without_selling(self):
+        agent = _make_agent(
+            position=0.00023,
+            dry_run=False,
+            entries=[_entry(65_000, 0.00023)],
+            live_cfg={"kucoin_subaccount_name": "BTCConservative"},
+        )
+        rows = [
+            {
+                "sub_name": "BTCConservative",
+                "account_type": "trade",
+                "currency": "BTC",
+                "available": 0.000458,
+            },
+            {
+                "sub_name": "BTCConservative",
+                "account_type": "trade",
+                "currency": "USDT",
+                "available": 15.71,
+            },
+        ]
+        with ExitStack() as stack:
+            for ctx in _subaccount_balance_patches(rows):
+                stack.enter_context(ctx)
+            agent._align_position_to_exchange(63_764.0)
+        assert agent.state.position == pytest.approx(0.000458)
+        assert agent.state.logical_position_slots == 2
+        agent.db.record_trade.assert_not_called()
+
 
 # ── _check_per_slot_exits: max_hold_hours ────────────────────────────────────
 
