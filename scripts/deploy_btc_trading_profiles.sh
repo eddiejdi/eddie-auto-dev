@@ -198,7 +198,10 @@ backup_if_present() {
 
 validate_ollama_models() {
   local models_env="${1:-/etc/crypto-agent/models.env}"
-  local ollama_host="${OLLAMA_PLAN_HOST:-http://192.168.15.2:11434}"
+  # Mesmo host que os agents usam: coordenador :11437 (NAS tem trading-analyst
+  # desde 2026-08-01). GPU0 :11434 só lista trading-analyst-phi4/candidate —
+  # checar lá aborta o deploy mesmo com o modelo vivo atrás do coordenador.
+  local ollama_host="${OLLAMA_PLAN_HOST:-http://192.168.15.2:11437}"
 
   if [[ ! -f "${models_env}" ]]; then
     echo "⚠️  ${models_env} não encontrado — pulando validação de modelos Ollama" >&2
