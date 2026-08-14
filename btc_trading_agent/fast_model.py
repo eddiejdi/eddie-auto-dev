@@ -86,43 +86,89 @@ class FastIndicators:
         self.prices = deque(maxlen=max_history)
         self.volumes = deque(maxlen=max_history)
         self.timestamps = deque(maxlen=max_history)
+        # Série oficial de 1min — ticks nunca crescem esta fila.
+        self._candle_prices = deque(maxlen=max_history)
+        self._candle_volumes = deque(maxlen=max_history)
+        self._candle_timestamps = deque(maxlen=max_history)
         self._candles_loaded = False
-    
-    def update(self, price: float, volume: float = 0):
-        """Atualiza histórico com um tick"""
+        self._last_tick_ts: float = 0.0
+        self._last_tick_price: float = float("nan")
+
+    @staticmethod
+    def _normalize_ts(raw: object, fallback: float) -> float:
+        """Normaliza timestamp de candle (s ou ms) para epoch em segundos."""
+        try:
+            ts = float(raw)
+        except (TypeError, ValueError):
+            return fallback
+        if ts > 1e12:
+            return ts / 1000.0
+        return ts
+
+    def update(self, price: float, volume: float = 0, timestamp: Optional[float] = None):
+        """Atualiza o preço atual sem poluir a série de indicadores.
+
+        Sem candles: append de tick (testes / bootstrap).
+        Com candles 1min: só substitui o close da barra em formação.
+        Dois updates do mesmo preço no mesmo segundo são no-op (guarda o
+        double-call de ``_get_market_state`` + ``predict``).
+        """
+        now = float(time.time() if timestamp is None else timestamp)
+        price = float(price)
+        volume = float(volume or 0.0)
+
+        if (
+            self._last_tick_ts > 0.0
+            and abs(now - self._last_tick_ts) < 1.0
+            and abs(price - self._last_tick_price) <= 0.01
+        ):
+            return
+        self._last_tick_ts = now
+        self._last_tick_price = price
+
+        if self._candles_loaded and self._candle_prices:
+            self._candle_prices[-1] = price
+            self.prices[-1] = price
+            if volume:
+                self._candle_volumes[-1] = volume
+                self.volumes[-1] = volume
+            return
+
         self.prices.append(price)
         self.volumes.append(volume)
-        self.timestamps.append(time.time())
-    
+        self.timestamps.append(now)
+
     def update_from_candles(self, candles: list):
         """
-        Popula o histórico a partir de candles reais (OHLCV).
+        Substitui o histórico pelos closes oficiais de 1min (OHLCV).
         Cada candle deve ter: close, volume, timestamp.
-        Substitui os ticks de 5s por dados reais de candles de 1min.
+        Ticks subsequentes não reabrem a série — só atualizam a barra atual.
         """
         if not candles:
             return
-        
-        # Só repopular se ainda não carregou ou se recebeu mais candles
-        if self._candles_loaded and len(self.prices) >= len(candles):
-            # Apenas atualizar o último candle
-            last = candles[-1]
-            if self.prices and abs(self.prices[-1] - last['close']) > 0.01:
-                self.prices[-1] = last['close']
-                self.volumes[-1] = last.get('volume', 0)
-            return
-        
-        # Reset e popular com candles reais
+
         self.prices.clear()
         self.volumes.clear()
         self.timestamps.clear()
-        
+        self._candle_prices.clear()
+        self._candle_volumes.clear()
+        self._candle_timestamps.clear()
+
+        now = time.time()
         for c in candles:
-            self.prices.append(c['close'])
-            self.volumes.append(c.get('volume', 0))
-            self.timestamps.append(c.get('timestamp', time.time()))
-        
+            close = float(c["close"])
+            vol = float(c.get("volume", 0.0) or 0.0)
+            ts = self._normalize_ts(c.get("timestamp"), now)
+            self.prices.append(close)
+            self.volumes.append(vol)
+            self.timestamps.append(ts)
+            self._candle_prices.append(close)
+            self._candle_volumes.append(vol)
+            self._candle_timestamps.append(ts)
+
         self._candles_loaded = True
+        self._last_tick_ts = 0.0
+        self._last_tick_price = float("nan")
         logger.debug(f"📊 Indicators loaded from {len(candles)} candles")
     
     def rsi(self, period: int = 14) -> float:
@@ -711,9 +757,9 @@ class FastTradingModel:
     def predict(self, state: MarketState, explore: bool = False) -> Signal:
         """Gera sinal de trading - COM DETECÇÃO DE REGIME"""
         start = time.time()
-        
-        # Atualizar indicadores
-        self.indicators.update(state.price)
+
+        # Indicadores (RSI/momentum/trend) são atualizados uma vez por ciclo
+        # em TradingAgent._get_market_state — não reanexar o tick aqui.
         
         # ===== DETECÇÃO DE REGIME com HYSTERESIS (a cada 10 ciclos) =====
         # Exige _REGIME_HYSTERESIS detecções consecutivas do novo regime antes

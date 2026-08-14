@@ -1184,7 +1184,8 @@ def trading_market_state(symbol: str = "BTC-USDT", limit: int = 5) -> str:
     """
     sql = f"""
         SELECT price, bid, ask, spread, orderbook_imbalance, trade_flow,
-               rsi, momentum, volatility, trend, volume, created_at
+               rsi, momentum, volatility, trend, volume,
+               to_timestamp(timestamp) AS created_at
         FROM btc.market_states
         WHERE symbol = %s
         ORDER BY timestamp DESC
@@ -1206,7 +1207,8 @@ def trading_decisions(
         profile: Perfil do agente (vazio = todos).
     """
     sql = """
-        SELECT action, confidence, price, reason, executed, profile, servidor, created_at
+        SELECT action, confidence, price, reason, executed, profile, servidor,
+               to_timestamp(timestamp) AS created_at
         FROM btc.decisions
         WHERE symbol = %s
     """
@@ -1244,7 +1246,7 @@ def trading_candles(
 
 @mcp.tool()
 def trading_ai_controls(
-    symbol: str = "BTC-USDT", profile: str = "default", limit: int = 3,
+    symbol: str = "BTC-USDT", profile: str = "conservative", limit: int = 3,
 ) -> str:
     """Retorna os últimos parâmetros de controle sugeridos pela IA para o trading.
 
@@ -1252,7 +1254,7 @@ def trading_ai_controls(
 
     Args:
         symbol:  Par de trading (default: BTC-USDT).
-        profile: Perfil do agente (default: default).
+        profile: Perfil do agente (default: conservative).
         limit:   Número de registros (default: 3).
     """
     sql = f"""
@@ -1273,7 +1275,7 @@ def trading_ai_controls(
 
 @mcp.tool()
 def trading_ai_plan(
-    symbol: str = "BTC-USDT", profile: str = "default", limit: int = 1,
+    symbol: str = "BTC-USDT", profile: str = "conservative", limit: int = 1,
 ) -> str:
     """Retorna o(s) último(s) plano(s) gerado(s) pela IA para o trading.
 
@@ -1281,7 +1283,7 @@ def trading_ai_plan(
 
     Args:
         symbol:  Par de trading (default: BTC-USDT).
-        profile: Perfil do agente (default: default).
+        profile: Perfil do agente (default: conservative).
         limit:   Número de planos (default: 1).
     """
     sql = f"""
@@ -1297,13 +1299,13 @@ def trading_ai_plan(
 
 @mcp.tool()
 def trading_ai_window(
-    symbol: str = "BTC-USDT", profile: str = "default",
+    symbol: str = "BTC-USDT", profile: str = "conservative",
 ) -> str:
     """Retorna a janela operacional ativa calculada pela IA (entry_low/high, target_sell, TTL).
 
     Args:
         symbol:  Par de trading (default: BTC-USDT).
-        profile: Perfil do agente (default: default).
+        profile: Perfil do agente (default: conservative).
     """
     sql = """
         SELECT regime, reference_price, entry_low, entry_high, target_sell,
@@ -1369,7 +1371,7 @@ def trading_learning_stats(symbol: str = "BTC-USDT") -> str:
 
 
 @mcp.tool()
-def trading_summary(symbol: str = "BTC-USDT", profile: str = "default") -> str:
+def trading_summary(symbol: str = "BTC-USDT", profile: str = "conservative") -> str:
     """Resumo completo do estado atual do trading agent — ideal para análise por LLM.
 
     Combina performance 7d, posições abertas, último estado de mercado,
@@ -1377,7 +1379,7 @@ def trading_summary(symbol: str = "BTC-USDT", profile: str = "default") -> str:
 
     Args:
         symbol:  Par de trading (default: BTC-USDT).
-        profile: Perfil do agente (default: default).
+        profile: Perfil do agente (default: conservative).
     """
     import json as _json
 

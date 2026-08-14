@@ -2402,7 +2402,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest_profile_sell AS (\n  SELECT\n    profile,\n    MAX(timestamp) AS last_sell_ts\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND side IN ('sell', 'sell_reconciled')\n    AND profile IN ('aggressive', 'conservative', 'shadow')\n    AND (\n      ('${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}')\n    )\n  GROUP BY profile\n),\nopen_buys_raw AS (\n  SELECT\n    t.*\n  FROM btc.trades t\n  LEFT JOIN latest_profile_sell lps ON lps.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND COALESCE(t.metadata->>'source', '') != 'external_deposit'\n    AND t.profile IN ('aggressive', 'conservative', 'shadow')\n    AND (\n      ('${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}')\n    )\n    AND (lps.last_sell_ts IS NULL OR t.timestamp > lps.last_sell_ts)\n),\nposition_summary AS (\n  SELECT\n    profile,\n    CONCAT(\n      profile,\n      '#',\n      MIN(id),\n      CASE WHEN MIN(id) <> MAX(id) THEN CONCAT('-', MAX(id)) ELSE '' END\n    ) AS position_ref,\n    COUNT(*) AS entries\n  FROM open_buys_raw\n  WHERE profile ~* '^(${profile:pipe})$'\n  GROUP BY profile\n),\nopen_trades AS (\n  SELECT\n    ob.id,\n    ob.profile,\n    ob.price,\n    ob.size,\n    ps.position_ref,\n    ps.entries,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_trigger_price', '')::double precision,\n      NULLIF(ob.metadata->>'target_sell_price', '')::double precision\n    ) AS sell_target,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_reason', ''),\n      NULLIF(ob.metadata->>'strategy_reason', ''),\n      NULLIF(ob.metadata->>'reason', '')\n    ) AS target_reason\n  FROM open_buys_raw ob\n  JOIN position_summary ps ON ps.profile = ob.profile\n  WHERE ob.profile ~* '^(${profile:pipe})$'\n),\nlatest_state AS (\n  SELECT\n    price AS current_price\n  FROM btc.market_states\n  WHERE symbol = '$coin'\n  ORDER BY timestamp DESC\n  LIMIT 1\n)\nSELECT\n  ot.id AS \"Trade\",\n  ot.profile AS \"Perfil\",\n  CONCAT(ot.profile, ' #', ot.id::text) AS \"Bot\",\n  CASE\n    WHEN ot.entries > 1 AND ot.target_reason IS NOT NULL THEN CONCAT('multientrada ', ot.entries, 'x • ', ot.target_reason)\n    WHEN ot.entries > 1 THEN CONCAT('multientrada ', ot.entries, 'x em ', ot.position_ref)\n    WHEN ot.target_reason IS NOT NULL THEN ot.target_reason\n    ELSE CONCAT('entrada unica em ', ot.position_ref)\n  END AS \"Cenário\",\n  ROUND(ot.size::numeric, 8) AS \"Qtd\",\n  ROUND(ot.price::numeric, 6) AS \"Entrada\",\n  ROUND(ls.current_price::numeric, 6) AS \"Atual\",\n  ROUND(ot.sell_target::numeric, 6) AS \"Alvo\",\n  ROUND((ot.sell_target - ls.current_price)::numeric, 6) AS \"Falta $\",\n  ROUND(((ot.sell_target / NULLIF(ls.current_price, 0) - 1) * 100)::numeric, 2) AS \"Falta %\",\n  ROUND(\n    LEAST(\n      100,\n      GREATEST(\n        0,\n        100 * (ls.current_price - ot.price) / NULLIF(ot.sell_target - ot.price, 0)\n      )\n    )::numeric,\n    1\n  ) AS \"Progresso %\",\n  ROUND(((ls.current_price - ot.price) * ot.size)::numeric, 4) AS \"PnL $\",\n  ROUND((((ls.current_price / NULLIF(ot.price, 0)) - 1) * 100)::numeric, 2) AS \"PnL %\",\n  '🛒 Abrir menu' AS \"Ação\"\nFROM open_trades ot\nCROSS JOIN latest_state ls\nORDER BY ot.id DESC;",
+          "rawSql": "WITH latest_profile_sell AS (\n  SELECT\n    profile,\n    MAX(timestamp) AS last_sell_ts\n  FROM btc.trades\n  WHERE symbol = '$coin'\n    AND dry_run = false\n    AND side IN ('sell', 'sell_reconciled')\n    AND profile IN ('aggressive', 'conservative', 'shadow')\n    AND (\n      ('${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}')\n    )\n  GROUP BY profile\n),\nopen_buys_raw AS (\n  SELECT\n    t.*\n  FROM btc.trades t\n  LEFT JOIN latest_profile_sell lps ON lps.profile = t.profile\n  WHERE t.symbol = '$coin'\n    AND t.dry_run = false\n    AND t.side = 'buy'\n    AND t.status <> 'closed'\n    AND COALESCE(t.metadata->>'closed_reason', '') = ''\n    AND COALESCE(t.metadata->>'source', '') != 'external_deposit'\n    AND t.profile IN ('aggressive', 'conservative', 'shadow')\n    AND (\n      ('${servidor:raw}' = '.*' OR '${servidor:raw}' = '*' OR servidor = '${servidor:raw}')\n    )\n    AND (lps.last_sell_ts IS NULL OR t.timestamp > lps.last_sell_ts)\n),\nposition_summary AS (\n  SELECT\n    profile,\n    CONCAT(\n      profile,\n      '#',\n      MIN(id),\n      CASE WHEN MIN(id) <> MAX(id) THEN CONCAT('-', MAX(id)) ELSE '' END\n    ) AS position_ref,\n    COUNT(*) AS entries\n  FROM open_buys_raw\n  WHERE profile ~* '^(${profile:pipe})$'\n  GROUP BY profile\n),\nopen_trades AS (\n  SELECT\n    ob.id,\n    ob.profile,\n    ob.price,\n    ob.size,\n    ps.position_ref,\n    ps.entries,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_trigger_price', '')::double precision,\n      NULLIF(ob.metadata->>'target_sell_price', '')::double precision\n    ) AS sell_target,\n    COALESCE(\n      NULLIF(ob.metadata->>'target_sell_reason', ''),\n      NULLIF(ob.metadata->>'strategy_reason', ''),\n      NULLIF(ob.metadata->>'reason', '')\n    ) AS target_reason\n  FROM open_buys_raw ob\n  JOIN position_summary ps ON ps.profile = ob.profile\n  WHERE ob.profile ~* '^(${profile:pipe})$'\n),\nlatest_state AS (\n  SELECT\n    price AS current_price\n  FROM btc.market_states\n  WHERE symbol = '$coin'\n  ORDER BY timestamp DESC\n  LIMIT 1\n)\nSELECT\n  ot.id AS \"Trade\",\n  ot.profile AS \"Perfil\",\n  CONCAT(ot.profile, ' #', ot.id::text) AS \"Bot\",\n  CASE\n    WHEN ot.entries > 1 AND ot.target_reason IS NOT NULL THEN CONCAT('multientrada ', ot.entries, 'x • ', ot.target_reason)\n    WHEN ot.entries > 1 THEN CONCAT('multientrada ', ot.entries, 'x em ', ot.position_ref)\n    WHEN ot.target_reason IS NOT NULL THEN ot.target_reason\n    ELSE CONCAT('entrada unica em ', ot.position_ref)\n  END AS \"Cenário\",\n  ROUND(ot.size::numeric, 8) AS \"Qtd\",\n  ROUND(ot.price::numeric, 6) AS \"Entrada\",\n  ROUND(ls.current_price::numeric, 6) AS \"Atual\",\n  ROUND(ot.sell_target::numeric, 6) AS \"Alvo\",\n  ROUND((ot.sell_target - ls.current_price)::numeric, 6) AS \"Falta $\",\n  ROUND(((ot.sell_target / NULLIF(ls.current_price, 0) - 1) * 100)::numeric, 2) AS \"Falta %\",\n  ROUND(\n    LEAST(\n      100,\n      GREATEST(\n        0,\n        100 * (ls.current_price - ot.price) / NULLIF(ot.sell_target - ot.price, 0)\n      )\n    )::numeric,\n    1\n  ) AS \"Progresso %\",\n  ROUND(((ls.current_price - ot.price) * ot.size)::numeric, 4) AS \"PnL $\",\n  ROUND((((ls.current_price / NULLIF(ot.price, 0)) - 1) * 100)::numeric, 2) AS \"PnL %\",\n  '🛒 Abrir menu' AS \"Ação\"\nFROM open_trades ot\nCROSS JOIN latest_state ls\nORDER BY ot.id DESC;",
           "refId": "A"
         }
       ],
@@ -2789,7 +2789,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Saldo total disponível na KuCoin convertido para BRL, somando as contas main e trade da conta master (subcontas não são sincronizadas). Taxa BRL do último snapshot.",
+      "description": "Total bruto: soma de todas as moedas do último snapshot (main, trade e subcontas), cada uma convertida para R$. Ignora $coin/$profile. Taxa BRL: price_usdt no snapshot; se nula (USDT-BRL sem book), fallback no último snapshot com taxa ou 1/último fill USDT-BRL.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -2846,11 +2846,11 @@
       "targets": [
         {
           "format": "table",
-          "rawSql": "WITH latest_sync AS (\n  SELECT MAX(synced_at) AS synced_at\n  FROM btc.exchange_balance_snapshots\n), latest_balances AS (\n  SELECT account_type, currency, available, price_usdt\n  FROM btc.exchange_balance_snapshots ebs\n  JOIN latest_sync ls ON ebs.synced_at = ls.synced_at\n  WHERE ebs.available > 0\n), brl_rate AS (\n  SELECT MAX(CASE WHEN currency = 'BRL' THEN NULLIF(price_usdt, 0) END) AS brl_price_usdt\n  FROM latest_balances\n)\nSELECT ROUND(COALESCE(SUM(\n  CASE\n    WHEN lb.currency = 'BRL' THEN lb.available\n    WHEN br.brl_price_usdt IS NULL OR br.brl_price_usdt = 0 THEN 0\n    ELSE (lb.available * COALESCE(lb.price_usdt, CASE WHEN lb.currency = 'USDT' THEN 1 END, 0)) / br.brl_price_usdt\n  END\n), 0)::numeric, 2) AS value\nFROM latest_balances lb\nCROSS JOIN brl_rate br",
+          "rawSql": "WITH latest_sync AS (\n  SELECT MAX(synced_at) AS synced_at\n  FROM btc.exchange_balance_snapshots\n), latest_balances AS (\n  SELECT account_type, currency, available, price_usdt\n  FROM btc.exchange_balance_snapshots ebs\n  JOIN latest_sync ls ON ebs.synced_at = ls.synced_at\n  WHERE ebs.available > 0\n), brl_rate AS (\n  SELECT COALESCE(\n    MAX(CASE WHEN currency = 'BRL' THEN NULLIF(price_usdt, 0) END),\n    (SELECT NULLIF(price_usdt, 0) FROM btc.exchange_balance_snapshots\n     WHERE currency = 'BRL' AND price_usdt > 0 ORDER BY synced_at DESC LIMIT 1),\n    (SELECT 1.0 / NULLIF(price, 0) FROM btc.trades\n     WHERE symbol = 'USDT-BRL' AND COALESCE(dry_run, false) = false\n     ORDER BY created_at DESC LIMIT 1)\n  ) AS brl_price_usdt\n  FROM latest_balances\n)\nSELECT ROUND(COALESCE(SUM(\n  CASE\n    WHEN lb.currency = 'BRL' THEN lb.available\n    WHEN br.brl_price_usdt IS NULL OR br.brl_price_usdt = 0 THEN 0\n    ELSE (lb.available * COALESCE(lb.price_usdt, CASE WHEN lb.currency = 'USDT' THEN 1 END, 0)) / br.brl_price_usdt\n  END\n), 0)::numeric, 2) AS value\nFROM latest_balances lb\nCROSS JOIN brl_rate br",
           "refId": "A"
         }
       ],
-      "title": "💸 Saldo Exchange em R$ (main+trade)",
+      "title": "💸 Saldo Exchange em R$ (total bruto)",
       "type": "stat"
     },
     {
@@ -2988,6 +2988,606 @@
       "type": "marcusolsson-dynamictext-panel"
     },
     {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 93
+      },
+      "id": 300,
+      "panels": [],
+      "title": "⛏️ Mineração KuMining",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "Saldo BTC total nas sub-contas de trading (BTCAgressive + BTCConservative). Recompensas de mineração KuMining são creditadas nestas contas.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 8,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 0.0001
+              },
+              {
+                "color": "green",
+                "value": 0.001
+              }
+            ]
+          },
+          "unit": "currencyBTC"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "w": 4,
+        "h": 5,
+        "y": 94
+      },
+      "id": 301,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH latest AS (\n  SELECT account_type, balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  ORDER BY synced_at DESC\n  LIMIT 2\n)\nSELECT\n  now() AS \"time\",\n  SUM(balance) AS \"Saldo BTC\"\nFROM latest",
+          "refId": "A",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "title": "₿ Saldo BTC (Main)",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "Ganho de BTC no período selecionado (conta main). Reflete recompensas de mineração KuMining creditadas.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 8,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 1e-05
+              }
+            ]
+          },
+          "unit": "currencyBTC"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 4,
+        "w": 4,
+        "h": 5,
+        "y": 94
+      },
+      "id": 302,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH btc_snapshots AS (\n  SELECT synced_at, SUM(balance) AS total_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  GROUP BY synced_at\n),\nperiod_ends AS (\n  SELECT\n    (ARRAY_AGG(total_balance ORDER BY synced_at DESC))[1] AS end_bal,\n    (ARRAY_AGG(total_balance ORDER BY synced_at ASC))[1] AS start_bal\n  FROM btc_snapshots\n  WHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n)\nSELECT\n  now() AS \"time\",\n  COALESCE(end_bal - start_bal, 0) AS \"Ganhos BTC\"\nFROM period_ends",
+          "refId": "A",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "title": "📈 Ganhos BTC no Período",
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "Valor dos ganhos de mineração em USDT no período selecionado.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "yellow",
+                "value": 0
+              },
+              {
+                "color": "green",
+                "value": 0.01
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 8,
+        "w": 4,
+        "h": 5,
+        "y": 94
+      },
+      "id": 303,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH btc_snapshots AS (\n  SELECT synced_at, SUM(balance) AS total_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  GROUP BY synced_at\n),\nbtc_delta AS (\n  SELECT\n    (ARRAY_AGG(total_balance ORDER BY synced_at DESC))[1]\n    - (ARRAY_AGG(total_balance ORDER BY synced_at ASC))[1] AS btc_earned\n  FROM btc_snapshots\n  WHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n),\nbtc_price AS (\n  SELECT price_usdt\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n    AND price_usdt IS NOT NULL\n  ORDER BY synced_at DESC\n  LIMIT 1\n)\nSELECT\n  now() AS \"time\",\n  COALESCE(btc_earned * btc_price.price_usdt, 0) AS \"Ganhos USDT\"\nFROM btc_delta, btc_price",
+          "refId": "A",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "title": "💰 Ganhos em USDT",
+      "type": "stat"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "w": 6,
+        "h": 5,
+        "y": 94
+      },
+      "id": 304,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "<div style=\"display:flex;flex-direction:column;justify-content:center;height:100%;padding:12px;font-size:12px;line-height:1.6;color:#c8ccd0;\">\n<div style=\"font-weight:700;font-size:14px;color:#FF9830;margin-bottom:8px;\">⛏️ Contrato KuMining</div>\n<div><b>Hashrate:</b> 10 TH</div>\n<div><b>Período:</b> 7 dias</div>\n<div><b>Cupom:</b> 1 TH · 1 dia (bônus)</div>\n<div><b>Início:</b> 08/08/2026, 21:00</div>\n<div><b>Término:</b> 14/08/2026, 21:00</div>\n<div style=\"margin-top:6px;\"><b>Custo Total:</b> ~2.62 USDT</div>\n<div><b>ROI Estimado:</b> ~518% (7 dias)</div>\n</div>",
+        "mode": "html"
+      },
+      "pluginVersion": "12.4.0",
+      "title": "📋 Contrato Ativo",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "Evolução do saldo BTC na conta main (inclui recompensas de mineração).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "BTC",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "line",
+            "fillOpacity": 15,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "smooth",
+            "lineWidth": 2,
+            "pointSize": 4,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "showValues": false,
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 8,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "currencyBTC"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Saldo BTC"
+            },
+            "properties": [
+              {
+                "id": "custom.lineWidth",
+                "value": 3
+              },
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#FF9830",
+                  "mode": "fixed"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "x": 0,
+        "w": 12,
+        "h": 8,
+        "y": 99
+      },
+      "id": 305,
+      "options": {
+        "legend": {
+          "calcs": [
+            "lastNotNull",
+            "min",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT\n  synced_at AS \"time\",\n  SUM(balance) AS \"Saldo BTC\"\nFROM btc.exchange_balance_snapshots\nWHERE currency = 'BTC'\n  AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  AND synced_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY synced_at\nORDER BY synced_at",
+          "refId": "A",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "title": "📈 Saldo BTC ao Longo do Tempo",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "Ganho diário de BTC por mineração (diferença entre snapshots consecutivos da conta main).",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": true,
+            "axisColorMode": "text",
+            "axisLabel": "BTC ganho",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "barWidthFactor": 0.6,
+            "drawStyle": "bars",
+            "fillOpacity": 80,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "showValues": false,
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "decimals": 8,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "currencyBTC"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 12,
+        "w": 12,
+        "h": 8,
+        "y": 99
+      },
+      "id": 306,
+      "options": {
+        "legend": {
+          "calcs": [
+            "sum",
+            "mean"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "hideZeros": false,
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH ordered AS (\n  SELECT\n    synced_at,\n    SUM(balance) AS total_balance,\n    LAG(SUM(balance)) OVER (ORDER BY synced_at) AS prev_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  GROUP BY synced_at\n)\nSELECT\n  synced_at AS \"time\",\n  COALESCE(total_balance - prev_balance, 0) AS \"Ganhos BTC\"\nFROM ordered\nWHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND total_balance - COALESCE(prev_balance, total_balance) > 0\nORDER BY synced_at",
+          "refId": "A",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "title": "⛏️ Ganhos de Mineração por Snapshot",
+      "type": "timeseries"
+    },
+    {
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 6,
+        "w": 18,
+        "h": 4,
+        "y": 107
+      },
+      "id": 308,
+      "options": {
+        "code": {
+          "language": "plaintext",
+          "showLineNumbers": false,
+          "showMiniMap": false
+        },
+        "content": "<div style=\"display:flex;align-items:center;justify-content:center;height:100%;gap:16px;padding:8px;\">\n<a href=\"https://www.kucoin.com/pt/assets/transfer?from=main&to=trade\" target=\"_blank\" style=\"display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#FF9830,#F57C00);color:#fff;font-weight:700;font-size:16px;padding:14px 32px;border-radius:10px;text-decoration:none;box-shadow:0 4px 15px rgba(255,152,48,0.3);transition:all 0.2s;\" onmouseover=\"this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(255,152,48,0.4)'\" onmouseout=\"this.style.transform='';this.style.boxShadow='0 4px 15px rgba(255,152,48,0.3)'\">\n<span style=\"font-size:20px;\">💸</span> Transferir para Conta de Trading\n</a>\n<a href=\"https://www.kucoin.com/pt/assets/transfer?from=main&to=trade&symbol=BTC-USDT\" target=\"_blank\" style=\"display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#FF9830,#F57C00);color:#fff;font-weight:700;font-size:16px;padding:14px 32px;border-radius:10px;text-decoration:none;box-shadow:0 4px 15px rgba(255,152,48,0.3);transition:all 0.2s;\" onmouseover=\"this.style.transform='translateY(-2px)';this.style.boxShadow='0 6px 20px rgba(255,152,48,0.4)'\" onmouseout=\"this.style.transform='';this.style.boxShadow='0 4px 15px rgba(255,152,48,0.3)'\">\n<span style=\"font-size:20px;\">⛏️</span> Transferir BTC Mining → Trading\n</a>\n</div>",
+        "mode": "html"
+      },
+      "pluginVersion": "12.4.0",
+      "title": "🚀 Ações Rápidas",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "btc-trading-pg"
+      },
+      "description": "USDT disponível na conta main para transferência.",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "decimals": 2,
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": 0
+              },
+              {
+                "color": "orange",
+                "value": 5
+              },
+              {
+                "color": "green",
+                "value": 20
+              }
+            ]
+          },
+          "unit": "currencyUSD"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "x": 0,
+        "w": 6,
+        "h": 4,
+        "y": 107
+      },
+      "id": 307,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "showPercentChange": false,
+        "textMode": "auto",
+        "wideLayout": true
+      },
+      "pluginVersion": "12.4.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "btc-trading-pg"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (account_type)\n    account_type, available\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'USDT'\n    AND account_type = 'main'\n  ORDER BY account_type, synced_at DESC\n)\nSELECT\n  now() AS \"time\",\n  available AS \"USDT Disponível\"\nFROM latest",
+          "refId": "A",
+          "timeColumns": [
+            "time"
+          ]
+        }
+      ],
+      "title": "💵 USDT Disponível (Main)",
+      "type": "stat"
+    },
+    {
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
@@ -3010,7 +3610,7 @@
         "h": 16,
         "w": 24,
         "x": 0,
-        "y": 93
+        "y": 113
       },
       "id": 203,
       "options": {
@@ -3075,7 +3675,7 @@
         "x": 0,
         "w": 24,
         "h": 12,
-        "y": 109
+        "y": 129
       },
       "id": 98,
       "options": {
@@ -3153,7 +3753,7 @@
             "x": 0,
             "w": 4,
             "h": 3,
-            "y": 97
+            "y": 117
           },
           "id": 21,
           "options": {
@@ -3215,7 +3815,7 @@
             "x": 4,
             "w": 4,
             "h": 3,
-            "y": 97
+            "y": 117
           },
           "id": 22,
           "options": {
@@ -3288,7 +3888,7 @@
             "x": 8,
             "w": 4,
             "h": 3,
-            "y": 97
+            "y": 117
           },
           "id": 23,
           "options": {
@@ -3346,7 +3946,7 @@
             "x": 12,
             "w": 4,
             "h": 3,
-            "y": 97
+            "y": 117
           },
           "id": 24,
           "options": {
@@ -3405,7 +4005,7 @@
             "x": 16,
             "w": 4,
             "h": 3,
-            "y": 97
+            "y": 117
           },
           "id": 25,
           "options": {
@@ -3467,7 +4067,7 @@
             "x": 20,
             "w": 4,
             "h": 3,
-            "y": 97
+            "y": 117
           },
           "id": 26,
           "options": {
@@ -3524,7 +4124,7 @@
             "x": 0,
             "w": 8,
             "h": 7,
-            "y": 100
+            "y": 120
           },
           "id": 27,
           "options": {
@@ -3618,7 +4218,7 @@
             "x": 8,
             "w": 8,
             "h": 7,
-            "y": 100
+            "y": 120
           },
           "id": 28,
           "options": {
@@ -3706,7 +4306,7 @@
             "x": 16,
             "w": 8,
             "h": 7,
-            "y": 100
+            "y": 120
           },
           "id": 29,
           "options": {
@@ -3802,7 +4402,7 @@
             "x": 0,
             "w": 6,
             "h": 6,
-            "y": 98
+            "y": 118
           },
           "id": 31,
           "options": {
@@ -3896,7 +4496,7 @@
             "x": 6,
             "w": 8,
             "h": 6,
-            "y": 98
+            "y": 118
           },
           "id": 32,
           "options": {
@@ -4000,7 +4600,7 @@
             "x": 14,
             "w": 5,
             "h": 6,
-            "y": 98
+            "y": 118
           },
           "id": 33,
           "options": {
@@ -4082,7 +4682,7 @@
             "x": 19,
             "w": 3,
             "h": 6,
-            "y": 98
+            "y": 118
           },
           "id": 56,
           "options": {
@@ -4157,7 +4757,7 @@
             "x": 22,
             "w": 2,
             "h": 6,
-            "y": 98
+            "y": 118
           },
           "id": 57,
           "options": {
@@ -4281,7 +4881,7 @@
             "x": 0,
             "w": 5,
             "h": 7,
-            "y": 99
+            "y": 119
           },
           "id": 81,
           "options": {
@@ -4354,7 +4954,7 @@
             "x": 5,
             "w": 4,
             "h": 7,
-            "y": 99
+            "y": 119
           },
           "id": 82,
           "options": {
@@ -4462,7 +5062,7 @@
             "x": 9,
             "w": 5,
             "h": 7,
-            "y": 99
+            "y": 119
           },
           "id": 83,
           "options": {
@@ -4543,7 +5143,7 @@
             "x": 14,
             "w": 3,
             "h": 7,
-            "y": 99
+            "y": 119
           },
           "id": 85,
           "options": {
@@ -4634,7 +5234,7 @@
             "x": 17,
             "w": 4,
             "h": 7,
-            "y": 99
+            "y": 119
           },
           "id": 84,
           "options": {
@@ -4714,7 +5314,7 @@
             "x": 21,
             "w": 3,
             "h": 7,
-            "y": 99
+            "y": 119
           },
           "id": 86,
           "options": {
@@ -4824,7 +5424,7 @@
             "x": 0,
             "w": 24,
             "h": 10,
-            "y": 106
+            "y": 126
           },
           "id": 88,
           "options": {
@@ -4879,7 +5479,7 @@
             "x": 0,
             "w": 24,
             "h": 28,
-            "y": 116
+            "y": 136
           },
           "id": 89,
           "options": {
@@ -5015,7 +5615,7 @@
             "x": 0,
             "w": 5,
             "h": 7,
-            "y": 100
+            "y": 120
           },
           "id": 91,
           "options": {
@@ -5088,7 +5688,7 @@
             "x": 5,
             "w": 4,
             "h": 7,
-            "y": 100
+            "y": 120
           },
           "id": 92,
           "options": {
@@ -5181,7 +5781,7 @@
             "x": 9,
             "w": 5,
             "h": 7,
-            "y": 100
+            "y": 120
           },
           "id": 93,
           "options": {
@@ -5260,7 +5860,7 @@
             "x": 14,
             "w": 4,
             "h": 7,
-            "y": 100
+            "y": 120
           },
           "id": 94,
           "options": {
@@ -5364,7 +5964,7 @@
             "x": 18,
             "w": 6,
             "h": 7,
-            "y": 100
+            "y": 120
           },
           "id": 95,
           "options": {
@@ -5500,7 +6100,7 @@
             "x": 0,
             "w": 24,
             "h": 8,
-            "y": 107
+            "y": 127
           },
           "id": 96,
           "options": {
@@ -5631,7 +6231,7 @@
             "x": 0,
             "w": 12,
             "h": 9,
-            "y": 115
+            "y": 135
           },
           "id": 107,
           "options": {
@@ -5703,7 +6303,7 @@
             "x": 12,
             "w": 12,
             "h": 9,
-            "y": 115
+            "y": 135
           },
           "id": 108,
           "options": {
@@ -5822,7 +6422,7 @@
             "x": 0,
             "w": 12,
             "h": 8,
-            "y": 124
+            "y": 144
           },
           "id": 109,
           "options": {
@@ -5988,7 +6588,7 @@
             "x": 12,
             "w": 12,
             "h": 8,
-            "y": 124
+            "y": 144
           },
           "id": 110,
           "options": {
@@ -6089,7 +6689,7 @@
             "x": 0,
             "w": 6,
             "h": 3,
-            "y": 101
+            "y": 121
           },
           "id": 51,
           "options": {
@@ -6147,7 +6747,7 @@
             "x": 6,
             "w": 6,
             "h": 3,
-            "y": 101
+            "y": 121
           },
           "id": 52,
           "options": {
@@ -6205,7 +6805,7 @@
             "x": 12,
             "w": 6,
             "h": 3,
-            "y": 101
+            "y": 121
           },
           "id": 53,
           "options": {
@@ -6263,7 +6863,7 @@
             "x": 18,
             "w": 6,
             "h": 3,
-            "y": 101
+            "y": 121
           },
           "id": 54,
           "options": {
@@ -6333,7 +6933,7 @@
             "x": 0,
             "w": 24,
             "h": 6,
-            "y": 104
+            "y": 124
           },
           "id": 60,
           "options": {
@@ -6459,7 +7059,7 @@
             "x": 0,
             "w": 24,
             "h": 12,
-            "y": 110
+            "y": 130
           },
           "id": 105,
           "options": {
@@ -6525,7 +7125,7 @@
         "h": 4,
         "w": 4,
         "x": 0,
-        "y": 127
+        "y": 147
       },
       "datasource": {
         "type": "prometheus",
@@ -6580,7 +7180,7 @@
         "h": 4,
         "w": 4,
         "x": 4,
-        "y": 127
+        "y": 147
       },
       "datasource": {
         "type": "prometheus",
@@ -6635,7 +7235,7 @@
         "h": 4,
         "w": 4,
         "x": 8,
-        "y": 127
+        "y": 147
       },
       "datasource": {
         "type": "prometheus",
@@ -6690,7 +7290,7 @@
         "h": 4,
         "w": 4,
         "x": 12,
-        "y": 127
+        "y": 147
       },
       "datasource": {
         "type": "prometheus",
@@ -6746,7 +7346,7 @@
         "h": 4,
         "w": 4,
         "x": 16,
-        "y": 127
+        "y": 147
       },
       "datasource": {
         "type": "prometheus",
@@ -6801,7 +7401,7 @@
         "h": 4,
         "w": 4,
         "x": 20,
-        "y": 127
+        "y": 147
       },
       "datasource": {
         "type": "prometheus",
@@ -6856,7 +7456,7 @@
         "h": 8,
         "w": 12,
         "x": 0,
-        "y": 131
+        "y": 151
       },
       "datasource": {
         "type": "prometheus",
@@ -6939,7 +7539,7 @@
         "h": 8,
         "w": 12,
         "x": 12,
-        "y": 131
+        "y": 151
       },
       "datasource": {
         "type": "prometheus",
@@ -6995,7 +7595,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 139
+        "y": 159
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",
@@ -7028,7 +7628,7 @@
         "h": 8,
         "w": 24,
         "x": 0,
-        "y": 147
+        "y": 167
       },
       "datasource": {
         "type": "grafana-postgresql-datasource",

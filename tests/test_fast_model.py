@@ -190,6 +190,64 @@ class TestFastIndicators:
         ind.update_from_candles([])
         assert len(ind.prices) == 0
 
+    def test_update_mesmo_preco_mesmo_segundo_nao_muda_rsi(self) -> None:
+        """Dois update() do mesmo preço no mesmo segundo são no-op."""
+        ind = FastIndicators()
+        candles = [
+            {"close": 100.0 + i, "volume": 1.0, "timestamp": 1_700_000_000 + i * 60}
+            for i in range(20)
+        ]
+        ind.update_from_candles(candles)
+        rsi_before = ind.rsi()
+        last = float(candles[-1]["close"])
+        ind.update(last)
+        ind.update(last)
+        assert ind.rsi() == pytest.approx(rsi_before)
+        assert len(ind.prices) == 20
+        assert len(ind._candle_prices) == 20
+
+    def test_rsi_estavel_em_candles_sinteticos_1min(self) -> None:
+        """14+ candles de alta limpa produzem RSI alto e estável no reload."""
+        ind = FastIndicators()
+        candles = [
+            {"close": 100.0 + i, "volume": 1.0, "timestamp": 1_700_000_000 + i * 60}
+            for i in range(15)
+        ]
+        ind.update_from_candles(candles)
+        rsi_val = ind.rsi()
+        assert 90.0 <= rsi_val <= 100.0
+        ind.update_from_candles(candles)
+        assert ind.rsi() == pytest.approx(rsi_val)
+
+    def test_ticks_apos_candles_nao_crescem_serie_1min(self) -> None:
+        """Ticks ruidosos só mexem a barra atual — não viram série de 3s."""
+        ind = FastIndicators()
+        candles = [
+            {"close": 69000.0 - i * 5.0, "volume": 1.0, "timestamp": 1_700_000_000 + i * 60}
+            for i in range(100)
+        ]
+        ind.update_from_candles(candles)
+        for i in range(200):
+            ind.update(69000.0 + (i % 10) * 5.0)
+        assert len(ind._candle_prices) == 100
+        assert len(ind.prices) == 100
+        rsi_after = ind.rsi()
+        assert 0.0 <= rsi_after <= 100.0
+
+    def test_predict_nao_anexa_tick(self, model: FastTradingModel) -> None:
+        """predict() não é o ponto de update — não cresce o histórico."""
+        candles = [
+            {"close": 80000.0 + i * 10.0, "volume": 1.0, "timestamp": 1_700_000_000 + i * 60}
+            for i in range(30)
+        ]
+        model.indicators.update_from_candles(candles)
+        n_before = len(model.indicators.prices)
+        state = MarketState(price=99999.0, rsi=50.0)
+        model.predict(state, explore=False)
+        model.predict(state, explore=False)
+        assert len(model.indicators.prices) == n_before
+        assert model.indicators.prices[-1] == pytest.approx(80000.0 + 29 * 10.0)
+
     def test_detect_regime_ranging_poucos_dados(self) -> None:
         ind = FastIndicators()
         for p in [100.0] * 30:

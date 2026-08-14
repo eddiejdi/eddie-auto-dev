@@ -47,8 +47,17 @@ from track_record_confidence import (
 from sell_target_mixin import SellTargetMixin
 from risk_guardian_mixin import RiskGuardianMixin
 from position_manager_mixin import PositionManagerMixin
-from position_reconstruction import reconstruct_open_buys, summarize_open_buys
-from profile_rules import validate_profile_for_symbol
+from position_reconstruction import (
+    compute_exposure_budget,
+    reconstruct_open_buys,
+    summarize_open_buys,
+)
+from profile_rules import (
+    config_subaccount_name,
+    live_config_shares_subaccount,
+    open_buy_net_sql_predicate,
+    validate_profile_for_symbol,
+)
 from llm import LLMRouter
 
 _ollama_gate_logger = logging.getLogger("btc_trading_agent.ollama_gate")
@@ -1696,7 +1705,11 @@ class BitcoinTradingAgent(
         cursor=None,
         exclude_external_deposits: bool = False,
     ) -> Dict[str, float]:
-        """Retorna profiles live com posição líquida aberta para o símbolo."""
+        """Retorna profiles live com posição líquida aberta para o símbolo.
+
+        BUY `closed` ou com `metadata.closed_reason` não entra no net — fantasmas
+        reconciliados não fazem o profile parecer "ativo" em conta compartilhada.
+        """
         own_cursor = cursor is None
         if own_cursor:
             with self.db._get_conn() as _conn:
@@ -1706,9 +1719,9 @@ class BitcoinTradingAgent(
                         exclude_external_deposits=exclude_external_deposits,
                     )
 
-        buy_clause = "side='buy'"
-        if exclude_external_deposits:
-            buy_clause += " AND COALESCE(metadata->>'source','') != 'external_deposit'"
+        buy_clause = open_buy_net_sql_predicate(
+            exclude_external_deposits=exclude_external_deposits,
+        )
         cursor.execute(
             f"""
             SELECT
@@ -1732,36 +1745,29 @@ class BitcoinTradingAgent(
         return active_profiles
 
     def _has_shared_live_symbol_profiles(self) -> bool:
-        """Detecta se há outro config LIVE do mesmo símbolo usando profile distinto."""
+        """True se outro config LIVE do mesmo par usa a mesma subconta KuCoin."""
         current_profile = self._current_profile()
         if current_profile == "default":
             return False
 
+        current_sub = config_subaccount_name(getattr(self, "config", None))
+        if not current_sub:
+            return False
+
         config_dir = Path(__file__).parent
         for candidate in config_dir.glob("config_*.json"):
-            if candidate.name == self.config_name:
-                continue
             try:
                 payload = _read_json_config(candidate)
             except Exception:
                 continue
-            if payload.get("symbol", self.symbol) != self.symbol:
-                continue
-            if not bool(payload.get("enabled", True)):
-                continue
-            if payload.get("dry_run") is True:
-                continue
-            if "live_mode" in payload and not bool(payload.get("live_mode")):
-                continue
-            try:
-                candidate_profile = validate_profile_for_symbol(
-                    self.symbol,
-                    payload.get("profile", "default"),
-                    config_name=candidate.name,
-                )
-            except ValueError:
-                continue
-            if candidate_profile not in {"default", current_profile}:
+            if live_config_shares_subaccount(
+                current_symbol=self.symbol,
+                current_profile=current_profile,
+                current_subaccount=current_sub,
+                current_config_name=str(getattr(self, "config_name", "") or ""),
+                candidate_name=candidate.name,
+                candidate=payload,
+            ):
                 return True
         return False
 
@@ -3955,6 +3961,7 @@ class BitcoinTradingAgent(
 
         # Popular indicadores técnicos com dados reais
         self.model.indicators.update_from_candles(candles)
+        self._last_indicator_candle_refresh = time.time()
         logger.info(
             f"📊 Loaded {len(candles)} candles into indicators "
             f"(RSI={self.model.indicators.rsi():.1f}, "
@@ -4506,6 +4513,30 @@ class BitcoinTradingAgent(
             f"episodes={self.model.q_model.episodes}"
         )
 
+    def _refresh_indicator_candles(self, force: bool = False) -> None:
+        """Recarrega closes de 1min no máximo uma vez por minuto.
+
+        A série de RSI/momentum/trend vive nestes candles. Ticks só
+        atualizam a barra em formação via ``indicators.update``.
+        """
+        now = time.time()
+        last = float(getattr(self, "_last_indicator_candle_refresh", 0.0) or 0.0)
+        if not force and last > 0.0 and (now - last) < 50.0:
+            return
+        try:
+            candles = get_candles(self.symbol, ktype="1min", limit=500)
+        except Exception as e:
+            logger.debug(f"Indicator candle refresh failed: {e}")
+            return
+        if not candles:
+            return
+        self.model.indicators.update_from_candles(candles)
+        self._last_indicator_candle_refresh = now
+        try:
+            self.db.store_candles(self.symbol, "1min", candles)
+        except Exception as e:
+            logger.debug(f"Indicator candle persist failed: {e}")
+
     def _get_market_state(self) -> Optional[MarketState]:
         """Coleta estado atual do mercado"""
         try:
@@ -4521,7 +4552,8 @@ class BitcoinTradingAgent(
             # Trade flow
             flow_analysis = analyze_trade_flow(self.symbol)
             
-            # Indicadores do modelo
+            # Um update por ciclo: candles 1min + close da barra atual.
+            self._refresh_indicator_candles()
             self.model.indicators.update(price)
             rsi = self.model.indicators.rsi()
             momentum = self.model.indicators.momentum()
@@ -5092,9 +5124,21 @@ class BitcoinTradingAgent(
             self.state.buy_dynamic_batch_cap_usdt = 0.0
             caps = self._get_runtime_risk_caps()
             quote_cur = self.symbol.split("-")[1]  # USDT, BRL, etc.
-            usdt_balance = get_balance(quote_cur) if not self.state.dry_run else 1000
-            # Profile allocation: aplicar % do saldo alocado ao perfil
-            usdt_balance = self._apply_profile_allocation(usdt_balance)
+            tracked_base = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
+            if self.state.dry_run:
+                raw_quote = 1000.0
+                base_qty = tracked_base
+            else:
+                try:
+                    raw_quote, base_qty = self._read_subaccount_spot_balances(quote_cur)
+                except Exception as exc:
+                    logger.warning("⚠️ Spot balance read failed, falling back: %s", exc)
+                    raw_quote = get_balance(quote_cur)
+                    base_qty = tracked_base
+                # Nunca subcontar o que o state já enxerga.
+                base_qty = max(float(base_qty or 0.0), tracked_base)
+            # Allocation só no USDT gastável — o cap usa equity real da subconta.
+            usdt_balance = self._apply_profile_allocation(raw_quote)
             rag_adj = self.market_rag.get_current_adjustment()
             controls = self._resolve_trade_controls(rag_adj)
             ai_controlled = controls.ai_controlled
@@ -5140,20 +5184,28 @@ class BitcoinTradingAgent(
                 per_entry_pct = controls.max_position_pct / max_positions
                 max_amount = usdt_balance * per_entry_pct
 
-            open_exposure = max(self.state.position * price, 0.0)
-            exposure_base = max(usdt_balance + open_exposure, 0.0)
-            max_total_exposure = exposure_base * controls.max_position_pct
-            remaining_exposure = max(max_total_exposure - open_exposure, 0.0)
+            budget = compute_exposure_budget(
+                quote_balance=raw_quote,
+                base_qty=base_qty,
+                price=price,
+                max_position_pct=controls.max_position_pct,
+            )
+            open_exposure = budget["open_exposure"]
+            max_total_exposure = budget["max_total_exposure"]
+            remaining_exposure = budget["remaining_exposure"]
             if remaining_exposure <= 0:
                 logger.info(
                     f"🧱 BUY blocked (max exposure): open=${open_exposure:.2f} "
-                    f">= cap=${max_total_exposure:.2f} ({controls.max_position_pct*100:.1f}%)"
+                    f">= cap=${max_total_exposure:.2f} "
+                    f"(equity=${budget['equity']:.2f}, {controls.max_position_pct*100:.1f}%)"
                 )
                 self._block_trade(
                     "buy_max_exposure",
                     open_exposure=open_exposure,
                     max_total_exposure=max_total_exposure,
                     max_position_pct=controls.max_position_pct,
+                    equity=budget["equity"],
+                    base_qty=base_qty,
                 )
                 return 0
             max_amount = min(max_amount, remaining_exposure)
@@ -6027,6 +6079,12 @@ class BitcoinTradingAgent(
                 if market_state is None:
                     time.sleep(POLL_INTERVAL)
                     continue
+
+                # Saldo real da subconta → state.position (sem vender).
+                try:
+                    self._align_position_to_exchange(market_state.price)
+                except Exception as e:
+                    logger.debug(f"Position align error: {e}")
                 
                 # Atualizar valor da posição
                 if self.state.position > 0:
