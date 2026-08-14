@@ -27,7 +27,8 @@ def test_script_routes_ollama_fallback_host_through_coordinator() -> None:
     assert "Environment=OLLAMA_TRADE_WINDOW_FALLBACK_HOST=http://192.168.15.2:11437" in content
     assert "Environment=OLLAMA_TRADE_PARAMS_HOST=http://192.168.15.2:11437" in content
     assert "Environment=OLLAMA_TRADE_WINDOW_HOST=http://192.168.15.2:11437" in content
-    assert "Environment=OLLAMA_TRADE_WINDOW_HOST=http://192.168.15.2:11437" in content
+    assert 'ollama_host="${OLLAMA_PLAN_HOST:-http://192.168.15.2:11437}"' in content
+    assert 'ollama_host="${OLLAMA_PLAN_HOST:-http://192.168.15.2:11434}"' not in content
 
 
 def test_script_syncs_btc_dashboard_to_canonical_remote_filename() -> None:
