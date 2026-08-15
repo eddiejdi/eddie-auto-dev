@@ -114,6 +114,11 @@ def test_script_skips_disabled_inactive_units() -> None:
         assert "start_or_skip_unit" in body
         assert "não religar" in body
         assert 'systemctl enable "crypto-agent@${inst}.service" "crypto-exporter@${inst}.service"' not in body
+        assert "primeira ativação" not in body
+        assert "ActiveEnterTimestamp" not in body
+        assert 'FORCE_ENABLE:-' in body
+        # enable de disabled só no escape hatch explícito
+        assert body.index('FORCE_ENABLE:-') < body.index('systemctl enable "${svc}"')
 
 
 def test_workflow_verify_skips_disabled_sol_doge_units() -> None:
