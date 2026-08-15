@@ -694,6 +694,34 @@ verify_agents_running_current_code() {
   echo "✅ Completude confirmada: todos os crypto-agent ativos no código recém-sincronizado."
 }
 
+unit_is_disabled_or_masked() {
+  local svc="$1"
+  local enabled
+  enabled="$(systemctl is-enabled "${svc}" 2>/dev/null || true)"
+  case "${enabled}" in
+    disabled|masked) return 0 ;;
+  esac
+  return 1
+}
+
+# Restart se a unit está enabled OU se já está ativa (disabled-but-running,
+# ex. BTC aggressive). Não dá start em disabled+inactive — o deploy #322
+# religou conservatives do tombamento e o ETH cons disputou a key do BTC shadow.
+restart_unit_respecting_disable() {
+  local svc="$1"
+  if unit_is_disabled_or_masked "${svc}"; then
+    if systemctl is-active --quiet "${svc}"; then
+      echo "  ↻ ${svc}: disabled mas ativo — restart sem enable"
+    else
+      echo "  ⏭ ${svc}: disabled/inactive — pulado (não religar)"
+      return 0
+    fi
+  fi
+  sudo systemctl restart "${svc}" || {
+    echo "⚠️  falha ao reiniciar ${svc} — seguindo" >&2
+  }
+}
+
 # `source`ar o script expõe apenas as funções (usado por
 # tests/test_systemd_dropin_parity.py para exercitar sync_systemd_dropins com um
 # /etc/systemd/system falso). Execução direta segue normalmente.
@@ -809,10 +837,8 @@ echo "♻️ Reiniciando agents com stagger ${AGENT_RESTART_STAGGER_SEC}s..."
 idx=0
 for svc in "${AGENT_SERVICES[@]}"; do
   idx=$((idx + 1))
-  echo "  [${idx}/${#AGENT_SERVICES[@]}] restart ${svc}"
-  sudo systemctl restart "${svc}" || {
-    echo "⚠️  falha ao reiniciar ${svc} — seguindo" >&2
-  }
+  echo "  [${idx}/${#AGENT_SERVICES[@]}] ${svc}"
+  restart_unit_respecting_disable "${svc}"
   if [[ "${idx}" -lt "${#AGENT_SERVICES[@]}" ]]; then
     sleep "${AGENT_RESTART_STAGGER_SEC}"
   fi
@@ -830,10 +856,8 @@ echo "♻️ Reiniciando exporters com stagger ${EXPORTER_RESTART_STAGGER_SEC}s.
 eidx=0
 for svc in "${EXPORTER_SERVICES[@]}"; do
   eidx=$((eidx + 1))
-  echo "  [${eidx}/${#EXPORTER_SERVICES[@]}] restart ${svc}"
-  sudo systemctl restart "${svc}" || {
-    echo "⚠️  falha ao reiniciar ${svc} — seguindo" >&2
-  }
+  echo "  [${eidx}/${#EXPORTER_SERVICES[@]}] ${svc}"
+  restart_unit_respecting_disable "${svc}"
   if [[ "${eidx}" -lt "${#EXPORTER_SERVICES[@]}" ]]; then
     sleep "${EXPORTER_RESTART_STAGGER_SEC}"
   fi
