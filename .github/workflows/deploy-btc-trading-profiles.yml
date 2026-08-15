@@ -121,6 +121,12 @@ jobs:
             crypto-exporter@DOGE_USDT_aggressive.service \
             crypto-exporter@DOGE_USDT_shadow.service
           do
+            en="$(systemctl is-enabled "${svc}" 2>/dev/null || true)"
+            if [[ "${en}" == "disabled" || "${en}" == "masked" ]] \
+               && ! systemctl is-active --quiet "${svc}"; then
+              echo "⏭ ${svc} ${en}/inactive — verify pulado"
+              continue
+            fi
             ok=0
             for wait in 1 2 3 4 5 6; do
               if systemctl is-active --quiet "${svc}"; then ok=1; break; fi
@@ -131,14 +137,33 @@ jobs:
             echo "✅ ${svc}"
           done
 
-          SOL_JOBS=(
-            crypto-exporter-sol_usdt_shadow
-            crypto-exporter-sol_usdt_conservative
-            crypto-exporter-sol_usdt_aggressive
-            crypto-exporter-doge_usdt_shadow
-            crypto-exporter-doge_usdt_conservative
-            crypto-exporter-doge_usdt_aggressive
-          )
+          required_job() {
+            local job="$1" unit="$2"
+            local en
+            en="$(systemctl is-enabled "${unit}" 2>/dev/null || true)"
+            if [[ "${en}" == "disabled" || "${en}" == "masked" ]] \
+               && ! systemctl is-active --quiet "${unit}"; then
+              return 1
+            fi
+            return 0
+          }
+          SOL_JOBS=()
+          required_job crypto-exporter-sol_usdt_shadow crypto-exporter@SOL_USDT_shadow.service \
+            && SOL_JOBS+=(crypto-exporter-sol_usdt_shadow)
+          required_job crypto-exporter-sol_usdt_conservative crypto-exporter@SOL_USDT_conservative.service \
+            && SOL_JOBS+=(crypto-exporter-sol_usdt_conservative)
+          required_job crypto-exporter-sol_usdt_aggressive crypto-exporter@SOL_USDT_aggressive.service \
+            && SOL_JOBS+=(crypto-exporter-sol_usdt_aggressive)
+          required_job crypto-exporter-doge_usdt_shadow crypto-exporter@DOGE_USDT_shadow.service \
+            && SOL_JOBS+=(crypto-exporter-doge_usdt_shadow)
+          required_job crypto-exporter-doge_usdt_conservative crypto-exporter@DOGE_USDT_conservative.service \
+            && SOL_JOBS+=(crypto-exporter-doge_usdt_conservative)
+          required_job crypto-exporter-doge_usdt_aggressive crypto-exporter@DOGE_USDT_aggressive.service \
+            && SOL_JOBS+=(crypto-exporter-doge_usdt_aggressive)
+          if [[ "${#SOL_JOBS[@]}" -eq 0 ]]; then
+            echo "⏭ Nenhum scrape target SOL/DOGE habilitado — verify pulado"
+            exit 0
+          fi
           for attempt in 1 2 3 4 5 6 7 8 9 10 11 12; do
             mapfile -t STATUSES < <(
               curl -sf "http://127.0.0.1:9090/api/v1/targets" | python3 -c "
