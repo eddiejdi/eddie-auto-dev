@@ -44,25 +44,25 @@ if [[ -f "${REPO_PROMETHEUS}" ]]; then
 fi
 
 systemctl daemon-reload
-# Não religar perfil disabled (tombamento). Primeira ativação (nunca started)
-# ainda faz enable+start. disabled+ativo: restart sem enable.
+# Unit disabled/masked NUNCA recebe enable. Timestamp vazio no systemd
+# religou SOL/DOGE conservative no deploy #324 — não usar isso como sinal.
+# Perfil novo de verdade: FORCE_ENABLE=1 ou systemctl enable --now manual.
 start_or_skip_unit() {
   local svc="$1"
-  local enabled active started
+  local enabled active
   enabled="$(systemctl is-enabled "${svc}" 2>/dev/null || true)"
   active="$(systemctl is-active "${svc}" 2>/dev/null || true)"
-  started="$(systemctl show "${svc}" -p ActiveEnterTimestamp --value 2>/dev/null || true)"
   case "${enabled}" in
     disabled|masked)
-      if [[ "${active}" == "active" ]]; then
-        systemctl restart "${svc}" || true
-        echo "  ↻ ${svc}: disabled mas ativo — restart sem enable"
-      elif [[ -n "${started}" && "${started}" != "n/a" ]]; then
-        echo "  ⏭ ${svc}: ${enabled}/${active} — pulado (não religar)"
-      else
+      if [[ "${FORCE_ENABLE:-}" == "1" ]]; then
         systemctl enable "${svc}"
         systemctl restart "${svc}"
-        echo "  started ${svc} (primeira ativação)"
+        echo "  started ${svc} (FORCE_ENABLE=1)"
+      elif [[ "${active}" == "active" ]]; then
+        systemctl restart "${svc}" || true
+        echo "  ↻ ${svc}: disabled mas ativo — restart sem enable"
+      else
+        echo "  ⏭ ${svc}: ${enabled}/${active} — pulado (não religar)"
       fi
       ;;
     *)
