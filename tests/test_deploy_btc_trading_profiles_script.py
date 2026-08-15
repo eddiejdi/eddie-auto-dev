@@ -86,10 +86,47 @@ def test_script_staggers_agent_and_exporter_restarts() -> None:
     assert "AGENT_RESTART_STAGGER_SEC" in content
     assert "EXPORTER_RESTART_STAGGER_SEC" in content
     assert 'for svc in "${AGENT_SERVICES[@]}"; do' in content
+    assert "restart_unit_respecting_disable" in content
     assert 'sudo systemctl restart "${svc}"' in content
     # Não deve mais reiniciar o array inteiro de uma vez
     assert 'sudo systemctl restart "${AGENT_SERVICES[@]}"' not in content
     assert 'sudo systemctl restart "${EXPORTER_SERVICES[@]}"' not in content
+
+
+def test_script_skips_disabled_inactive_units() -> None:
+    """Tombamento: deploy não pode dar start em conservative disabled+inactive.
+
+    disabled+ativo (BTC aggressive) ainda recebe restart, sem enable.
+    """
+    content = _load_script()
+    assert "unit_is_disabled_or_masked" in content
+    assert "restart_unit_respecting_disable" in content
+    assert "disabled/inactive — pulado" in content
+    assert "disabled mas ativo — restart sem enable" in content
+    assert content.count("restart_unit_respecting_disable") >= 3
+    activate_sol = (SCRIPT_PATH.parent / "activate_sol_trading_profiles.sh").read_text(
+        encoding="utf-8"
+    )
+    activate_doge = (SCRIPT_PATH.parent / "activate_doge_trading_profiles.sh").read_text(
+        encoding="utf-8"
+    )
+    for body in (activate_sol, activate_doge):
+        assert "start_or_skip_unit" in body
+        assert "não religar" in body
+        assert 'systemctl enable "crypto-agent@${inst}.service" "crypto-exporter@${inst}.service"' not in body
+
+
+def test_workflow_verify_skips_disabled_sol_doge_units() -> None:
+    """Verify do workflow não pode falhar porque conservative está disabled."""
+    workflow = (
+        SCRIPT_PATH.parent.parent
+        / ".github"
+        / "workflows"
+        / "deploy-btc-trading-profiles.yml"
+    ).read_text(encoding="utf-8")
+    assert "verify pulado" in workflow
+    assert '== "disabled"' in workflow
+    assert "required_job" in workflow
 
 
 def test_script_restarts_all_crypto_agents_that_share_runtime_code() -> None:

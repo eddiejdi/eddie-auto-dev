@@ -44,11 +44,38 @@ if [[ -f "${REPO_PROMETHEUS}" ]]; then
 fi
 
 systemctl daemon-reload
+# Não religar perfil disabled (tombamento). Primeira ativação (nunca started)
+# ainda faz enable+start. disabled+ativo: restart sem enable.
+start_or_skip_unit() {
+  local svc="$1"
+  local enabled active started
+  enabled="$(systemctl is-enabled "${svc}" 2>/dev/null || true)"
+  active="$(systemctl is-active "${svc}" 2>/dev/null || true)"
+  started="$(systemctl show "${svc}" -p ActiveEnterTimestamp --value 2>/dev/null || true)"
+  case "${enabled}" in
+    disabled|masked)
+      if [[ "${active}" == "active" ]]; then
+        systemctl restart "${svc}" || true
+        echo "  ↻ ${svc}: disabled mas ativo — restart sem enable"
+      elif [[ -n "${started}" && "${started}" != "n/a" ]]; then
+        echo "  ⏭ ${svc}: ${enabled}/${active} — pulado (não religar)"
+      else
+        systemctl enable "${svc}"
+        systemctl restart "${svc}"
+        echo "  started ${svc} (primeira ativação)"
+      fi
+      ;;
+    *)
+      systemctl enable "${svc}"
+      systemctl restart "${svc}"
+      echo "  started ${svc}"
+      ;;
+  esac
+}
 for entry in "${PROFILES[@]}"; do
   inst="${entry%%:*}"
-  systemctl enable "crypto-agent@${inst}.service" "crypto-exporter@${inst}.service"
-  systemctl restart "crypto-agent@${inst}.service" "crypto-exporter@${inst}.service"
-  echo "  started crypto-agent@${inst} + crypto-exporter@${inst}"
+  start_or_skip_unit "crypto-agent@${inst}.service"
+  start_or_skip_unit "crypto-exporter@${inst}.service"
 done
 
 sleep 3
