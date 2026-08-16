@@ -45,7 +45,6 @@ try:
     HAS_STOP_ORDERS = True
 except ImportError:
     HAS_STOP_ORDERS = False
-    logger.debug("Stop-order functions not available in kucoin_api")
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
 from market_rag import MarketRAG
