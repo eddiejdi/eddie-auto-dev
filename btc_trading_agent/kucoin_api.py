@@ -1202,6 +1202,321 @@ def place_market_order(symbol: str, side: str, funds: float = None,
     return {"success": True, "orderId": order_id, "raw": result}
 
 
+# ====================== STOP-LOSS / TAKE-PROFIT ORDERS ======================
+
+def place_stop_loss_order(
+    symbol: str,
+    size: float,
+    stop_price: float,
+    client_oid: str = None,
+    order_type: str = "market",
+    price: float = None,
+) -> Dict[str, Any]:
+    """Coloca ordem stop-loss na KuCoin.
+
+    A ordem é executada automaticamente quando o preço atinge o stopPrice.
+
+    Args:
+        symbol: Par de trading (ex: 'BTC-USDT')
+        size: Quantidade em moeda base (ex: 0.00015 BTC)
+        stop_price: Preço que dispara a ordem
+        client_oid: ID único (opcional, gerado automaticamente)
+        order_type: 'market' ou 'limit' (padrão: market)
+        price: Preço limite (apenas para order_type='limit')
+
+    Returns:
+        Dict com success, orderId, raw
+    """
+    validate_credentials()
+
+    endpoint = "/api/v1/stop-order"
+    client_oid = client_oid or f"btc_sl_{int(time.time() * 1e6)}"
+
+    increments = get_symbol_increments(symbol)
+    size_rounded = _floor_to_increment(float(size), increments["baseIncrement"])
+
+    payload = {
+        "clientOid": client_oid,
+        "side": "sell",
+        "symbol": symbol,
+        "type": order_type,
+        "stop": "loss",
+        "stopPrice": str(stop_price),
+        "size": str(size_rounded),
+    }
+
+    if order_type == "limit" and price is not None:
+        payload["price"] = str(_floor_to_increment(float(price), increments["quoteIncrement"]))
+
+    body_str = json.dumps(payload, separators=(",", ":"))
+
+    max_attempts = 3
+    last_error: Optional[Exception] = None
+    result: Optional[Dict[str, Any]] = None
+
+    for attempt in range(max_attempts):
+        if attempt > 0:
+            existing = get_stop_order_by_client_oid(client_oid)
+            if existing:
+                logger.warning(
+                    "⚠️ Stop-order clientOid=%s já existe na KuCoin (id=%s) — "
+                    "reaproveitando em vez de reenviar",
+                    client_oid, existing.get("orderId"),
+                )
+                result = {"code": "200000", "data": existing}
+                break
+
+        try:
+            r = _signed_request("POST", endpoint, data=payload, timeout=10)
+            result = r.json()
+            if result.get("code") == "200000":
+                break
+        except Exception as e:
+            last_error = e
+            logger.warning(
+                f"⚠️ Falha de rede ao enviar stop-order (tentativa {attempt + 1}/{max_attempts}): {e}"
+            )
+            if attempt < max_attempts - 1:
+                time.sleep(0.5 * (attempt + 1))
+
+    if result is None:
+        existing = get_stop_order_by_client_oid(client_oid)
+        if existing:
+            logger.warning(
+                "⚠️ Stop-order clientOid=%s foi criada apesar das exceções de rede "
+                "(id=%s) — usando ordem existente",
+                client_oid, existing.get("orderId"),
+            )
+            result = {"code": "200000", "data": existing}
+        else:
+            raise last_error
+
+    if result.get("code") != "200000":
+        logger.error(f"❌ Stop-loss order failed: {result}")
+        error_msg = result.get("msg", "Unknown")
+        return {"success": False, "error": error_msg, "raw": result}
+
+    order_data = result.get("data", {})
+    order_id = order_data.get("orderId")
+    logger.info(
+        f"🛑 Stop-loss order placed: {order_id} | "
+        f"Symbol={symbol} Size={size_rounded} StopPrice={stop_price}"
+    )
+
+    return {"success": True, "orderId": order_id, "raw": result}
+
+
+def place_take_profit_order(
+    symbol: str,
+    size: float,
+    stop_price: float,
+    client_oid: str = None,
+    order_type: str = "market",
+    price: float = None,
+) -> Dict[str, Any]:
+    """Coloca ordem take-profit na KuCoin.
+
+    Args:
+        symbol: Par de trading (ex: 'BTC-USDT')
+        size: Quantidade em moeda base
+        stop_price: Preço que dispara a ordem
+        client_oid: ID único (opcional)
+        order_type: 'market' ou 'limit'
+        price: Preço limite (apenas para limit)
+
+    Returns:
+        Dict com success, orderId, raw
+    """
+    validate_credentials()
+
+    endpoint = "/api/v1/stop-order"
+    client_oid = client_oid or f"btc_tp_{int(time.time() * 1e6)}"
+
+    increments = get_symbol_increments(symbol)
+    size_rounded = _floor_to_increment(float(size), increments["baseIncrement"])
+
+    payload = {
+        "clientOid": client_oid,
+        "side": "sell",
+        "symbol": symbol,
+        "type": order_type,
+        "stop": "entry",
+        "stopPrice": str(stop_price),
+        "size": str(size_rounded),
+    }
+
+    if order_type == "limit" and price is not None:
+        payload["price"] = str(_floor_to_increment(float(price), increments["quoteIncrement"]))
+
+    body_str = json.dumps(payload, separators=(",", ":"))
+
+    max_attempts = 3
+    last_error: Optional[Exception] = None
+    result: Optional[Dict[str, Any]] = None
+
+    for attempt in range(max_attempts):
+        if attempt > 0:
+            existing = get_stop_order_by_client_oid(client_oid)
+            if existing:
+                result = {"code": "200000", "data": existing}
+                break
+
+        try:
+            r = _signed_request("POST", endpoint, data=payload, timeout=10)
+            result = r.json()
+            if result.get("code") == "200000":
+                break
+        except Exception as e:
+            last_error = e
+            if attempt < max_attempts - 1:
+                time.sleep(0.5 * (attempt + 1))
+
+    if result is None:
+        existing = get_stop_order_by_client_oid(client_oid)
+        if existing:
+            result = {"code": "200000", "data": existing}
+        else:
+            raise last_error
+
+    if result.get("code") != "200000":
+        logger.error(f"❌ Take-profit order failed: {result}")
+        return {"success": False, "error": result.get("msg", "Unknown"), "raw": result}
+
+    order_data = result.get("data", {})
+    order_id = order_data.get("orderId")
+    logger.info(
+        f"🎯 Take-profit order placed: {order_id} | "
+        f"Symbol={symbol} Size={size_rounded} StopPrice={stop_price}"
+    )
+
+    return {"success": True, "orderId": order_id, "raw": result}
+
+
+def cancel_stop_order(order_id: str = None, client_oid: str = None) -> Dict[str, Any]:
+    """Cancela uma ordem stop na KuCoin.
+
+    Args:
+        order_id: ID da ordem na KuCoin
+        client_oid: ID cliente (um dos dois é obrigatório)
+
+    Returns:
+        Dict com success, raw
+    """
+    validate_credentials()
+
+    if not order_id and not client_oid:
+        raise ValueError("Must specify order_id or client_oid")
+
+    if client_oid:
+        endpoint = f"/api/v1/stop-order/cancelOrderByClientOid"
+        payload = {"clientOid": client_oid, "symbol": "BTC-USDT"}
+    else:
+        endpoint = f"/api/v1/stop-order/{order_id}"
+
+    try:
+        if client_oid:
+            r = _signed_request("DELETE", endpoint, data=payload, timeout=10)
+        else:
+            r = _signed_request("DELETE", endpoint, timeout=10)
+        result = r.json()
+
+        if result.get("code") == "200000":
+            logger.info(f"🛑 Stop-order cancelled: {order_id or client_oid}")
+            return {"success": True, "raw": result}
+        else:
+            logger.warning(f"⚠️ Cancel stop-order failed: {result}")
+            return {"success": False, "error": result.get("msg", "Unknown"), "raw": result}
+    except Exception as e:
+        logger.error(f"❌ Cancel stop-order error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def cancel_all_stop_orders(symbol: str = "BTC-USDT") -> Dict[str, Any]:
+    """Cancela todas as ordens stop de um símbolo.
+
+    Args:
+        symbol: Par de trading
+
+    Returns:
+        Dict com success, count, raw
+    """
+    validate_credentials()
+
+    endpoint = "/api/v1/stop-order/cancel"
+    payload = {"symbol": symbol}
+
+    try:
+        r = _signed_request("DELETE", endpoint, data=payload, timeout=10)
+        result = r.json()
+
+        if result.get("code") == "200000":
+            logger.info(f"🛑 All stop-orders cancelled for {symbol}")
+            return {"success": True, "raw": result}
+        else:
+            return {"success": False, "error": result.get("msg", "Unknown"), "raw": result}
+    except Exception as e:
+        logger.error(f"❌ Cancel all stop-orders error: {e}")
+        return {"success": False, "error": str(e)}
+
+
+def get_stop_orders(
+    symbol: str = "BTC-USDT",
+    status: str = "active",
+) -> Dict[str, Any]:
+    """Lista ordens stop de um símbolo.
+
+    Args:
+        symbol: Par de trading
+        status: 'active' ou 'done'
+
+    Returns:
+        Dict com success, orders, raw
+    """
+    validate_credentials()
+
+    endpoint = "/api/v1/stop-order"
+    params = {"symbol": symbol, "status": status}
+
+    try:
+        r = _signed_request("GET", endpoint, params=params, timeout=10)
+        result = r.json()
+
+        if result.get("code") == "200000":
+            orders = result.get("data", {}).get("items", [])
+            return {"success": True, "orders": orders, "raw": result}
+        else:
+            return {"success": False, "error": result.get("msg", "Unknown"), "raw": result}
+    except Exception as e:
+        logger.error(f"❌ Get stop-orders error: {e}")
+        return {"success": False, "error": str(e), "orders": []}
+
+
+def get_stop_order_by_client_oid(client_oid: str) -> Optional[Dict[str, Any]]:
+    """Busca uma stop-order pelo clientOid.
+
+    Args:
+        client_oid: ID cliente
+
+    Returns:
+        Dict com dados da ordem ou None
+    """
+    validate_credentials()
+
+    endpoint = "/api/v1/stop-order/queryClientOid"
+    params = {"clientOid": client_oid, "symbol": "BTC-USDT"}
+
+    try:
+        r = _signed_request("GET", endpoint, params=params, timeout=10)
+        result = r.json()
+
+        if result.get("code") == "200000":
+            return result.get("data")
+    except Exception as e:
+        logger.debug(f"Get stop-order by client_oid error: {e}")
+
+    return None
+
+
 # ====================== WITHDRAWAL / DEPOSIT / FEES ======================
 @retry_on_failure(max_retries=2)
 def get_withdrawal_quotas(currency: str, chain: Optional[str] = None) -> Dict[str, Any]:

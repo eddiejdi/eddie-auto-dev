@@ -199,7 +199,7 @@ def run_warmup(verbose: bool = False) -> tuple[list[WarmupResult], bool]:
     all_ok = True
 
     gpu_configs = [
-        (GPU0_HOST, "GPU0 (RTX 2060)", GPU0_MODELS),
+        (GPU0_HOST, "GPU0 (RTX 3060)", GPU0_MODELS),
         (GPU1_HOST, "GPU1 (GTX 1050)", GPU1_MODELS),
     ]
 
@@ -234,7 +234,7 @@ def run_warmup(verbose: bool = False) -> tuple[list[WarmupResult], bool]:
 
 def show_status() -> None:
     """Exibe status de ambas as GPUs."""
-    for host, name in [(GPU0_HOST, "GPU0 (RTX 2060)"), (GPU1_HOST, "GPU1 (GTX 1050)")]:
+    for host, name in [(GPU0_HOST, "GPU0 (RTX 3060)"), (GPU1_HOST, "GPU1 (GTX 1050)")]:
         status = check_gpu_status(host, name)
         if status.online:
             models_str = ", ".join(status.loaded_models) if status.loaded_models else "nenhum"

@@ -3,9 +3,9 @@
 Ollama MCP Server — exposes local GPU cluster (3 GPUs) as Claude Code tools.
 
 Saves Claude API tokens by routing eligible tasks to local LLMs:
-  GPU0  RTX 3060 12GB  192.168.15.2:11544  (proxy → 11434)  trading-analyst / heavy
+  GPU0  RTX 3060 12GB  192.168.15.2:11544  (proxy → 11434)  auxiliares leves
   GPU1  GTX 1050  2GB  192.168.15.2:11545  (proxy → 11435)  lfm2.5-fast:gpu1 / fast
-  NAS   RTX 2060  8GB  192.168.15.4:11546  (proxy → 11436)  phi4-mini:latest / mid-tier
+  NAS   RTX 2060  8GB  192.168.15.4:11546  (proxy → 11436)  trading-analyst / heavy
 
 Tools exposed to Claude Code:
   ollama_ask           — general question/task, auto-selects GPU

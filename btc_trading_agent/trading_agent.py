@@ -35,6 +35,8 @@ from kucoin_api import (
     get_recent_trades, get_balances, get_balance,
     place_market_order, analyze_orderbook, analyze_trade_flow,
     inner_transfer, _has_keys, get_fills_for_order,
+    place_stop_loss_order, place_take_profit_order,
+    cancel_stop_order, cancel_all_stop_orders, get_stop_orders,
 )
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
@@ -47,8 +49,17 @@ from track_record_confidence import (
 from sell_target_mixin import SellTargetMixin
 from risk_guardian_mixin import RiskGuardianMixin
 from position_manager_mixin import PositionManagerMixin
-from position_reconstruction import reconstruct_open_buys, summarize_open_buys
-from profile_rules import validate_profile_for_symbol
+from position_reconstruction import (
+    compute_exposure_budget,
+    reconstruct_open_buys,
+    summarize_open_buys,
+)
+from profile_rules import (
+    config_subaccount_name,
+    live_config_shares_subaccount,
+    open_buy_net_sql_predicate,
+    validate_profile_for_symbol,
+)
 from llm import LLMRouter
 
 _ollama_gate_logger = logging.getLogger("btc_trading_agent.ollama_gate")
@@ -1696,7 +1707,11 @@ class BitcoinTradingAgent(
         cursor=None,
         exclude_external_deposits: bool = False,
     ) -> Dict[str, float]:
-        """Retorna profiles live com posição líquida aberta para o símbolo."""
+        """Retorna profiles live com posição líquida aberta para o símbolo.
+
+        BUY `closed` ou com `metadata.closed_reason` não entra no net — fantasmas
+        reconciliados não fazem o profile parecer "ativo" em conta compartilhada.
+        """
         own_cursor = cursor is None
         if own_cursor:
             with self.db._get_conn() as _conn:
@@ -1706,9 +1721,9 @@ class BitcoinTradingAgent(
                         exclude_external_deposits=exclude_external_deposits,
                     )
 
-        buy_clause = "side='buy'"
-        if exclude_external_deposits:
-            buy_clause += " AND COALESCE(metadata->>'source','') != 'external_deposit'"
+        buy_clause = open_buy_net_sql_predicate(
+            exclude_external_deposits=exclude_external_deposits,
+        )
         cursor.execute(
             f"""
             SELECT
@@ -1732,36 +1747,29 @@ class BitcoinTradingAgent(
         return active_profiles
 
     def _has_shared_live_symbol_profiles(self) -> bool:
-        """Detecta se há outro config LIVE do mesmo símbolo usando profile distinto."""
+        """True se outro config LIVE do mesmo par usa a mesma subconta KuCoin."""
         current_profile = self._current_profile()
         if current_profile == "default":
             return False
 
+        current_sub = config_subaccount_name(getattr(self, "config", None))
+        if not current_sub:
+            return False
+
         config_dir = Path(__file__).parent
         for candidate in config_dir.glob("config_*.json"):
-            if candidate.name == self.config_name:
-                continue
             try:
                 payload = _read_json_config(candidate)
             except Exception:
                 continue
-            if payload.get("symbol", self.symbol) != self.symbol:
-                continue
-            if not bool(payload.get("enabled", True)):
-                continue
-            if payload.get("dry_run") is True:
-                continue
-            if "live_mode" in payload and not bool(payload.get("live_mode")):
-                continue
-            try:
-                candidate_profile = validate_profile_for_symbol(
-                    self.symbol,
-                    payload.get("profile", "default"),
-                    config_name=candidate.name,
-                )
-            except ValueError:
-                continue
-            if candidate_profile not in {"default", current_profile}:
+            if live_config_shares_subaccount(
+                current_symbol=self.symbol,
+                current_profile=current_profile,
+                current_subaccount=current_sub,
+                current_config_name=str(getattr(self, "config_name", "") or ""),
+                candidate_name=candidate.name,
+                candidate=payload,
+            ):
                 return True
         return False
 
@@ -3955,6 +3963,7 @@ class BitcoinTradingAgent(
 
         # Popular indicadores técnicos com dados reais
         self.model.indicators.update_from_candles(candles)
+        self._last_indicator_candle_refresh = time.time()
         logger.info(
             f"📊 Loaded {len(candles)} candles into indicators "
             f"(RSI={self.model.indicators.rsi():.1f}, "
@@ -4506,6 +4515,30 @@ class BitcoinTradingAgent(
             f"episodes={self.model.q_model.episodes}"
         )
 
+    def _refresh_indicator_candles(self, force: bool = False) -> None:
+        """Recarrega closes de 1min no máximo uma vez por minuto.
+
+        A série de RSI/momentum/trend vive nestes candles. Ticks só
+        atualizam a barra em formação via ``indicators.update``.
+        """
+        now = time.time()
+        last = float(getattr(self, "_last_indicator_candle_refresh", 0.0) or 0.0)
+        if not force and last > 0.0 and (now - last) < 50.0:
+            return
+        try:
+            candles = get_candles(self.symbol, ktype="1min", limit=500)
+        except Exception as e:
+            logger.debug(f"Indicator candle refresh failed: {e}")
+            return
+        if not candles:
+            return
+        self.model.indicators.update_from_candles(candles)
+        self._last_indicator_candle_refresh = now
+        try:
+            self.db.store_candles(self.symbol, "1min", candles)
+        except Exception as e:
+            logger.debug(f"Indicator candle persist failed: {e}")
+
     def _get_market_state(self) -> Optional[MarketState]:
         """Coleta estado atual do mercado"""
         try:
@@ -4521,7 +4554,8 @@ class BitcoinTradingAgent(
             # Trade flow
             flow_analysis = analyze_trade_flow(self.symbol)
             
-            # Indicadores do modelo
+            # Um update por ciclo: candles 1min + close da barra atual.
+            self._refresh_indicator_candles()
             self.model.indicators.update(price)
             rsi = self.model.indicators.rsi()
             momentum = self.model.indicators.momentum()
@@ -5092,9 +5126,21 @@ class BitcoinTradingAgent(
             self.state.buy_dynamic_batch_cap_usdt = 0.0
             caps = self._get_runtime_risk_caps()
             quote_cur = self.symbol.split("-")[1]  # USDT, BRL, etc.
-            usdt_balance = get_balance(quote_cur) if not self.state.dry_run else 1000
-            # Profile allocation: aplicar % do saldo alocado ao perfil
-            usdt_balance = self._apply_profile_allocation(usdt_balance)
+            tracked_base = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
+            if self.state.dry_run:
+                raw_quote = 1000.0
+                base_qty = tracked_base
+            else:
+                try:
+                    raw_quote, base_qty = self._read_subaccount_spot_balances(quote_cur)
+                except Exception as exc:
+                    logger.warning("⚠️ Spot balance read failed, falling back: %s", exc)
+                    raw_quote = get_balance(quote_cur)
+                    base_qty = tracked_base
+                # Nunca subcontar o que o state já enxerga.
+                base_qty = max(float(base_qty or 0.0), tracked_base)
+            # Allocation só no USDT gastável — o cap usa equity real da subconta.
+            usdt_balance = self._apply_profile_allocation(raw_quote)
             rag_adj = self.market_rag.get_current_adjustment()
             controls = self._resolve_trade_controls(rag_adj)
             ai_controlled = controls.ai_controlled
@@ -5140,20 +5186,28 @@ class BitcoinTradingAgent(
                 per_entry_pct = controls.max_position_pct / max_positions
                 max_amount = usdt_balance * per_entry_pct
 
-            open_exposure = max(self.state.position * price, 0.0)
-            exposure_base = max(usdt_balance + open_exposure, 0.0)
-            max_total_exposure = exposure_base * controls.max_position_pct
-            remaining_exposure = max(max_total_exposure - open_exposure, 0.0)
+            budget = compute_exposure_budget(
+                quote_balance=raw_quote,
+                base_qty=base_qty,
+                price=price,
+                max_position_pct=controls.max_position_pct,
+            )
+            open_exposure = budget["open_exposure"]
+            max_total_exposure = budget["max_total_exposure"]
+            remaining_exposure = budget["remaining_exposure"]
             if remaining_exposure <= 0:
                 logger.info(
                     f"🧱 BUY blocked (max exposure): open=${open_exposure:.2f} "
-                    f">= cap=${max_total_exposure:.2f} ({controls.max_position_pct*100:.1f}%)"
+                    f">= cap=${max_total_exposure:.2f} "
+                    f"(equity=${budget['equity']:.2f}, {controls.max_position_pct*100:.1f}%)"
                 )
                 self._block_trade(
                     "buy_max_exposure",
                     open_exposure=open_exposure,
                     max_total_exposure=max_total_exposure,
                     max_position_pct=controls.max_position_pct,
+                    equity=budget["equity"],
+                    base_qty=base_qty,
                 )
                 return 0
             max_amount = min(max_amount, remaining_exposure)
@@ -5442,7 +5496,11 @@ class BitcoinTradingAgent(
                                 daemon=True,
                                 name=f"buy-fill-reconcile-{trade_id}",
                             ).start()
-                        else:
+                        # ── Colocar take-profit na exchange ──
+                        self._place_exchange_take_profit(tp_target, size)
+                        # NOTA: stop-loss é colocado apenas quando há lucro mínimo
+                        # (via _check_and_update_exchange_stop no loop principal)
+                    else:
                             logger.warning(
                                 "⚠️ BUY sem order_id — fill reconcile impossível; "
                                 "rodando só reconciliação de posição"
@@ -5455,6 +5513,9 @@ class BitcoinTradingAgent(
                             ).start()
 
                 elif signal.action == "SELL":
+                    # Cancelar stop-orders na exchange antes de vender
+                    self._cancel_exchange_stop_orders()
+
                     # Use _calculate_trade_size for fee check (force bypasses)
                     size = self._calculate_trade_size(signal, price, force=force)
                     if size <= 0:
@@ -5984,6 +6045,214 @@ class BitcoinTradingAgent(
 
         return False
 
+    # ── Exchange Stop-Loss / Take-Profit ──────────────────────────────────────
+
+    def _check_and_update_exchange_stop(self, current_price: float):
+        """Verifica lucro e coloca/atualiza stop-loss na exchange.
+
+        Lógica:
+        - Se não há stop-loss e preço > entrada + lucro_mínimo → Coloca stop em 0% (breakeven)
+        - Se há stop-loss e preço subiu → Atualiza stop para proteger lucro
+
+        Args:
+            current_price: Preço atual do mercado
+        """
+        if self.state.dry_run:
+            return
+        if self.state.position <= 0 or self.state.entry_price <= 0:
+            return
+
+        _config = self._load_live_config()
+        auto_sl = _config.get("auto_stop_loss", {})
+        if not auto_sl.get("enabled", False):
+            return
+
+        # Configurações
+        sl_pct = auto_sl.get("pct", 0.03)  # Stop-loss máximo (3%)
+        min_profit激活 = auto_sl.get("min_profit_pct", 0.005)  # Lucro mínimo para ativar (0.5%)
+
+        # Calcular lucro atual
+        pnl_pct = (current_price / self.state.entry_price) - 1
+
+        # Verificar se já tem stop-loss na exchange
+        current_stop_price = None
+        current_stop_order_id = None
+        for entry in getattr(self.state, "entries", []):
+            if entry.get("exchange_stop_order_id"):
+                current_stop_price = entry.get("exchange_stop_price", 0)
+                current_stop_order_id = entry.get("exchange_stop_order_id")
+                break
+
+        # ── Caso 1: Não tem stop-loss ainda ──
+        if not current_stop_order_id:
+            # Só coloca stop se houver lucro mínimo
+            if pnl_pct >= min_profit激活:
+                # Stop-loss em 0% (breakeven) - não vende com prejuízo
+                stop_price = self.state.entry_price
+
+                # Arredondar stop_price para incremento do par
+                increments = get_symbol_increments(self.symbol)
+                stop_price_rounded = _floor_to_increment(stop_price, increments["quoteIncrement"])
+
+                client_oid = f"btc_sl_{self.state.position_count}_{int(time.time())}"
+
+                try:
+                    result = place_stop_loss_order(
+                        symbol=self.symbol,
+                        size=self.state.position,
+                        stop_price=stop_price_rounded,
+                        client_oid=client_oid,
+                    )
+                    if result.get("success"):
+                        logger.info(
+                            f"🛑 Stop-loss ATIVADO na exchange (breakeven): "
+                            f"Stop=${stop_price_rounded:,.2f} (0%) "
+                            f"Lucro atual: {pnl_pct*100:.2f}% "
+                            f"Size={self.state.position:.6f} OrderID={result.get('orderId')}"
+                        )
+                        if self.state.entries:
+                            self.state.entries[0]["exchange_stop_order_id"] = result.get("orderId")
+                            self.state.entries[0]["exchange_stop_price"] = stop_price_rounded
+                    else:
+                        logger.warning(
+                            f"⚠️ Falha ao colocar stop-loss na exchange: {result.get('error')}"
+                        )
+                except Exception as e:
+                    logger.error(f"❌ Erro ao colocar stop-loss na exchange: {e}")
+
+        # ── Caso 2: Já tem stop-loss → Atualizar se preço subiu ──
+        elif current_stop_price > 0:
+            # Novo stop = preço atual - margem (ex: 1% abaixo do pico)
+            trailing_pct = auto_sl.get("trail_pct", 0.01)
+            new_stop_price = current_price * (1 - trailing_pct)
+
+            # Só atualiza se o novo stop for MAIOR que o atual (protege mais lucro)
+            if new_stop_price > current_stop_price:
+                # Não baixo o stop - só subo
+                increments = get_symbol_increments(self.symbol)
+                new_stop_rounded = _floor_to_increment(new_stop_price, increments["quoteIncrement"])
+
+                # Cancelar stop anterior
+                cancel_stop_order(order_id=current_stop_order_id)
+
+                # Colocar novo stop
+                client_oid = f"btc_sl_{self.state.position_count}_{int(time.time())}"
+
+                try:
+                    result = place_stop_loss_order(
+                        symbol=self.symbol,
+                        size=self.state.position,
+                        stop_price=new_stop_rounded,
+                        client_oid=client_oid,
+                    )
+                    if result.get("success"):
+                        logger.info(
+                            f"🛑 Stop-loss ATUALIZADO na exchange: "
+                            f"${current_stop_price:,.2f} → ${new_stop_rounded:,.2f} "
+                            f"(protege +{(new_stop_rounded/self.state.entry_price - 1)*100:.2f}% lucro) "
+                            f"Preço atual: ${current_price:,.2f}"
+                        )
+                        if self.state.entries:
+                            self.state.entries[0]["exchange_stop_order_id"] = result.get("orderId")
+                            self.state.entries[0]["exchange_stop_price"] = new_stop_rounded
+                    else:
+                        logger.warning(
+                            f"⚠️ Falha ao atualizar stop-loss: {result.get('error')}"
+                        )
+                except Exception as e:
+                    logger.error(f"❌ Erro ao atualizar stop-loss: {e}")
+
+    def _place_exchange_take_profit(self, target_price: float, size: float):
+        """Coloca ordem take-profit na exchange (KuCoin).
+
+        Args:
+            target_price: Preço alvo de venda
+            size: Tamanho da posição em BTC
+        """
+        if self.state.dry_run:
+            return
+
+        _config = self._load_live_config()
+        auto_tp = _config.get("auto_take_profit", {})
+        if not auto_tp.get("enabled", False):
+            return
+
+        # Arredondar target_price para incremento do par
+        increments = get_symbol_increments(self.symbol)
+        target_price_rounded = _floor_to_increment(target_price, increments["quoteIncrement"])
+
+        client_oid = f"btc_tp_{self.state.position_count}_{int(time.time())}"
+
+        try:
+            result = place_take_profit_order(
+                symbol=self.symbol,
+                size=size,
+                stop_price=target_price_rounded,
+                client_oid=client_oid,
+            )
+            if result.get("success"):
+                logger.info(
+                    f"🎯 Take-profit colocado na exchange: "
+                    f"Target=${target_price_rounded:,.2f} "
+                    f"Size={size:.6f} OrderID={result.get('orderId')}"
+                )
+                if self.state.entries:
+                    self.state.entries[-1]["exchange_tp_order_id"] = result.get("orderId")
+                    self.state.entries[-1]["exchange_tp_price"] = target_price_rounded
+            else:
+                logger.warning(
+                    f"⚠️ Falha ao colocar take-profit na exchange: {result.get('error')}"
+                )
+        except Exception as e:
+            logger.error(f"❌ Erro ao colocar take-profit na exchange: {e}")
+
+    def _cancel_exchange_stop_orders(self):
+        """Cancela todas as ordens stop da exchange (antes de novo BUY ou SELL)."""
+        if self.state.dry_run:
+            return
+
+        try:
+            # Cancelar stop-loss e take-profit pendentes
+            for entry in getattr(self.state, "entries", []):
+                sl_order_id = entry.get("exchange_stop_order_id")
+                tp_order_id = entry.get("exchange_tp_order_id")
+
+                if sl_order_id:
+                    cancel_stop_order(order_id=sl_order_id)
+                    entry.pop("exchange_stop_order_id", None)
+                    logger.info(f"🛑 Stop-loss cancelado: {sl_order_id}")
+
+                if tp_order_id:
+                    cancel_stop_order(order_id=tp_order_id)
+                    entry.pop("exchange_tp_order_id", None)
+                    logger.info(f"🎯 Take-profit cancelado: {tp_order_id}")
+
+            # Fallback: cancelar todas as stop-orders pendentes
+            cancel_all_stop_orders(self.symbol)
+        except Exception as e:
+            logger.error(f"❌ Erro ao cancelar stop-orders na exchange: {e}")
+
+    def _update_exchange_stop_loss(self, new_stop_price: float):
+        """Atualiza stop-loss na exchange (cancela e recoloca).
+
+        Args:
+            new_stop_price: Novo preço de stop
+        """
+        if self.state.dry_run:
+            return
+
+        # Cancelar stop-loss anterior
+        for entry in getattr(self.state, "entries", []):
+            old_order_id = entry.get("exchange_stop_order_id")
+            if old_order_id:
+                cancel_stop_order(order_id=old_order_id)
+                entry.pop("exchange_stop_order_id", None)
+
+        # Recolocar com novo preço
+        total_size = sum(e.get("size", 0) for e in getattr(self.state, "entries", []))
+        if total_size > 0:
+            self._place_exchange_stop_loss(new_stop_price / (1 - 0.03), total_size)
+
     def _write_heartbeat(self):
         """Escreve arquivo de heartbeat para detecção de stall pelo self-healer"""
         try:
@@ -6027,10 +6296,23 @@ class BitcoinTradingAgent(
                 if market_state is None:
                     time.sleep(POLL_INTERVAL)
                     continue
+
+                # Saldo real da subconta → state.position (sem vender).
+                try:
+                    self._align_position_to_exchange(market_state.price)
+                except Exception as e:
+                    logger.debug(f"Position align error: {e}")
                 
                 # Atualizar valor da posição
                 if self.state.position > 0:
                     self.state.position_value = self.state.position * market_state.price
+
+                # ── Exchange Stop-Loss: verificar e atualizar se há lucro ──
+                if self.state.position > 0:
+                    try:
+                        self._check_and_update_exchange_stop(market_state.price)
+                    except Exception as e:
+                        logger.debug(f"Exchange stop-check error: {e}")
                 
                 # Per-slot exits FIRST (independent TP/trailing/SL per entry),
                 # then global trailing/auto-exit as fallback for legacy entries.

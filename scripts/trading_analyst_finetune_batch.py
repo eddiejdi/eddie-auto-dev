@@ -5,7 +5,7 @@ Adaptado de scripts/ollama_finetune_batch.py (que fine-tuna o trading-sentiment
 na RTX 3060 do homelab). Diferenças essenciais:
 
   - Roda NA NAS (192.168.15.4), na RTX 2060 SUPER 8GB — NUNCA para o Ollama de
-    produção da GPU0 (a 3060 continua servindo trading-analyst o tempo todo).
+    produção da NAS (a 2060 continua servindo trading-analyst o tempo todo).
   - Base = llama3.1:8b (mesma base do trading-analyst atual, ver
     docs/MIGRACAO_MODELOS_CHINESES_2026-07-03.md e models/Modelfile.trading-analyst).
   - Fonte = os 3 JSONL gerados pelo dataset builder (controls/window/plan),
