@@ -364,25 +364,38 @@ class TestPerSlotTakeProfit:
 
 class TestPerSlotStopLoss:
 
-    def _cfg(self, pct: float = 0.03) -> dict:
-        return {"auto_stop_loss": {"enabled": True, "pct": pct}}
+    def _cfg(self, pct: float = 0.0, min_profit_pct: float = 0.005) -> dict:
+        return {"auto_stop_loss": {"enabled": True, "pct": pct, "min_profit_pct": min_profit_pct}}
 
-    def test_triggers_at_loss(self):
-        # preço caiu 3.1% → SL de 3% dispara
+    def test_no_trigger_at_loss(self):
+        # Nova lógica: SL NÃO dispara com prejuízo
         entries = [_entry(90_000, 0.001)]
         agent = _make_agent(
             position=0.001, entry_price=90_000.0, entries=entries, live_cfg=self._cfg(0.03)
         )
         sold = agent._check_per_slot_exits(87_210.0)  # -3.1%
-        assert sold
+        assert not sold  # Não vende com prejuízo
 
-    def test_no_trigger_above_threshold(self):
+    def test_no_trigger_below_min_profit(self):
+        # Não ativa se lucro < min_profit_pct (0.5%)
         entries = [_entry(90_000, 0.001)]
         agent = _make_agent(
-            position=0.001, entries=entries, live_cfg=self._cfg(0.03)
+            position=0.001, entries=entries, live_cfg=self._cfg(0.0, 0.005)
         )
-        sold = agent._check_per_slot_exits(88_000.0)  # -2.2% (acima do SL)
+        sold = agent._check_per_slot_exits(90_400.0)  # +0.44% (abaixo de 0.5%)
         assert not sold
+
+    def test_triggers_after_profit(self):
+        # Ativa quando lucro >= min_profit_pct e cai do pico
+        entries = [_entry(90_000, 0.001)]
+        agent = _make_agent(
+            position=0.001, entry_price=90_000.0, entries=entries, live_cfg=self._cfg(0.0, 0.005)
+        )
+        # Preço sobe para 91_000 (+1.11%) - ativa stop
+        agent._check_per_slot_exits(91_000.0)
+        # Agora preço cai para 90_500 (+0.56%) - ainda lucro, mas caiu do pico
+        sold = agent._check_per_slot_exits(90_500.0)
+        assert sold  # Vende com lucro
 
     def test_sells_all_slots_that_individually_hit_stop_loss(self):
         entries = [_entry(90_000, 0.001), _entry(89_000, 0.001)]
@@ -390,9 +403,12 @@ class TestPerSlotStopLoss:
             position=0.002,
             entry_price=89_500.0,
             entries=entries,
-            live_cfg=self._cfg(0.02),
+            live_cfg=self._cfg(0.0, 0.005),
         )
-        sold = agent._check_per_slot_exits(87_000.0)
+        # Primeiro: preço sobe para ativar stop
+        agent._check_per_slot_exits(91_000.0)
+        # Agora: preço cai, mas ainda com lucro
+        sold = agent._check_per_slot_exits(90_000.0)
         assert sold
         assert agent.state.position == 0.0
         assert agent.state.entries == []
@@ -691,21 +707,23 @@ class TestGuardrailPerSlotExitIntegration:
         assert not sold
         assert agent.state.position == pytest.approx(0.001)
 
-    def test_stop_loss_bypasses_guardrail_and_executes(self):
-        """StopLoss tem bypass_guardrail=True → executa mesmo com PnL negativo."""
+    def test_stop_loss_bypasses_guardrail_after_profit(self):
+        """StopLoss bypass_guardrail=True SOMENTE após lucro mínimo."""
         entries = [_entry(90_000, 0.001)]
         agent = _make_agent(
             position=0.001,
             entry_price=90_000.0,
             entries=entries,
             live_cfg={
-                "auto_stop_loss": {"enabled": True, "pct": 0.03},
+                "auto_stop_loss": {"enabled": True, "pct": 0.0, "min_profit_pct": 0.005},
                 **self._guardrail_cfg(),
             },
         )
-        # preço caiu 4% → SL dispara (3% threshold); bypass=True → guardrail ignorado
-        sold = agent._check_per_slot_exits(86_400.0)
-        assert sold
+        # Primeiro: preço sobe para ativar stop
+        agent._check_per_slot_exits(91_000.0)  # +1.11% → ativa
+        # Agora: preço cai, mas ainda com lucro
+        sold = agent._check_per_slot_exits(90_500.0)  # +0.56%
+        assert sold  # Vende com lucro, bypassando guardrail
         assert agent.state.position == pytest.approx(0.0)
 
 
