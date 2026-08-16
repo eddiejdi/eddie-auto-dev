@@ -6054,6 +6054,80 @@ class BitcoinTradingAgent(
 
     # ── Exchange Stop-Loss / Take-Profit ──────────────────────────────────────
 
+    def _monitor_exchange_stop_orders(self):
+        """Monitora ordens stop na exchange e notifica quando disparam.
+
+        Verifica periodicamente se ordens stop-loss/take-profit foram executadas
+        e envia notificação Telegram quando isso acontece.
+        """
+        if self.state.dry_run or not HAS_STOP_ORDERS:
+            return
+
+        try:
+            # Buscar ordens stop ativas
+            result = get_stop_orders(self.symbol, status="active")
+            if not result.get("success"):
+                return
+
+            active_orders = result.get("orders", [])
+
+            # Verificar se alguma ordem sumiu (foi executada)
+            for entry in list(getattr(self.state, "entries", [])):
+                sl_order_id = entry.get("exchange_stop_order_id")
+                tp_order_id = entry.get("exchange_tp_order_id")
+
+                # Verificar stop-loss
+                if sl_order_id:
+                    order_found = any(
+                        o.get("orderId") == sl_order_id for o in active_orders
+                    )
+                    if not order_found:
+                        # Ordem executada!
+                        entry_price = entry.get("price", 0)
+                        stop_price = entry.get("exchange_stop_price", 0)
+                        size = entry.get("size", 0)
+
+                        # Notificar
+                        _send_telegram_alert(
+                            f"🛑 STOP-LOSS EXECUTADO!\n"
+                            f"Symbol: {self.symbol}\n"
+                            f"Preço stop: ${stop_price:,.2f}\n"
+                            f"Preço entrada: ${entry_price:,.2f}\n"
+                            f"Tamanho: {size:.6f}\n"
+                            f"Motivo: Preço caiu abaixo do stop"
+                        )
+                        logger.info(
+                            f"🛑 Stop-loss executado na exchange: "
+                            f"Stop=${stop_price:,.2f} Entry=${entry_price:,.2f}"
+                        )
+
+                # Verificar take-profit
+                if tp_order_id:
+                    order_found = any(
+                        o.get("orderId") == tp_order_id for o in active_orders
+                    )
+                    if not order_found:
+                        entry_price = entry.get("price", 0)
+                        tp_price = entry.get("exchange_tp_price", 0)
+                        size = entry.get("size", 0)
+                        pnl_pct = ((tp_price / entry_price) - 1) * 100 if entry_price > 0 else 0
+
+                        _send_telegram_alert(
+                            f"🎯 TAKE-PROFIT EXECUTADO!\n"
+                            f"Symbol: {self.symbol}\n"
+                            f"Preço target: ${tp_price:,.2f}\n"
+                            f"Preço entrada: ${entry_price:,.2f}\n"
+                            f"Tamanho: {size:.6f}\n"
+                            f"Lucro: +{pnl_pct:.2f}%"
+                        )
+                        logger.info(
+                            f"🎯 Take-profit executado na exchange: "
+                            f"Target=${tp_price:,.2f} Entry=${entry_price:,.2f} PnL=+{pnl_pct:.2f}%"
+                        )
+
+        except Exception as e:
+            logger.debug(f"Monitor stop-orders error: {e}")
+
     def _check_and_update_exchange_stop(self, current_price: float):
         """Verifica lucro e coloca/atualiza stop-loss na exchange.
 
@@ -6332,7 +6406,14 @@ class BitcoinTradingAgent(
                         self._check_and_update_exchange_stop(market_state.price)
                     except Exception as e:
                         logger.debug(f"Exchange stop-check error: {e}")
-                
+
+                # ── Monitorar ordens stop executadas (notificação) ──
+                if cycle % 3 == 0:  # A cada 3 ciclos (~15s)
+                    try:
+                        self._monitor_exchange_stop_orders()
+                    except Exception as e:
+                        logger.debug(f"Monitor stop-orders error: {e}")
+
                 # Per-slot exits FIRST (independent TP/trailing/SL per entry),
                 # then global trailing/auto-exit as fallback for legacy entries.
                 if self.state.position > 0:
