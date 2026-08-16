@@ -3067,7 +3067,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT account_type, balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  ORDER BY synced_at DESC\n  LIMIT 2\n)\nSELECT\n  now() AS \"time\",\n  SUM(balance) AS \"Saldo BTC\"\nFROM latest",
+          "rawSql": "WITH latest AS (\n  SELECT account_type, balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative', 'sub:ETHConservative', 'sub:ETHConservative')\n  ORDER BY synced_at DESC\n  LIMIT 3\n)\nSELECT\n  now() AS \"time\",\n  SUM(balance) AS \"Saldo BTC\"\nFROM latest",
           "refId": "A",
           "timeColumns": [
             "time"
@@ -3144,7 +3144,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH btc_snapshots AS (\n  SELECT synced_at, SUM(balance) AS total_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  GROUP BY synced_at\n),\nperiod_ends AS (\n  SELECT\n    (ARRAY_AGG(total_balance ORDER BY synced_at DESC))[1] AS end_bal,\n    (ARRAY_AGG(total_balance ORDER BY synced_at ASC))[1] AS start_bal\n  FROM btc_snapshots\n  WHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n)\nSELECT\n  now() AS \"time\",\n  COALESCE(end_bal - start_bal, 0) AS \"Ganhos BTC\"\nFROM period_ends",
+          "rawSql": "WITH btc_snapshots AS (\n  SELECT synced_at, SUM(balance) AS total_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative', 'sub:ETHConservative')\n  GROUP BY synced_at\n),\nperiod_ends AS (\n  SELECT\n    (ARRAY_AGG(total_balance ORDER BY synced_at DESC))[1] AS end_bal,\n    (ARRAY_AGG(total_balance ORDER BY synced_at ASC))[1] AS start_bal\n  FROM btc_snapshots\n  WHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n)\nSELECT\n  now() AS \"time\",\n  COALESCE(end_bal - start_bal, 0) AS \"Ganhos BTC\"\nFROM period_ends",
           "refId": "A",
           "timeColumns": [
             "time"
@@ -3221,7 +3221,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH btc_snapshots AS (\n  SELECT synced_at, SUM(balance) AS total_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  GROUP BY synced_at\n),\nbtc_delta AS (\n  SELECT\n    (ARRAY_AGG(total_balance ORDER BY synced_at DESC))[1]\n    - (ARRAY_AGG(total_balance ORDER BY synced_at ASC))[1] AS btc_earned\n  FROM btc_snapshots\n  WHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n),\nbtc_price AS (\n  SELECT price_usdt\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n    AND price_usdt IS NOT NULL\n  ORDER BY synced_at DESC\n  LIMIT 1\n)\nSELECT\n  now() AS \"time\",\n  COALESCE(btc_earned * btc_price.price_usdt, 0) AS \"Ganhos USDT\"\nFROM btc_delta, btc_price",
+          "rawSql": "WITH btc_snapshots AS (\n  SELECT synced_at, SUM(balance) AS total_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative', 'sub:ETHConservative')\n  GROUP BY synced_at\n),\nbtc_delta AS (\n  SELECT\n    (ARRAY_AGG(total_balance ORDER BY synced_at DESC))[1]\n    - (ARRAY_AGG(total_balance ORDER BY synced_at ASC))[1] AS btc_earned\n  FROM btc_snapshots\n  WHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n),\nbtc_price AS (\n  SELECT price_usdt\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative', 'sub:ETHConservative')\n    AND price_usdt IS NOT NULL\n  ORDER BY synced_at DESC\n  LIMIT 1\n)\nSELECT\n  now() AS \"time\",\n  COALESCE(btc_earned * btc_price.price_usdt, 0) AS \"Ganhos USDT\"\nFROM btc_delta, btc_price",
           "refId": "A",
           "timeColumns": [
             "time"
@@ -3371,7 +3371,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  synced_at AS \"time\",\n  SUM(balance) AS \"Saldo BTC\"\nFROM btc.exchange_balance_snapshots\nWHERE currency = 'BTC'\n  AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  AND synced_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY synced_at\nORDER BY synced_at",
+          "rawSql": "SELECT\n  synced_at AS \"time\",\n  SUM(balance) AS \"Saldo BTC\"\nFROM btc.exchange_balance_snapshots\nWHERE currency = 'BTC'\n  AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative', 'sub:ETHConservative')\n  AND synced_at BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY synced_at\nORDER BY synced_at",
           "refId": "A",
           "timeColumns": [
             "time"
@@ -3474,7 +3474,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH ordered AS (\n  SELECT\n    synced_at,\n    SUM(balance) AS total_balance,\n    LAG(SUM(balance)) OVER (ORDER BY synced_at) AS prev_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative')\n  GROUP BY synced_at\n)\nSELECT\n  synced_at AS \"time\",\n  COALESCE(total_balance - prev_balance, 0) AS \"Ganhos BTC\"\nFROM ordered\nWHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND total_balance - COALESCE(prev_balance, total_balance) > 0\nORDER BY synced_at",
+          "rawSql": "WITH ordered AS (\n  SELECT\n    synced_at,\n    SUM(balance) AS total_balance,\n    LAG(SUM(balance)) OVER (ORDER BY synced_at) AS prev_balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative', 'sub:ETHConservative')\n  GROUP BY synced_at\n)\nSELECT\n  synced_at AS \"time\",\n  COALESCE(total_balance - prev_balance, 0) AS \"Ganhos BTC\"\nFROM ordered\nWHERE synced_at BETWEEN $__timeFrom() AND $__timeTo()\n  AND total_balance - COALESCE(prev_balance, total_balance) > 0\nORDER BY synced_at",
           "refId": "A",
           "timeColumns": [
             "time"
