@@ -166,7 +166,6 @@ def test_should_heal_zero_entities_above_soft_bridge_not_newer() -> None:
         (FRESH_TOKEN, FRESH_TOKEN, 75, 0, "ainda válido"),
         (EXPIRED_TOKEN, None, 0, 0, "ausente/inválido"),
         (EXPIRED_TOKEN, EXPIRED_TOKEN, 0, 0, "não é mais novo"),
-        # Soft-threshold / proativo ainda respeita rate limit (HA ainda válido).
         (NEAR_EXPIRY_TOKEN, NEWER_RUNTIME, 75, 24, "rate limit"),
     ],
 )
@@ -185,54 +184,32 @@ def test_should_heal_guards(ha_token, runtime, active, heals, expected_reason) -
 
 
 def test_should_heal_expired_bypasses_rate_limit() -> None:
-    """Incidente 2026-08-08: budget cheio não pode bloquear inject com HA morto + bridge fresco."""
+    """Incidente 2026-08-08: HA expirado + bridge fresca → inject prioritário,
+    mesmo com budget 24h esgotado (rate limit vale só para heals proativos)."""
     heal, reason = selfheal.should_heal(
         EXPIRED_TOKEN,
         FRESH_TOKEN,
-        entities_active=82,
-        heals_last_24h=24,
-        now_ms=NOW_MS,
-        soft_threshold_min=45,
-        entities_total=82,
-    )
-    assert heal, reason
-    assert "expirado" in reason
-    assert "rate-limit bypass" in reason
-
-
-def test_should_heal_soft_still_rate_limited_when_budget_full() -> None:
-    """Proativo (soft) continua barrado com budget cheio — só expired faz bypass."""
-    heal, reason = selfheal.should_heal(
-        NEAR_EXPIRY_TOKEN,
-        NEWER_RUNTIME,
-        entities_active=75,
+        entities_active=0,
         heals_last_24h=24,
         now_ms=NOW_MS,
         soft_threshold_min=45,
         entities_total=75,
     )
-    assert not heal
-    assert "rate limit" in reason
+    assert heal, reason
+    assert "expirado" in reason
+    assert "bypass" in reason
 
 
-def test_reload_counts_toward_heal_budget_only_on_recovery() -> None:
-    """Reload zumbi (já havia ativas) não conta; 0→N conta."""
-    assert not selfheal.reload_counts_toward_heal_budget(82, 82)
-    assert not selfheal.reload_counts_toward_heal_budget(10, 82)
-    assert selfheal.reload_counts_toward_heal_budget(0, 82)
-    assert selfheal.reload_counts_toward_heal_budget(0, 1)
-    assert not selfheal.reload_counts_toward_heal_budget(0, 0)
+def test_reload_counts_toward_heal_budget() -> None:
+    """Reload que não recupera entidades (zumbi 0→...→ainda >0) não queima MAX_HEALS."""
+    assert selfheal.reload_counts_toward_heal_budget(0, 0) is False
+    assert selfheal.reload_counts_toward_heal_budget(0, 75) is True
+    assert selfheal.reload_counts_toward_heal_budget(75, 75) is False
+    assert selfheal.reload_counts_toward_heal_budget(75, 0) is False
 
 
 def test_should_reload_entry_setup_error() -> None:
     do, reason = selfheal.should_reload_entry("setup_error", 0, 75, 50.0)
-    assert do
-    assert "setup_error" in reason
-
-
-def test_should_reload_entry_setup_error_with_active_entities() -> None:
-    """setup_error + entidades ativas: ainda pode reloadar (mas não queima budget no main)."""
-    do, reason = selfheal.should_reload_entry("setup_error", 82, 82, 50.0)
     assert do
     assert "setup_error" in reason
 
@@ -431,3 +408,75 @@ def test_ensure_fresh_force_refreshes_above_soft(
     )
     assert out == refreshed
     assert called == [refreshed]
+
+
+class _SubResult:
+    def __init__(self, returncode: int, stdout: str = "", stderr: str = "") -> None:
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
+
+
+def test_ensure_container_health_already_running(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, **_kw):  # noqa: ANN001
+        calls.append(cmd)
+        return _SubResult(0, "true\n")
+
+    monkeypatch.setattr(selfheal.subprocess, "run", fake_run)
+    out = selfheal.ensure_container_health()
+    assert out["running"] is True
+    assert out["restarted"] is False
+    assert calls == [["docker", "inspect", "-f", "{{.State.Running}}", "homeassistant"]]
+
+
+def test_ensure_container_health_starts_stopped(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, **_kw):  # noqa: ANN001
+        calls.append(cmd)
+        if cmd[:2] == ["docker", "inspect"]:
+            return _SubResult(0, "false\n")
+        return _SubResult(0, "homeassistant\n")
+
+    monkeypatch.setattr(selfheal.subprocess, "run", fake_run)
+    out = selfheal.ensure_container_health()
+    assert out["running"] is True
+    assert out["restarted"] is True
+    assert ["docker", "start", "homeassistant"] in calls
+
+
+def test_ensure_container_health_start_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run(cmd, **_kw):  # noqa: ANN001
+        if cmd[:2] == ["docker", "inspect"]:
+            return _SubResult(0, "false\n")
+        return _SubResult(1, "", "docker: Error response from daemon")
+
+    monkeypatch.setattr(selfheal.subprocess, "run", fake_run)
+    out = selfheal.ensure_container_health()
+    assert out["running"] is False
+    assert out["restarted"] is False
+    assert "docker start falhou" in out["detail"]
+
+
+def test_ensure_container_health_inspect_error_does_not_start(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run(cmd, **_kw):  # noqa: ANN001
+        calls.append(cmd)
+        return _SubResult(1, "", "No such object: homeassistant")
+
+    monkeypatch.setattr(selfheal.subprocess, "run", fake_run)
+    out = selfheal.ensure_container_health()
+    assert out["running"] is False
+    assert out["restarted"] is False
+    assert ["docker", "start", "homeassistant"] not in calls

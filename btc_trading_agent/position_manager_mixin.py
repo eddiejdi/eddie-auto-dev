@@ -17,6 +17,7 @@ import time
 from typing import Any, Dict
 
 from kucoin_api import place_market_order, _send_telegram_alert
+from position_reconstruction import infer_logical_slots
 from slot_exit_policy import (
     PerSlotExitPlanner,
     SignalSellContext,
@@ -36,21 +37,95 @@ class PositionManagerMixin:
     _per_slot_exit_planner = PerSlotExitPlanner()
     _signal_sell_policy_resolver = SignalSellPolicyResolver()
 
+    def _min_tradeable_dust(self) -> float:
+        """Pó abaixo do mínimo negociável da exchange."""
+        try:
+            live_cfg = self._load_live_config()
+        except Exception:
+            live_cfg = getattr(self, "config", {}) or {}
+        if not isinstance(live_cfg, dict):
+            live_cfg = {}
+        return float(live_cfg.get("min_tradeable_balance", 0.00001) or 0.00001)
+
+    def _read_subaccount_spot_balances(self, quote_cur: str) -> tuple[float, float]:
+        """Saldo disponível (quote, base) da subconta TRADE configurada.
+
+        Sem subconta, usa a conta TRADE autenticada. Não vende nada.
+        """
+        base_cur = str(self.symbol).split("-")[0]
+        try:
+            live_cfg = self._load_live_config()
+        except Exception:
+            live_cfg = getattr(self, "config", {}) or {}
+        subaccount = (
+            str(live_cfg.get("kucoin_subaccount_name") or "").strip()
+            if isinstance(live_cfg, dict)
+            else ""
+        )
+        if subaccount:
+            from kucoin_api import get_sub_account_balances
+
+            rows = get_sub_account_balances()
+
+            def _sum(currency: str) -> float:
+                return sum(
+                    float(account.get("available", 0) or 0)
+                    for account in rows
+                    if account.get("sub_name") == subaccount
+                    and account.get("account_type") == "trade"
+                    and account.get("currency") == currency
+                )
+
+            return _sum(quote_cur), _sum(base_cur)
+
+        from kucoin_api import get_balance
+
+        return float(get_balance(quote_cur) or 0.0), float(get_balance(base_cur) or 0.0)
+
+    def _align_position_to_exchange(self, price: float = 0.0) -> None:
+        """Copia o saldo base da subconta para ``state.position`` sem flatten.
+
+        Entries extra não são inventadas e nenhuma ordem é enviada.
+        """
+        if getattr(self.state, "dry_run", False):
+            self._sync_position_tracking()
+            return
+
+        quote_cur = str(self.symbol).split("-")[1]
+        try:
+            _quote, base_qty = self._read_subaccount_spot_balances(quote_cur)
+        except Exception as exc:
+            logger.debug("Position align skipped (balance read failed): %s", exc)
+            self._sync_position_tracking()
+            return
+
+        dust = self._min_tradeable_dust()
+        tracked = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
+        aligned = 0.0 if base_qty < dust else max(float(base_qty), 0.0)
+        if abs(aligned - tracked) > max(dust, tracked * 0.005):
+            logger.info(
+                "📐 Position aligned to subaccount: tracked=%.8f -> exchange=%.8f "
+                "(no flatten, no synthetic entries)",
+                tracked,
+                aligned,
+            )
+        self.state.position = aligned
+        if price > 0:
+            self.state.position_value = aligned * float(price)
+        self._sync_position_tracking()
+
     def _sync_position_tracking(self) -> None:
         """Mantém contagem bruta e slot lógico coerentes com a posição atual."""
         entries = list(getattr(self.state, "entries", []) or [])
         raw_entry_count = len(entries)
         position = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
-        entry_price = max(float(getattr(self.state, "entry_price", 0.0) or 0.0), 0.0)
-        has_open_position = position > 0 and (raw_entry_count > 0 or entry_price > 0)
         self.state.position_count = raw_entry_count
         self.state.raw_entry_count = raw_entry_count
-        if not has_open_position:
-            self.state.logical_position_slots = 0
-        elif raw_entry_count > 0:
-            self.state.logical_position_slots = raw_entry_count
-        else:
-            self.state.logical_position_slots = 1
+        self.state.logical_position_slots = infer_logical_slots(
+            exchange_qty=position,
+            entries=entries,
+            dust=self._min_tradeable_dust(),
+        )
 
     def _check_per_slot_exits(self, price: float) -> bool:
         """Verifica saída independente por slot: TP, trailing, SL e max_hold_hours."""
@@ -513,6 +588,29 @@ class PositionManagerMixin:
 
     # ── Reconciliação de posição com a exchange ──────────────────────────────
 
+    def _has_exclusive_exchange_balance(self, subaccount: str = "") -> bool:
+        """True se o saldo da exchange consultado pertence só a este profile.
+
+        Conta compartilhada (master kucoin/homelab, vários agents no mesmo
+        book) continua só-alerta. Subconta nomeada, flag de credencial
+        dedicada ou KUCOIN_SECRET_NAMES=kucoin/sub-* único = exclusivo.
+        """
+        if str(subaccount or "").strip():
+            return True
+        try:
+            live_cfg = self._load_live_config()
+        except Exception:
+            live_cfg = getattr(self, "config", {}) or {}
+        if not isinstance(live_cfg, dict):
+            live_cfg = {}
+        if live_cfg.get("kucoin_require_dedicated_credentials"):
+            return True
+        secrets = os.environ.get("KUCOIN_SECRET_NAMES", "")
+        names = [part.strip() for part in secrets.split(",") if part.strip()]
+        if len(names) == 1 and "/sub-" in names[0].lower():
+            return True
+        return False
+
     def _restore_persistent_reconciliation_candidate(
         self,
         real_balance: float,
@@ -520,15 +618,15 @@ class PositionManagerMixin:
         tolerance: float,
         profile: str,
         subaccount: str,
+        *,
+        exclusive: bool = False,
     ) -> bool:
         """Readota um único BUY persistente que explica o excesso na exchange.
 
-        A readopção só é segura quando o profile tem subconta configurada e um
-        único BUY aberto, identificado por order_id, explica o saldo excedente.
-        Essa regra evita atribuir saldo de outro profile quando os agentes usam
-        a mesma conta KuCoin.
+        Sem subconta nomeada só segue se o saldo da exchange for exclusivo
+        deste profile (credencial kucoin/sub-* dedicada).
         """
-        if not subaccount:
+        if not subaccount and not exclusive:
             return False
 
         excess = real_balance - db_position
@@ -623,6 +721,139 @@ class PositionManagerMixin:
         )
         return True
 
+    def _adopt_untracked_exchange_excess(
+        self,
+        *,
+        excess: float,
+        real_balance: float,
+        db_position: float,
+        current_price: float,
+        profile: str,
+        subaccount: str,
+        base_currency: str,
+        tolerance: float,
+    ) -> bool:
+        """Incorpora excesso exclusivo no state e no DB (lote ou fill)."""
+        dust = self._min_tradeable_dust()
+        if excess <= max(dust, 0.0):
+            return False
+
+        price = float(current_price or 0.0)
+        if price <= 0:
+            entries = list(getattr(self.state, "entries", []) or [])
+            if entries:
+                price = float(entries[-1].get("price", 0) or 0)
+        if price <= 0:
+            try:
+                from kucoin_api import get_price
+                price = float(get_price(self.symbol) or 0.0)
+            except Exception:
+                price = 0.0
+        if price <= 0:
+            logger.warning("[reconcile] Sem preço para adotar excesso %.8f %s", excess, base_currency)
+            return False
+
+        meta = {
+            "reconciled_exchange_excess": True,
+            "reconcile_real_balance": round(real_balance, 8),
+            "reconcile_db_position_before": round(db_position, 8),
+            "kucoin_subaccount": subaccount or None,
+        }
+
+        with self._trade_lock:
+            entries = list(getattr(self.state, "entries", []) or [])
+            db_now = sum(float(e.get("size", 0) or 0) for e in entries)
+            if real_balance <= db_now + tolerance:
+                return True
+            excess_now = real_balance - db_now
+            if excess_now <= max(dust, 0.0):
+                return False
+
+            adopted_via = "new_lot"
+            trade_id = None
+            if entries:
+                last = dict(entries[-1])
+                last_price = float(last.get("price", 0) or 0) or price
+                last_size = float(last.get("size", 0) or 0)
+                last_id = last.get("trade_id")
+                if last_id and last_size > 0 and last_price > 0:
+                    new_size = last_size + excess_now
+                    try:
+                        updated = self.db.update_trade_fill(
+                            int(last_id),
+                            new_size,
+                            last_price,
+                            funds=new_size * last_price,
+                        )
+                    except Exception as exc:
+                        logger.warning("[reconcile] update_trade_fill failed: %s", exc)
+                        updated = False
+                    if updated:
+                        try:
+                            self.db.merge_trade_metadata(int(last_id), meta)
+                        except Exception as exc:
+                            logger.warning("[reconcile] merge metadata failed: %s", exc)
+                        last["size"] = new_size
+                        entries[-1] = last
+                        trade_id = int(last_id)
+                        adopted_via = "fill_adjust"
+                if adopted_via != "fill_adjust":
+                    adopted_via = "new_lot"
+
+            if adopted_via == "new_lot":
+                order_id = f"reconcile-{profile}-{int(time.time())}"
+                try:
+                    trade_id = self.db.record_trade(
+                        self.symbol,
+                        "buy",
+                        price,
+                        size=excess_now,
+                        funds=price * excess_now,
+                        order_id=order_id,
+                        dry_run=False,
+                        metadata=meta,
+                        profile=profile,
+                    )
+                except Exception as exc:
+                    logger.warning("[reconcile] record_trade do excesso falhou: %s", exc)
+                    return False
+                entries.append({
+                    "price": price,
+                    "size": excess_now,
+                    "ts": time.time(),
+                    "trade_id": trade_id,
+                    "order_id": order_id,
+                    "target_sell": 0.0,
+                    "target_sell_reason": "reconciled_exchange_excess",
+                    "trailing_high": price,
+                    "dry_run": False,
+                })
+
+            self.state.entries = entries
+            total_size = sum(float(e.get("size", 0) or 0) for e in entries)
+            total_cost = sum(
+                float(e.get("size", 0) or 0) * float(e.get("price", 0) or 0)
+                for e in entries
+            )
+            self.state.position = total_size
+            self.state.entry_price = total_cost / total_size if total_size > 0 else 0.0
+            self._sync_position_tracking()
+
+        logger.warning(
+            "✅ [reconcile] Excesso adotado (%s) %s/%s: +%.8f %s via %s trade_id=%s "
+            "(DB %.8f → exchange %.8f)",
+            adopted_via, self.symbol, profile, excess_now, base_currency,
+            adopted_via, trade_id, db_now, real_balance,
+        )
+        _send_telegram_alert(
+            f"✅ *Reconciliação efetiva* `{self.symbol}`/`{profile}`\n"
+            f"Excesso da exchange *adotado* ({adopted_via}):\n"
+            f"+`{excess_now:.8f}` {base_currency} @ `${price:.2f}`\n"
+            f"DB era `{db_now:.8f}` → agora `{self.state.position:.8f}` "
+            f"(exchange `{real_balance:.8f}`)"
+        )
+        return True
+
     def _reconcile_position_with_exchange(self, current_price: float = 0.0) -> int:
         """Reconcilia os slots do DB com o saldo real de BTC na exchange.
 
@@ -635,11 +866,10 @@ class PositionManagerMixin:
         do state (sem gravar sell sintético no DB), do slot mais recente para
         o mais antigo, até que DB == saldo real ± tolerância.
 
-        Na direção oposta (exchange > DB — a exchange tem MAIS moeda do que o
-        DB conhece), somente readota um BUY persistente quando profile,
-        subconta, order_id e tamanho do excesso formam uma identidade única.
-        Qualquer caso ambíguo só dispara alerta Telegram para investigação
-        manual.
+        Na direção oposta (exchange > DB), se o saldo for exclusivo deste
+        profile (subconta ou credencial kucoin/sub-*), a reconciliação é
+        efetiva: readota BUY persistente ou incorpora o excesso no lote.
+        Conta compartilhada continua só-alerta.
 
         Chamado:
         - Em background quando sell falha com código 200004 (Balance insufficient)
@@ -647,8 +877,8 @@ class PositionManagerMixin:
         - Em background após cada compra bem-sucedida
 
         Returns:
-            Número de slots fechados por reconciliação (0 = tudo consistente,
-            readopção persistente ou exchange > DB apenas alertado).
+            Número de slots fechados por reconciliação (0 = consistente,
+            readopção, adoção de excesso ou alerta em conta compartilhada).
         """
         if self.state.dry_run:
             return 0
@@ -656,8 +886,6 @@ class PositionManagerMixin:
         base_currency = self.symbol.split("-")[0]
 
         entries = list(getattr(self.state, "entries", []) or [])
-        if not entries:
-            return 0
 
         profile = self._current_profile() if callable(getattr(self, "_current_profile", None)) else "default"
         try:
@@ -668,6 +896,9 @@ class PositionManagerMixin:
             str(live_cfg.get("kucoin_subaccount_name") or "").strip()
             if isinstance(live_cfg, dict) else ""
         )
+        exclusive = self._has_exclusive_exchange_balance(subaccount)
+        if not entries and not exclusive:
+            return 0
 
         try:
             if subaccount:
@@ -702,21 +933,40 @@ class PositionManagerMixin:
         if real_balance > db_position + tolerance:
             if self._restore_persistent_reconciliation_candidate(
                 real_balance, db_position, tolerance, profile, subaccount,
+                exclusive=exclusive,
             ):
                 return 0
             excess = real_balance - db_position
+            if exclusive and self._adopt_untracked_exchange_excess(
+                excess=excess,
+                real_balance=real_balance,
+                db_position=db_position,
+                current_price=current_price,
+                profile=profile,
+                subaccount=subaccount,
+                base_currency=base_currency,
+                tolerance=tolerance,
+            ):
+                return 0
             logger.warning(
                 "⚠️ [reconcile] Exchange tem mais %s do que o DB conhece (%s/%s): "
-                "DB=%.8f | Exchange=%.8f | excesso=%.8f — alertando, sem ação automática",
+                "DB=%.8f | Exchange=%.8f | excesso=%.8f — %s",
                 base_currency, self.symbol, profile, db_position, real_balance, excess,
+                "adotar falhou" if exclusive else "conta compartilhada, sem ação automática",
             )
             _send_telegram_alert(
                 f"⚠️ *Reconciliação* `{self.symbol}`/`{profile}`\n"
                 f"Exchange tem *mais* {base_currency} do que o DB sabe:\n"
                 f"DB: `{db_position:.8f}` | Exchange: `{real_balance:.8f}` | "
                 f"excesso: `{excess:.8f}`\n"
-                f"Sem ação automática (risco de atribuir saldo de outro profile "
-                f"na mesma subconta) — verificar manualmente."
+                + (
+                    "Adoção automática falhou — verificar logs."
+                    if exclusive
+                    else (
+                        "Sem ação automática (risco de atribuir saldo de outro "
+                        "profile na mesma subconta) — verificar manualmente."
+                    )
+                )
             )
             return 0
 

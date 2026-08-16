@@ -164,3 +164,29 @@ def test_recalibrate_reapplies_last_ollama_controls(rag, monkeypatch):
     assert adj.applied_min_confidence > adj.baseline_min_confidence
     assert adj.applied_max_position_pct == pytest.approx(0.20)
     assert adj.applied_max_positions == 2
+
+
+def test_apply_mode_does_not_raise_ai_position_pct_when_baseline_is_one(rag):
+    """JSON shadow max_position_pct=1.0 não pode empurrar 6% da IA para 25%."""
+    rag.set_trading_context(
+        avg_entry_price=0.0,
+        position_count=0,
+        usdt_balance=30.0,
+        max_position_pct=1.0,
+        max_positions=4,
+        profile="shadow",
+    )
+    adj = rag.set_ollama_trade_controls(
+        {
+            "min_confidence": 0.61,
+            "min_trade_interval": 150,
+            "max_position_pct": 0.06,
+            "max_positions": 2,
+            "rationale": "small size",
+        },
+        mode="apply",
+        trigger="periodic",
+        model="trading-analyst",
+    )
+    assert adj.ollama_suggested_max_position_pct == pytest.approx(0.06)
+    assert adj.applied_max_position_pct == pytest.approx(0.06)

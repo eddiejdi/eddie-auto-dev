@@ -16,6 +16,8 @@ Modos de falha cobertos (jul/2026 + ago/2026):
    tiver token mais novo, injeta mesmo acima do soft threshold.
 4. Rate limit 24h: aplica a heals proativos; **bypass** se HA já expirou e
    o bridge/runtime é estritamente mais novo (incidente 2026-08-08).
+5. Container do HA parado/exited (ex.: reboot com policy ``unless-stopped``)
+   → **``docker start`` automático** antes de avaliar entry (gap 2026-08-10).
 
 Fluxo:
 1. Se o access token (HA ou bridge) está abaixo do limiar soft, **força
@@ -25,6 +27,8 @@ Fluxo:
    a. **hot** — serviço `tuya_token_inject.apply` (preferido)
    b. **core_restart** — storage + `homeassistant.restart`
    c. **docker_restart** — storage + `docker restart` (último recurso)
+4. Container do HA fora do ar → **``docker start``** antes de avaliar entry
+   (o self-heal também recupera o HA, não só o token).
 
 Exporta métricas via textfile collector.
 """
@@ -467,6 +471,10 @@ def render_prom(metrics: dict[str, float | int]) -> str:
             "Último modo de heal: 0=none 1=hot 2=core_restart 3=docker_restart 4=reload",
         ),
         "tuya_selfheal_reloads_total": ("counter", "Reloads de config entry Tuya aplicados"),
+        "tuya_selfheal_container_restarts_total": (
+            "counter",
+            "Vezes que o self-heal subiu o container do HA (docker start)",
+        ),
         "tuya_entry_state_code": (
             "gauge",
             "Estado da entry: 0=loaded 1=setup_error 2=setup_retry 3=not_loaded "
@@ -503,6 +511,58 @@ def docker_py(script: str, timeout: int = 60) -> str:
         check=True,
     )
     return proc.stdout.strip()
+
+
+def ensure_container_health(container: str = CONTAINER) -> dict:
+    """Garante que o container do HA esteja em execução (docker start se preciso).
+
+    Gap fechado em 2026-08-10: o container `homeassistant` saiu (exit 137)
+    *antes* do reboot do host e a policy `unless-stopped` não o reiniciou —
+    os timers de monitor/reload só faziam `docker exec`/API e nenhum chamava
+    `docker start`, então nada recuperava o HA. Passa a ser responsabilidade
+    deste self-heal subir o container antes de avaliar token/entidades.
+
+    Retorna {'running': bool, 'restarted': bool, 'detail': str} (nunca levanta).
+    """
+    insp = subprocess.run(
+        ["docker", "inspect", "-f", "{{.State.Running}}", container],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    if insp.returncode == 0 and insp.stdout.strip() == "true":
+        return {"running": True, "restarted": False, "detail": "container em execução"}
+    if insp.returncode != 0:
+        return {
+            "running": False,
+            "restarted": False,
+            "detail": f"docker inspect falhou: "
+            f"{(insp.stderr or insp.stdout).strip()[:160]}",
+        }
+    proc = subprocess.run(
+        ["docker", "start", container],
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return {
+            "running": False,
+            "restarted": False,
+            "detail": f"docker start falhou: "
+            f"{(proc.stderr or proc.stdout).strip()[:200]}",
+        }
+    log.warning(
+        "Container %s estava parado e foi reiniciado pelo self-heal",
+        container,
+    )
+    return {
+        "running": True,
+        "restarted": True,
+        "detail": "container reiniciado pelo self-heal",
+    }
 
 
 def ha_tuya_status() -> dict:
@@ -848,6 +908,9 @@ def _prom_snapshot(
         "tuya_selfheal_heals_total": state["heals_total"],
         "tuya_selfheal_heal_failures_total": state["heal_failures_total"],
         "tuya_selfheal_reloads_total": state.get("reloads_total", 0),
+        "tuya_selfheal_container_restarts_total": state.get(
+            "container_restarts_total", 0
+        ),
         "tuya_selfheal_check_failures_total": state.get("check_failures_total", 0),
         "tuya_selfheal_last_run_timestamp": int(time.time()),
         "tuya_selfheal_last_heal_timestamp": state.get("last_heal_timestamp", 0),
@@ -871,6 +934,22 @@ def main() -> int:
     state["runs_total"] += 1
     state["heal_history"] = prune_heal_history(state.get("heal_history", []))
     state.setdefault("reloads_total", 0)
+    state.setdefault("container_restarts_total", 0)
+
+    # Gap 2026-08-10: garante que o container do HA esteja de pé antes de
+    # avaliar token/entidades. Se estava parado, dá `docker start` e aguarda
+    # um pouco pelo boot antes da checagem (docker exec falha rápido se não pronto).
+    container = ensure_container_health()
+    if container["restarted"]:
+        state["container_restarts_total"] = int(
+            state.get("container_restarts_total", 0)
+        ) + 1
+        log.warning(
+            "HA estava fora; docker start emitido — aguardando boot "
+            "antes de avaliar entry (%s)",
+            container["detail"],
+        )
+        time.sleep(20)
 
     status = ha_tuya_status_with_retry()
     runtime_token = load_runtime_token()

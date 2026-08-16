@@ -10,6 +10,7 @@ from tools.trading_guardrails_control import (
     _authentik_auth_ok,
     _manual_sell_menu_body,
     _normalize_base_path,
+    _open_buy_sql,
     _positions_table,
     build_manual_sell_path,
     build_handler,
@@ -147,3 +148,12 @@ def test_compute_manual_sell_pnl_accounts_for_fees() -> None:
     pnl, pnl_pct = _compute_manual_sell_pnl(avg_entry=70000.0, price=71000.0, size=0.001)
     assert round(pnl, 6) == round((71000 - 70000) * 0.001 - ((71000 + 70000) * 0.001 * 0.001), 6)
     assert pnl_pct > 0
+
+
+def test_open_buy_sql_skips_closed_and_closed_reason() -> None:
+    bare = _open_buy_sql()
+    aliased = _open_buy_sql("t")
+    assert "status <> 'closed'" in bare
+    assert "closed_reason" in bare
+    assert "t.status <> 'closed'" in aliased
+    assert "t.metadata->>'closed_reason'" in aliased

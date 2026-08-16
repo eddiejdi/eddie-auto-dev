@@ -209,6 +209,50 @@ class TestSyncPositionTracking:
         agent._sync_position_tracking()
         assert agent.state.logical_position_slots == 1
 
+    def test_untracked_exchange_qty_raises_logical_slots(self):
+        entries = [_entry(65_000, 0.00023)]
+        agent = _make_agent(position=0.00269, entries=entries)
+        agent._sync_position_tracking()
+        assert agent.state.raw_entry_count == 1
+        assert agent.state.logical_position_slots >= 11
+
+
+class TestAlignPositionToExchange:
+
+    def test_dry_run_does_not_touch_exchange(self):
+        agent = _make_agent(position=0.001, dry_run=True, entries=[_entry(65_000, 0.001)])
+        agent._align_position_to_exchange(65_000.0)
+        assert agent.state.position == pytest.approx(0.001)
+
+    def test_live_copies_subaccount_base_without_selling(self):
+        agent = _make_agent(
+            position=0.00023,
+            dry_run=False,
+            entries=[_entry(65_000, 0.00023)],
+            live_cfg={"kucoin_subaccount_name": "BTCConservative"},
+        )
+        rows = [
+            {
+                "sub_name": "BTCConservative",
+                "account_type": "trade",
+                "currency": "BTC",
+                "available": 0.000458,
+            },
+            {
+                "sub_name": "BTCConservative",
+                "account_type": "trade",
+                "currency": "USDT",
+                "available": 15.71,
+            },
+        ]
+        with ExitStack() as stack:
+            for ctx in _subaccount_balance_patches(rows):
+                stack.enter_context(ctx)
+            agent._align_position_to_exchange(63_764.0)
+        assert agent.state.position == pytest.approx(0.000458)
+        assert agent.state.logical_position_slots == 2
+        agent.db.record_trade.assert_not_called()
+
 
 # ── _check_per_slot_exits: max_hold_hours ────────────────────────────────────
 
@@ -704,16 +748,15 @@ class TestMixinInheritance:
 # ── _reconcile_position_with_exchange ──────────────────────────────────────
 
 class TestReconcilePositionWithExchange:
-    """Cobre os 3 achados da revisão 2026-08-01:
+    """Cobre reconciliação nas duas direções.
 
-    1. Direção reversa (exchange > DB) não pode criar entries sintéticas
-       (risco de atribuir saldo de outro profile) — deve só alertar.
-    2. TOCTOU: os números usados para decidir QUAIS/QUANTOS slots fechar
-       devem vir de uma leitura de `entries` feita já dentro do lock, não
-       da leitura pré-lock (que pode estar obsoleta se outro trade mutou
-       `self.state.entries` entre a checagem inicial e a aquisição do lock).
-    3. (Comportamento pré-existente, preservado) fecha do slot mais
-       recente para o mais antigo até eliminar o excesso.
+    1. Direção reversa em conta *compartilhada* não cria entries sintéticas
+       (risco de atribuir saldo de outro profile) — só alerta.
+    2. Direção reversa em saldo *exclusivo* (subconta / kucoin/sub-*) é
+       efetiva: ajusta o lote ou grava BUY reconciliado.
+    3. TOCTOU: os números usados para decidir QUAIS/QUANTOS slots fechar
+       devem vir de uma leitura de `entries` feita já dentro do lock.
+    4. Fecha do slot mais recente para o mais antigo até eliminar phantom.
     """
 
     def test_dry_run_returns_zero_without_querying_exchange(self):
@@ -743,8 +786,7 @@ class TestReconcilePositionWithExchange:
         mock_alert.assert_not_called()
 
     def test_exchange_greater_than_db_alerts_and_does_not_mutate_entries(self):
-        """Achado #2: exchange com MAIS moeda do que o DB só alerta — nunca
-        cria uma entry sintética automaticamente."""
+        """Conta compartilhada: exchange com MAIS moeda só alerta."""
         entries = [_entry(90_000, 0.001)]
         agent = _make_agent(entries=entries, dry_run=False)
         with (
@@ -758,6 +800,67 @@ class TestReconcilePositionWithExchange:
         message = mock_alert.call_args.args[0]
         assert "mais" in message.lower()
         assert "BTC" in message
+        assert "Sem ação automática" in message
+
+    def test_exclusive_balance_applies_excess_to_latest_open_buy(self):
+        """ETH-USDT/aggressive: subconta dedicada adota o excesso no lote."""
+        lot = _entry(1_957.09, 0.03147046)
+        lot["trade_id"] = 3901
+        agent = _make_agent(
+            entries=[lot],
+            dry_run=False,
+            live_cfg={"kucoin_require_dedicated_credentials": True},
+        )
+        agent.symbol = "ETH-USDT"
+        agent.db.update_trade_fill.return_value = True
+        with (
+            patch.object(kucoin_api, "get_balance", return_value=0.03177560),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange(current_price=1_882.36)
+        assert result == 0
+        assert len(agent.state.entries) == 1
+        assert agent.state.entries[0]["size"] == pytest.approx(0.03177560)
+        assert agent.state.position == pytest.approx(0.03177560)
+        agent.db.update_trade_fill.assert_called_once()
+        mock_alert.assert_called_once()
+        assert "efetiva" in mock_alert.call_args.args[0].lower()
+        agent.db.record_trade.assert_not_called()
+
+    def test_exclusive_balance_without_trade_id_records_new_lot(self):
+        entries = [_entry(90_000, 0.001)]
+        agent = _make_agent(
+            entries=entries,
+            dry_run=False,
+            live_cfg={"kucoin_require_dedicated_credentials": True},
+        )
+        agent.db.record_trade.return_value = 77
+        with (
+            patch.object(kucoin_api, "get_balance", return_value=0.0013),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange(current_price=90_000.0)
+        assert result == 0
+        assert len(agent.state.entries) == 2
+        assert agent.state.entries[-1]["trade_id"] == 77
+        assert agent.state.entries[-1]["size"] == pytest.approx(0.0003)
+        agent.db.record_trade.assert_called_once()
+        assert "efetiva" in mock_alert.call_args.args[0].lower()
+
+    def test_exclusive_secret_name_adopts_excess_when_entries_empty(self):
+        agent = _make_agent(entries=[], dry_run=False)
+        agent.symbol = "ETH-USDT"
+        agent.db.record_trade.return_value = 88
+        with (
+            patch.dict(os.environ, {"KUCOIN_SECRET_NAMES": "kucoin/sub-ethagressive"}),
+            patch.object(kucoin_api, "get_balance", return_value=0.00030514),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange(current_price=1_882.36)
+        assert result == 0
+        assert len(agent.state.entries) == 1
+        assert agent.state.entries[0]["size"] == pytest.approx(0.00030514)
+        assert "efetiva" in mock_alert.call_args.args[0].lower()
 
     def test_exchange_excess_restores_exact_persistent_buy_for_configured_subaccount(self):
         """O saldo extra só readota o BUY identificado por profile/subconta/order.
@@ -829,7 +932,7 @@ class TestReconcilePositionWithExchange:
         agent.db.mark_open_buy_restored.assert_not_called()
         mock_alert.assert_called_once()
 
-    def test_exchange_excess_with_multiple_candidates_remains_an_alert(self):
+    def test_exchange_excess_with_multiple_candidates_adopts_exclusive_lot(self):
         entries = [_entry(90_000, 0.001)]
         agent = _make_agent(
             entries=entries,
@@ -856,11 +959,14 @@ class TestReconcilePositionWithExchange:
             result = agent._reconcile_position_with_exchange()
 
         assert result == 0
-        assert len(agent.state.entries) == 1
+        # Subconta exclusiva: se o BUY persistente é ambíguo, o excesso
+        # ainda é adotado (lote novo) — reconciliação efetiva.
+        assert len(agent.state.entries) == 2
         agent.db.mark_open_buy_restored.assert_not_called()
         mock_alert.assert_called_once()
+        assert "efetiva" in mock_alert.call_args.args[0].lower()
 
-    def test_persistent_claim_failure_keeps_excess_as_alert(self):
+    def test_persistent_claim_failure_adopts_exclusive_excess(self):
         entries = [_entry(90_000, 0.001)]
         agent = _make_agent(
             entries=entries,
@@ -887,8 +993,9 @@ class TestReconcilePositionWithExchange:
             result = agent._reconcile_position_with_exchange()
 
         assert result == 0
-        assert len(agent.state.entries) == 1
+        assert len(agent.state.entries) == 2
         mock_alert.assert_called_once()
+        assert "efetiva" in mock_alert.call_args.args[0].lower()
 
     def test_configured_subaccount_uses_available_balance_not_total_balance(self):
         entries = [_entry(90_000, 0.001)]

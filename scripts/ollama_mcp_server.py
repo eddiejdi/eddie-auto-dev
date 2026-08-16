@@ -63,6 +63,18 @@ _health_cache: dict[str, tuple[bool, float]] = {}
 HEALTH_TTL = 30.0  # seconds
 
 
+def _loaded_models(endpoint: dict, timeout: float = 3.0) -> list[str]:
+    """Return list of model names resident in VRAM (via /api/ps)."""
+    host = endpoint["host"]
+    try:
+        req = urllib.request.Request(f"{host}/api/ps", method="GET")
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read())
+        return [m.get("name", "") for m in data.get("models", []) if m.get("name")]
+    except Exception:
+        return []
+
+
 def _is_healthy(endpoint: dict, timeout: float = 3.0) -> bool:
     host = endpoint["host"]
     now = time.monotonic()
@@ -198,8 +210,13 @@ def handle_ollama_health(_args: dict) -> dict:
     lines = ["## Ollama GPU Cluster Health\n"]
     for ep in ENDPOINTS:
         ok = _is_healthy(ep, timeout=3.0)
+        loaded = _loaded_models(ep, timeout=3.0)
+        resident = ", ".join(loaded) if loaded else "nenhum"
         status = "✓ online" if ok else "✗ offline"
-        lines.append(f"- **{ep['name']}** {ep['host']} ({ep['vram_gb']}GB)  model=`{ep['model']}`  {status}")
+        lines.append(
+            f"- **{ep['name']}** {ep['host']} ({ep['vram_gb']}GB)  "
+            f"config=`{ep['model']}`  residente=`{resident}`  {status}"
+        )
     healthy = sum(1 for ep in ENDPOINTS if _health_cache.get(ep["host"], (False,))[0])
     lines.append(f"\n{healthy}/{len(ENDPOINTS)} endpoints disponíveis.")
     return _text("\n".join(lines))

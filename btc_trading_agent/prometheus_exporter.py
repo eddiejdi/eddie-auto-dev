@@ -86,6 +86,11 @@ class MetricsCollector:
         self.dsn = dsn
         self.symbol = symbol
         self.profile = profile
+        # Cache for heavy equity-daily CTE (Prometheus scrape is ~15s; day PnL need not match that).
+        # Override: EXPORTER_EQUITY_DAILY_TTL seconds (default 60).
+        self._equity_daily_cache: Optional[Dict] = None
+        self._equity_daily_cache_ts: float = 0.0
+        self._equity_daily_ttl: float = float(os.environ.get("EXPORTER_EQUITY_DAILY_TTL", "60"))
 
     def _get_conn(self):
         """Cria conexão PostgreSQL com autocommit e search_path btc"""
@@ -261,7 +266,18 @@ class MetricsCollector:
 
         Equivalente ao PnL que a KuCoin exibe como "variação do dia" — inclui
         posição aberta, ao contrário do PnL realizado da tabela trades.
+
+        Cached per collector instance (TTL via EXPORTER_EQUITY_DAILY_TTL, default 60s)
+        so parallel Prometheus scrapes of many crypto-exporter@* units do not
+        re-run the heavy balance_equity CTE every 15s.
         """
+        now_mono = time.time()
+        if (
+            self._equity_daily_cache is not None
+            and (now_mono - self._equity_daily_cache_ts) < self._equity_daily_ttl
+        ):
+            return self._equity_daily_cache
+
         result = {
             'equity_change_today_usdt': 0.0,
             'equity_change_today_pct': 0.0,
@@ -327,6 +343,8 @@ class MetricsCollector:
             conn.close()
         except Exception as e:
             print(f"⚠️ Erro ao calcular equity daily changes: {e}")
+        self._equity_daily_cache = result
+        self._equity_daily_cache_ts = now_mono
         return result
 
     def get_metrics(self) -> Dict:
@@ -345,7 +363,10 @@ class MetricsCollector:
         """, (self.symbol,))
         result = cursor.fetchone()
         db_price = result[0] if result else 0
-        db_price_age = (now - result[1]) if result and result[1] else float('inf')
+        db_ts = result[1] if result and result[1] else 0
+        db_price_age = (now - db_ts) if db_ts else float('inf')
+        # Reuse latest market_states timestamp as last_activity (avoids extra MAX scan).
+        metrics['last_activity'] = db_ts if db_ts else 0
 
         # Se preço do DB tem mais de 5 minutos, buscar ao vivo
         if db_price_age > 300:
@@ -591,10 +612,7 @@ class MetricsCollector:
             metrics['spread'] = result[8] if result[8] else 0
             metrics['volume'] = result[9] if result[9] else 0
 
-        # ── Última atividade ──
-        cursor.execute("SELECT MAX(timestamp) FROM market_states WHERE symbol=%s", (self.symbol,))
-        result = cursor.fetchone()
-        metrics['last_activity'] = result[0] if result and result[0] else 0
+        # last_activity set from price query above (same latest market_states row).
 
         # ── Status do agente (process check + DB fallback) ──
         process_running = self._is_agent_process_running()
