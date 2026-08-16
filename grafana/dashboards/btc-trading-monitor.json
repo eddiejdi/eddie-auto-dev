@@ -3067,14 +3067,14 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT account_type, balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative', 'sub:ETHConservative', 'sub:ETHConservative')\n  ORDER BY synced_at DESC\n  LIMIT 3\n)\nSELECT\n  now() AS \"time\",\n  SUM(balance) AS \"Saldo BTC\"\nFROM latest",
+          "rawSql": "WITH latest AS (\n  SELECT account_type, balance\n  FROM btc.exchange_balance_snapshots\n  WHERE currency = 'BTC'\n    AND account_type IN ('sub:BTCAgressive', 'sub:BTCConservative', 'sub:ETHConservative')\n  ORDER BY synced_at DESC\n  LIMIT 3\n)\nSELECT\n  now() AS \"time\",\n  SUM(balance) AS \"Saldo BTC\"\nFROM latest",
           "refId": "A",
           "timeColumns": [
             "time"
           ]
         }
       ],
-      "title": "₿ Saldo BTC (Main)",
+      "title": "₿ Saldo BTC (Sub-contas)",
       "type": "stat"
     },
     {
@@ -3082,7 +3082,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Ganho de BTC no período selecionado (conta main). Reflete recompensas de mineração KuMining creditadas.",
+      "description": "Ganho de BTC no período selecionado (sub-contas de trading). Reflete recompensas de mineração KuMining creditadas.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3249,7 +3249,7 @@
           "showLineNumbers": false,
           "showMiniMap": false
         },
-        "content": "<div style=\"display:flex;flex-direction:column;justify-content:center;height:100%;padding:12px;font-size:12px;line-height:1.6;color:#c8ccd0;\">\n<div style=\"font-weight:700;font-size:14px;color:#FF9830;margin-bottom:8px;\">⛏️ Contrato KuMining</div>\n<div><b>Hashrate:</b> 10 TH</div>\n<div><b>Período:</b> 7 dias</div>\n<div><b>Cupom:</b> 1 TH · 1 dia (bônus)</div>\n<div><b>Início:</b> 08/08/2026, 21:00</div>\n<div><b>Término:</b> 14/08/2026, 21:00</div>\n<div style=\"margin-top:6px;\"><b>Custo Total:</b> ~2.62 USDT</div>\n<div><b>ROI Estimado:</b> ~518% (7 dias)</div>\n</div>",
+        "content": "<div style=\"display:flex;flex-direction:column;justify-content:center;height:100%;padding:12px;font-size:12px;line-height:1.6;color:#c8ccd0;\">\n<div style=\"font-weight:700;font-size:14px;color:#FF9830;margin-bottom:8px;\">⛏️ Contrato KuMining</div>\n<div><b>Status:</b> <span style=\"color:#73bf69;\">✅ Concluído</span></div>\n<div><b>Hashrate:</b> 10 TH</div>\n<div><b>Período:</b> 7 dias</div>\n<div><b>Início:</b> 08/08/2026, 21:00</div>\n<div><b>Término:</b> 14/08/2026, 21:00</div>\n<div style=\"margin-top:6px;\"><b>Custo Total:</b> ~2.62 USDT</div>\n<div><b>ROI Real:</b> Verificar painéis acima</div>\n</div>",
         "mode": "html"
       },
       "pluginVersion": "12.4.0",
@@ -3262,7 +3262,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Evolução do saldo BTC na conta main (inclui recompensas de mineração).",
+      "description": "Evolução do saldo BTC nas sub-contas de trading (inclui recompensas de mineração KuMining).",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -3386,7 +3386,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "btc-trading-pg"
       },
-      "description": "Ganho diário de BTC por mineração (diferença entre snapshots consecutivos da conta main).",
+      "description": "Ganho diário de BTC por mineração (diferença entre snapshots consecutivos das sub-contas).",
       "fieldConfig": {
         "defaults": {
           "color": {
