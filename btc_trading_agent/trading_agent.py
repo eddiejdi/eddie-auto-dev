@@ -35,9 +35,17 @@ from kucoin_api import (
     get_recent_trades, get_balances, get_balance,
     place_market_order, analyze_orderbook, analyze_trade_flow,
     inner_transfer, _has_keys, get_fills_for_order,
-    place_stop_loss_order, place_take_profit_order,
-    cancel_stop_order, cancel_all_stop_orders, get_stop_orders,
 )
+# Stop-loss functions (may not be available in all environments)
+try:
+    from kucoin_api import (
+        place_stop_loss_order, place_take_profit_order,
+        cancel_stop_order, cancel_all_stop_orders, get_stop_orders,
+    )
+    HAS_STOP_ORDERS = True
+except ImportError:
+    HAS_STOP_ORDERS = False
+    logger.debug("Stop-order functions not available in kucoin_api")
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
 from market_rag import MarketRAG
@@ -6062,6 +6070,9 @@ class BitcoinTradingAgent(
         if self.state.position <= 0 or self.state.entry_price <= 0:
             return
 
+        if not HAS_STOP_ORDERS:
+            return
+
         _config = self._load_live_config()
         auto_sl = _config.get("auto_stop_loss", {})
         if not auto_sl.get("enabled", False):
@@ -6172,6 +6183,9 @@ class BitcoinTradingAgent(
         if self.state.dry_run:
             return
 
+        if not HAS_STOP_ORDERS:
+            return
+
         _config = self._load_live_config()
         auto_tp = _config.get("auto_take_profit", {})
         if not auto_tp.get("enabled", False):
@@ -6211,6 +6225,9 @@ class BitcoinTradingAgent(
         if self.state.dry_run:
             return
 
+        if not HAS_STOP_ORDERS:
+            return
+
         try:
             # Cancelar stop-loss e take-profit pendentes
             for entry in getattr(self.state, "entries", []):
@@ -6239,6 +6256,9 @@ class BitcoinTradingAgent(
             new_stop_price: Novo preço de stop
         """
         if self.state.dry_run:
+            return
+
+        if not HAS_STOP_ORDERS:
             return
 
         # Cancelar stop-loss anterior
