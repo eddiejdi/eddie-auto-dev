@@ -184,9 +184,9 @@ class StopLossRule(SlotExitRule):
         trail_pct = float(auto_sl.get("trail_pct", 0.01) or 0.01)
         stop_price = trailing_high * (1 - trail_pct)
 
-        # Se preço atual caiu abaixo do stop, vende (com lucro)
+        # Se preço atual caiu abaixo do stop, vende (com lucro ou breakeven)
         pnl_pct = (ctx.price / slot.entry_price) - 1
-        if ctx.price <= stop_price and pnl_pct > 0:
+        if ctx.price <= stop_price and pnl_pct >= 0:
             return SlotExitDecision(
                 entry_idx=slot.index,
                 expected_entry_price=slot.entry_price,
