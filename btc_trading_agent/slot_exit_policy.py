@@ -148,7 +148,13 @@ class TakeProfitRule(SlotExitRule):
 
 
 class StopLossRule(SlotExitRule):
-    """Triggers when one slot breaches the configured stop-loss threshold."""
+    """Triggers when one slot breaches the configured stop-loss threshold.
+
+    Nova lógica (2026-08-16):
+    - Só ativa quando há lucro mínimo (min_profit_pct, padrão 0.5%)
+    - Quando ativa, stop é em 0% (breakeven) - não vende com prejuízo
+    - Se lucro aumenta, stop sobe para proteger lucro
+    """
 
     def evaluate(
         self,
@@ -159,17 +165,37 @@ class StopLossRule(SlotExitRule):
         if not bool(auto_sl.get("enabled", False)) or slot.entry_price <= 0:
             return None
 
-        sl_pct = float(auto_sl.get("pct", 0.05) or 0.05)
+        # Lucro mínimo para ativar stop-loss (padrão: 0.5%)
+        min_profit_pct = float(auto_sl.get("min_profit_pct", 0.005) or 0.005)
+        # Stop-loss máximo quando ativado (padrão: 0% = breakeven)
+        sl_pct = float(auto_sl.get("pct", 0.0) or 0.0)
+
         pnl_pct = (ctx.price / slot.entry_price) - 1
-        if pnl_pct > -sl_pct:
+
+        # Se não há lucro mínimo, não ativa stop-loss
+        if pnl_pct < min_profit_pct:
             return None
 
-        return SlotExitDecision(
-            entry_idx=slot.index,
-            expected_entry_price=slot.entry_price,
-            reason=f"PER_SLOT_SL slot#{slot.index + 1} ({pnl_pct * 100:.2f}%)",
-            bypass_guardrail=True,
-        )
+        # Se há lucro, verifica se caiu do pico (trailing stop)
+        # Stop é em 0% (breakeven) ou mais alto se preço subiu
+        trailing_high = getattr(slot, 'trailing_high', slot.entry_price)
+        if trailing_high <= 0:
+            trailing_high = slot.entry_price
+
+        # Stop é 1% abaixo do pico, mas mínimo 0% (breakeven)
+        trail_pct = float(auto_sl.get("trail_pct", 0.01) or 0.01)
+        stop_price = trailing_high * (1 - trail_pct)
+
+        # Se preço atual caiu abaixo do stop, vende
+        if ctx.price <= stop_price and pnl_pct > 0:
+            return SlotExitDecision(
+                entry_idx=slot.index,
+                expected_entry_price=slot.entry_price,
+                reason=f"PER_SLOT_SL slot#{slot.index + 1} (lucro {pnl_pct * 100:.2f}%, stop em {((stop_price/slot.entry_price)-1)*100:.2f}%)",
+                bypass_guardrail=True,
+            )
+
+        return None
 
 
 class PerSlotExitPlanner:
