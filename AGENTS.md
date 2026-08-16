@@ -6,13 +6,26 @@ Monorepo do homelab RPA4All: automação, trading, Nextcloud/LTO, wiki, agentes 
 
 | Ferramenta | Quando usar |
 |------------|-------------|
-| **Claude Code / Grok Build** | Refactors grandes, multi-file, arquitetura |
-| **Codex** | Trechos com modelos OpenAI |
+| **Claude Code / Grok Build** | Orquestração paga: interpretar pedido, validar, acompanhar até sucesso; refactors grandes só quando free não bastar |
+| **Codex** | Trechos com modelos OpenAI (preferir free OpenRouter antes) |
+| **OpenRouter free / fleet PASS** | **Execução padrão** de coding, explore, drafts, review barato |
 | **Pi + Ollama** | Coding local barato / fallback (este arquivo é lido pelo Pi) |
 | **specialized_agents + systemd** | Domínio 24/7 (trading, Nextcloud, wiki, selfheal) |
 
 Setup Pi: `docs/PI_CODING_AGENT_SETUP.md`  
-Hooks Pi: `.pi/extensions/rpa4all-hooks/` (bridge para `tools/hooks` + `tools/copilot_hooks`)
+Hooks Pi: `.pi/extensions/rpa4all-hooks/` (bridge para `tools/hooks` + `tools/copilot_hooks`)  
+Fleet free: `~/apps/agents/agents/free-openrouter/fleet.yaml` · Traycer guide: `~/.traycer/agent-selection-guide.md`
+
+### 0. Free-first orchestration (2026-08-07)
+
+**Sempre distribuir atividades para agentes gratuitos.** Modelos pagos (Grok/Claude/GPT parent) são para:
+
+1. **Pensar** na requisição (escopo, riscos, plano, critérios de sucesso)
+2. **Delegar** a free workers com handoff completo
+3. **Validar** o resultado (código, testes, logs, claims)
+4. **Acompanhar** o loop até o sucesso — não abandonar após o primeiro handoff
+
+Exceções: skill Traycer que **exige** harness pago; risco extremo trading/LTO/rede onde o orquestrador age sob confirmação do usuário. Free **nunca** usa LLM chinês nem fleet `excluded`.
 
 ## Políticas críticas (não violar)
 
@@ -26,6 +39,7 @@ Hooks Pi: `.pi/extensions/rpa4all-hooks/` (bridge para `tools/hooks` + `tools/co
 7. Wiki: publicar via agent `wiki_rpa4all`, não scrape/update direto arbitrário.
 8. **Internet desta workstation**: preferir **RJ45** (`enp0s31f6`) e **Wi‑Fi GVT-38AA**; SSID **TANK** só como fallback. Hook: `tools/copilot_hooks/internet_preference_context.py`.
 9. **Web-agent log em tempo real**: ao chamar qualquer tool `web-agent__*`, o hook `tools/hooks/open_agent_log_terminal.py` abre (se ainda não estiver aberta) uma janela de terminal com `tail -F` do log `~/.grok/logs/mcp/web-agent.stderr.log`. Não é preciso chamar `monitor` só por causa do log.
+10. **Governança de ações (2026-08-08)**: todo agente (incl. Traycer GUI) que chamar `intent_declare(risk_level='medium'|'high'|'critical')` **DEVE** aguardar `intent_check_status(intent_id)` retornar `"approved"` antes de executar. O MCP server rejeita `intent_complete()` em intents `pending` — não tente bypassar. Aprovação é via Telegram (botões ✅/❌) ou texto livre ("sim"/"não"). **Trava de deploy (2026-08-09)**: ações com `action_type='deploy'` ou `action_type='restart'` **SEMPRE** exigem aprovação humana — o MCP server força `risk_level` para no mínimo `'medium'` mesmo que o agente declare `'low'` ou `'none'`.
 
 ## Layout útil
 

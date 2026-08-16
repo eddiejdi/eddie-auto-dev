@@ -74,13 +74,13 @@ STALE_AFTER_SEC = float(os.environ.get(
 ))
 # Cap de acúmulo de chunks de streaming para preview (bytes)
 STREAM_PREVIEW_CAP = int(os.environ.get("GPU_COORD_STREAM_PREVIEW_CAP", str(256 * 1024)))
-# ── Trading: intocável; VRAM livre da 3060 liberada só a auxiliares pequenos ──
+# ── Trading: intocável; VRAM livre da NAS liberada só a auxiliares pequenos ──
 # Política (2026-07):
 #   1. Modelos trading-* NUNCA são evictados.
-#   2. Com trading residente na GPU0, só cabem modelos AUXILIARES PEQUENOS
+#   2. Com trading residente na NAS, só cabem modelos AUXILIARES PEQUENOS
 #      na VRAM livre (sem despejar o analyst). Modelos grandes (≥7B etc.)
 #      vão para GPU1/NAS.
-#   3. Nunca se abre espaço na GPU0 evictando trading para caber auxiliar.
+#   3. Nunca se abre espaço na NAS evictando trading para caber auxiliar.
 #
 # Default cobre: trading-analyst, trading-analyst-phi4, candidates, sentiment…
 PROTECTED_MODELS = tuple(
@@ -89,12 +89,12 @@ PROTECTED_MODELS = tuple(
         "trading-analyst,trading-sentiment,trading-",
     ).split(",") if p.strip()
 )
-# Reserva “inteligente” da GPU0: trading prioritário + auxiliares pequenos no resto.
+# Reserva "inteligente" da NAS: trading prioritário + auxiliares pequenos no resto.
 TRADING_RESERVE_GPU0 = os.environ.get(
     "GPU_COORD_TRADING_RESERVE_GPU0", "1"
 ).strip().lower() not in {"0", "false", "no", "off"}
-TRADING_GPU0_NAME = os.environ.get("GPU_COORD_TRADING_GPU0_NAME", "gpu0-rtx3060")
-# Exclusivo: NÃO rotear agenda/aux para a 3060 (evita timeout do trading-analyst).
+TRADING_GPU0_NAME = os.environ.get("GPU_COORD_TRADING_GPU0_NAME", "nas-rtx2060")
+# Exclusivo: NÃO rotear agenda/aux para a NAS (evita timeout do trading-analyst).
 # 2026-07-30: soft-pin spill da agenda enchia a GPU0 e o trading dava connect timeout.
 # GPU_COORD_TRADING_EXCLUSIVE_GPU0=0 reativa auxiliares pequenos na VRAM livre.
 TRADING_EXCLUSIVE_GPU0 = os.environ.get(
@@ -106,7 +106,7 @@ AUX_MAX_VRAM_MB = max(
     256, int(os.environ.get("GPU_COORD_AUX_MAX_VRAM_MB", "1800"))
 )
 # Margem de VRAM livre que deve sobrar após carregar o auxiliar (MB).
-# Evita espremer o trading / fragmentar a 3060.
+# Evita espremer o trading / fragmentar a NAS.
 TRADING_HEADROOM_MB = max(
     0, int(os.environ.get("GPU_COORD_TRADING_HEADROOM_MB", "1024"))
 )

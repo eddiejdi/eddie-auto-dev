@@ -3,7 +3,7 @@
 
 set -e
 
-echo "🔍 Running pre-commit checks..."
+echo "🔍 Running pre-commit checks (13 checks)..."
 
 # ─── Check 1: Blocked hardcoded tokens ───────────────────────────────────────
 echo "  [1/6] Checking for hardcoded API tokens..."
@@ -231,6 +231,20 @@ fi
 echo "  [12/12] Checking API taxonomy (duplicates)..."
 if [ -f "tools/hooks/api_registry_validate.py" ]; then
     if ! python3 tools/hooks/api_registry_validate.py --staged; then
+        exit 1
+    fi
+fi
+
+# ─── Check 13: Wiki documentation analysis ────────────────────────────────────
+# Valida estrutura, extrai termos-chave e detecta duplicatas em .md staged.
+# Alimenta memória do agente wiki para decisões futuras.
+echo "  [13/13] Analyzing wiki documentation..."
+if [ -f "tools/hooks/wiki_doc_analyzer.py" ]; then
+    PY_WIKI="$(dirname "$0")/../.venv/bin/python"
+    [ -x "$PY_WIKI" ] || PY_WIKI="python3"
+    if ! "$PY_WIKI" tools/hooks/wiki_doc_analyzer.py --staged --verbose; then
+        echo "❌ BLOCKED: Wiki documentation analysis failed"
+        echo "   Fix the errors or use --no-verify to skip"
         exit 1
     fi
 fi

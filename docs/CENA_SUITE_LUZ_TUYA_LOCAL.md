@@ -113,6 +113,37 @@ Config entries em
 | Spot | `switch.spot_quarto` | 192.168.15.149 |
 | Closet | `switch.luz_closet_local` | 192.168.15.138 |
 
+### Desacoplamento Closet ↔ Relé Mini Suite (2026-08-16)
+
+**Motivo:** O usuário solicitou que somente o interruptor da suite controlasse o relé mini, removendo o vínculo com o closet.
+
+**Automações desativadas** (`initial_state: false`):
+
+| ID | Alias | Direção |
+|---|---|---|
+| `sync_closet_to_relay_on` | Sinc Luz Closet → Relé Mini Suite (Ligar) | Closet → Relay |
+| `sync_closet_to_relay_off` | Sinc Luz Closet → Relé Mini Suite (Desligar) | Closet → Relay |
+| `sync_relay_to_closet_on` | Sinc Relé Mini Suite → Luz Closet (Ligar) | Relay → Closet |
+| `sync_relay_to_closet_off` | Sinc Relé Mini Suite → Luz Closet (Desligar) | Relay → Closet |
+
+**Resultado:**
+
+```
+ANTES:
+switch.luz_closet_local ←→ switch.rele_mini_suite_local ←→ light.luz_e_ventilador_suite_local
+
+DEPOIS:
+switch.luz_closet_local (isolado)
+switch.rele_mini_suite_local ←→ light.luz_e_ventilador_suite_local (somente interruptor da suite controla)
+```
+
+**Procedimento:**
+1. Backup: `automations.yaml.bak.20260816*`
+2. Adicionado `initial_state: false` nas 4 automações
+3. `docker restart homeassistant`
+
+**Para reativar:** Remover `initial_state: false` ou definir como `true` nas 4 automações e reiniciar HA.
+
 ---
 
 ## Automações (HA)
@@ -261,6 +292,9 @@ Script de apoio: `tools/homelab/tuya_reauth_via_authentik.py`
 Client ID público HA Tuya: `HA_3y9q4ak7g4ephrvke`  
 User code atual da conta (não secret de sessão): `Ba0osdh` (pode mudar se recriar pairing).
 
+Incidente completo (timers failed + 1010 + QR + `docker_restart`):  
+[docs/INCIDENTS/2026-08-05_TUYA_TIMERS_FAILED_REFRESH_1010_AND_REAUTH.md](INCIDENTS/2026-08-05_TUYA_TIMERS_FAILED_REFRESH_1010_AND_REAUTH.md).
+
 ### Serviços systemd relevantes
 
 | Unit | Função |
@@ -292,6 +326,7 @@ User code atual da conta (não secret de sessão): `Ba0osdh` (pode mudar se recr
 - [ ] Toggle light local → mini acompanha em &lt; 2s
 - [ ] Botão físico do ventilador → mesma reação
 - [ ] (Opcional) token Sharing remaining &gt; 30 min para self-heal de keys
+- [ ] Closet `switch.luz_closet_local` **desacoplado** do relé mini (4 automações com `initial_state: false`)
 
 ---
 

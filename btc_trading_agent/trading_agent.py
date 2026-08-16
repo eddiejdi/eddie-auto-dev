@@ -36,6 +36,15 @@ from kucoin_api import (
     place_market_order, analyze_orderbook, analyze_trade_flow,
     inner_transfer, _has_keys, get_fills_for_order,
 )
+# Stop-loss functions (may not be available in all environments)
+try:
+    from kucoin_api import (
+        place_stop_loss_order, place_take_profit_order,
+        cancel_stop_order, cancel_all_stop_orders, get_stop_orders,
+    )
+    HAS_STOP_ORDERS = True
+except ImportError:
+    HAS_STOP_ORDERS = False
 from fast_model import FastTradingModel, MarketState, Signal
 from training_db import TrainingDatabase, TrainingManager
 from market_rag import MarketRAG
@@ -5494,7 +5503,11 @@ class BitcoinTradingAgent(
                                 daemon=True,
                                 name=f"buy-fill-reconcile-{trade_id}",
                             ).start()
-                        else:
+                        # ── Colocar take-profit na exchange ──
+                        self._place_exchange_take_profit(tp_target, size)
+                        # NOTA: stop-loss é colocado apenas quando há lucro mínimo
+                        # (via _check_and_update_exchange_stop no loop principal)
+                    else:
                             logger.warning(
                                 "⚠️ BUY sem order_id — fill reconcile impossível; "
                                 "rodando só reconciliação de posição"
@@ -5507,6 +5520,9 @@ class BitcoinTradingAgent(
                             ).start()
 
                 elif signal.action == "SELL":
+                    # Cancelar stop-orders na exchange antes de vender
+                    self._cancel_exchange_stop_orders()
+
                     # Use _calculate_trade_size for fee check (force bypasses)
                     size = self._calculate_trade_size(signal, price, force=force)
                     if size <= 0:
@@ -6036,6 +6052,226 @@ class BitcoinTradingAgent(
 
         return False
 
+    # ── Exchange Stop-Loss / Take-Profit ──────────────────────────────────────
+
+    def _check_and_update_exchange_stop(self, current_price: float):
+        """Verifica lucro e coloca/atualiza stop-loss na exchange.
+
+        Lógica:
+        - Se não há stop-loss e preço > entrada + lucro_mínimo → Coloca stop em 0% (breakeven)
+        - Se há stop-loss e preço subiu → Atualiza stop para proteger lucro
+
+        Args:
+            current_price: Preço atual do mercado
+        """
+        if self.state.dry_run:
+            return
+        if self.state.position <= 0 or self.state.entry_price <= 0:
+            return
+
+        if not HAS_STOP_ORDERS:
+            return
+
+        _config = self._load_live_config()
+        auto_sl = _config.get("auto_stop_loss", {})
+        if not auto_sl.get("enabled", False):
+            return
+
+        # Configurações
+        sl_pct = auto_sl.get("pct", 0.03)  # Stop-loss máximo (3%)
+        min_profit激活 = auto_sl.get("min_profit_pct", 0.005)  # Lucro mínimo para ativar (0.5%)
+
+        # Calcular lucro atual
+        pnl_pct = (current_price / self.state.entry_price) - 1
+
+        # Verificar se já tem stop-loss na exchange
+        current_stop_price = None
+        current_stop_order_id = None
+        for entry in getattr(self.state, "entries", []):
+            if entry.get("exchange_stop_order_id"):
+                current_stop_price = entry.get("exchange_stop_price", 0)
+                current_stop_order_id = entry.get("exchange_stop_order_id")
+                break
+
+        # ── Caso 1: Não tem stop-loss ainda ──
+        if not current_stop_order_id:
+            # Só coloca stop se houver lucro mínimo
+            if pnl_pct >= min_profit激活:
+                # Stop-loss em 0% (breakeven) - não vende com prejuízo
+                stop_price = self.state.entry_price
+
+                # Arredondar stop_price para incremento do par
+                increments = get_symbol_increments(self.symbol)
+                stop_price_rounded = _floor_to_increment(stop_price, increments["quoteIncrement"])
+
+                client_oid = f"btc_sl_{self.state.position_count}_{int(time.time())}"
+
+                try:
+                    result = place_stop_loss_order(
+                        symbol=self.symbol,
+                        size=self.state.position,
+                        stop_price=stop_price_rounded,
+                        client_oid=client_oid,
+                    )
+                    if result.get("success"):
+                        logger.info(
+                            f"🛑 Stop-loss ATIVADO na exchange (breakeven): "
+                            f"Stop=${stop_price_rounded:,.2f} (0%) "
+                            f"Lucro atual: {pnl_pct*100:.2f}% "
+                            f"Size={self.state.position:.6f} OrderID={result.get('orderId')}"
+                        )
+                        if self.state.entries:
+                            self.state.entries[0]["exchange_stop_order_id"] = result.get("orderId")
+                            self.state.entries[0]["exchange_stop_price"] = stop_price_rounded
+                    else:
+                        logger.warning(
+                            f"⚠️ Falha ao colocar stop-loss na exchange: {result.get('error')}"
+                        )
+                except Exception as e:
+                    logger.error(f"❌ Erro ao colocar stop-loss na exchange: {e}")
+
+        # ── Caso 2: Já tem stop-loss → Atualizar se preço subiu ──
+        elif current_stop_price > 0:
+            # Novo stop = preço atual - margem (ex: 1% abaixo do pico)
+            trailing_pct = auto_sl.get("trail_pct", 0.01)
+            new_stop_price = current_price * (1 - trailing_pct)
+
+            # Só atualiza se o novo stop for MAIOR que o atual (protege mais lucro)
+            if new_stop_price > current_stop_price:
+                # Não baixo o stop - só subo
+                increments = get_symbol_increments(self.symbol)
+                new_stop_rounded = _floor_to_increment(new_stop_price, increments["quoteIncrement"])
+
+                # Cancelar stop anterior
+                cancel_stop_order(order_id=current_stop_order_id)
+
+                # Colocar novo stop
+                client_oid = f"btc_sl_{self.state.position_count}_{int(time.time())}"
+
+                try:
+                    result = place_stop_loss_order(
+                        symbol=self.symbol,
+                        size=self.state.position,
+                        stop_price=new_stop_rounded,
+                        client_oid=client_oid,
+                    )
+                    if result.get("success"):
+                        logger.info(
+                            f"🛑 Stop-loss ATUALIZADO na exchange: "
+                            f"${current_stop_price:,.2f} → ${new_stop_rounded:,.2f} "
+                            f"(protege +{(new_stop_rounded/self.state.entry_price - 1)*100:.2f}% lucro) "
+                            f"Preço atual: ${current_price:,.2f}"
+                        )
+                        if self.state.entries:
+                            self.state.entries[0]["exchange_stop_order_id"] = result.get("orderId")
+                            self.state.entries[0]["exchange_stop_price"] = new_stop_rounded
+                    else:
+                        logger.warning(
+                            f"⚠️ Falha ao atualizar stop-loss: {result.get('error')}"
+                        )
+                except Exception as e:
+                    logger.error(f"❌ Erro ao atualizar stop-loss: {e}")
+
+    def _place_exchange_take_profit(self, target_price: float, size: float):
+        """Coloca ordem take-profit na exchange (KuCoin).
+
+        Args:
+            target_price: Preço alvo de venda
+            size: Tamanho da posição em BTC
+        """
+        if self.state.dry_run:
+            return
+
+        if not HAS_STOP_ORDERS:
+            return
+
+        _config = self._load_live_config()
+        auto_tp = _config.get("auto_take_profit", {})
+        if not auto_tp.get("enabled", False):
+            return
+
+        # Arredondar target_price para incremento do par
+        increments = get_symbol_increments(self.symbol)
+        target_price_rounded = _floor_to_increment(target_price, increments["quoteIncrement"])
+
+        client_oid = f"btc_tp_{self.state.position_count}_{int(time.time())}"
+
+        try:
+            result = place_take_profit_order(
+                symbol=self.symbol,
+                size=size,
+                stop_price=target_price_rounded,
+                client_oid=client_oid,
+            )
+            if result.get("success"):
+                logger.info(
+                    f"🎯 Take-profit colocado na exchange: "
+                    f"Target=${target_price_rounded:,.2f} "
+                    f"Size={size:.6f} OrderID={result.get('orderId')}"
+                )
+                if self.state.entries:
+                    self.state.entries[-1]["exchange_tp_order_id"] = result.get("orderId")
+                    self.state.entries[-1]["exchange_tp_price"] = target_price_rounded
+            else:
+                logger.warning(
+                    f"⚠️ Falha ao colocar take-profit na exchange: {result.get('error')}"
+                )
+        except Exception as e:
+            logger.error(f"❌ Erro ao colocar take-profit na exchange: {e}")
+
+    def _cancel_exchange_stop_orders(self):
+        """Cancela todas as ordens stop da exchange (antes de novo BUY ou SELL)."""
+        if self.state.dry_run:
+            return
+
+        if not HAS_STOP_ORDERS:
+            return
+
+        try:
+            # Cancelar stop-loss e take-profit pendentes
+            for entry in getattr(self.state, "entries", []):
+                sl_order_id = entry.get("exchange_stop_order_id")
+                tp_order_id = entry.get("exchange_tp_order_id")
+
+                if sl_order_id:
+                    cancel_stop_order(order_id=sl_order_id)
+                    entry.pop("exchange_stop_order_id", None)
+                    logger.info(f"🛑 Stop-loss cancelado: {sl_order_id}")
+
+                if tp_order_id:
+                    cancel_stop_order(order_id=tp_order_id)
+                    entry.pop("exchange_tp_order_id", None)
+                    logger.info(f"🎯 Take-profit cancelado: {tp_order_id}")
+
+            # Fallback: cancelar todas as stop-orders pendentes
+            cancel_all_stop_orders(self.symbol)
+        except Exception as e:
+            logger.error(f"❌ Erro ao cancelar stop-orders na exchange: {e}")
+
+    def _update_exchange_stop_loss(self, new_stop_price: float):
+        """Atualiza stop-loss na exchange (cancela e recoloca).
+
+        Args:
+            new_stop_price: Novo preço de stop
+        """
+        if self.state.dry_run:
+            return
+
+        if not HAS_STOP_ORDERS:
+            return
+
+        # Cancelar stop-loss anterior
+        for entry in getattr(self.state, "entries", []):
+            old_order_id = entry.get("exchange_stop_order_id")
+            if old_order_id:
+                cancel_stop_order(order_id=old_order_id)
+                entry.pop("exchange_stop_order_id", None)
+
+        # Recolocar com novo preço
+        total_size = sum(e.get("size", 0) for e in getattr(self.state, "entries", []))
+        if total_size > 0:
+            self._place_exchange_stop_loss(new_stop_price / (1 - 0.03), total_size)
+
     def _write_heartbeat(self):
         """Escreve arquivo de heartbeat para detecção de stall pelo self-healer"""
         try:
@@ -6089,6 +6325,13 @@ class BitcoinTradingAgent(
                 # Atualizar valor da posição
                 if self.state.position > 0:
                     self.state.position_value = self.state.position * market_state.price
+
+                # ── Exchange Stop-Loss: verificar e atualizar se há lucro ──
+                if self.state.position > 0:
+                    try:
+                        self._check_and_update_exchange_stop(market_state.price)
+                    except Exception as e:
+                        logger.debug(f"Exchange stop-check error: {e}")
                 
                 # Per-slot exits FIRST (independent TP/trailing/SL per entry),
                 # then global trailing/auto-exit as fallback for legacy entries.

@@ -6,12 +6,12 @@ Politica de LLM (obrigatoria):
   O coordinator e quem gerencia VRAM, affinity, least-load e eviction
   entre GPU0 (:11434), GPU1 (:11435) e NAS (:11436).
 
-  TRADING INTOCÁVEL; VRAM livre da 3060 ok para auxiliares pequenos:
+  TRADING INTOCÁVEL; VRAM livre da NAS ok para auxiliares pequenos:
     - Modelos trading-* nunca são evictados.
-    - GPU0 pode receber só auxiliares pequenos (≤~1.8GB est.) que caibam
+    - NAS pode receber só auxiliares pequenos (≤~1.8GB est.) que caibam
       na VRAM livre + headroom — sem despejar o analyst.
-    - Agenda NÃO usa família trading-*; prefere GPU1/NAS e modelos leves
-      (gemma/lfm/1b) que o coordinator pode pousar na 3060 se sobrar memória.
+    - Agenda NÃO usa família trading-*; prefere GPU0/GPU1 e modelos leves
+      (gemma/lfm/1b) que o coordinator pode pousar na NAS se sobrar memória.
 
   Clientes da agenda NAO devem contatar as GPUs diretas no caminho
   automatico (--llm-auto-route). Override manual (--ollama-host) e
@@ -47,8 +47,8 @@ DEFAULT_COORD_FALLBACK_MODELS = tuple(
     ).split(",")
     if item.strip() and not item.strip().lower().startswith("trading")
 )
-# Workers paralelos de LLM na geração modular (segmentos).
-# 2026-07-30: default 2 — agenda NÃO deve saturar a 3060 (trading intocável).
+# Workeres paralelos de LLM na geração modular (segmentos).
+# 2026-07-30: default 2 — agenda NÃO deve saturar a NAS (trading intocável).
 # Coordinator: GPU1 + NAS apenas quando TRADING_EXCLUSIVE_GPU0=1.
 DEFAULT_LLM_PARALLEL = max(1, int(os.getenv("AGENDA_LLM_PARALLEL", "2")))
 
@@ -151,7 +151,7 @@ def default_llm_chain() -> tuple[LlmEndpoint, ...]:
 
     Um unico host (:11437); a cadeia de modelos cobre GPU0, GPU1 e NAS.
     O coordinator faz least-load + soft-pin para espalhar a carga.
-    trading-analyst na GPU0 permanece protegido de eviction.
+    trading-analyst na NAS permanece protegido de eviction.
     """
     host = ensure_coordinator_host(DEFAULT_COORD_HOST)
     return (
@@ -168,10 +168,10 @@ def distributed_llm_chain() -> tuple[LlmEndpoint, ...]:
     """Varias entradas no coordinator com modelos primarios distintos.
 
     GPU1 (soft-pin) + NAS. NÃO usa gemma3:1b sem pin (antes vazava p/ GPU0 e
-    causava timeout do trading-analyst na 3060).
+    causava timeout do trading-analyst na NAS).
     """
     host = ensure_coordinator_host(DEFAULT_COORD_HOST)
-    # Primários só em GPU1/NAS — trading fica exclusivo na 3060.
+    # Primários só em GPU0/GPU1 — trading fica exclusivo na NAS.
     primaries = (
         ("coord-gpu1-a", DEFAULT_COORD_MODEL),  # lfm2.5-fast:gpu1
         ("coord-gpu1-b", "gemma3-fast:gpu1"),

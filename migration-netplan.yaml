@@ -1,0 +1,33 @@
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    onboard:
+      match:
+        macaddress: "00:e0:4c:b6:3d:5e"
+      set-name: eth-onboard
+      dhcp4: false
+      wakeonlan: true
+      addresses:
+        - 192.168.15.2/24
+      nameservers:
+        addresses:
+          - 8.8.8.8
+          - 8.8.4.4
+    usb-wan:
+      match:
+        macaddress: "00:e0:4c:59:67:10"
+      set-name: enx00e04c596710
+      dhcp4: false
+      addresses:
+        - 192.168.15.3/24
+      routes:
+        - to: 192.168.15.1/32
+          scope: link
+        - to: default
+          via: 192.168.15.1
+          metric: 50
+      nameservers:
+        addresses:
+          - 8.8.8.8
+          - 8.8.4.4
