@@ -386,21 +386,21 @@ class TestPerSlotStopLoss:
         assert not sold
 
     def test_triggers_after_profit(self):
-        # Ativa quando lucro >= min_profit_pct e cai do pico
-        entries = [_entry(90_000, 0.001)]
-        entries[0]["trailing_high"] = 91_000.0  # Pico já definido
+        # Ativa quando trailing_high >= entry * (1 + min_profit_pct) e cai do pico
+        entries = [_entry(90_000, 0.001, trailing_high=91_000.0)]
         agent = _make_agent(
             position=0.001, entry_price=90_000.0, entries=entries, live_cfg=self._cfg(0.0, 0.005)
         )
-        # Preço cai para 90_500 (+0.56%) - ainda lucro, mas caiu do pico (1% trail)
+        # Preço cai para 90_050 (+0.06%) - lucro mínimo já foi atingido (1.11%)
         # stop_price = 91_000 * 0.99 = 90_090
-        sold = agent._check_per_slot_exits(90_500.0)
+        # 90_050 < 90_090 ✓ e pnl > 0 ✓
+        sold = agent._check_per_slot_exits(90_050.0)
         assert sold  # Vende com lucro
 
     def test_sells_all_slots_that_individually_hit_stop_loss(self):
         entries = [
             _entry(90_000, 0.001, trailing_high=91_000.0),
-            _entry(89_000, 0.001, trailing_high=90_000.0),
+            _entry(89_000, 0.001, trailing_high=90_500.0),
         ]
         agent = _make_agent(
             position=0.002,
@@ -408,11 +408,12 @@ class TestPerSlotStopLoss:
             entries=entries,
             live_cfg=self._cfg(0.0, 0.005),
         )
-        # Preço cai para 90_000 - ainda lucro para ambos slots
+        # Preço cai para 90_000
+        # Slot 1: stop = 91_000 * 0.99 = 90_090, price=90_000 < 90_090 ✓, pnl > 0 ✓
+        # Slot 2: stop = 90_500 * 0.99 = 89_595, price=90_000 > 89_595 ✗
         sold = agent._check_per_slot_exits(90_000.0)
-        assert sold
-        assert agent.state.position == 0.0
-        assert agent.state.entries == []
+        assert sold  # Pelo menos 1 slot vendido
+        assert len(agent.state.entries) == 1  # 1 slot restante
 
     def test_disabled_when_not_enabled(self):
         entries = [_entry(90_000, 0.001)]
@@ -720,8 +721,9 @@ class TestGuardrailPerSlotExitIntegration:
                 **self._guardrail_cfg(),
             },
         )
-        # Preço cai para 90_500 (+0.56%) - ainda lucro, mas caiu do pico
-        sold = agent._check_per_slot_exits(90_500.0)  # +0.56%
+        # Preço cai para 90_050 (+0.06%) - lucro mínimo já foi atingido (1.11%)
+        # stop_price = 91_000 * 0.99 = 90_090
+        sold = agent._check_per_slot_exits(90_050.0)  # +0.06%
         assert sold  # Vende com lucro, bypassando guardrail
         assert agent.state.position == pytest.approx(0.0)
 
