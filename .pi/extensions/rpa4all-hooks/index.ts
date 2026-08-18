@@ -12,6 +12,8 @@ import {
   PRE_TOOL_HOOKS,
   SIDEQUEST_HOOK,
   STOP_HOOKS,
+  WIKI_BLOCK_HOOK,
+  WIKI_SESSION_HOOK,
   runPythonHook,
   type HookDecision,
 } from "./bridge.ts";
@@ -89,8 +91,20 @@ export default function (pi: ExtensionAPI) {
     notify(ctx, "rpa4all-hooks loaded (bridge → tools/hooks + copilot_hooks)", "info");
   });
 
-  // Inject a SHORT MEMORY.md snippet into the system prompt (local 7–8B models choke on full MEMORY).
+  // Inject a SHORT MEMORY.md snippet + WIKI index into the system prompt (local 7–8B models choke on full MEMORY).
   pi.on("before_agent_start", async (event, ctx) => {
+    let wikiExtra = "";
+    try {
+      const wikiDec = await runPythonHook(WIKI_SESSION_HOOK.script, {}, {
+        cwd: ctx.cwd,
+        timeoutMs: WIKI_SESSION_HOOK.timeoutMs,
+        args: WIKI_SESSION_HOOK.args,
+      });
+      wikiExtra = wikiDec.additionalContext?.trim() ?? "";
+    } catch {
+      /* fail-open */
+    }
+
     const decision = await runPythonHook(MEMORY_HOOK.script, {}, {
       cwd: ctx.cwd,
       timeoutMs: MEMORY_HOOK.timeoutMs,
@@ -100,14 +114,21 @@ export default function (pi: ExtensionAPI) {
       { hookEventName: "SessionStart", cwd: ctx.cwd, sessionId: sessionIdOf(ctx) },
       { cwd: ctx.cwd, timeoutMs: SIDEQUEST_HOOK.timeoutMs },
     );
+    const maxChars = Number(process.env.PI_MEMORY_MAX_CHARS || 1200);
     const extras: string[] = [];
     if (decision.additionalContext) {
-      const maxChars = Number(process.env.PI_MEMORY_MAX_CHARS || 1200);
       let mem = decision.additionalContext.trim();
       if (mem.length > maxChars) {
         mem = `${mem.slice(0, maxChars)}\n... (MEMORY truncada para Pi local; ver MEMORY.md completo no Claude)`;
       }
       extras.push(`# Project memory (truncated)\n${mem}`);
+    }
+    if (wikiExtra) {
+      let wikiBlock = wikiExtra;
+      if (wikiBlock.length > maxChars) {
+        wikiBlock = `${wikiBlock.slice(0, maxChars)}\n... (wiki truncada para Pi local)`;
+      }
+      extras.push(wikiBlock);
     }
     if (sidequest.additionalContext) {
       extras.push(`# Sidequest policy\n${sidequest.additionalContext.trim()}`);
@@ -116,7 +137,7 @@ export default function (pi: ExtensionAPI) {
       return undefined;
     }
     return {
-      systemPrompt: `${event.systemPrompt}\n\n${extras.join("\n\n")}`,
+      systemPrompt: `${event.systemPrompt}\n\n# Project knowledge\n${extras.join("\n\n")}`,
     };
   });
 
@@ -208,6 +229,7 @@ export default function (pi: ExtensionAPI) {
     const sid = sessionIdOf(ctx);
     const payload = buildStopPayload(ctx.cwd, sid);
 
+    let blocked = false;
     for (const hook of STOP_HOOKS) {
       const decision = await runPythonHook(hook.script, payload, {
         cwd: ctx.cwd,
@@ -218,12 +240,34 @@ export default function (pi: ExtensionAPI) {
         continue;
       }
       if (decision.stopDecision === "block") {
+        blocked = true;
         notify(
           ctx,
           `Stop bloqueado (incompleto): ${(decision.stopReason || "").slice(0, 400)}\n` +
             "Nota: no Pi o loop forçado do Claude não é idêntico; complete stubs e continue a sessão.",
           "warning",
         );
+      }
+    }
+
+    // Quando o agente é bloqueado por trabalho incompleto, injeta conhecimento do wiki
+    // relevante para ajudar a evoluir a atividade.
+    if (blocked) {
+      try {
+        const wikiDec = await runPythonHook(WIKI_BLOCK_HOOK.script, payload, {
+          cwd: ctx.cwd,
+          timeoutMs: WIKI_BLOCK_HOOK.timeoutMs,
+          args: WIKI_BLOCK_HOOK.args,
+        });
+        if (wikiDec.additionalContext) {
+          notify(
+            ctx,
+            `📚 Wiki RPA4All (para evoluir a atividade):\n${wikiDec.additionalContext.slice(0, 1200)}`,
+            "info",
+          );
+        }
+      } catch {
+        /* fail-open */
       }
     }
   });

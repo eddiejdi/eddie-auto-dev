@@ -16,13 +16,13 @@ Fine-tuning move parte desse aprendizado para os pesos do LLM: o modelo aprende 
 
 ```
 [HOMELAB 192.168.15.2]                         [NAS 192.168.15.4 — nas-optiplex]
-GPU: RTX 3060 11GB (produção, trading-analyst)  GPU: RTX 2060 SUPER 8GB (livre, sem isolamento)
+GPU: RTX 3060 12GB (auxiliares leves)          GPU: RTX 2060 SUPER 8GB (trading-analyst, produção)
 Postgres: btc.trades / btc.decisions /          CPU: Intel i3-3220 (2C/4T) — fraco
           btc.learning_rewards                  RAM: 8GB — fraco
-                                                 SO: TrueNAS-SCALE-24.10.2.4
+                                                SO: TrueNAS-SCALE-24.10.2.4
 ```
 
-A 3060 continua servindo produção sem ser tocada. Todo o trabalho de dataset, treino e shadow-serving roda na 2060 do NAS.
+A 2060 continua servindo produção sem ser tocada. Todo o trabalho de dataset, treino e shadow-serving roda na 2060 do NAS.
 
 ## 3. Pipeline
 

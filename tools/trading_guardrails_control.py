@@ -166,12 +166,24 @@ def build_manual_sell_path(profile: str, base_path: str = "") -> str:
     return f"{_normalize_base_path(base_path)}/manual-sell?profile={quote_plus(profile)}"
 
 
+def _open_buy_sql(alias: str = "") -> str:
+    """BUY ainda aberto no ledger — ignora status=closed e closed_reason."""
+    prefix = f"{alias}." if alias else ""
+    return (
+        f"{prefix}side = 'buy' "
+        f"AND {prefix}status <> 'closed' "
+        f"AND COALESCE({prefix}metadata->>'closed_reason', '') = ''"
+    )
+
+
 def load_open_positions(symbol: str = DEFAULT_SYMBOL, profile: str | None = None) -> list[ManualSellPosition]:
     db = _load_training_db()
+    open_buy_t = _open_buy_sql("t")
+    open_buy = _open_buy_sql()
     with db._get_conn() as conn:  # noqa: SLF001 - internal helper used by control plane
         cur = conn.cursor()
         cur.execute(
-            """
+            f"""
             WITH last_sell AS (
               SELECT
                 profile,
@@ -198,7 +210,7 @@ def load_open_positions(symbol: str = DEFAULT_SYMBOL, profile: str | None = None
               LEFT JOIN last_sell ls ON ls.profile = t.profile
               WHERE t.symbol = %s
                 AND t.dry_run = false
-                AND t.side = 'buy'
+                AND {open_buy_t}
                 AND (%s IS NULL OR t.profile = %s)
                 AND (ls.last_sell_ts IS NULL OR t.timestamp > ls.last_sell_ts)
               GROUP BY t.profile
@@ -214,7 +226,7 @@ def load_open_positions(symbol: str = DEFAULT_SYMBOL, profile: str | None = None
               FROM btc.trades
               WHERE symbol = %s
                 AND dry_run = false
-                AND side = 'buy'
+                AND {open_buy}
                 AND (%s IS NULL OR profile = %s)
               ORDER BY profile, timestamp DESC, id DESC
             ),

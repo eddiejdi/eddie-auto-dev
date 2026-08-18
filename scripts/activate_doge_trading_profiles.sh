@@ -44,11 +44,38 @@ if [[ -f "${REPO_PROMETHEUS}" ]]; then
 fi
 
 systemctl daemon-reload
+# Unit disabled/masked NUNCA recebe enable. Timestamp vazio no systemd
+# religou SOL/DOGE conservative no deploy #324 — não usar isso como sinal.
+# Perfil novo de verdade: FORCE_ENABLE=1 ou systemctl enable --now manual.
+start_or_skip_unit() {
+  local svc="$1"
+  local enabled active
+  enabled="$(systemctl is-enabled "${svc}" 2>/dev/null || true)"
+  active="$(systemctl is-active "${svc}" 2>/dev/null || true)"
+  case "${enabled}" in
+    disabled|masked)
+      if [[ "${FORCE_ENABLE:-}" == "1" ]]; then
+        systemctl enable "${svc}"
+        systemctl restart "${svc}"
+        echo "  started ${svc} (FORCE_ENABLE=1)"
+      elif [[ "${active}" == "active" ]]; then
+        systemctl restart "${svc}" || true
+        echo "  ↻ ${svc}: disabled mas ativo — restart sem enable"
+      else
+        echo "  ⏭ ${svc}: ${enabled}/${active} — pulado (não religar)"
+      fi
+      ;;
+    *)
+      systemctl enable "${svc}"
+      systemctl restart "${svc}"
+      echo "  started ${svc}"
+      ;;
+  esac
+}
 for entry in "${PROFILES[@]}"; do
   inst="${entry%%:*}"
-  systemctl enable "crypto-agent@${inst}.service" "crypto-exporter@${inst}.service"
-  systemctl restart "crypto-agent@${inst}.service" "crypto-exporter@${inst}.service"
-  echo "  started crypto-agent@${inst} + crypto-exporter@${inst}"
+  start_or_skip_unit "crypto-agent@${inst}.service"
+  start_or_skip_unit "crypto-exporter@${inst}.service"
 done
 
 sleep 3

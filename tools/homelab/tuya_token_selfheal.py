@@ -7,12 +7,17 @@ MQTT tuya_sharing cai. O pandaplus-bridge mantém sessão própria, mas o SDK
 só renova o token quando faltam <60s; sem intervenção proativa restam
 janelas de 5–15 min com HA sem token válido.
 
-Modos de falha cobertos (jul/2026):
+Modos de falha cobertos (jul/2026 + ago/2026):
 1. Token OAuth expirado / na janela soft → refresh proativo + injeção.
 2. Entry em ``setup_error`` (timeout API Tuya) com token ainda "válido" →
    reload da config entry (self-heal antigo *não* cobria — só olhava token).
+   Reload com entidades já ativas (zumbi) **não** consome MAX_HEALS_24H.
 3. 0/N entidades ativas com token aparentemente válido → reload; se bridge
    tiver token mais novo, injeta mesmo acima do soft threshold.
+4. Rate limit 24h: aplica a heals proativos; **bypass** se HA já expirou e
+   o bridge/runtime é estritamente mais novo (incidente 2026-08-08).
+5. Container do HA parado/exited (ex.: reboot com policy ``unless-stopped``)
+   → **``docker start`` automático** antes de avaliar entry (gap 2026-08-10).
 
 Fluxo:
 1. Se o access token (HA ou bridge) está abaixo do limiar soft, **força
@@ -22,6 +27,8 @@ Fluxo:
    a. **hot** — serviço `tuya_token_inject.apply` (preferido)
    b. **core_restart** — storage + `homeassistant.restart`
    c. **docker_restart** — storage + `docker restart` (último recurso)
+4. Container do HA fora do ar → **``docker start``** antes de avaliar entry
+   (o self-heal também recupera o HA, não só o token).
 
 Exporta métricas via textfile collector.
 """
@@ -130,6 +137,10 @@ def should_reload_entry(
     Cobre o buraco do incidente 2026-07-25: entry em ``setup_error`` por
     timeout da API Tuya, token ainda com dezenas de minutos, 0 entidades
     ativas — o heal de token recusava com "ainda válido" e ninguém reloadava.
+
+    Nota (2026-08-08): reload com entidades já ativas (zumbi) ainda pode
+    rodar, mas **não** deve consumir ``MAX_HEALS_24H`` — ver
+    ``reload_counts_toward_heal_budget``.
     """
     state = (entry_state or "").strip().lower()
     if state == "setup_error":
@@ -150,6 +161,20 @@ def should_reload_entry(
     return False, "reload não necessário"
 
 
+def reload_counts_toward_heal_budget(
+    entities_active_before: int,
+    entities_active_after: int,
+) -> bool:
+    """Só conta reload no budget de heals se recuperou entidades (0 → >0).
+
+    Incidente 2026-08-08: entry em ``setup_error`` com 82/82 ainda "ativas"
+    fazia reload a cada 5 min, cada um contava como Heal OK e esgotava
+    ``MAX_HEALS_24H`` — depois o inject legítimo (HA expirado + bridge fresco)
+    era barrado pelo rate limit.
+    """
+    return entities_active_before <= 0 and entities_active_after > 0
+
+
 def should_heal(
     ha_token: dict,
     runtime_token: dict | None,
@@ -161,16 +186,20 @@ def should_heal(
 ) -> tuple[bool, str]:
     """Decide se a injeção do token do bridge deve ser aplicada.
 
-    Regras (2026-07-23 + buracos 2026-07-27):
+    Regras (2026-07-23 + buracos 2026-07-27 + rate-limit 2026-08-08):
     - Token do HA **expirado** (remaining <= 0): heal **mesmo com entidades
       ainda "ativas"** — estado zumbi típico (cloud morta, HA cacheia on/off).
+      **Bypass de rate limit** quando o bridge é estritamente mais novo
+      (inject é o único path automático; budget queimado em reload não pode
+      bloquear).
     - Soft threshold (HEAL_SOFT_THRESHOLD_MIN, default 45): heal proativo se
       remaining estiver abaixo do limiar e o runtime/bridge for mais novo.
     - **0 entidades ativas** com entidades no registry: permite heal mesmo
       *acima* do soft threshold se o bridge for estritamente mais novo
       (token em memória pode estar stale / entry semi-morta).
     - Bridge/runtime precisa de token válido e estritamente mais novo (t maior).
-    - Rate limit por 24h.
+    - Rate limit por 24h para heals **proativos** (soft / 0-ativas com token
+      ainda válido); **não** aplica quando HA já expirou + bridge fresco.
     """
     now_ms = time.time() * 1000 if now_ms is None else now_ms
     if soft_threshold_min is None:
@@ -192,15 +221,24 @@ def should_heal(
         return False, "token runtime do bridge ausente/inválido"
     if bridge_t <= ha_t:
         return False, "token do bridge não é mais novo que o do HA"
-    if heals_last_24h >= MAX_HEALS_24H:
-        return False, f"rate limit: {heals_last_24h} heals nas últimas 24h"
 
+    rate_limited = heals_last_24h >= MAX_HEALS_24H
+
+    # HA access token morto + bridge fresco: inject prioritário (bypass budget).
     if remaining <= 0:
         return (
             True,
             f"token HA expirado ({remaining:.0f} min) + bridge mais novo"
-            + (f" | {entities_active} entidades ainda ativas" if entities_active > 0 else ""),
+            + (" | rate-limit bypass" if rate_limited else "")
+            + (
+                f" | {entities_active} entidades ainda ativas"
+                if entities_active > 0
+                else ""
+            ),
         )
+
+    if rate_limited:
+        return False, f"rate limit: {heals_last_24h} heals nas últimas 24h"
 
     if zero_entities and remaining > soft_threshold_min:
         return (
@@ -433,6 +471,10 @@ def render_prom(metrics: dict[str, float | int]) -> str:
             "Último modo de heal: 0=none 1=hot 2=core_restart 3=docker_restart 4=reload",
         ),
         "tuya_selfheal_reloads_total": ("counter", "Reloads de config entry Tuya aplicados"),
+        "tuya_selfheal_container_restarts_total": (
+            "counter",
+            "Vezes que o self-heal subiu o container do HA (docker start)",
+        ),
         "tuya_entry_state_code": (
             "gauge",
             "Estado da entry: 0=loaded 1=setup_error 2=setup_retry 3=not_loaded "
@@ -469,6 +511,58 @@ def docker_py(script: str, timeout: int = 60) -> str:
         check=True,
     )
     return proc.stdout.strip()
+
+
+def ensure_container_health(container: str = CONTAINER) -> dict:
+    """Garante que o container do HA esteja em execução (docker start se preciso).
+
+    Gap fechado em 2026-08-10: o container `homeassistant` saiu (exit 137)
+    *antes* do reboot do host e a policy `unless-stopped` não o reiniciou —
+    os timers de monitor/reload só faziam `docker exec`/API e nenhum chamava
+    `docker start`, então nada recuperava o HA. Passa a ser responsabilidade
+    deste self-heal subir o container antes de avaliar token/entidades.
+
+    Retorna {'running': bool, 'restarted': bool, 'detail': str} (nunca levanta).
+    """
+    insp = subprocess.run(
+        ["docker", "inspect", "-f", "{{.State.Running}}", container],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        check=False,
+    )
+    if insp.returncode == 0 and insp.stdout.strip() == "true":
+        return {"running": True, "restarted": False, "detail": "container em execução"}
+    if insp.returncode != 0:
+        return {
+            "running": False,
+            "restarted": False,
+            "detail": f"docker inspect falhou: "
+            f"{(insp.stderr or insp.stdout).strip()[:160]}",
+        }
+    proc = subprocess.run(
+        ["docker", "start", container],
+        capture_output=True,
+        text=True,
+        timeout=180,
+        check=False,
+    )
+    if proc.returncode != 0:
+        return {
+            "running": False,
+            "restarted": False,
+            "detail": f"docker start falhou: "
+            f"{(proc.stderr or proc.stdout).strip()[:200]}",
+        }
+    log.warning(
+        "Container %s estava parado e foi reiniciado pelo self-heal",
+        container,
+    )
+    return {
+        "running": True,
+        "restarted": True,
+        "detail": "container reiniciado pelo self-heal",
+    }
 
 
 def ha_tuya_status() -> dict:
@@ -814,6 +908,9 @@ def _prom_snapshot(
         "tuya_selfheal_heals_total": state["heals_total"],
         "tuya_selfheal_heal_failures_total": state["heal_failures_total"],
         "tuya_selfheal_reloads_total": state.get("reloads_total", 0),
+        "tuya_selfheal_container_restarts_total": state.get(
+            "container_restarts_total", 0
+        ),
         "tuya_selfheal_check_failures_total": state.get("check_failures_total", 0),
         "tuya_selfheal_last_run_timestamp": int(time.time()),
         "tuya_selfheal_last_heal_timestamp": state.get("last_heal_timestamp", 0),
@@ -837,6 +934,22 @@ def main() -> int:
     state["runs_total"] += 1
     state["heal_history"] = prune_heal_history(state.get("heal_history", []))
     state.setdefault("reloads_total", 0)
+    state.setdefault("container_restarts_total", 0)
+
+    # Gap 2026-08-10: garante que o container do HA esteja de pé antes de
+    # avaliar token/entidades. Se estava parado, dá `docker start` e aguarda
+    # um pouco pelo boot antes da checagem (docker exec falha rápido se não pronto).
+    container = ensure_container_health()
+    if container["restarted"]:
+        state["container_restarts_total"] = int(
+            state.get("container_restarts_total", 0)
+        ) + 1
+        log.warning(
+            "HA estava fora; docker start emitido — aguardando boot "
+            "antes de avaliar entry (%s)",
+            container["detail"],
+        )
+        time.sleep(20)
 
     status = ha_tuya_status_with_retry()
     runtime_token = load_runtime_token()
@@ -889,6 +1002,7 @@ def main() -> int:
     # Reload só faz sentido se o token no storage ainda pode autenticar.
     # Token já morto → pular direto para inject (reload só gasta tempo).
     if do_reload and status.get("entry_id") and ha_remaining > 0:
+        entities_before_reload = int(status["entities_active"])
         log.info(
             "Tuya reload: %s/%s ativas | state=%s | %s",
             status["entities_active"],
@@ -907,15 +1021,29 @@ def main() -> int:
                 ha_token = status.get("token_info") or {}
                 ha_remaining = token_remaining_minutes(ha_token)
                 if active > 0:
-                    state["heals_total"] += 1
-                    state["last_heal_timestamp"] = int(time.time())
-                    state["heal_history"].append(time.time())
-                    log.info(
-                        "Heal OK (reload): %s entidades ativas | token resta %.0f min | state=%s",
-                        active,
-                        ha_remaining,
-                        status.get("entry_state"),
-                    )
+                    # Zumbi (setup_error + entidades já ativas): reload pode
+                    # "suceder" sem recuperar nada e não deve queimar MAX_HEALS.
+                    if reload_counts_toward_heal_budget(
+                        entities_before_reload, active
+                    ):
+                        state["heals_total"] += 1
+                        state["last_heal_timestamp"] = int(time.time())
+                        state["heal_history"].append(time.time())
+                        log.info(
+                            "Heal OK (reload): %s entidades ativas | token resta %.0f min | state=%s",
+                            active,
+                            ha_remaining,
+                            status.get("entry_state"),
+                        )
+                    else:
+                        log.info(
+                            "Reload applied (not counted toward heal budget): "
+                            "%s→%s ativas | token resta %.0f min | state=%s",
+                            entities_before_reload,
+                            active,
+                            ha_remaining,
+                            status.get("entry_state"),
+                        )
                 else:
                     log.warning(
                         "Reload aplicado mas entidades ainda 0 — tentando inject se bridge mais novo"

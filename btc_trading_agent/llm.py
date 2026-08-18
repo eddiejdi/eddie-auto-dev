@@ -3,9 +3,9 @@
 LLM Router — roteamento multi-GPU para o trading agent.
 
 Gerencia 3 endpoints Ollama:
-  GPU0  homelab:11434 — RTX 3060 12GB   (modelos pesados: trading-analyst)
+  GPU0  homelab:11434 — RTX 3060 12GB   (auxiliares leves)
   GPU1  homelab:11435 — GTX 1050 2GB    (modelos leves: gemma3:1b)
-  NAS   192.168.15.4:11436 — RTX 2060 SUPER 8GB (média carga, CPU até driver NVIDIA)
+  NAS   192.168.15.4:11436 — RTX 2060 SUPER 8GB (trading-analyst, modelos pesados)
 
 Uso simples no trading agent:
     from llm import LLMRouter

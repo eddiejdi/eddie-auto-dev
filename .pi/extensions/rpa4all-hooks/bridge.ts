@@ -52,6 +52,7 @@ export async function runPythonHook(
     cwd: string;
     timeoutMs: number;
     env?: Record<string, string | undefined>;
+    args?: string[];
   },
 ): Promise<HookDecision> {
   const repoRoot = findRepoRoot(options.cwd);
@@ -75,7 +76,7 @@ export async function runPythonHook(
   };
 
   return await new Promise((resolveDecision) => {
-    const child = spawn("python3", [scriptPath], {
+    const child = spawn("python3", [scriptPath, ...(options.args ?? [])], {
       cwd: repoRoot,
       env,
       stdio: ["pipe", "pipe", "pipe"],
@@ -235,6 +236,18 @@ export const MEMORY_HOOK = {
 export const SIDEQUEST_HOOK = {
   script: "tools/hooks/sidequest_nonblocking.py",
   timeoutMs: 8_000,
+};
+
+export const WIKI_SESSION_HOOK = {
+  script: "tools/copilot_hooks/inject_wiki_context.py",
+  args: ["--mode=session"],
+  timeoutMs: 15_000,
+};
+
+export const WIKI_BLOCK_HOOK = {
+  script: "tools/copilot_hooks/inject_wiki_context.py",
+  args: ["--mode=block"],
+  timeoutMs: 15_000,
 };
 
 export const STOP_HOOKS: Array<{ script: string; timeoutMs: number }> = [

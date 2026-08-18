@@ -243,13 +243,14 @@ def secrets_list() -> str:
 
 
 @mcp.tool()
-def secrets_get(name: str) -> str:
+def secrets_get(name: str, field: str = "password") -> str:
     """Obtém um secret pelo nome.
 
     Args:
         name: Nome do secret (ex: 'eddie/telegram_bot_token', 'eddie/github_token').
+        field: Campo do secret (default: 'password'). Exemplos: api_key, api_secret, passphrase, value.
     """
-    result = _http_get(f"{SECRETS_AGENT_URL}/secrets/{name}", headers=_secrets_headers())
+    result = _http_get(f"{SECRETS_AGENT_URL}/secrets/{name}?field={field}", headers=_secrets_headers())
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -509,6 +510,11 @@ _VALID_RISK_LEVELS   = {"none", "low", "medium", "high", "critical"}
 _VALID_ACTION_TYPES  = {"restart", "deploy", "modify", "delete", "create", "query", "config", "other"}
 _VALID_STATUSES      = {"pending", "approved", "rejected", "in_progress", "done", "failed", "expired"}
 
+# Ações que SEMPRE exigem aprovação humana, mesmo com risk_level low/none.
+# Deploy e restart podem causar downtime ou alterar ambiente de produção.
+_ALWAYS_GATE_ACTION_TYPES: set[str] = {"deploy", "restart"}
+_FORCE_MIN_RISK_FOR_GATED = "medium"
+
 
 def _db_write(sql: str, params: tuple) -> dict:
     """Executa SQL de escrita no PostgreSQL do homelab (INSERT/UPDATE)."""
@@ -612,6 +618,17 @@ def intent_declare(
     except json.JSONDecodeError:
         return json.dumps({"ok": False, "error": "context não é JSON válido."}, ensure_ascii=False)
 
+    # ── Guard: ações de deploy/restart SEMPRE exigem aprovação humana ────
+    # Mesmo que o agente declare risk_level='low' ou 'none', deploy e restart
+    # são forçados para risk_level mínimo 'medium' para garantir que o humano
+    # seja notificado via Telegram antes de qualquer alteração em produção.
+    _risk_order = {"none": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
+    if action_type in _ALWAYS_GATE_ACTION_TYPES:
+        min_risk_idx = _risk_order[_FORCE_MIN_RISK_FOR_GATED]
+        current_risk_idx = _risk_order.get(risk_level, 0)
+        if current_risk_idx < min_risk_idx:
+            risk_level = _FORCE_MIN_RISK_FOR_GATED
+
     intent_id = f"intent-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}-{uuid.uuid4().hex[:6]}"
     initial_status = "approved" if risk_level in _AUTO_APPROVE_LEVELS else "pending"
 
@@ -637,11 +654,14 @@ def intent_declare(
         return json.dumps(result, ensure_ascii=False)
 
     row = result["rows"][0] if result["rows"] else {}
+    risk_forced = action_type in _ALWAYS_GATE_ACTION_TYPES and initial_status == "pending"
     return json.dumps({
         "ok": True,
         "intent_id": intent_id,
         "status": initial_status,
         "auto_approved": initial_status == "approved",
+        "risk_level": risk_level,
+        "risk_forced": risk_forced,
         "message": (
             "Auto-aprovado — pode prosseguir." if initial_status == "approved"
             else "Aguardando aprovação humana. Chame intent_check_status() antes de executar."
@@ -729,6 +749,41 @@ def intent_complete(
     """
     final_status = "done" if success else "failed"
     now = datetime.now(timezone.utc)
+
+    # ── Guard: não permitir complete sem aprovação prévia ────────────────
+    # Antes desta correção, qualquer agente podia chamar intent_complete()
+    # num intent 'pending' e marcá-lo como 'done' sem aprovação humana.
+    # Agora só permitimos complete se o status atual for 'approved'.
+    current = _db_read_one(
+        "SELECT status, risk_level FROM agent_actions WHERE intent_id = %s",
+        (intent_id,),
+    )
+    if not current["ok"]:
+        return json.dumps(current, ensure_ascii=False)
+    if current["row"] is None:
+        return json.dumps({"ok": False, "error": f"intent_id não encontrado: {intent_id}"}, ensure_ascii=False)
+
+    current_status = current["row"]["status"]
+    risk = current["row"].get("risk_level", "medium")
+
+    if current_status == "pending" and risk not in _AUTO_APPROVE_LEVELS:
+        return json.dumps({
+            "ok": False,
+            "error": (
+                f"Intent '{intent_id}' está 'pending' e requer aprovação humana "
+                f"(risk={risk}). Aguarde intent_check_status() retornar 'approved' "
+                "antes de chamar intent_complete()."
+            ),
+            "status": current_status,
+            "risk_level": risk,
+        }, ensure_ascii=False, indent=2)
+
+    if current_status in ("rejected", "expired"):
+        return json.dumps({
+            "ok": False,
+            "error": f"Intent '{intent_id}' já foi {current_status} — não pode ser completado.",
+            "status": current_status,
+        }, ensure_ascii=False, indent=2)
 
     result = _db_write(
         """
@@ -1184,7 +1239,8 @@ def trading_market_state(symbol: str = "BTC-USDT", limit: int = 5) -> str:
     """
     sql = f"""
         SELECT price, bid, ask, spread, orderbook_imbalance, trade_flow,
-               rsi, momentum, volatility, trend, volume, created_at
+               rsi, momentum, volatility, trend, volume,
+               to_timestamp(timestamp) AS created_at
         FROM btc.market_states
         WHERE symbol = %s
         ORDER BY timestamp DESC
@@ -1206,7 +1262,8 @@ def trading_decisions(
         profile: Perfil do agente (vazio = todos).
     """
     sql = """
-        SELECT action, confidence, price, reason, executed, profile, servidor, created_at
+        SELECT action, confidence, price, reason, executed, profile, servidor,
+               to_timestamp(timestamp) AS created_at
         FROM btc.decisions
         WHERE symbol = %s
     """
@@ -1244,7 +1301,7 @@ def trading_candles(
 
 @mcp.tool()
 def trading_ai_controls(
-    symbol: str = "BTC-USDT", profile: str = "default", limit: int = 3,
+    symbol: str = "BTC-USDT", profile: str = "conservative", limit: int = 3,
 ) -> str:
     """Retorna os últimos parâmetros de controle sugeridos pela IA para o trading.
 
@@ -1252,7 +1309,7 @@ def trading_ai_controls(
 
     Args:
         symbol:  Par de trading (default: BTC-USDT).
-        profile: Perfil do agente (default: default).
+        profile: Perfil do agente (default: conservative).
         limit:   Número de registros (default: 3).
     """
     sql = f"""
@@ -1273,7 +1330,7 @@ def trading_ai_controls(
 
 @mcp.tool()
 def trading_ai_plan(
-    symbol: str = "BTC-USDT", profile: str = "default", limit: int = 1,
+    symbol: str = "BTC-USDT", profile: str = "conservative", limit: int = 1,
 ) -> str:
     """Retorna o(s) último(s) plano(s) gerado(s) pela IA para o trading.
 
@@ -1281,7 +1338,7 @@ def trading_ai_plan(
 
     Args:
         symbol:  Par de trading (default: BTC-USDT).
-        profile: Perfil do agente (default: default).
+        profile: Perfil do agente (default: conservative).
         limit:   Número de planos (default: 1).
     """
     sql = f"""
@@ -1297,13 +1354,13 @@ def trading_ai_plan(
 
 @mcp.tool()
 def trading_ai_window(
-    symbol: str = "BTC-USDT", profile: str = "default",
+    symbol: str = "BTC-USDT", profile: str = "conservative",
 ) -> str:
     """Retorna a janela operacional ativa calculada pela IA (entry_low/high, target_sell, TTL).
 
     Args:
         symbol:  Par de trading (default: BTC-USDT).
-        profile: Perfil do agente (default: default).
+        profile: Perfil do agente (default: conservative).
     """
     sql = """
         SELECT regime, reference_price, entry_low, entry_high, target_sell,
@@ -1369,7 +1426,7 @@ def trading_learning_stats(symbol: str = "BTC-USDT") -> str:
 
 
 @mcp.tool()
-def trading_summary(symbol: str = "BTC-USDT", profile: str = "default") -> str:
+def trading_summary(symbol: str = "BTC-USDT", profile: str = "conservative") -> str:
     """Resumo completo do estado atual do trading agent — ideal para análise por LLM.
 
     Combina performance 7d, posições abertas, último estado de mercado,
@@ -1377,7 +1434,7 @@ def trading_summary(symbol: str = "BTC-USDT", profile: str = "default") -> str:
 
     Args:
         symbol:  Par de trading (default: BTC-USDT).
-        profile: Perfil do agente (default: default).
+        profile: Perfil do agente (default: conservative).
     """
     import json as _json
 

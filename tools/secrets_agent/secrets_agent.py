@@ -88,7 +88,7 @@ class AuthentikSecretManager:
     """
 
     def __init__(self) -> None:
-        self._base = os.environ.get("AUTHENTIK_URL", "https://auth.rpa4all.com").rstrip("/")
+        self._base = os.environ.get("AUTHENTIK_URL", "http://192.168.15.2:9000").rstrip("/")
         self._token = os.environ.get("AUTHENTIK_TOKEN", "")
         self._available: bool = False
         self._last_check: float = 0.0

@@ -15,7 +15,7 @@
   "min_sell_pnl": 0.001,
   "max_hold_minutes": 0,
   "trading_hours": {
-    "enabled": false,
+    "enabled": true,
     "start": "00:00",
     "end": "23:59"
   },
@@ -38,8 +38,8 @@
   },
   "trailing_stop": {
     "enabled": true,
-    "activation_pct": 0.01,
-    "trail_pct": 0.005
+    "activation_pct": 0.02,
+    "trail_pct": 0.01
   },
   "strategy": {
     "mode": "swing",
@@ -52,11 +52,11 @@
   "live_mode": true,
   "auto_stop_loss": {
     "enabled": true,
-    "pct": 0.03
+    "pct": 0.03, "min_profit_pct": 0.005
   },
   "auto_take_profit": {
     "enabled": true,
-    "pct": 0.02,
+    "pct": 0.03, "min_profit_pct": 0.005,
     "min_pct": 0.005
   },
   "min_net_profit": {
@@ -106,7 +106,7 @@
     "jobs": [
       {"type": "deposit_onramp", "enabled": true},
       {"type": "manual_queue", "enabled": true},
-      {"type": "dust_sweep", "enabled": false}
+      {"type": "dust_sweep", "enabled": true}
     ]
   }
 }

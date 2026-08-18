@@ -345,7 +345,7 @@ def test_unload_recusa_modelo_protegido(monkeypatch):
 
     monkeypatch.setattr(coord.urllib.request, "urlopen", _fake_urlopen)
     cluster = coord.GPUCluster([])
-    ep = _make_healthy(_endpoint("gpu0-rtx3060"), loaded={"trading-analyst:latest": 6500.0})
+    ep = _make_healthy(_endpoint("nas-rtx2060"), loaded={"trading-analyst:latest": 6500.0})
     cluster._unload_model(ep, "trading-analyst:latest")
     assert calls == []
 

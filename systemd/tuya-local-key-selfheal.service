@@ -5,5 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=homelab
+# root: o storage do HA (core.config_entries) é gravado pelo container como
+# root — rodar como homelab gerava PermissionError ao atualizar a local_key.
+User=root
 ExecStart=/home/homelab/myClaude/.venv/bin/python3 /usr/local/bin/tuya_local_key_selfheal.py

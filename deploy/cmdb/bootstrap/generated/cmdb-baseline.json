@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-08-18T14:01:51.162199+00:00",
+  "generated_at": "2026-08-18T15:51:49.152244+00:00",
   "repo_root": "/home/edenilson/.traycer/worktrees/eddiejdi__eddie-auto-dev/traycer-zealous-seal",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 213,
+    "repo_services": 214,
     "trading_instances": 12,
     "critical_services": 87,
     "domains": {
       "identity": 4,
       "monitoring": 19,
       "network": 25,
-      "operations": 115,
+      "operations": 116,
       "storage": 39,
       "trading": 11
     }
@@ -1026,6 +1026,14 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/github-agent.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "ha-tuya-boot-sync.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "systemd/ha-tuya-boot-sync.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },

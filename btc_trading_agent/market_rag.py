@@ -1615,7 +1615,9 @@ class MarketRAG:
         conf_ceiling = min(0.92, baseline_conf + 0.10)
         interval_floor = max(30, int(round(baseline_interval * 0.50)))
         interval_ceiling = min(900, int(round(baseline_interval * 1.80)))
-        cap_pct_floor = max(0.01, baseline_cap_pct * 0.25)
+        # Piso absoluto 1%. Não usar baseline*0.25 — com JSON max_position_pct=1.0
+        # isso elevava um cap da IA de 6% para 25%.
+        cap_pct_floor = 0.01
 
         suggested_conf = float(np.clip(
             float(suggestion.get("min_confidence") or baseline_conf),
