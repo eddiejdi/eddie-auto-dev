@@ -9,6 +9,37 @@
             "timeout": 5
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/sidequest_nonblocking.py",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/sidequest_nonblocking.py",
+            "timeout": 8
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/sidequest_nonblocking.py",
+            "timeout": 8
+          }
+        ]
       }
     ],
     "PreToolUse": [
@@ -122,6 +153,15 @@
             "type": "command",
             "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/web_agent_live_log.py --mode=stop",
             "timeout": 10
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/tools/hooks/sidequest_nonblocking.py",
+            "timeout": 8
           }
         ]
       },

@@ -16,7 +16,7 @@ Hooks Pi: `.pi/extensions/rpa4all-hooks/` (bridge para `tools/hooks` + `tools/co
 
 ## Políticas críticas (não violar)
 
-1. **Sem LLM chinês** (Qwen, DeepSeek, ERNIE, ChatGLM, etc.) — política 2026-07-01. Preferir Llama, Mistral, Gemma, Phi.
+1. **Sem LLM chinês em PROD** (Qwen, DeepSeek, MiMo, ERNIE, ChatGLM, etc.) — política 2026-07-01. Em **DEV** (workstation, Traycer, sidequests) MiMo/DeepSeek são permitidos se funcionais. Preferir Llama, Mistral, Gemma, Phi em produção. Sidequest não-bloqueante: `tools/hooks/sidequest_nonblocking.py`.
 2. **PostgreSQL** na porta **5433** (schema `btc`); SQLite proibido para trading.
 2b. **Trading intocável no cluster LLM**: modelos `trading-*` nunca são evictados. Com analyst residente, a **GPU0 (3060)** ainda pode receber **só auxiliares pequenos** na VRAM livre (≤~1.8GB est., com headroom) — sem despejar trading. Modelos grandes vão para **GPU1 + NAS** (`GPU_COORD_TRADING_RESERVE_GPU0`, `GPU_COORD_AUX_MAX_VRAM_MB`).
 3. **Fita LTO**: nunca `ltfsck`/`mkltfs`/`sg_raw` diretos — usar orchestrator `ltfs_recovery.py`.

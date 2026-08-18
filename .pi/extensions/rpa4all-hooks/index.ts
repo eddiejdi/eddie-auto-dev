@@ -10,6 +10,7 @@ import {
   MEMORY_HOOK,
   POST_TOOL_HOOKS,
   PRE_TOOL_HOOKS,
+  SIDEQUEST_HOOK,
   STOP_HOOKS,
   runPythonHook,
   type HookDecision,
@@ -94,16 +95,28 @@ export default function (pi: ExtensionAPI) {
       cwd: ctx.cwd,
       timeoutMs: MEMORY_HOOK.timeoutMs,
     });
-    if (!decision.additionalContext) {
+    const sidequest = await runPythonHook(
+      SIDEQUEST_HOOK.script,
+      { hookEventName: "SessionStart", cwd: ctx.cwd, sessionId: sessionIdOf(ctx) },
+      { cwd: ctx.cwd, timeoutMs: SIDEQUEST_HOOK.timeoutMs },
+    );
+    const extras: string[] = [];
+    if (decision.additionalContext) {
+      const maxChars = Number(process.env.PI_MEMORY_MAX_CHARS || 1200);
+      let mem = decision.additionalContext.trim();
+      if (mem.length > maxChars) {
+        mem = `${mem.slice(0, maxChars)}\n... (MEMORY truncada para Pi local; ver MEMORY.md completo no Claude)`;
+      }
+      extras.push(`# Project memory (truncated)\n${mem}`);
+    }
+    if (sidequest.additionalContext) {
+      extras.push(`# Sidequest policy\n${sidequest.additionalContext.trim()}`);
+    }
+    if (extras.length === 0) {
       return undefined;
     }
-    const maxChars = Number(process.env.PI_MEMORY_MAX_CHARS || 1200);
-    let mem = decision.additionalContext.trim();
-    if (mem.length > maxChars) {
-      mem = `${mem.slice(0, maxChars)}\n... (MEMORY truncada para Pi local; ver MEMORY.md completo no Claude)`;
-    }
     return {
-      systemPrompt: `${event.systemPrompt}\n\n# Project memory (truncated)\n${mem}`,
+      systemPrompt: `${event.systemPrompt}\n\n${extras.join("\n\n")}`,
     };
   });
 

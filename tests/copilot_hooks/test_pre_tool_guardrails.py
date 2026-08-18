@@ -488,6 +488,18 @@ class TestTapeBypassPatterns(unittest.TestCase):
         self.assertEqual(_decision(_cmd("mt -f /dev/st0 rewind")), "ask")
 
 
+class TestChineseLlmProdOnly(unittest.TestCase):
+    """LLM chinês: deny em PROD, allow em DEV (sidequest)."""
+
+    def test_prod_denies_ollama_pull_deepseek(self) -> None:
+        cmd = "ollama pull " + "deep" + "seek-coder:6.7b"
+        self.assertEqual(_decision_env(_cmd(cmd), {"RPA4ALL_ENV": "prod"}), "deny")
+
+    def test_dev_allows_ollama_pull_deepseek(self) -> None:
+        cmd = "ollama pull " + "deep" + "seek-coder:6.7b"
+        self.assertEqual(_decision_env(_cmd(cmd), {"RPA4ALL_ENV": "dev"}), "allow")
+
+
 if __name__ == "__main__":
     unittest.main()
 

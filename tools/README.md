@@ -47,6 +47,7 @@ python3 auto_retrain.py --data tests/sample.jsonl --out-dir /tmp/out --dry-run
 ## Outros Utilitários
 
 - **copilot_hooks/**: Hooks de validação e guardrails para Copilot
+- **hooks/sidequest_nonblocking.py**: não parar atividade por bug/ajuste não-bloqueante; worker DEV=MiMo/DeepSeek, PROD=fleet PASS
 - **vault/**: Gerenciamento de segredos
 - **deploy/**: Scripts de deployment
 - **homelab/**: Utilitários de homelab
