@@ -23,6 +23,7 @@ import os
 import re
 import subprocess
 import sys
+from pathlib import Path
 from typing import Any
 
 
@@ -67,11 +68,11 @@ PT_BR_GUARDRAIL_MODE = os.environ.get("PTBR_GUARDRAIL_MODE", "soft").strip().low
 CHINESE_LLM_PATTERN = (
     r"\b(qwen[\w.:/-]*|deepseek[\w.:/-]*|ernie[\w.:/-]*|chatglm[\w.:/-]*"
     r"|internlm[\w.:/-]*|baichuan[\w.:/-]*|tigerbot[\w.:/-]*|yi-coder[\w.:/-]*"
-    r"|glm-[\w.:/-]+|minimax-llm[\w.:/-]*)\b"
+    r"|glm-[\w.:/-]+|minimax-llm[\w.:/-]*|mimo[\w.:/-]*|xiaomi/mimo[\w.:/-]*)\b"
 )
 CHINESE_LLM_REASON = (
-    "⛔ MODELO LLM CHINÊS PROIBIDO: Qwen/DeepSeek/ERNIE/ChatGLM/InternLM/Baichuan são banidos "
-    "por política de soberania e privacidade de dados (2026-07-01).\n\n"
+    "⛔ MODELO LLM CHINÊS PROIBIDO EM PROD: Qwen/DeepSeek/MiMo/ERNIE/ChatGLM/InternLM/Baichuan "
+    "são banidos em produção (política 2026-07-01). Em DEV o hook de sidequest pode usá-los.\n\n"
     "Alternativas aprovadas:\n"
     "  • Mistral — europeu, ótima qualidade geral e coding\n"
     "  • Llama   — melhor ecossistema open-source, alta compatibilidade\n"
@@ -381,6 +382,18 @@ def _matches_any_simple(patterns: list[str], text: str) -> bool:
     return any(re.search(p, text, re.IGNORECASE) for p in patterns)
 
 
+def _chinese_llm_ban_applies() -> bool:
+    """Banimento de LLM chinês vale só em PROD. DEV pode designar MiMo/DeepSeek."""
+    hooks_dir = Path(__file__).resolve().parents[1] / "hooks"
+    if str(hooks_dir) not in sys.path:
+        sys.path.insert(0, str(hooks_dir))
+    try:
+        from runtime_env import is_prod as _is_prod
+    except ImportError:
+        return True
+    return _is_prod()
+
+
 def _first_match_with_reason(
     patterns: list[tuple[str, str]], text: str
 ) -> tuple[str, str] | None:
@@ -614,8 +627,11 @@ def _notify_caution_telegram(reason: str, command_snippet: str) -> None:
 
 def _check_terminal_commands(command_blob: str) -> str | None:
     """Verifica padrões perigosos em comandos de terminal. Retorna JSON de resposta ou None."""
-    # 1. Padrões PERIGOSOS → deny
-    match = _first_match_with_reason(DANGEROUS_PATTERNS, command_blob)
+    # 1. Padrões PERIGOSOS → deny (LLM chinês só em PROD)
+    patterns = DANGEROUS_PATTERNS
+    if not _chinese_llm_ban_applies():
+        patterns = [(p, r) for p, r in DANGEROUS_PATTERNS if p is not CHINESE_LLM_DEPLOY_PATTERN]
+    match = _first_match_with_reason(patterns, command_blob)
     if match:
         _, reason = match
         return _deny(
@@ -785,8 +801,11 @@ def _check_file_edits(payload: dict[str, Any]) -> str | None:
             "Nunca incluir o valor real no código-fonte."
         )
 
-    # 2b. Padrões PERIGOSOS no conteúdo editado → deny
-    match = _first_match_with_reason(EDIT_DANGEROUS_PATTERNS, content_blob)
+    # 2b. Padrões PERIGOSOS no conteúdo editado → deny (LLM chinês só em PROD)
+    edit_patterns = EDIT_DANGEROUS_PATTERNS
+    if not _chinese_llm_ban_applies():
+        edit_patterns = [(p, r) for p, r in EDIT_DANGEROUS_PATTERNS if p is not CHINESE_LLM_PATTERN]
+    match = _first_match_with_reason(edit_patterns, content_blob)
     if match:
         _, reason = match
         return _deny(

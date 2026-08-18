@@ -31,11 +31,19 @@ from pathlib import Path
 from typing import Any
 
 LOG_CANDIDATES = [
-    Path.home() / ".grok" / "logs" / "mcp" / "web-agent.stderr.log",
-    Path("/tmp/web-agent.stderr.log"),
+    Path(p)
+    for p in (
+        os.environ.get("WEB_AGENT_LIVE_LOG_PATH"),
+        str(Path.home() / ".grok" / "logs" / "mcp" / "web-agent.stderr.log"),
+        "/tmp/web-agent.stderr.log",
+    )
+    if p
 ]
 
-STATE_DIR = Path.home() / ".grok" / "state" / "web-agent-live-log"
+STATE_DIR = Path(
+    os.environ.get("WEB_AGENT_LIVE_LOG_STATE")
+    or (Path.home() / ".grok" / "state" / "web-agent-live-log")
+)
 MAX_INJECT_LINES = 40
 MAX_INJECT_CHARS = 4500
 ACTIVE_WINDOW_SEC = 900  # 15 min sem mtime = inativo
@@ -162,6 +170,27 @@ def _log_active(log_path: Path) -> bool:
         return False
 
 
+def _session_owns_web_agent(meta_path: Path, now: float | None = None) -> bool:
+    """True só se ESTA sessão chamou web-agent recentemente (meta do modo pre).
+
+    O log MCP é compartilhado: sem este gate, o Stop de qualquer chat
+    bloqueia quando *outro* agent escreve no mesmo arquivo.
+    """
+    if not meta_path.is_file():
+        return False
+    try:
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError, TypeError):
+        return False
+    if not isinstance(meta, dict):
+        return False
+    started = float(meta.get("startedAt") or 0)
+    if started <= 0:
+        return False
+    stamp = time.time() if now is None else now
+    return (stamp - started) <= ACTIVE_WINDOW_SEC
+
+
 def _format_block(title: str, lines: list[str], log_path: Path) -> str:
     body = "\n".join(lines)
     if len(body) > MAX_INJECT_CHARS:
@@ -238,6 +267,9 @@ def main() -> int:
             return 0
         if payload.get("stopHookActive") is True:
             # already continued once — allow stop to avoid loop
+            print(json.dumps({"continue": True}))
+            return 0
+        if not _session_owns_web_agent(meta_path):
             print(json.dumps({"continue": True}))
             return 0
         lines, _ = _read_delta(log_path, cursor, consume=True, cursor_path=cursor_path)
@@ -323,9 +355,9 @@ def main() -> int:
         )
         return 0
 
-    # --- Delta mode: any other tool while web-agent is warm ---
+    # --- Delta mode: any other tool while THIS session's web-agent is warm ---
     if mode == "delta":
-        if not active:
+        if not active or not _session_owns_web_agent(meta_path):
             print(json.dumps({"continue": True}))
             return 0
         lines, _ = _read_delta(log_path, cursor, consume=True, cursor_path=cursor_path)

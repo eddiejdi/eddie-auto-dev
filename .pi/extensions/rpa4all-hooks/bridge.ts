@@ -233,6 +233,11 @@ export const MEMORY_HOOK = {
   timeoutMs: 5_000,
 };
 
+export const SIDEQUEST_HOOK = {
+  script: "tools/hooks/sidequest_nonblocking.py",
+  timeoutMs: 8_000,
+};
+
 export const WIKI_SESSION_HOOK = {
   script: "tools/copilot_hooks/inject_wiki_context.py",
   args: ["--mode=session"],
@@ -246,6 +251,7 @@ export const WIKI_BLOCK_HOOK = {
 };
 
 export const STOP_HOOKS: Array<{ script: string; timeoutMs: number }> = [
+  { script: "tools/hooks/sidequest_nonblocking.py", timeoutMs: 8_000 },
   { script: "tools/hooks/block_incomplete_stop.py", timeoutMs: 30_000 },
   { script: "tools/hooks/restore_stopped.py", timeoutMs: 60_000 },
 ];

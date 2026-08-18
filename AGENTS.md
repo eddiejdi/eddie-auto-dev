@@ -29,7 +29,7 @@ Exceções: skill Traycer que **exige** harness pago; risco extremo trading/LTO/
 
 ## Políticas críticas (não violar)
 
-1. **Sem LLM chinês** (Qwen, DeepSeek, ERNIE, ChatGLM, etc.) — política 2026-07-01. Preferir Llama, Mistral, Gemma, Phi.
+1. **Sem LLM chinês em PROD** (Qwen, DeepSeek, MiMo, ERNIE, ChatGLM, etc.) — política 2026-07-01. Em **DEV** (workstation, Traycer, sidequests) MiMo/DeepSeek são permitidos se funcionais. Preferir Llama, Mistral, Gemma, Phi em produção. Sidequest não-bloqueante: `tools/hooks/sidequest_nonblocking.py`.
 2. **PostgreSQL** na porta **5433** (schema `btc`); SQLite proibido para trading.
 2b. **Trading intocável no cluster LLM**: modelos `trading-*` nunca são evictados. O analyst (`trading-analyst:latest`) reside no **NAS (RTX 2060 SUPER, `:11436`)** desde 2026-08-12 (decisão documentada em `docs/DECISION_TRADING_ANALYST_NAS_2026-08-12.md` — decode mais rápido por bandwidth e sem risco de migração em live). Sempre que um modelo `trading-*` estiver residente num endpoint, aquele endpoint não pode despejá-lo nem receber auxiliar que o compita (`GPU_COORD_PROTECTED_MODELS`, `GPU_COORD_TRADING_RESERVE_GPU0`).
 3. **Fita LTO**: nunca `ltfsck`/`mkltfs`/`sg_raw` diretos — usar orchestrator `ltfs_recovery.py`.
