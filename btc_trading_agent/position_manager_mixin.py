@@ -47,6 +47,22 @@ class PositionManagerMixin:
             live_cfg = {}
         return float(live_cfg.get("min_tradeable_balance", 0.00001) or 0.00001)
 
+    def _base_min_size(self) -> float:
+        """baseMinSize do símbolo no KuCoin (0.0 se desconhecido).
+
+        Piso real que a exchange exige para aceitar uma ordem SELL —
+        diferente de ``_min_tradeable_dust`` (que é só piso do config para
+        decidir se o saldo conta como posição). Usado pelo guard de SELL
+        dust e por ``_adopt_untracked_exchange_excess`` para não inventar
+        slot fantasma que a KuCoin rejeitaria com "The quantity is invalid."
+        """
+        try:
+            from kucoin_api import get_symbol_min_size
+            meta = get_symbol_min_size(self.symbol) or {}
+            return float(meta.get("baseMinSize") or 0.0)
+        except Exception:
+            return 0.0
+
     def _read_subaccount_spot_balances(self, quote_cur: str) -> tuple[float, float]:
         """Saldo disponível (quote, base) da subconta TRADE configurada.
 
@@ -305,6 +321,72 @@ class PositionManagerMixin:
                             "pnl_pct": pnl_pct,
                         },
                     )
+                    # ── SELL dust: KuCoin nunca recebe ordens abaixo de ──
+                    # baseMinSize. O guard em place_market_order devolve
+                    # ``skipped=True`` sem chamar a API. Aqui descartamos o
+                    # slot do state e marcamos a BUY de origem como fechada no
+                    # DB (``closed_reason=dust_below_baseMinSize``) — sem
+                    # gravar uma SELL falsa, sem notificar Telegram. Evita
+                    # que o mesmo dust reapareça a cada ciclo como slot
+                    # fantasma e dispare a "The quantity is invalid."
+                    if result.get("skipped"):
+                        skip_reason = result.get("skip_reason", "unknown")
+                        logger.warning(
+                            "💤 Slot #%d dust descartado %s: size=%.8f < baseMinSize "
+                            "(reason=%s). Slot removido do state sem venda; "
+                            "BUY de origem marcada como closed=dust_below_baseMinSize.",
+                            entry_idx + 1, self.symbol, size, skip_reason,
+                        )
+                        entries.pop(entry_idx)
+                        self.state.entries = entries
+                        self.state.position = max(0.0, self.state.position - size)
+
+                        if entries:
+                            total_sz = sum(
+                                float(e.get("size", 0) or 0) for e in entries
+                            )
+                            total_ct = sum(
+                                float(e.get("size", 0) or 0)
+                                * float(e.get("price", 0) or 0)
+                                for e in entries
+                            )
+                            self.state.entry_price = (
+                                total_ct / total_sz if total_sz > 0 else 0.0
+                            )
+                        else:
+                            self.state.entry_price = 0.0
+                            self.state.entries = []
+                            self.state.position = 0.0
+                            self.state.target_sell_price = 0.0
+                            self.state.target_sell_reason = ""
+                            self.state.buy_success_pressure = 0.0
+                            self.state.buy_success_factor = 1.0
+                            self.state.buy_dynamic_batch_cap_usdt = 0.0
+                            self.state.dca_valley_low = 0.0
+                            self.state.trailing_high = 0.0
+                        self._sync_position_tracking()
+
+                        # Marca a BUY de origem como closed no DB (sem venda)
+                        # — evita que o reconstruct a reabrace como slot.
+                        try:
+                            buy_trade_id = entry.get("trade_id")
+                            if buy_trade_id:
+                                self.db.merge_trade_metadata(
+                                    int(buy_trade_id),
+                                    {
+                                        "closed_reason": "dust_below_baseMinSize",
+                                        "dust_size": round(size, 8),
+                                        "dust_skip_reason": skip_reason,
+                                        "closed_at": time.time(),
+                                    },
+                                )
+                        except Exception as exc:
+                            logger.debug(
+                                "Dust slot DB mark failed (trade_id=%s): %s",
+                                entry.get("trade_id"), exc,
+                            )
+                        return True
+
                     if not result.get("success"):
                         logger.error("❌ Slot sell failed: %s", result)
                         err_code = str(
@@ -735,7 +817,17 @@ class PositionManagerMixin:
     ) -> bool:
         """Incorpora excesso exclusivo no state e no DB (lote ou fill)."""
         dust = self._min_tradeable_dust()
-        if excess <= max(dust, 0.0):
+        base_min = self._base_min_size()
+        # Piso efetivo: o maior entre o dust do config e o baseMinSize real
+        # da exchange — abaixo disso a KuCoin rejeitaria qualquer SELL com
+        # "The quantity is invalid." e o slot viraria fantasma eterno.
+        floor = max(dust, base_min, 0.0)
+        if excess <= floor:
+            logger.info(
+                "💤 [reconcile] Excesso %.8f %s abaixo do piso (dust=%.8f, "
+                "baseMinSize=%.8f) — não adota, fica como pó na subconta.",
+                excess, base_currency, dust, base_min,
+            )
             return False
 
         price = float(current_price or 0.0)
@@ -766,7 +858,7 @@ class PositionManagerMixin:
             if real_balance <= db_now + tolerance:
                 return True
             excess_now = real_balance - db_now
-            if excess_now <= max(dust, 0.0):
+            if excess_now <= floor:
                 return False
 
             adopted_via = "new_lot"

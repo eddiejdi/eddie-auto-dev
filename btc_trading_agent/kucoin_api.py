@@ -1047,6 +1047,10 @@ def sub_transfer(currency: str, amount: float, sub_user_id: str,
 
 
 _symbol_increment_cache: Dict[str, Dict[str, str]] = {}
+# Mínimo negociável por símbolo (baseMinSize em moeda base, minFunds em quote).
+# Usado pelo guard de SELL dust — KuCoin devolve "The quantity is invalid."
+# para ordens abaixo destes limites. Cache por processo, mesmo TTL do increment.
+_symbol_min_size_cache: Dict[str, Dict[str, float]] = {}
 
 
 def get_symbol_increments(symbol: str) -> Dict[str, str]:
@@ -1065,10 +1069,35 @@ def get_symbol_increments(symbol: str) -> Dict[str, str]:
                 "baseIncrement": data.get("baseIncrement") or "0.00000001",
                 "quoteIncrement": data.get("quoteIncrement") or "0.01",
             }
+            # Aproveita o mesmo round-trip para cachear baseMinSize/minFunds.
+            # A KuCoin usa "" para ausência; normaliza para 0.0 (sem piso).
+            _symbol_min_size_cache[symbol] = {
+                "baseMinSize": float(data.get("baseMinSize") or 0.0),
+                "minFunds": float(data.get("minFunds") or 0.0),
+            }
         except Exception as e:
             logger.warning(f"⚠️ Falha ao obter increments de {symbol}: {e}")
             return {"baseIncrement": "0.00000001", "quoteIncrement": "0.01"}
     return _symbol_increment_cache[symbol]
+
+
+def get_symbol_min_size(symbol: str) -> Dict[str, float]:
+    """Retorna {baseMinSize, minFunds} do símbolo (cache por processo).
+
+    0.0 significa "sem piso conhecido" — o agente então confia apenas no
+    dust threshold do próprio config (``_min_tradeable_dust``). Nunca
+    bloqueia: só usado para o guard de SELL dust evitar ordens que a
+    KuCoin rejeitaria com "The quantity is invalid.".
+
+    Preenche o cache lazy via get_symbol_increments — ambas leem o mesmo
+    endpoint /api/v2/symbols/{symbol} num único round-trip.
+    """
+    if symbol not in _symbol_min_size_cache:
+        # Dispara o populate conjunto (side-effect em get_symbol_increments).
+        get_symbol_increments(symbol)
+    return _symbol_min_size_cache.get(
+        symbol, {"baseMinSize": 0.0, "minFunds": 0.0}
+    )
 
 
 def _floor_to_increment(value: float, increment: str) -> str:
@@ -1101,12 +1130,63 @@ def place_market_order(symbol: str, side: str, funds: float = None,
     """
     validate_credentials()
 
+    # ── Guard de SELL dust (baseMinSize / minFunds) ────────────────────────
+    # KuCoin rejeita SELLs cujo size < baseMinSize ou notional < minFunds com
+    # a mensagem "The quantity is invalid." Esses lotes são resíduos
+    # sub‑arredondados de fills anteriores — não há nada a fazer a não ser
+    # descartar o slot silenciosamente (sem Telegram, sem POST). Retornar
+    # ``skipped=True`` sinaliza ao caller (``_execute_slot_sell``) que o slot
+    # deve ser removido do state sem gravar uma venda falsa no DB.
+    side_l = (side or "").lower()
+    if side_l == "sell":
+        try:
+            min_meta = get_symbol_min_size(symbol)
+        except Exception:
+            min_meta = {"baseMinSize": 0.0, "minFunds": 0.0}
+        base_min = float(min_meta.get("baseMinSize") or 0.0)
+        min_funds = float(min_meta.get("minFunds") or 0.0)
+        size_val = float(size) if size is not None else 0.0
+        funds_val = float(funds) if funds is not None else 0.0
+        if base_min > 0 and size_val > 0 and size_val < base_min:
+            logger.info(
+                "💤 SELL dust skipped %s: size=%.8f < baseMinSize=%.8f "
+                "(não envia para a KuCoin, sem Telegram)",
+                symbol, size_val, base_min,
+            )
+            return {
+                "success": False,
+                "skipped": True,
+                "skip_reason": "below_baseMinSize",
+                "baseMinSize": base_min,
+                "size": size_val,
+                "error": "below_baseMinSize",
+            }
+        if min_funds > 0 and size_val > 0:
+            # Notional aproximado pelo size (não temos o preço aqui); se o
+            # caller passou funds, usa funds. Caso contrário, exige que o
+            # caller valide via get_price — para SELL spot o size é a moeda
+            # base e minFunds é em USDT, então só podemos checar se houver
+            # funds explícito. Deixa passar (a KuCoin rejeitaria com 200611).
+            if funds_val > 0 and funds_val < min_funds:
+                logger.info(
+                    "💤 SELL dust skipped %s: funds=%.8f < minFunds=%.8f",
+                    symbol, funds_val, min_funds,
+                )
+                return {
+                    "success": False,
+                    "skipped": True,
+                    "skip_reason": "below_minFunds",
+                    "minFunds": min_funds,
+                    "funds": funds_val,
+                    "error": "below_minFunds",
+                }
+
     endpoint = "/api/v1/orders"
     client_oid = f"btc_agent_{int(time.time() * 1e6)}"
 
     payload = {
         "clientOid": client_oid,
-        "side": side.lower(),
+        "side": side_l,
         "symbol": symbol,
         "type": "market",
     }

@@ -1,6 +1,6 @@
 {
-  "generated_at": "2026-08-16T12:30:32.806229+00:00",
-  "repo_root": "/home/edenilson/.traycer/worktrees/eddiejdi__eddie-auto-dev/traycer-daring-raven",
+  "generated_at": "2026-08-18T16:18:19.917259+00:00",
+  "repo_root": "/home/edenilson/.traycer/worktrees/eddiejdi__eddie-auto-dev/traycer-brave-seal",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
