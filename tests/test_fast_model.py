@@ -207,17 +207,29 @@ class TestFastIndicators:
         assert len(ind._candle_prices) == 20
 
     def test_rsi_estavel_em_candles_sinteticos_1min(self) -> None:
-        """14+ candles de alta limpa produzem RSI alto e estável no reload."""
+        """30+ candles de alta limpa produzem RSI alto e estável no reload."""
         ind = FastIndicators()
         candles = [
             {"close": 100.0 + i, "volume": 1.0, "timestamp": 1_700_000_000 + i * 60}
-            for i in range(15)
+            for i in range(35)
         ]
         ind.update_from_candles(candles)
         rsi_val = ind.rsi()
         assert 90.0 <= rsi_val <= 100.0
         ind.update_from_candles(candles)
         assert ind.rsi() == pytest.approx(rsi_val)
+
+    def test_rsi_janela_padrao_30_estavel_diante_de_ruido(self) -> None:
+        """Janela padrão 30 reduz a saturação 0/100 típica do RSI-14 (1min)."""
+        ind = FastIndicators()
+        candles = [
+            {"close": 100.0 + (i % 6) * 5.0, "volume": 1.0, "timestamp": 1_700_000_000 + i * 60}
+            for i in range(60)
+        ]
+        ind.update_from_candles(candles)
+        rsi_val = ind.rsi()
+        assert 5.0 < rsi_val < 95.0
+        assert 0.0 <= rsi_val <= 100.0
 
     def test_ticks_apos_candles_nao_crescem_serie_1min(self) -> None:
         """Ticks ruidosos só mexem a barra atual — não viram série de 3s."""

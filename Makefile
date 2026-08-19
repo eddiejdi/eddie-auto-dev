@@ -101,8 +101,7 @@ deploy-all: deploy-clear
 	@printf "$(CYAN)[DEPLOY] Todos os agentes$(RESET)\n"
 	@ssh -o StrictHostKeyChecking=no $(HOMELAB_USER)@$(HOMELAB_HOST) \
 		"cd $(REMOTE_DIR) && git pull origin main --ff-only 2>&1 | tail -3 && \
-		 sudo systemctl restart crypto-agent@BTC_USDT_aggressive crypto-agent@BTC_USDT_conservative \
-		   crypto-agent@USDT_BRL_aggressive crypto-agent@USDT_BRL_conservative 2>&1 || true && \
+		 sudo systemctl restart crypto-agent@BTC_USDT_aggressive crypto-agent@BTC_USDT_conservative 2>&1 || true && \
 		 echo 'Restart crypto-agents: OK'"
 	@printf "$(GREEN)[DEPLOY] Tudo concluído$(RESET)\n"
 
@@ -117,8 +116,7 @@ status:
 	@printf "$(CYAN)[STATUS] Agentes no homelab:$(RESET)\n"
 	@ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 $(HOMELAB_USER)@$(HOMELAB_HOST) \
 		"systemctl status clear-trading-agent crypto-agent@BTC_USDT_aggressive \
-		  crypto-agent@BTC_USDT_conservative crypto-agent@USDT_BRL_aggressive \
-		  crypto-agent@USDT_BRL_conservative --no-pager -n 0 2>&1 | \
+		  crypto-agent@BTC_USDT_conservative --no-pager -n 0 2>&1 | \
 		  grep -E '^(●|     Active|     Main PID)'" 2>&1 || true
 
 ## logs: Tail dos logs do clear-trading-agent

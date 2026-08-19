@@ -601,7 +601,7 @@ class MetricsCollector:
         """, (self.symbol,))
         result = cursor.fetchone()
         if result:
-            metrics['rsi'] = result[0] if result[0] else 50
+            metrics['rsi'] = result[0] if result[0] is not None else 50
             metrics['momentum'] = result[1] if result[1] else 0
             metrics['volatility'] = result[2] if result[2] else 0
             metrics['trend'] = result[3] if result[3] else 0

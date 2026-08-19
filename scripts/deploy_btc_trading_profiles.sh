@@ -49,8 +49,6 @@ AGENT_SERVICES=(
   "crypto-agent@DOGE_USDT_conservative.service"
   "crypto-agent@DOGE_USDT_aggressive.service"
   "crypto-agent@DOGE_USDT_shadow.service"
-  "crypto-agent@USDT_BRL_conservative.service"
-  "crypto-agent@USDT_BRL_aggressive.service"
 )
 
 EXPORTER_SERVICES=(
@@ -66,8 +64,6 @@ EXPORTER_SERVICES=(
   "crypto-exporter@DOGE_USDT_conservative.service"
   "crypto-exporter@DOGE_USDT_aggressive.service"
   "crypto-exporter@DOGE_USDT_shadow.service"
-  "crypto-exporter@USDT_BRL_conservative.service"
-  "crypto-exporter@USDT_BRL_aggressive.service"
 )
 
 LEGACY_EXPORTER_SERVICES=(

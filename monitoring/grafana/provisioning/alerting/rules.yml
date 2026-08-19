@@ -690,7 +690,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: btc_trading_rsi
+        expr: btc_trading_rsi{coin="BTC-USDT"}
         instant: true
         refId: A
     - refId: B
@@ -724,7 +724,7 @@ groups:
             params:
             - B
         expression: B
-    for: 5m
+    for: 15m
     labels:
       severity: warning
       category: trading
@@ -744,7 +744,7 @@ groups:
         to: 0
       datasourceUid: dfc0w4yioe4u8e
       model:
-        expr: btc_trading_rsi
+        expr: btc_trading_rsi{coin="BTC-USDT"}
         instant: true
         refId: A
     - refId: B
@@ -778,7 +778,7 @@ groups:
             params:
             - B
         expression: B
-    for: 5m
+    for: 15m
     labels:
       severity: warning
       category: trading
