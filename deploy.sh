@@ -102,9 +102,7 @@ fi
 echo "[systemd] reiniciando crypto-agents..."
 sudo systemctl restart \\
     crypto-agent@BTC_USDT_aggressive \\
-    crypto-agent@BTC_USDT_conservative \\
-    crypto-agent@USDT_BRL_aggressive \\
-    crypto-agent@USDT_BRL_conservative 2>&1 || true
+    crypto-agent@BTC_USDT_conservative 2>&1 || true
 
 sleep 3
 systemctl is-active crypto-agent@BTC_USDT_aggressive >/dev/null && echo "BTC_USDT_aggressive: active" || echo "BTC_USDT_aggressive: FAILED"
@@ -140,8 +138,6 @@ cmd_status() {
             clear-trading-agent \
             crypto-agent@BTC_USDT_aggressive \
             crypto-agent@BTC_USDT_conservative \
-            crypto-agent@USDT_BRL_aggressive \
-            crypto-agent@USDT_BRL_conservative \
             --no-pager -n 0 2>&1 | grep -E '^(●|     Active|     Main PID)'"
 }
 

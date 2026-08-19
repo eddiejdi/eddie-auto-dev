@@ -143,3 +143,6 @@ philco10b_raspios/
 .pi/npm/
 .pi/git/
 tools/ollama_gpu_coordinator.py.orig
+
+# Wiki doc analyzer hook: contexto transitório de task (regenerado a cada run)
+tools/hooks/.wiki_task_context.json

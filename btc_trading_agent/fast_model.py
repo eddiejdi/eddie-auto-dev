@@ -171,8 +171,14 @@ class FastIndicators:
         self._last_tick_price = float("nan")
         logger.debug(f"📊 Indicators loaded from {len(candles)} candles")
     
-    def rsi(self, period: int = 14) -> float:
-        """RSI otimizado"""
+    def rsi(self, period: int = 30) -> float:
+        """RSI otimizado.
+
+        Janela padrão 30 (≈30min de candles 1min) em vez de 14 para reduzir a
+        saturação a 0/100: RSI-14 sobre 1min oscila de forma extrema e dispara
+        alertas espúrios de sobrecompra/sobrevenda. O período da chamada segue
+        customizável por parâmetro.
+        """
         if len(self.prices) < period + 1:
             return 50.0
         

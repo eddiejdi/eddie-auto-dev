@@ -209,27 +209,18 @@ scrape_configs:
           servidor: 'homelab'
 
   # USDT-BRL (on-ramp FX + intercoin conversion owner) — ports 9115/9116
-  # (DOGE keeps 9112-9114; do not reuse those for USDT_BRL)
-  - job_name: 'crypto-exporter-usdt_brl_conservative'
-    scrape_interval: 30s
-    scrape_timeout: 25s
-    static_configs:
-      - targets: ['172.17.0.1:9115']
-        labels:
-          coin: 'USDT-BRL'
-          instance: 'usdt_brl_conservative'
-          profile: 'conservative'
-          servidor: 'homelab'
+  # REMOVIDO 2026-08-18: pares fiat BRL deslistados pela KuCoin (anúncio
+  # 2026-08-13). DOGE continua em 9112-9114; não reutilizar 9115/9116.
 
-  - job_name: 'crypto-exporter-usdt_brl_aggressive'
-    scrape_interval: 30s
+  # KuMining — cloud mining KuCoin: rendimentos/custos do contrato
+  - job_name: 'kumining-exporter'
+    scrape_interval: 60s
     scrape_timeout: 25s
     static_configs:
-      - targets: ['172.17.0.1:9116']
+      - targets: ['172.17.0.1:9130']
         labels:
-          coin: 'USDT-BRL'
-          instance: 'usdt_brl_aggressive'
-          profile: 'aggressive'
+          coin: 'KUMINING'
+          instance: 'kumining'
           servidor: 'homelab'
 
   # ---------------------------------------------------------------------------

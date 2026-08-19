@@ -113,8 +113,8 @@ def test_grafana_selfheal_config_uses_profile_specific_exporter_ports(grafana_se
 
     assert agents[("BTC-USDT", "conservative")] == 9094
     assert agents[("BTC-USDT", "aggressive")] == 9095
-    assert agents[("USDT-BRL", "conservative")] == 9115
-    assert agents[("USDT-BRL", "aggressive")] == 9116
+    assert ("USDT-BRL", "conservative") not in agents
+    assert ("USDT-BRL", "aggressive") not in agents
 
 
 def test_default_agents_avoid_legacy_btc_exporter_port():

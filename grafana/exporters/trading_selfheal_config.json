@@ -6,7 +6,7 @@
   "consecutive_failures_threshold": 4,
   "ollama_enabled": true,
   "ollama_host": "http://192.168.15.2:8512",
-  "ollama_model": "mistral:7b",
+  "ollama_model": "qwen2.5-coder:7b",
   "ollama_timeout_seconds": 15,
   "agents": [
     {
@@ -33,33 +33,8 @@
       "service_user": "btc-trading",
       "service_group": "btc-trading",
       "legacy_path": "/home/homelab/eddie-auto-dev",
-      "remove_legacy_path": true
-    },
-    {
-      "symbol": "USDT-BRL",
-      "profile": "aggressive",
-      "systemd_unit": "crypto-agent@USDT_BRL_aggressive",
-      "exporter_port": 9116,
-      "config_file": "config_USDT_BRL_aggressive.json",
-      "expected_process": "trading_agent.py.*config_USDT_BRL_aggressive.json",
-      "runtime_root": "/apps/crypto-trader/trading",
-      "service_user": "btc-trading",
-      "service_group": "btc-trading",
-      "legacy_path": "/home/homelab/eddie-auto-dev",
-      "remove_legacy_path": true
-    },
-    {
-      "symbol": "USDT-BRL",
-      "profile": "conservative",
-      "systemd_unit": "crypto-agent@USDT_BRL_conservative",
-      "exporter_port": 9115,
-      "config_file": "config_USDT_BRL_conservative.json",
-      "expected_process": "trading_agent.py.*config_USDT_BRL_conservative.json",
-      "runtime_root": "/apps/crypto-trader/trading",
-      "service_user": "btc-trading",
-      "service_group": "btc-trading",
-      "legacy_path": "/home/homelab/eddie-auto-dev",
-      "remove_legacy_path": true
+      "remove_legacy_path": true,
+      "enabled": false
     }
   ]
 }

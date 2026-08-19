@@ -162,6 +162,32 @@ SELECT now() AS "time", available AS "USDT Disponível"
 FROM latest
 ```
 
+## Painel 103: Valor KuMining no Saldo Exchange R$
+
+O painel **103 "💰 Saldo Exchange em R$ (total bruto)"** agora soma também o valor investido
+em contratos KuMining (hashrate + energia) convertido para R$.
+
+Fonte: `btc.exchange_account_ledgers`, saídas USDT com
+`biz_type IN ('Cloud Mining Hash Power Fee', 'Cloud Mining Electricity Fee')`.
+
+Taxa de conversão: mesma `brl_rate` usada no resto do painel (snapshot BRL → fallback trades USDT-BRL).
+
+### Query KuMining (adicionada ao painel 103)
+```sql
+, kumining_cost AS (
+  SELECT COALESCE(SUM(ABS(amount)), 0) AS usdt_cost
+  FROM btc.exchange_account_ledgers
+  WHERE currency = 'USDT'
+    AND direction = 'out'
+    AND biz_type IN ('Cloud Mining Hash Power Fee', 'Cloud Mining Electricity Fee')
+)
+```
+
+O `usdt_cost` é somado ao total em R$ via `usdt_cost / brl_price_usdt`.
+
+> **Nota:** o texto estático do painel 304 (~2.62 USDT) está **desatualizado** — o ledger mostra
+> 2 compras de hash power (1.764 em 08/08 + 18.144 em 08/15 = 19.91 USDT) além das taxas de energia.
+
 ## Botões de Transferência (Painel 308)
 
 O painel 308 é um painel de texto HTML com botões que abrem a KuCoin:

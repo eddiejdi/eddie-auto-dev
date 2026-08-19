@@ -617,3 +617,77 @@ class TestReconcileStuckProfileAlert:
             "sub:BTCConservative": 0.002,
         }
         assert result["position_diff"] == pytest.approx(0.0)
+
+
+# ---------------------------------------------------------------------------
+# Fallback de cotação BRL/USDT (par USDT-BRL deslistado da KuCoin)
+# ---------------------------------------------------------------------------
+
+class TestBRLFallback:
+    """Fallback de taxa BRL/USDT quando a KuCoin não tem mais USDT-BRL."""
+
+    @patch.object(sync.requests, "get")
+    def test_external_usdt_brl_parse(self, mock_get):
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.raise_for_status.return_value = None
+        mock_get.return_value.json.return_value = {
+            "USDBRL": {"bid": "5.4725"},
+        }
+
+        assert sync._external_usdt_brl() == pytest.approx(5.4725)
+
+    @patch.object(sync.requests, "get", side_effect=Exception("network"))
+    def test_external_usdt_brl_falha_retorna_zero(self, mock_get):
+        assert sync._external_usdt_brl() == 0.0
+
+    def test_last_usdt_brl_trade(self):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+        mock_cur.__exit__ = MagicMock(return_value=False)
+        mock_cur.fetchone.return_value = (5.2953,)
+        mock_conn.cursor.return_value = mock_cur
+
+        assert sync._last_usdt_brl_trade(mock_conn) == pytest.approx(5.2953)
+        assert "USDT-BRL" in str(mock_cur.execute.call_args[0][0])
+
+    def test_last_usdt_brl_trade_sem_dados(self):
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+        mock_cur.__exit__ = MagicMock(return_value=False)
+        mock_cur.fetchone.return_value = None
+        mock_conn.cursor.return_value = mock_cur
+
+        assert sync._last_usdt_brl_trade(mock_conn) == 0.0
+
+    @patch("kucoin_postgres_sync.get_price_fast")
+    def test_snapshot_balances_usa_fallback_externo(self, mock_price):
+        """BRL entra com price_usdt mesmo com USDT-BRL fora do ar."""
+        mock_price.side_effect = [0.0, 60000.0]  # USDT-BRL falha, BTC-USDT ok
+        with patch.object(sync, "_external_usdt_brl", return_value=5.4725) as mock_ext:
+            mock_conn = MagicMock()
+            mock_cur = MagicMock()
+            mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+            mock_cur.__exit__ = MagicMock(return_value=False)
+            mock_conn.cursor.return_value = mock_cur
+            sync.get_balances.return_value = [
+                {"currency": "BRL", "balance": 23.46, "available": 23.46, "holds": 0.0},
+                {"currency": "USDT", "balance": 462.89, "available": 462.89, "holds": 0.0},
+            ]
+            sync.kucoin_api.get_sub_account_balances.return_value = []
+            sync._snapshot_balances(mock_conn)
+            mock_ext.assert_called_once()
+
+            brl_inserted = []
+            for call in mock_cur.execute.call_args_list:
+                sql, params = call.args if len(call.args) > 1 else (call.args[0], None)
+                if "INSERT INTO btc.exchange_balance_snapshots" in str(sql):
+                    if params:
+                        brl_inserted.append(params)
+            assert brl_inserted, "nenhum INSERT de snapshots executado"
+            brl_prices = [p[5] for p in brl_inserted if p[1] == "BRL"]
+            assert brl_prices, "nenhum snapshot BRL com price_usdt"
+            assert all(p == pytest.approx(1.0 / 5.4725) for p in brl_prices)
+            usdt_prices = [p[5] for p in brl_inserted if p[1] == "USDT"]
+            assert all(p == pytest.approx(1.0) for p in usdt_prices)

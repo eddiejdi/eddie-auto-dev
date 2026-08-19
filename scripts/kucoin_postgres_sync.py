@@ -124,6 +124,51 @@ def _safe_float(value: Any) -> float:
         return 0.0
 
 
+def _external_usdt_brl(timeout: float = 5.0) -> float:
+    """Cotação externa BRL/USD (USDT≈USD) quando a KuCoin deslistou USDT-BRL.
+
+    Usa economia.awesomeapi.com.br (USD-BRL). Retorna 0.0 se indisponível.
+    """
+    try:
+        r = requests.get(
+            "https://economia.awesomeapi.com.br/json/last/USD-BRL",
+            timeout=timeout,
+        )
+        r.raise_for_status()
+        data = r.json()
+        bid = data.get("USDBRL", {}).get("bid")
+        if bid:
+            return _safe_float(bid)
+    except Exception:
+        pass
+    return 0.0
+
+
+def _last_usdt_brl_trade(conn, max_age_days: float = 7.0) -> float:
+    """Fallback final: última trade real USDT-BRL persistida (price = BRL/USDT).
+
+    Retorna 0.0 se não houver trade recente.
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                SELECT price
+                FROM {SCHEMA}.trades
+                WHERE symbol = 'USDT-BRL'
+                  AND dry_run = FALSE
+                  AND timestamp >= EXTRACT(EPOCH FROM NOW() - %s::interval)
+                ORDER BY timestamp DESC
+                LIMIT 1
+                """,
+                (f"{max_age_days} days",),
+            )
+            row = cur.fetchone()
+        return _safe_float(row[0]) if row and row[0] else 0.0
+    except Exception:
+        return 0.0
+
+
 def _get_sync_cursor_ms(conn, sync_key: str) -> Optional[int]:
     with conn.cursor() as cur:
         cur.execute(
@@ -150,6 +195,10 @@ def _iter_time_windows(start_ms: int, end_ms: int, window_ms: int = LEDGER_WINDO
 def _snapshot_balances(conn) -> int:
     counts = 0
     usdt_brl = get_price_fast("USDT-BRL", timeout=5) or 0.0
+    if usdt_brl <= 0:
+        usdt_brl = _external_usdt_brl()
+    if usdt_brl <= 0:
+        usdt_brl = _last_usdt_brl_trade(conn)
     btc_usdt = get_price_fast("BTC-USDT", timeout=5) or 0.0
 
     _price_cache: Dict[str, Optional[float]] = {}

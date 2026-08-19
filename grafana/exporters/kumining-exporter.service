@@ -1,0 +1,28 @@
+[Unit]
+Description=KuMining Exporter — Cloud Mining KuCoin earnings/costs (Prometheus)
+After=network.target eddie-postgres.service
+Wants=eddie-postgres.service
+
+[Service]
+Type=simple
+User=btc-trading
+Group=btc-trading
+WorkingDirectory=/apps/crypto-trader/trading
+EnvironmentFile=-/apps/crypto-trader/envfiles/trading-database.env
+Environment="KUMINING_INTERVAL=300"
+Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONDONTWRITEBYTECODE=1"
+Environment="HOME=/apps/crypto-trader"
+Environment="PYTHONPATH=/apps/crypto-trader/trading"
+ExecStart=/apps/crypto-trader/.venv/bin/python /apps/crypto-trader/trading/grafana/exporters/kumining_exporter.py --port 9130
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
