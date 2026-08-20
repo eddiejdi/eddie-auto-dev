@@ -24,26 +24,11 @@ import time
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 # Adicionar o diretório raiz ao path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from clear_trading_agent.mt5_api import (
-    get_price,
-    get_price_fast,
-    get_candles,
-    place_market_order,
-    place_limit_order,
-    get_positions,
-    get_account_info,
-    get_balance,
-    get_equity,
-    analyze_spread,
-    analyze_trade_flow,
-    get_clear_connection_status,
-    _send_telegram_alert,
-)
 from clear_trading_agent.fast_model import (
     FastTradingModel,
     MarketState,
@@ -51,9 +36,19 @@ from clear_trading_agent.fast_model import (
     is_market_open,
     minutes_to_market_open,
 )
-from clear_trading_agent.training_db import TrainingDatabase
 from clear_trading_agent.market_rag import MarketRAG
+from clear_trading_agent.mt5_api import (
+    _send_telegram_alert,
+    analyze_spread,
+    analyze_trade_flow,
+    get_balance,
+    get_candles,
+    get_clear_connection_status,
+    get_price_fast,
+    place_market_order,
+)
 from clear_trading_agent.tax_guardrails import TaxTracker
+from clear_trading_agent.training_db import TrainingDatabase
 
 # ====================== CONFIGURAÇÃO ======================
 LOG_DIR = Path(__file__).parent / "logs"
@@ -70,7 +65,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _resolve_process_dry_run(cli_live: bool, loaded_cfg: Optional[Dict[str, Any]] = None) -> bool:
+def _resolve_process_dry_run(cli_live: bool, loaded_cfg: dict[str, Any] | None = None) -> bool:
     """Resolve o modo efetivo do processo com override seguro pelo config."""
     requested_dry_run = not cli_live
     if requested_dry_run:
@@ -136,7 +131,7 @@ class AgentState:
     profile: str = "default"
     start_time: float = 0.0
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Serializa estado para dicionário."""
         return {
             "running": self.running,
@@ -182,7 +177,7 @@ class ClearTradingAgent:
         self,
         symbol: str = DEFAULT_SYMBOL,
         dry_run: bool = True,
-        config_name: Optional[str] = None,
+        config_name: str | None = None,
     ) -> None:
         self.symbol = symbol
         self.config_name = config_name or os.environ.get("CLEAR_CONFIG_FILE", _config_file)
@@ -224,7 +219,7 @@ class ClearTradingAgent:
         # Threading
         self._stop_event = threading.Event()
         self._trade_lock = threading.Lock()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._last_trade_id = 0
 
         # Callbacks
@@ -252,7 +247,7 @@ class ClearTradingAgent:
         except Exception as exc:
             logger.warning("⚠️ Falha ao validar integração Clear: %s", exc)
 
-    def _load_live_config(self) -> Dict:
+    def _load_live_config(self) -> dict:
         """Carrega config ativo da instância."""
         try:
             with open(self.config_path) as cfg_file:
@@ -261,7 +256,7 @@ class ClearTradingAgent:
             logger.debug("Config live reload fallback: %s", e)
             return dict(_config)
 
-    def _get_runtime_risk_caps(self) -> Dict[str, Any]:
+    def _get_runtime_risk_caps(self) -> dict[str, Any]:
         """Retorna caps/configs ativos da instância."""
         live_cfg = self._load_live_config()
         return {
@@ -272,7 +267,7 @@ class ClearTradingAgent:
             "max_positions": max(1, int(live_cfg.get("max_positions", MAX_POSITIONS))),
         }
 
-    def _get_runtime_trade_day_limits(self) -> Dict[str, float]:
+    def _get_runtime_trade_day_limits(self) -> dict[str, float]:
         """Retorna limites diários ativos."""
         live_cfg = self._load_live_config()
         return {
@@ -311,7 +306,7 @@ class ClearTradingAgent:
 
     # ====================== MARKET STATE ======================
 
-    def _get_market_state(self) -> Optional[MarketState]:
+    def _get_market_state(self) -> MarketState | None:
         """Coleta estado atual do mercado via MT5 Bridge."""
         try:
             price = get_price_fast(self.symbol, timeout=3)
@@ -716,8 +711,7 @@ class ClearTradingAgent:
         activation_pct = ts_cfg.get("activation_pct", 0.015)
         trail_pct = ts_cfg.get("trail_pct", 0.008)
 
-        if price > self.state.trailing_high:
-            self.state.trailing_high = price
+        self.state.trailing_high = max(self.state.trailing_high, price)
 
         pnl_pct = (self.state.trailing_high / self.state.entry_price) - 1
         if pnl_pct < activation_pct:
@@ -1016,7 +1010,7 @@ class ClearTradingAgent:
         self.model.save()
         logger.info("✅ Clear Agent stopped")
 
-    def get_status(self) -> Dict:
+    def get_status(self) -> dict:
         """Retorna status atual."""
         return {
             **self.state.to_dict(),
@@ -1083,7 +1077,7 @@ def main() -> None:
 
     config_name = args.config or os.environ.get("CLEAR_CONFIG_FILE", "config.json")
     config_path = Path(__file__).parent / config_name
-    _loaded_cfg: Dict = {}
+    _loaded_cfg: dict = {}
     if config_path.exists():
         try:
             with open(config_path) as _f:

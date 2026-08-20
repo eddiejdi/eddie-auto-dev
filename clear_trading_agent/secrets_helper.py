@@ -10,7 +10,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +20,7 @@ if str(_PROJECT_ROOT) not in sys.path:
 _cache: dict[str, str] = {}
 
 
-def get_secret(name: str, field: str = "password", *, use_cache: bool = True) -> Optional[str]:
+def get_secret(name: str, field: str = "password", *, use_cache: bool = True) -> str | None:
     """Resolve um secret a partir dos backends configurados."""
     cache_key = f"{name}:{field}"
     if use_cache and cache_key in _cache:
@@ -95,7 +94,7 @@ def get_clear_integration_status() -> dict[str, object]:
     }
 
 
-def _try_vault_import(name: str, field: str) -> Optional[str]:
+def _try_vault_import(name: str, field: str) -> str | None:
     """Tenta acesso direto ao vault local."""
     _configure_vault_runtime_env()
     try:
@@ -132,7 +131,7 @@ def _configure_vault_runtime_env() -> None:
             os.environ["SECRETS_AGENT_DATA"] = str(homelab_data)
 
 
-def _try_env_var(name: str, field: str) -> Optional[str]:
+def _try_env_var(name: str, field: str) -> str | None:
     """Tenta ler de uma variável de ambiente normalizada."""
     env_name = name.replace("/", "_").upper()
     if field and field not in ("password",):

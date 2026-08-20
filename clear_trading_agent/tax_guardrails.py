@@ -36,9 +36,9 @@ import json
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ class TaxEvent:
     commission: float = 0.0     # Custo operacional
     irrf: float = 0.0          # IRRF retido
     tax_exempt: bool = False    # Dentro da isenção de R$20k?
-    buy_date: Optional[str] = None  # Data da compra (para classificar swing/day)
+    buy_date: str | None = None  # Data da compra (para classificar swing/day)
 
 
 @dataclass
@@ -92,7 +92,7 @@ class MonthlyTaxSummary:
     futures_daytrade_pnl: float = 0.0       # PnL futuros day trade
     irrf_total: float = 0.0                 # IRRF retido no mês
     commissions_total: float = 0.0          # Total de custos operacionais
-    events: List[TaxEvent] = field(default_factory=list)
+    events: list[TaxEvent] = field(default_factory=list)
 
     @property
     def equity_swing_exempt(self) -> bool:
@@ -143,7 +143,7 @@ class MonthlyTaxSummary:
         )
         return max(0, gross - self.irrf_total)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serializa para dicionário."""
         return {
             "year_month": self.year_month,
@@ -188,7 +188,7 @@ class AccumulatedLosses:
         setattr(self, category, accumulated + compensable)
         return gain - compensable
 
-    def to_dict(self) -> Dict[str, float]:
+    def to_dict(self) -> dict[str, float]:
         """Serializa para dicionário."""
         return {
             "equity_swing": round(self.equity_swing, 2),
@@ -206,7 +206,7 @@ class GuardrailDecision:
     allowed: bool
     reason: str
     guardrail: str              # Nome do guardrail que atuou
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)
 
 
 # ====================== TAX TRACKER ======================
@@ -219,8 +219,8 @@ class TaxTracker:
 
     def __init__(
         self,
-        config: Optional[Dict[str, Any]] = None,
-        persist_path: Optional[Path] = None,
+        config: dict[str, Any] | None = None,
+        persist_path: Path | None = None,
     ) -> None:
         cfg = config or {}
         self._safety_margin = float(cfg.get(
@@ -237,9 +237,9 @@ class TaxTracker:
         self._persist_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Estado
-        self._monthly: Dict[str, MonthlyTaxSummary] = {}
+        self._monthly: dict[str, MonthlyTaxSummary] = {}
         self._losses = AccumulatedLosses()
-        self._buy_dates: Dict[str, str] = {}  # symbol → date da compra mais antiga
+        self._buy_dates: dict[str, str] = {}  # symbol → date da compra mais antiga
 
         self._load_state()
 
@@ -301,7 +301,7 @@ class TaxTracker:
         """Retorna mês atual no formato YYYY-MM."""
         return datetime.now(BRT).strftime("%Y-%m")
 
-    def _get_month(self, year_month: Optional[str] = None) -> MonthlyTaxSummary:
+    def _get_month(self, year_month: str | None = None) -> MonthlyTaxSummary:
         """Obtém ou cria summary do mês."""
         ym = year_month or self._current_month()
         if ym not in self._monthly:
@@ -552,7 +552,7 @@ class TaxTracker:
 
         # Log
         exempt_tag = " [ISENTO]" if tax_exempt else ""
-        dt_tag = f" [DAY TRADE 20%]" if trade_type == "daytrade" else ""
+        dt_tag = " [DAY TRADE 20%]" if trade_type == "daytrade" else ""
         logger.info(
             "📋 TAX SELL: %s %s %.0f @ R$%.2f = R$%.2f PnL "
             "(IRRF=R$%.4f, sales_mth=R$%.2f)%s%s",
@@ -565,7 +565,7 @@ class TaxTracker:
 
     # ====================== CONSULTAS ======================
 
-    def get_monthly_summary(self, year_month: Optional[str] = None) -> MonthlyTaxSummary:
+    def get_monthly_summary(self, year_month: str | None = None) -> MonthlyTaxSummary:
         """Retorna resumo fiscal do mês."""
         return self._get_month(year_month)
 
@@ -573,7 +573,7 @@ class TaxTracker:
         """Retorna prejuízos acumulados por categoria."""
         return self._losses
 
-    def get_darf_due(self, year_month: Optional[str] = None) -> Dict[str, Any]:
+    def get_darf_due(self, year_month: str | None = None) -> dict[str, Any]:
         """Calcula DARF devida para o mês (pagar até último dia útil mês seguinte).
 
         Returns:
@@ -593,7 +593,7 @@ class TaxTracker:
         due_date = f"{due_year}-{due_month:02d}-28"
 
         # Categorias
-        result: Dict[str, Any] = {
+        result: dict[str, Any] = {
             "year_month": ym,
             "due_date": due_date,
         }
@@ -669,7 +669,7 @@ class TaxTracker:
 
         return result
 
-    def get_status(self) -> Dict[str, Any]:
+    def get_status(self) -> dict[str, Any]:
         """Retorna status completo do tracker fiscal."""
         month = self._get_month()
         return {

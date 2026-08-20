@@ -27,10 +27,9 @@ import tempfile
 import threading
 import time
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -96,10 +95,10 @@ class MarketSnapshot:
     ema_20: float = 0.0
 
     # Resultado futuro (preenchido retrospectivamente)
-    price_change_5m: Optional[float] = None
-    price_change_15m: Optional[float] = None
-    price_change_60m: Optional[float] = None
-    outcome: Optional[str] = None  # "BULL", "BEAR", "FLAT"
+    price_change_5m: float | None = None
+    price_change_15m: float | None = None
+    price_change_60m: float | None = None
+    outcome: str | None = None  # "BULL", "BEAR", "FLAT"
 
     def to_embedding(self) -> np.ndarray:
         """Converte snapshot para vetor numérico normalizado (20-dim)."""
@@ -182,7 +181,7 @@ class MarketSnapshot:
             return 1.0
         return 0.0
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Serializa para dicionário."""
         return {
             "timestamp": self.timestamp,
@@ -274,7 +273,7 @@ class RegimeAdjustment:
     ollama_suggested_max_position_pct: float = 0.0
     ollama_suggested_max_positions: int = 0
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Serializa para dicionário."""
         return {
             "timestamp": self.timestamp,
@@ -325,7 +324,7 @@ class VectorStore:
         self.dim = dim
         self.max_size = max_size
         self._embeddings: np.ndarray = np.empty((0, dim), dtype=np.float32)
-        self._metadata: List[Dict] = []
+        self._metadata: list[dict] = []
         self._dirty = False
 
     @property
@@ -333,7 +332,7 @@ class VectorStore:
         """Número de vetores armazenados."""
         return len(self._metadata)
 
-    def add(self, embedding: np.ndarray, metadata: Dict) -> None:
+    def add(self, embedding: np.ndarray, metadata: dict) -> None:
         """Adiciona um vetor ao store."""
         vec = embedding.reshape(1, -1).astype(np.float32)
         if self._embeddings.shape[0] == 0:
@@ -347,7 +346,7 @@ class VectorStore:
             self._embeddings = self._embeddings[-self.max_size:]
             self._metadata = self._metadata[-self.max_size:]
 
-    def search(self, query: np.ndarray, top_k: int = TOP_K) -> List[Tuple[float, Dict]]:
+    def search(self, query: np.ndarray, top_k: int = TOP_K) -> list[tuple[float, dict]]:
         """Busca os top_k vetores mais similares por cosseno."""
         if self.size == 0:
             return []
@@ -451,16 +450,16 @@ class MarketDataCollector:
     def __init__(self, symbol: str = "PETR4") -> None:
         self.symbol = symbol
         self._price_history: deque = deque(maxlen=500)
-        self._last_candles: List[Dict] = []
+        self._last_candles: list[dict] = []
         self._last_candle_fetch: float = 0.0
 
     def collect_snapshot(
         self,
-        price: Optional[float] = None,
-        indicators: Optional[object] = None,
-        spread_analysis: Optional[Dict] = None,
-        flow_analysis: Optional[Dict] = None,
-    ) -> Optional[MarketSnapshot]:
+        price: float | None = None,
+        indicators: object | None = None,
+        spread_analysis: dict | None = None,
+        flow_analysis: dict | None = None,
+    ) -> MarketSnapshot | None:
         """Coleta um snapshot completo do mercado B3.
 
         Args:
@@ -590,13 +589,13 @@ class RegimeAdjuster:
 
     def __init__(self, symbol: str = "PETR4") -> None:
         self.symbol = symbol
-        self._last_adjustment: Optional[RegimeAdjustment] = None
+        self._last_adjustment: RegimeAdjustment | None = None
         self._adjustment_history: deque = deque(maxlen=100)
 
     def calculate_adjustment(
         self,
         current_snapshot: MarketSnapshot,
-        similar_results: List[Tuple[float, Dict]],
+        similar_results: list[tuple[float, dict]],
     ) -> RegimeAdjustment:
         """Calcula ajuste de regime baseado em padrões similares."""
         adjustment = RegimeAdjustment(
@@ -741,7 +740,7 @@ class RegimeAdjuster:
 
     def _calculate_ai_buy_target(
         self, adj: RegimeAdjustment, current_price: float,
-        store: Optional[VectorStore] = None,
+        store: VectorStore | None = None,
     ) -> None:
         """Calcula preço alvo de compra baseado em análise técnica."""
         try:
@@ -753,7 +752,7 @@ class RegimeAdjuster:
                 adj.ai_buy_target_reason = "sem_dados:aceitar_preco_atual"
                 return
 
-            recent_prices: List[float] = []
+            recent_prices: list[float] = []
             n = min(200, store.size)
             for i in range(store.size - n, store.size):
                 meta = store._metadata[i]
@@ -817,7 +816,7 @@ class RegimeAdjuster:
 
     def _calculate_ai_take_profit(
         self, adj: RegimeAdjustment, current_price: float,
-        store: Optional[VectorStore] = None,
+        store: VectorStore | None = None,
     ) -> None:
         """Calcula take-profit dinâmico baseado em regime e volatilidade."""
         try:
@@ -860,7 +859,7 @@ class RegimeAdjuster:
     def _calculate_ai_position_size(
         self, adj: RegimeAdjustment, current_price: float,
         avg_entry_price: float = 0.0, position_count: int = 0,
-        brl_balance: float = 0.0, store: Optional[VectorStore] = None,
+        brl_balance: float = 0.0, store: VectorStore | None = None,
     ) -> None:
         """Calcula tamanho e nº máximo de entradas controlado pela IA."""
         try:
@@ -956,7 +955,7 @@ class MarketRAG:
         )
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._last_snapshot_time: float = 0.0
         self._last_recalibrate_time: float = 0.0
         self._stats = {
@@ -964,7 +963,7 @@ class MarketRAG:
             "recalibrations": 0,
             "outcomes_updated": 0,
         }
-        self._trading_context: Dict = {
+        self._trading_context: dict = {
             "avg_entry_price": 0.0,
             "position_count": 0,
             "brl_balance": 0.0,
@@ -972,7 +971,7 @@ class MarketRAG:
             "max_positions": 3,
             "profile": "default",
         }
-        self._ollama_trade_controls: Dict = {}
+        self._ollama_trade_controls: dict = {}
 
         self.store.load()
 
@@ -1026,11 +1025,11 @@ class MarketRAG:
 
     def feed_snapshot(
         self,
-        price: Optional[float] = None,
-        indicators: Optional[object] = None,
-        spread_analysis: Optional[Dict] = None,
-        flow_analysis: Optional[Dict] = None,
-    ) -> Optional[MarketSnapshot]:
+        price: float | None = None,
+        indicators: object | None = None,
+        spread_analysis: dict | None = None,
+        flow_analysis: dict | None = None,
+    ) -> MarketSnapshot | None:
         """Alimenta o RAG com dados do loop de trading."""
         now = time.time()
         if now - self._last_snapshot_time < self.snapshot_interval:
@@ -1048,7 +1047,7 @@ class MarketRAG:
         """Força uma recalibração imediata."""
         return self._recalibrate()
 
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """Retorna estatísticas do RAG."""
         adj = self.get_current_adjustment()
         return {
@@ -1066,7 +1065,7 @@ class MarketRAG:
 
     def set_ollama_trade_controls(
         self,
-        suggestion: Dict,
+        suggestion: dict,
         *,
         mode: str = "shadow",
         trigger: str = "periodic",
@@ -1104,7 +1103,7 @@ class MarketRAG:
         adjustment.ollama_mode = str(self._ollama_trade_controls.get("mode") or "shadow")
 
     def _apply_ollama_trade_controls(
-        self, adjustment: RegimeAdjustment, suggestion: Optional[Dict],
+        self, adjustment: RegimeAdjustment, suggestion: dict | None,
     ) -> None:
         """Aplica sugestão do Ollama sobre o baseline do RAG."""
         if not suggestion:
@@ -1198,7 +1197,7 @@ class MarketRAG:
         if updated > 0:
             self._stats["outcomes_updated"] += updated
 
-    def _find_price_at(self, target_time: float) -> Optional[float]:
+    def _find_price_at(self, target_time: float) -> float | None:
         """Encontra o preço mais próximo de um timestamp alvo."""
         best_price = None
         best_diff = float("inf")
@@ -1276,7 +1275,10 @@ class MarketRAG:
 
     def _run_loop(self) -> None:
         """Loop principal do thread de RAG (respeita horário B3)."""
-        from clear_trading_agent.fast_model import is_market_open, minutes_to_market_open
+        from clear_trading_agent.fast_model import (
+            is_market_open,
+            minutes_to_market_open,
+        )
 
         logger.info("🧠 MarketRAG B3 loop iniciado")
 
