@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
 """Script para forçar interações e persistir no banco de dados"""
-import sys
 import os
+import sys
+
 sys.path.insert(0, '/home/shared/myClaude')
 os.chdir('/home/shared/myClaude')
 
 # Forçar criação do interceptor que vai persistir no SQLite
 from specialized_agents.agent_interceptor import get_agent_interceptor
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+
+from specialized_agents.agent_communication_bus import (
+    MessageType,
+    get_communication_bus,
+)
 
 # Obter instâncias (singletons dentro deste processo)
 interceptor = get_agent_interceptor()
@@ -42,6 +47,7 @@ print(f"✅ {len(msgs)} mensagens enviadas!")
 # Verificar se foram persistidas
 import sqlite3
 from pathlib import Path
+
 from specialized_agents.config import DATA_DIR
 
 db_path = Path(DATA_DIR) / "interceptor_data" / "conversations.db"

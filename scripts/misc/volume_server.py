@@ -11,8 +11,8 @@ Endpoints:
 import http.server
 import json
 import subprocess
-import urllib.parse
 import sys
+import urllib.parse
 
 PORT = 9876
 STEP = 5

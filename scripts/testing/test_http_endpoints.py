@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 """Teste HTTP dos endpoints do interceptador."""
 import subprocess
-import json
-import sys
 
 # Aguardar a API estar pronta
 print("Aguardando API estar pronta...")

@@ -249,7 +249,7 @@ class Handler(BaseHTTPRequestHandler):
             raise ValueError("JSON deve ser objeto")
         return data
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         path = self._strip_prefix(urlparse(self.path).path)
         if path in ("/api/health", "/health"):
             self._json(200, {"ok": True, "config": str(CONFIG_PATH), "ollama": OLLAMA_HOST})
@@ -287,7 +287,7 @@ class Handler(BaseHTTPRequestHandler):
             ctype = "text/css; charset=utf-8"
         self._send(200, target.read_bytes(), ctype)
 
-    def do_PUT(self) -> None:  # noqa: N802
+    def do_PUT(self) -> None:
         path = self._strip_prefix(urlparse(self.path).path)
         if not self._auth_ok():
             self._json(401, {"error": "unauthorized"})
@@ -307,7 +307,7 @@ class Handler(BaseHTTPRequestHandler):
         except Exception as exc:
             self._json(400, {"ok": False, "error": str(exc)})
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         path = self._strip_prefix(urlparse(self.path).path)
         if not self._auth_ok():
             self._json(401, {"error": "unauthorized"})

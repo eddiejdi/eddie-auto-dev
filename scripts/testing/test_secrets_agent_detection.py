@@ -4,6 +4,7 @@ Teste rápido: verifica se o worker detectaria tickets do secrets_agent
 """
 import json
 import sys
+
 sys.path.insert(0, '/home/edenilson/shared-auto-dev')
 
 # Ler board JSON diretamente (sem dependências pesadas)
@@ -49,7 +50,7 @@ for t in secrets_tickets:
 print(f"\n{'='*60}")
 if 'secrets_agent' in agent_names and len(secrets_tickets) > 0:
     print("✅ SUCESSO: Worker detectaria tickets do secrets_agent!")
-    print(f"   - secrets_agent está nos agent_names")
+    print("   - secrets_agent está nos agent_names")
     print(f"   - {len(secrets_tickets)} ticket(s) disponível(is) para processamento")
 else:
     print("❌ FALHA: Worker NÃO detectaria tickets do secrets_agent")

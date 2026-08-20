@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Teste do Instructor Agent"""
 import sys
+
 sys.path.insert(0, '/home/homelab/myClaude')
 
 try:
-    from specialized_agents.instructor_agent import get_instructor, AgentInstructor
+    from specialized_agents.instructor_agent import get_instructor
     print("✅ Importação OK")
     
     instructor = get_instructor()

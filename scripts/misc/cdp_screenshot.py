@@ -3,12 +3,12 @@
 Script para capturar screenshots do Chrome usando CDP direto
 Sem precisar de Selenium conectar remotamente
 """
-import time
-import os
-import json
 import base64
-import urllib.request
+import json
+import os
+import time
 import urllib.parse
+import urllib.request
 
 SCREENSHOT_DIR = '/home/homelab/myClaude/screenshots/oauth_visual'
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
@@ -30,8 +30,9 @@ def get_ws_url():
 
 def take_screenshot_via_devtools():
     """Captura screenshot usando Chrome DevTools Protocol"""
-    import websocket
     import json
+
+    import websocket
     
     ws_url = get_ws_url()
     if not ws_url:
@@ -67,7 +68,7 @@ if __name__ == '__main__':
     print('Testando conexao com Chrome...')
     ws_url = get_ws_url()
     if ws_url:
-        print(f'Chrome conectado!')
+        print('Chrome conectado!')
         take_screenshot_via_devtools()
     else:
         print('Chrome nao acessivel')

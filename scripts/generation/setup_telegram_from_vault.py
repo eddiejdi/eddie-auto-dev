@@ -111,7 +111,7 @@ def save_telegram_config(token: str, chat_id: str) -> bool:
         os.chmod(config_path, 0o600)
         
         print(f"✅ Configuração salva em: {config_path}")
-        print(f"   Permissões: 0600 (somente proprietário)")
+        print("   Permissões: 0600 (somente proprietário)")
         return True
         
     except Exception as e:
@@ -121,8 +121,8 @@ def save_telegram_config(token: str, chat_id: str) -> bool:
 
 def test_telegram_connection(token: str, chat_id: str) -> bool:
     """Testa conexão com Telegram enviando mensagem de teste"""
-    import urllib.request
     import urllib.parse
+    import urllib.request
     
     print("\n🧪 Testando conexão com Telegram...")
     
@@ -156,7 +156,7 @@ def create_item_in_bitwarden(token: str, chat_id: str) -> bool:
     item = {
         "type": 1,  # Login
         "name": "Telegram Bot - RPA4ALL Monitoring",
-        "notes": f"Bot para alertas de monitoramento\nCriado: 2026-02-02\nUso: validation_scheduler.py",
+        "notes": "Bot para alertas de monitoramento\nCriado: 2026-02-02\nUso: validation_scheduler.py",
         "login": {
             "username": "rpa4all_monitoring_bot",
             "password": token

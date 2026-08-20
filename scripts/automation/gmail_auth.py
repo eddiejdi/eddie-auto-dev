@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Autenticação Gmail com Desktop App credentials"""
-import os
 import json
+import os
+
 from google_auth_oauthlib.flow import InstalledAppFlow
-from google.oauth2.credentials import Credentials
 
 SCOPES = [
     'https://www.googleapis.com/auth/gmail.readonly',

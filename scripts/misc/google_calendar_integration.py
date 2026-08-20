@@ -8,19 +8,18 @@ Autor: Shared Assistant
 Data: 2026
 """
 
-import os
-import json
-import pickle
 import asyncio
-import httpx
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any, Tuple
-from pathlib import Path
-from dataclasses import dataclass, field
 import logging
-from dateutil import parser as date_parser
-from dateutil.tz import tzlocal
+import os
+import pickle
 import re
+from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any
+
+import httpx
+from dateutil import parser as date_parser
 
 # Configurar logging
 logging.basicConfig(
@@ -52,7 +51,7 @@ SCOPES = [
 
 # Configurações de notificação (sempre obter chaves do cofre)
 try:
-    from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+    from tools.secrets_loader import get_telegram_chat_id, get_telegram_token
     TELEGRAM_BOT_TOKEN = get_telegram_token()
     TELEGRAM_ADMIN_CHAT_ID = get_telegram_chat_id()
 except Exception:
@@ -75,15 +74,15 @@ class CalendarEvent:
     start: datetime = None
     end: datetime = None
     location: str = ""
-    attendees: List[str] = field(default_factory=list)
-    reminders: List[int] = field(default_factory=lambda: [30, 10])  # minutos
+    attendees: list[str] = field(default_factory=list)
+    reminders: list[int] = field(default_factory=lambda: [30, 10])  # minutos
     recurring: str = None  # DAILY, WEEKLY, MONTHLY, YEARLY
     all_day: bool = False
     color_id: str = None
     created_at: datetime = None
     updated_at: datetime = None
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Converte para dicionário para API"""
         event_dict = {
             'summary': self.summary,
@@ -131,7 +130,7 @@ class CalendarEvent:
         return event_dict
     
     @classmethod
-    def from_api(cls, data: Dict[str, Any]) -> 'CalendarEvent':
+    def from_api(cls, data: dict[str, Any]) -> 'CalendarEvent':
         """Cria evento a partir de dados da API"""
         start_data = data.get('start', {})
         end_data = data.get('end', {})
@@ -244,7 +243,7 @@ class GoogleCalendarClient:
             self.credentials = None
 
     @staticmethod
-    def _client_config_from_vault() -> Optional[dict]:
+    def _client_config_from_vault() -> dict | None:
         """Monta o client config OAuth do Google a partir do Authentik.
 
         Substitui o `credentials.json` solto em disco: o client_id/secret do
@@ -310,14 +309,14 @@ class GoogleCalendarClient:
         
         return True
     
-    async def authenticate(self, auth_code: str = None) -> Tuple[bool, str]:
+    async def authenticate(self, auth_code: str = None) -> tuple[bool, str]:
         """
         Autentica com Google Calendar
         Se auth_code não fornecido, retorna URL de autenticação
         """
         try:
-            from google_auth_oauthlib.flow import InstalledAppFlow
             from google.auth.transport.requests import Request
+            from google_auth_oauthlib.flow import InstalledAppFlow
             from googleapiclient.discovery import build
             
             # Verificar se já tem credenciais válidas
@@ -369,7 +368,7 @@ class GoogleCalendarClient:
             return False, "Bibliotecas Google não instaladas. Execute: pip install google-auth-oauthlib google-api-python-client"
         except Exception as e:
             logger.error(f"Erro na autenticação: {e}")
-            return False, f"Erro na autenticação: {str(e)}"
+            return False, f"Erro na autenticação: {e!s}"
     
     async def ensure_service(self) -> bool:
         """Garante que o serviço está inicializado"""
@@ -387,7 +386,7 @@ class GoogleCalendarClient:
             logger.error(f"Erro ao inicializar serviço: {e}")
             return False
     
-    async def create_event(self, event: CalendarEvent) -> Tuple[bool, str, Optional[CalendarEvent]]:
+    async def create_event(self, event: CalendarEvent) -> tuple[bool, str, CalendarEvent | None]:
         """Cria um novo evento"""
         if not await self.ensure_service():
             return False, "Não autenticado. Use /calendar auth", None
@@ -405,9 +404,9 @@ class GoogleCalendarClient:
             
         except Exception as e:
             logger.error(f"Erro ao criar evento: {e}")
-            return False, f"❌ Erro ao criar evento: {str(e)}", None
+            return False, f"❌ Erro ao criar evento: {e!s}", None
     
-    async def get_event(self, event_id: str) -> Tuple[bool, str, Optional[CalendarEvent]]:
+    async def get_event(self, event_id: str) -> tuple[bool, str, CalendarEvent | None]:
         """Obtém um evento específico"""
         if not await self.ensure_service():
             return False, "Não autenticado", None
@@ -423,9 +422,9 @@ class GoogleCalendarClient:
             
         except Exception as e:
             logger.error(f"Erro ao buscar evento: {e}")
-            return False, f"Erro ao buscar evento: {str(e)}", None
+            return False, f"Erro ao buscar evento: {e!s}", None
     
-    async def update_event(self, event_id: str, event: CalendarEvent) -> Tuple[bool, str]:
+    async def update_event(self, event_id: str, event: CalendarEvent) -> tuple[bool, str]:
         """Atualiza um evento existente"""
         if not await self.ensure_service():
             return False, "Não autenticado"
@@ -439,13 +438,13 @@ class GoogleCalendarClient:
             ).execute()
             
             logger.info(f"Evento atualizado: {event_id}")
-            return True, f"✅ Evento atualizado!"
+            return True, "✅ Evento atualizado!"
             
         except Exception as e:
             logger.error(f"Erro ao atualizar evento: {e}")
-            return False, f"❌ Erro ao atualizar: {str(e)}"
+            return False, f"❌ Erro ao atualizar: {e!s}"
     
-    async def delete_event(self, event_id: str) -> Tuple[bool, str]:
+    async def delete_event(self, event_id: str) -> tuple[bool, str]:
         """Deleta um evento"""
         if not await self.ensure_service():
             return False, "Não autenticado"
@@ -461,13 +460,13 @@ class GoogleCalendarClient:
             
         except Exception as e:
             logger.error(f"Erro ao deletar evento: {e}")
-            return False, f"❌ Erro ao deletar: {str(e)}"
+            return False, f"❌ Erro ao deletar: {e!s}"
     
     async def list_events(self, 
                           time_min: datetime = None,
                           time_max: datetime = None,
                           max_results: int = 10,
-                          query: str = None) -> Tuple[bool, str, List[CalendarEvent]]:
+                          query: str = None) -> tuple[bool, str, list[CalendarEvent]]:
         """Lista eventos do calendário"""
         if not await self.ensure_service():
             return False, "Não autenticado", []
@@ -505,9 +504,9 @@ class GoogleCalendarClient:
             
         except Exception as e:
             logger.error(f"Erro ao listar eventos: {e}")
-            return False, f"Erro ao listar eventos: {str(e)}", []
+            return False, f"Erro ao listar eventos: {e!s}", []
     
-    async def get_upcoming_events(self, hours: int = 24) -> List[CalendarEvent]:
+    async def get_upcoming_events(self, hours: int = 24) -> list[CalendarEvent]:
         """Obtém eventos das próximas horas"""
         time_min = datetime.now()
         time_max = time_min + timedelta(hours=hours)
@@ -523,7 +522,7 @@ class GoogleCalendarClient:
     async def search_free_time(self, 
                                duration_minutes: int,
                                date: datetime = None,
-                               work_hours: Tuple[int, int] = (9, 18)) -> List[Tuple[datetime, datetime]]:
+                               work_hours: tuple[int, int] = (9, 18)) -> list[tuple[datetime, datetime]]:
         """Busca horários livres no calendário"""
         if not date:
             date = datetime.now()
@@ -557,7 +556,7 @@ class GoogleCalendarClient:
         
         return free_slots
     
-    async def list_calendars(self) -> Tuple[bool, str, List[Dict]]:
+    async def list_calendars(self) -> tuple[bool, str, list[dict]]:
         """Lista todos os calendários disponíveis"""
         if not await self.ensure_service():
             return False, "Não autenticado", []
@@ -575,7 +574,7 @@ class GoogleCalendarClient:
             
         except Exception as e:
             logger.error(f"Erro ao listar calendários: {e}")
-            return False, f"Erro: {str(e)}", []
+            return False, f"Erro: {e!s}", []
     
     def set_calendar(self, calendar_id: str):
         """Define o calendário a ser usado"""
@@ -670,7 +669,7 @@ class NotificationManager:
         return results
     
     async def send_daily_agenda(self, 
-                                events: List[CalendarEvent],
+                                events: list[CalendarEvent],
                                 telegram_chat_id: int = None,
                                 whatsapp_number: str = None):
         """Envia agenda diária"""
@@ -707,9 +706,9 @@ class CalendarAssistant:
     def __init__(self):
         self.calendar = GoogleCalendarClient()
         self.notifications = NotificationManager()
-        self.pending_events: Dict[str, CalendarEvent] = {}
+        self.pending_events: dict[str, CalendarEvent] = {}
     
-    def parse_datetime(self, text: str, reference: datetime = None) -> Optional[datetime]:
+    def parse_datetime(self, text: str, reference: datetime = None) -> datetime | None:
         """Converte texto em datetime"""
         if not reference:
             reference = datetime.now()
@@ -820,7 +819,7 @@ class CalendarAssistant:
         
         return timedelta(hours=hours, minutes=minutes)
     
-    async def parse_event_from_text(self, text: str) -> Tuple[Optional[CalendarEvent], str]:
+    async def parse_event_from_text(self, text: str) -> tuple[CalendarEvent | None, str]:
         """Extrai informações de evento a partir de texto natural"""
         
         # Padrões para extrair informações
@@ -1057,7 +1056,7 @@ Você pode me pedir naturalmente:
 
 
 # Instância global
-_calendar_assistant: Optional[CalendarAssistant] = None
+_calendar_assistant: CalendarAssistant | None = None
 
 
 def get_calendar_assistant() -> CalendarAssistant:

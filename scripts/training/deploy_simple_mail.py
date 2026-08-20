@@ -4,9 +4,8 @@ Simplified Email Server Deployment Script
 Uses lightweight, publicly available Docker images (Postfix, Dovecot, Roundcube)
 """
 
-import os
-import sys
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -60,7 +59,7 @@ def check_network() -> bool:
     output = run_cmd(["docker", "network", "ls", "--filter", "name=homelab_monitoring", "-q"], check=False)
     
     if output:
-        print(f"✓ Network 'homelab_monitoring' already exists")
+        print("✓ Network 'homelab_monitoring' already exists")
         return True
     else:
         print("ℹ Creating network 'homelab_monitoring'...")
@@ -195,7 +194,7 @@ def wait_for_services(timeout: int = 120) -> bool:
             print("✓ All services are running")
             return True
         
-        print("⏳ Waiting for services... ({:.0f}s)".format(time.time() - start_time))
+        print(f"⏳ Waiting for services... ({time.time() - start_time:.0f}s)")
         time.sleep(5)
     
     print("✗ Services did not start within timeout")

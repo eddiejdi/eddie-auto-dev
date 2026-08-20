@@ -3,10 +3,7 @@
 Script Selenium para configurar OAuth com captura de cada passo
 Executa no Windows usando Chrome com perfil logado
 """
-import time
 import os
-import subprocess
-from datetime import datetime
 
 # Diretorio para screenshots
 SCREENSHOT_DIR = '/home/homelab/myClaude/screenshots/oauth_setup'

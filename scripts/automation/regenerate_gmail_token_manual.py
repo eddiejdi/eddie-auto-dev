@@ -3,12 +3,12 @@
 Regenerar token Gmail com autorização manual (para ambientes sem navegador).
 O usuário acessa a URL no navegador, autoriza, e cola o código aqui.
 """
+import base64
 import json
 import subprocess
-import base64
 from pathlib import Path
+
 from google_auth_oauthlib.flow import InstalledAppFlow
-from google.oauth2.credentials import Credentials
 
 SECRETS_AGENT_HOST = "192.168.15.2"
 SECRETS_AGENT_DB = "/var/lib/shared/secrets_agent/audit.db"
@@ -129,7 +129,7 @@ def main():
         
         # Get credentials
         creds_json = get_credentials_json()
-        print(f"✅ Credenciais obtidas do Secrets Agent")
+        print("✅ Credenciais obtidas do Secrets Agent")
         
         # Create temp file
         temp_creds = Path("/tmp/credentials_temp.json")
@@ -169,7 +169,7 @@ def main():
             return False
         
         # Exchange code for token
-        print(f"\n🔄 Trocando código por token...")
+        print("\n🔄 Trocando código por token...")
         try:
             flow.fetch_token(code=auth_code)
             creds = flow.credentials

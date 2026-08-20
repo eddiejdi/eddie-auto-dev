@@ -4,8 +4,9 @@ import logging
 import os
 import sys
 import time
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any
 
 try:
     import psycopg2
@@ -17,7 +18,6 @@ else:
     REAL_DICT_CURSOR = psycopg2.extras.RealDictCursor
 import requests
 
-
 RUNTIME_DIR = Path(os.environ.get("BTC_AGENT_DIR", "/apps/crypto-trader/trading/btc_trading_agent"))
 if str(RUNTIME_DIR) not in sys.path:
     sys.path.insert(0, str(RUNTIME_DIR))
@@ -27,9 +27,11 @@ if REPO_AGENT_DIR.exists() and str(REPO_AGENT_DIR) not in sys.path:
 
 import kucoin_api  # type: ignore
 from kucoin_api import get_balances, get_fills, get_price_fast  # type: ignore
-from position_reconstruction import reconstruct_open_buys, summarize_open_buys  # type: ignore
+from position_reconstruction import (  # type: ignore
+    reconstruct_open_buys,
+    summarize_open_buys,
+)
 from secrets_helper import get_database_url  # type: ignore
-
 
 LOG = logging.getLogger("kucoin_postgres_sync")
 logging.basicConfig(
@@ -169,7 +171,7 @@ def _last_usdt_brl_trade(conn, max_age_days: float = 7.0) -> float:
         return 0.0
 
 
-def _get_sync_cursor_ms(conn, sync_key: str) -> Optional[int]:
+def _get_sync_cursor_ms(conn, sync_key: str) -> int | None:
     with conn.cursor() as cur:
         cur.execute(
             f"SELECT cursor_value FROM {SCHEMA}.exchange_sync_state WHERE sync_key = %s",
@@ -201,9 +203,9 @@ def _snapshot_balances(conn) -> int:
         usdt_brl = _last_usdt_brl_trade(conn)
     btc_usdt = get_price_fast("BTC-USDT", timeout=5) or 0.0
 
-    _price_cache: Dict[str, Optional[float]] = {}
+    _price_cache: dict[str, float | None] = {}
 
-    def price_in_usdt(currency: str) -> Optional[float]:
+    def price_in_usdt(currency: str) -> float | None:
         if currency == "USDT":
             return 1.0
         if currency == "BTC":
@@ -285,8 +287,8 @@ def _snapshot_balances(conn) -> int:
     return counts
 
 
-def _aggregate_fills(fills: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
-    grouped: Dict[str, Dict[str, Any]] = {}
+def _aggregate_fills(fills: Iterable[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    grouped: dict[str, dict[str, Any]] = {}
     for fill in fills:
         order_id = str(fill.get("orderId") or fill.get("order_id") or "").strip()
         trade_id = str(fill.get("tradeId") or fill.get("trade_id") or "").strip()
@@ -326,7 +328,7 @@ def _aggregate_fills(fills: Iterable[Dict[str, Any]]) -> Dict[str, Dict[str, Any
     return grouped
 
 
-def _row_event_timestamp(row: Dict[str, Any]) -> float:
+def _row_event_timestamp(row: dict[str, Any]) -> float:
     created_at = row.get("created_at")
     try:
         if created_at is None:
@@ -336,7 +338,7 @@ def _row_event_timestamp(row: Dict[str, Any]) -> float:
         return time.time()
 
 
-def _parse_metadata(value: Any) -> Dict[str, Any]:
+def _parse_metadata(value: Any) -> dict[str, Any]:
     if isinstance(value, dict):
         return value
     if not value:
@@ -348,14 +350,14 @@ def _parse_metadata(value: Any) -> Dict[str, Any]:
     return parsed if isinstance(parsed, dict) else {}
 
 
-def _fill_notional_usdt(fill: Dict[str, Any]) -> float:
+def _fill_notional_usdt(fill: dict[str, Any]) -> float:
     funds = _safe_float(fill.get("funds"))
     if funds > 0:
         return funds
     return _safe_float(fill.get("price")) * _safe_float(fill.get("size"))
 
 
-def _fee_usdt_from_fill(fill: Dict[str, Any], notional_usdt: float) -> float:
+def _fee_usdt_from_fill(fill: dict[str, Any], notional_usdt: float) -> float:
     fee = _safe_float(fill.get("fee"))
     currency = str(fill.get("feeCurrency") or "USDT").upper()
     if fee <= 0:
@@ -367,14 +369,14 @@ def _fee_usdt_from_fill(fill: Dict[str, Any], notional_usdt: float) -> float:
     return notional_usdt * rate
 
 
-def _sum_sell_fees_usdt(raw_fills: Iterable[Dict[str, Any]]) -> float:
+def _sum_sell_fees_usdt(raw_fills: Iterable[dict[str, Any]]) -> float:
     total = 0.0
     for fill in raw_fills:
         total += _fee_usdt_from_fill(fill, _fill_notional_usdt(fill))
     return total
 
 
-def _buy_fee_usdt(price: float, size: float, metadata: Dict[str, Any]) -> float:
+def _buy_fee_usdt(price: float, size: float, metadata: dict[str, Any]) -> float:
     fills = metadata.get("fills")
     if isinstance(fills, list) and fills:
         return sum(
@@ -385,7 +387,7 @@ def _buy_fee_usdt(price: float, size: float, metadata: Dict[str, Any]) -> float:
     return price * size * TRADING_FEE_PCT
 
 
-def _consume_buy_queue(queue: list[Dict[str, Any]], amount: float) -> None:
+def _consume_buy_queue(queue: list[dict[str, Any]], amount: float) -> None:
     remaining = amount
     while remaining > 1e-12 and queue:
         head = queue[0]
@@ -397,14 +399,14 @@ def _consume_buy_queue(queue: list[Dict[str, Any]], amount: float) -> None:
 
 
 def _fifo_cost_for_sell(
-    trades_before: Iterable[Dict[str, Any]],
+    trades_before: Iterable[dict[str, Any]],
     sell_size: float,
-) -> Optional[tuple[float, float, float]]:
+) -> tuple[float, float, float] | None:
     """Retorna (avg_entry, buy_fees_usdt, matched_size) via FIFO."""
     if sell_size <= 0:
         return None
 
-    queue: list[Dict[str, Any]] = []
+    queue: list[dict[str, Any]] = []
     for trade in trades_before:
         side = str(trade.get("side") or "").lower()
         metadata = _parse_metadata(trade.get("metadata"))
@@ -463,7 +465,7 @@ def _load_trades_before_sell(
     profile: str,
     sell_ts: float,
     sell_id: int,
-) -> list[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     cur.execute(
         f"""
         SELECT id, side, price, size, timestamp, metadata
@@ -614,9 +616,9 @@ def _trades_has_profile(conn) -> bool:
 def _match_orphan_to_fill(
     cur,
     order_id: str,
-    row: Dict[str, Any],
+    row: dict[str, Any],
     event_ts: float,
-) -> Optional[int]:
+) -> int | None:
     """Tenta vincular um fill KuCoin a um trade órfão do agent (sem order_id).
 
     Procura trades com source='external_deposit' ou sem order_id que tenham
@@ -804,13 +806,13 @@ def _cleanup_duplicate_orphans(conn) -> int:
     return cleaned
 
 
-def _reconcile_position_integrity(conn) -> Dict[str, Any]:
+def _reconcile_position_integrity(conn) -> dict[str, Any]:
     """Verifica integridade de posição: detecta trades fantasmas e registra estado.
 
     Calcula posição teórica (SUM BUY - SUM SELL) por profile e compara com
     o saldo real na exchange. Registra resultado no exchange_sync_state.
     """
-    result: Dict[str, Any] = {"profiles": {}, "orphan_count": 0, "reconciled": 0}
+    result: dict[str, Any] = {"profiles": {}, "orphan_count": 0, "reconciled": 0}
 
     with conn.cursor(cursor_factory=REAL_DICT_CURSOR) as cur:
         cur.execute(f"""
@@ -892,7 +894,7 @@ def _reconcile_position_integrity(conn) -> Dict[str, Any]:
 
         # Buscar saldo real exchange para comparar
         try:
-            exchange_balances: Dict[str, float] = {}
+            exchange_balances: dict[str, float] = {}
             base_balance = 0.0
             for acc in get_balances(account_type="trade"):
                 if acc.get("currency") == "BTC":
@@ -984,9 +986,9 @@ _PROFILE_MIN_OPEN_POSITION = 0.000001
 
 def _match_open_buy_profile(
     cur,
-    row: Dict[str, Any],
+    row: dict[str, Any],
     event_ts: float,
-) -> Optional[str]:
+) -> str | None:
     """Retorna o profile que possui BUY aberto correspondente a um fill SELL.
 
     Em contas compartilhadas, um fill SELL da exchange pode fechar um BUY
@@ -1219,7 +1221,7 @@ def _sync_fills(conn) -> int:
 def _fetch_account_ledgers(
     start_ms: int,
     end_ms: int,
-    currency: Optional[str] = None,
+    currency: str | None = None,
     page_size: int = 500,
 ) -> list[dict[str, Any]]:
     page = 1
@@ -1269,7 +1271,7 @@ def _sync_account_ledgers(conn) -> int:
     rows_seen = 0
     now_ms = int(time.time() * 1000)
     last_cursor_ms = _get_sync_cursor_ms(conn, ACCOUNT_LEDGER_SYNC_KEY)
-    currency_filter: Optional[str] = None
+    currency_filter: str | None = None
     if last_cursor_ms is None:
         start_ms = now_ms - LEDGER_BACKFILL_MS
         currency_filter = "BRL"

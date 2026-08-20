@@ -11,8 +11,8 @@ from specialized_agents.resource_manager import (
     ResourceManager,
     ResourceMetrics,
     ResourceStatus,
-    TaskPriority,
 )
+
 
 def test_exhausted_status():
     """Test that metrics with 100% load returns EXHAUSTED"""
@@ -23,11 +23,11 @@ def test_exhausted_status():
         gpu_utilization=100.0,
         active_tasks=50,
     )
-    print(f"✓ Metrics: cpu=100%, mem=100%, gpu=100%, tasks=50")
+    print("✓ Metrics: cpu=100%, mem=100%, gpu=100%, tasks=50")
     print(f"  overall_load = {metrics.overall_load:.4f}")
     print(f"  status = {metrics.status}")
     assert metrics.status == ResourceStatus.EXHAUSTED, f"Expected EXHAUSTED, got {metrics.status}"
-    print(f"  ✓ Status is EXHAUSTED")
+    print("  ✓ Status is EXHAUSTED")
     return True
 
 def test_critical_status():
@@ -39,11 +39,11 @@ def test_critical_status():
         gpu_utilization=70.0,
         active_tasks=3,
     )
-    print(f"✓ Metrics: cpu=95%, mem=80%, gpu=70%, tasks=3")
+    print("✓ Metrics: cpu=95%, mem=80%, gpu=70%, tasks=3")
     print(f"  overall_load = {metrics.overall_load:.4f}")
     print(f"  status = {metrics.status}")
     assert metrics.status == ResourceStatus.CRITICAL, f"Expected CRITICAL, got {metrics.status}"
-    print(f"  ✓ Status is CRITICAL")
+    print("  ✓ Status is CRITICAL")
     return True
 
 def test_agent_selection():
@@ -71,12 +71,12 @@ def test_agent_selection():
     rm.update_metrics("go", go_metrics)
     
     best_lang, score = rm.select_best_agent()
-    print(f"✓ Agent Selection Test")
+    print("✓ Agent Selection Test")
     print(f"  Python load: {python_metrics.overall_load:.4f}")
     print(f"  Go load: {go_metrics.overall_load:.4f}")
     print(f"  Selected: {best_lang} with score {score:.4f}")
     assert best_lang == "go", f"Expected 'go', got '{best_lang}'"
-    print(f"  ✓ Go selected (lighter load)")
+    print("  ✓ Go selected (lighter load)")
     return True
 
 def test_recency():
@@ -99,12 +99,12 @@ def test_recency():
     rm.agent_last_execution["javascript"] = datetime.now() - timedelta(hours=1)
     
     best_lang, score = rm.select_best_agent()
-    print(f"✓ Recency (LRU) Test")
-    print(f"  Python: used now")
-    print(f"  JavaScript: used 1 hour ago")
+    print("✓ Recency (LRU) Test")
+    print("  Python: used now")
+    print("  JavaScript: used 1 hour ago")
     print(f"  Selected: {best_lang} with score {score:.4f}")
     assert best_lang == "javascript", f"Expected 'javascript', got '{best_lang}'"
-    print(f"  ✓ JavaScript selected (not used recently)")
+    print("  ✓ JavaScript selected (not used recently)")
     return True
 
 def test_task_tracking():
@@ -113,12 +113,12 @@ def test_task_tracking():
     
     # Allocate tasks
     success, reason, task_id = rm.allocate_task("task_1", "python")
-    assert success and task_id, f"Failed to allocate task_1"
+    assert success and task_id, "Failed to allocate task_1"
     
     success, reason, task_id2 = rm.allocate_task("task_2", "python")
-    assert success and task_id2, f"Failed to allocate task_2"
+    assert success and task_id2, "Failed to allocate task_2"
     
-    print(f"✓ Allocated 2 tasks")
+    print("✓ Allocated 2 tasks")
     
     # Start first task
     rm.start_task("task_1")
@@ -130,7 +130,7 @@ def test_task_tracking():
     
     assert summary['active_tasks'] == 1, f"Expected 1 active, got {summary['active_tasks']}"
     assert summary['queued_tasks'] == 1, f"Expected 1 queued, got {summary['queued_tasks']}"
-    print(f"  ✓ Task tracking working")
+    print("  ✓ Task tracking working")
     return True
 
 if __name__ == "__main__":
@@ -155,7 +155,7 @@ if __name__ == "__main__":
             if test_fn():
                 passed += 1
         except Exception as e:
-            print(f"  ✗ FAILED: {str(e)}")
+            print(f"  ✗ FAILED: {e!s}")
             failed += 1
     
     print("\n" + "=" * 60)

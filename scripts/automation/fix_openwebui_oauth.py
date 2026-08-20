@@ -5,8 +5,8 @@ Restaurar login Authentik no Open WebUI
 Análogo ao script para Grafana, mas com configuração específica do Open WebUI.
 """
 
-import subprocess
 import os
+import subprocess
 import sys
 import time
 
@@ -51,9 +51,9 @@ def fix_openwebui():
     print("\n2️⃣  Verificando Open WebUI container...")
     rc, out, err = ssh_cmd("docker ps | grep open-webui")
     if rc != 0 or not out:
-        print(f"   ❌ Container não encontrado")
+        print("   ❌ Container não encontrado")
         return False
-    print(f"   ✅ Container rodando")
+    print("   ✅ Container rodando")
     
     # Step 3: Obter client secret
     print("\n3️⃣  Obtendo client secret do Authentik...")
@@ -64,15 +64,15 @@ def fix_openwebui():
     """
     rc, secret, _ = ssh_cmd(cmd)
     if rc != 0 or not secret or "NOTFOUND" in secret:
-        print(f"   ⚠️  Não conseguiu obter secret")
+        print("   ⚠️  Não conseguiu obter secret")
         return False
-    print(f"   ✅ Secret obtido")
+    print("   ✅ Secret obtido")
     
     # Step 4: Restaurar variáveis
     print("\n4️⃣  Restaurando variáveis de ambiente...")
     
     env_vars = {
-        "OPENID_PROVIDER_URL": f"https://auth.rpa4all.com/application/o/openwebui/.well-known/openid-configuration",
+        "OPENID_PROVIDER_URL": "https://auth.rpa4all.com/application/o/openwebui/.well-known/openid-configuration",
         "OAUTH_CLIENT_ID": "authentik-openwebui",
         "OAUTH_CLIENT_SECRET": secret,
         "OAUTH_PROVIDER_NAME": "Authentik",

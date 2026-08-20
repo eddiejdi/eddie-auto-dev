@@ -4,13 +4,12 @@ Treinar LLM com dados REAIS de chat extraídos do PostgreSQL.
 1939 mensagens de conversa real do sistema.
 """
 
-import json
-import os
-import sys
 import asyncio
-from pathlib import Path
-from typing import List, Dict, Any
+import json
 import logging
+import sys
+from pathlib import Path
+from typing import Any
 
 logging.basicConfig(
     level=logging.INFO,
@@ -28,7 +27,7 @@ class RealChatTrainer:
     
     def __init__(self, data_file: str = "artifacts/real_chat_data.json"):
         self.data_file = Path(data_file)
-        self.messages: List[Dict[str, Any]] = []
+        self.messages: list[dict[str, Any]] = []
     
     def load_data(self) -> bool:
         """Carregar dados do arquivo JSON."""
@@ -54,7 +53,7 @@ class RealChatTrainer:
             logger.error(f"❌ Erro ao carregar: {e}")
             return False
     
-    def extract_training_docs(self) -> List[str]:
+    def extract_training_docs(self) -> list[str]:
         """Extrair documentos de treinamento das mensagens."""
         logger.info("📝 Extracting training documents...")
         docs = []
@@ -105,7 +104,7 @@ Messages ({len(group_msgs)} total):
         logger.info(f"✅ {len(docs)} documentos de treinamento criados")
         return docs
     
-    async def train_rag(self, docs: List[str]) -> int:
+    async def train_rag(self, docs: list[str]) -> int:
         """Treinar RAG com documentos."""
         logger.info("🧠 Iniciando treinamento RAG...")
         
@@ -142,7 +141,7 @@ Messages ({len(group_msgs)} total):
         
         return total_indexed
     
-    async def test_rag(self) -> Dict[str, Any]:
+    async def test_rag(self) -> dict[str, Any]:
         """Testar RAG com queries relevantes."""
         logger.info("🔍 Testando RAG com queries reais...")
         
@@ -208,15 +207,15 @@ async def main():
     print("\n" + "=" * 70)
     print("  ✅ TREINAMENTO COM DADOS REAIS COMPLETO")
     print("=" * 70)
-    print(f"\n📊 Resultados:")
+    print("\n📊 Resultados:")
     print(f"  • Mensagens originais: {len(trainer.messages)}")
     print(f"  • Documentos criados: {len(docs)}")
     print(f"  • Documentos indexados: {indexed}")
     print(f"  • Queries testadas: {len(test_results)}")
     print(f"  • Querys com resultados: {sum(1 for v in test_results.values() if v > 0)}")
     
-    print(f"\n🎯 Status:")
-    print(f"  🟢 RAG pronto para consultas com dados REAIS do sistema")
+    print("\n🎯 Status:")
+    print("  🟢 RAG pronto para consultas com dados REAIS do sistema")
     
     print("\n" + "=" * 70 + "\n")
     

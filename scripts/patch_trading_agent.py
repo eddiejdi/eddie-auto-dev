@@ -48,6 +48,7 @@ else:
 
 # 5. Banner profile — use exact emoji chars from file
 import re
+
 m = re.search(r'(    print\(f"Symbol: \{args\.symbol\}"\)\n)(    print\(f"Mode: )', content)
 if m and 'Profile:' not in content[m.start():m.start()+200]:
     insert_pos = m.start() + len(m.group(1))

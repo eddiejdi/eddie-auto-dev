@@ -6,8 +6,6 @@ Gera relatório com estatísticas e insights
 
 import json
 import statistics
-from datetime import datetime
-from collections import defaultdict
 
 # Carregar dados
 with open('/tmp/autocoinbot_trades.json', 'r') as f:

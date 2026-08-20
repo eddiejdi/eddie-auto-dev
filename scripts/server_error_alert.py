@@ -25,7 +25,6 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
-from typing import Any
 from urllib.parse import quote
 
 
@@ -456,7 +455,7 @@ def _is_noisy(unit: str) -> bool:
 
 def _journal_monitor() -> None:
     cmd = ["journalctl", "-f", "-o", "json", "-p", "err", "--no-pager"]
-    print(f"[journal] monitorando erros de todos os serviços...", flush=True)
+    print("[journal] monitorando erros de todos os serviços...", flush=True)
     while True:
         try:
             proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, text=True, errors="replace")

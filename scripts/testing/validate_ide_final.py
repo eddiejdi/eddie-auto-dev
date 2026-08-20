@@ -63,12 +63,12 @@ def main():
             "return window.getComputedStyle(arguments[0]).flexDirection", container
         )
         
-        print(f"\n🔹 ide-container:")
+        print("\n🔹 ide-container:")
         print(f"  display: {display}")
         print(f"  flex-direction: {flex_direction}")
         
         if display == 'flex' and flex_direction == 'column':
-            print(f"  ✅ Estrutura flex aplicada corretamente!")
+            print("  ✅ Estrutura flex aplicada corretamente!")
         else:
             print(f"  ⚠️  Display está {display} (esperado: flex)")
         
@@ -78,7 +78,7 @@ def main():
         main_area = driver.find_element(By.CSS_SELECTOR, 'div.ide-main')
         
         # 3. Verificar posicionamento e visibilidade
-        print(f"\n🔹 Elementos da IDE:")
+        print("\n🔹 Elementos da IDE:")
         
         for name, elem in [('Toolbar', toolbar), ('AI Bar', ai_bar), ('Main Area', main_area)]:
             computed_height = driver.execute_script(
@@ -90,7 +90,7 @@ def main():
             print(f"  {name}: height={computed_height}, visibility={visibility}")
         
         # 4. Verificar espaçamento relativo
-        print(f"\n🔹 Espaçamento entre elementos:")
+        print("\n🔹 Espaçamento entre elementos:")
         
         toolbar_rect = driver.execute_script(
             "return arguments[0].getBoundingClientRect()", toolbar
@@ -109,14 +109,14 @@ def main():
         print(f"  Entre AI Bar e Main: {gap2}px")
         
         if gap1 >= 0 and gap2 >= 0:
-            print(f"  ✅ Elementos não se sobrepõem")
+            print("  ✅ Elementos não se sobrepõem")
         else:
-            print(f"  ⚠️  Possível sobreposição detectada")
+            print("  ⚠️  Possível sobreposição detectada")
         
         # 5. Screenshot final
-        print(f"\n✓ Capturando screenshot final...")
+        print("\n✓ Capturando screenshot final...")
         driver.save_screenshot("/tmp/ide_final_validation.png")
-        print(f"  📸 Screenshot: /tmp/ide_final_validation.png")
+        print("  📸 Screenshot: /tmp/ide_final_validation.png")
         
         # 6. Relatório final
         print("\n" + "="*70)

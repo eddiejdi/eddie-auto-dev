@@ -4,7 +4,6 @@ Atualizar shared-central.json com queries FASE 2
 Modified directly no arquivo provisioned
 """
 import json
-import sys
 
 EDDIE_CENTRAL_JSON = "/tmp/shared-central.json"
 
@@ -33,7 +32,7 @@ print(f"\n📖 Carregando {EDDIE_CENTRAL_JSON}...")
 with open(EDDIE_CENTRAL_JSON, 'r') as f:
     dashboard = json.load(f)
 
-print(f"✅ Dashboard carregado")
+print("✅ Dashboard carregado")
 print(f"   Título: {dashboard.get('title')}")
 print(f"   Painéis: {len(dashboard.get('panels', []))}")
 
@@ -53,7 +52,7 @@ for panel_id, (title, query) in PHASE2_QUERIES.items():
             break
     
     if not target_panel:
-        print(f"      ❌ Painel não encontrado")
+        print("      ❌ Painel não encontrado")
         failed += 1
         continue
     
@@ -70,7 +69,7 @@ for panel_id, (title, query) in PHASE2_QUERIES.items():
         "legendFormat": ""
     })
     
-    print(f"      ✅ Query atualizada")
+    print("      ✅ Query atualizada")
     updated += 1
 
 print(f"\n{'=' * 80}")
@@ -78,22 +77,22 @@ print(f"📊 RESUMO: {updated}/{len(PHASE2_QUERIES)} painéis atualizados, {fail
 print(f"{'=' * 80}")
 
 # Salvar arquivo atualizado
-print(f"\n💾 Salvando arquivo atualizado...")
+print("\n💾 Salvando arquivo atualizado...")
 with open(EDDIE_CENTRAL_JSON, 'w') as f:
     json.dump(dashboard, f, indent=2)
 
 print(f"✅ Arquivo salvo: {EDDIE_CENTRAL_JSON}")
 
 # Próximos passos
-print(f"\n📝 Próximos passos:")
-print(f"   1. Fazer upload do arquivo para homelab:")
-print(f"      scp /tmp/shared-central.json homelab@192.168.15.2:/tmp/")
-print(f"      ")
-print(f"   2. Substituir no container Grafana:")
-print(f"      ssh homelab@192.168.15.2 'docker cp /tmp/shared-central.json grafana:/etc/grafana/provisioning/dashboards/'")
-print(f"      ")
-print(f"   3. Recarregar Grafana:")
-print(f"      ssh homelab@192.168.15.2 'docker restart grafana'")
-print(f"      ")
-print(f"   4. Validar:")
-print(f"      python3 validate_shared_central_api.py")
+print("\n📝 Próximos passos:")
+print("   1. Fazer upload do arquivo para homelab:")
+print("      scp /tmp/shared-central.json homelab@192.168.15.2:/tmp/")
+print("      ")
+print("   2. Substituir no container Grafana:")
+print("      ssh homelab@192.168.15.2 'docker cp /tmp/shared-central.json grafana:/etc/grafana/provisioning/dashboards/'")
+print("      ")
+print("   3. Recarregar Grafana:")
+print("      ssh homelab@192.168.15.2 'docker restart grafana'")
+print("      ")
+print("   4. Validar:")
+print("      python3 validate_shared_central_api.py")

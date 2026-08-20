@@ -3,9 +3,10 @@
 Completar autenticação com o código fornecido
 Usage: python3 complete_auth.py <CODIGO>
 """
-import sys
 import json
+import sys
 from pathlib import Path
+
 from google_auth_oauthlib.flow import InstalledAppFlow
 
 CREDS_FILE = Path('/home/homelab/myClaude/credentials.json')
@@ -52,7 +53,7 @@ try:
             'scopes': creds.scopes
         }, f, indent=2)
     
-    print(f"\n✅ Autenticação completa!")
+    print("\n✅ Autenticação completa!")
     print(f"   Token salvo em: {DRIVE_TOKEN}")
     
     # Agora buscar currículo
@@ -60,9 +61,10 @@ try:
     print("📂 BUSCANDO CURRÍCULO NO GOOGLE DRIVE")
     print("=" * 80)
     
+    from datetime import datetime
+
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
-    from datetime import datetime
     
     creds_obj = Credentials(
         token=creds.token,

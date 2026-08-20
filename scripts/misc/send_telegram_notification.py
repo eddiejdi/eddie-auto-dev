@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Script para enviar notificação da tarefa via Telegram"""
 
-import requests
-import os
 import sys
 
-from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+import requests
+
+from tools.secrets_loader import get_telegram_chat_id, get_telegram_token
 
 TELEGRAM_TOKEN = get_telegram_token()
 TELEGRAM_CHAT_ID = "948686300"

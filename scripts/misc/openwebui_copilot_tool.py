@@ -8,7 +8,7 @@ description: Executa comandos do GitHub Copilot via gh copilot.
 import shlex
 import shutil
 import subprocess
-from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -37,8 +37,8 @@ class Tools:
     def copilot_cli(
         self,
         args: str,
-        cwd: Optional[str] = None,
-        timeout: Optional[int] = None,
+        cwd: str | None = None,
+        timeout: int | None = None,
         __user__: dict = {},
     ) -> str:
         """
@@ -82,7 +82,7 @@ class Tools:
         except FileNotFoundError:
             return "❌ `gh` não encontrado no PATH."
         except Exception as e:
-            return f"❌ Erro ao executar: {str(e)}"
+            return f"❌ Erro ao executar: {e!s}"
 
         stdout = result.stdout or ""
         stderr = result.stderr or ""
@@ -96,8 +96,8 @@ class Tools:
     def copilot_suggest_and_run(
         self,
         query: str,
-        cwd: Optional[str] = None,
-        timeout: Optional[int] = None,
+        cwd: str | None = None,
+        timeout: int | None = None,
         __user__: dict = {},
     ) -> str:
         """
@@ -139,7 +139,7 @@ class Tools:
         except subprocess.TimeoutExpired:
             return f"⏱️ Timeout: sugestão excedeu {exec_timeout}s."
         except Exception as e:
-            return f"❌ Erro ao executar Copilot: {str(e)}"
+            return f"❌ Erro ao executar Copilot: {e!s}"
 
         raw = (suggestion.stdout or "").strip()
         if not raw:
@@ -166,7 +166,7 @@ class Tools:
         except subprocess.TimeoutExpired:
             return f"⏱️ Timeout: execução excedeu {exec_timeout}s."
         except Exception as e:
-            return f"❌ Erro ao executar comando: {str(e)}"
+            return f"❌ Erro ao executar comando: {e!s}"
 
         stdout = result.stdout or ""
         stderr = result.stderr or ""
@@ -187,7 +187,7 @@ class Tools:
         if not user:
             return ""
         for key in ["model", "model_id", "model_name", "modelId", "modelName"]:
-            if key in user and user[key]:
+            if user.get(key):
                 return str(user[key])
         settings = user.get("settings") or {}
         if isinstance(settings, dict):

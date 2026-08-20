@@ -4,16 +4,17 @@ Validação detalhada de todos os gauges do dashboard Shared Central
 Usa Selenium para extrair e validar cada gauge individualmente
 """
 
-import time
-import sys
 import json
+import sys
+import time
 from datetime import datetime
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
 
 # Configurações
@@ -308,7 +309,7 @@ class EddieCentralGaugeValidator:
         
         except Exception as e:
             gauge_info["status"] = "ERROR"
-            gauge_info["issues"].append(f"Erro durante validação: {str(e)}")
+            gauge_info["issues"].append(f"Erro durante validação: {e!s}")
             return gauge_info
     
     def validate_all_gauges(self, panels):
@@ -338,7 +339,7 @@ class EddieCentralGaugeValidator:
                 print(f"    Valor: {gauge_info['value']}")
                 
                 if gauge_info["issues"]:
-                    print(f"    Problemas:")
+                    print("    Problemas:")
                     for issue in gauge_info["issues"]:
                         print(f"      • {issue}")
                 print()
@@ -363,7 +364,7 @@ class EddieCentralGaugeValidator:
         print("=" * 80)
         
         summary = self.results["summary"]
-        print(f"\n📈 RESUMO:")
+        print("\n📈 RESUMO:")
         print(f"   Total de painéis: {summary['total']}")
         print(f"   ✅ Válidos: {summary['valid']}")
         print(f"   ❌ Inválidos: {summary['invalid']}")

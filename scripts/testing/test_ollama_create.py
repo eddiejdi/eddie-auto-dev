@@ -2,8 +2,8 @@
 """Teste simples de criação de modelo"""
 
 import os
+
 import requests
-import json
 
 # Teste simples
 modelfile = '''FROM qwen2.5-coder:7b

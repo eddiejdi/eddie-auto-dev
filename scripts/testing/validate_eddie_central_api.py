@@ -4,11 +4,12 @@ Validação de gauges do Shared Central via API do Grafana
 Mais rápido e eficiente que Selenium
 """
 
-import requests
 import json
-from datetime import datetime
-import sys
 import os
+import sys
+from datetime import datetime
+
+import requests
 
 # Configurações
 GRAFANA_BASE = os.getenv("GRAFANA_URL", "https://grafana.rpa4all.com")
@@ -163,7 +164,7 @@ class EddieCentralAPIValidator:
         
         except Exception as e:
             panel_info["status"] = "ERROR"
-            panel_info["issues"].append(f"Erro: {str(e)}")
+            panel_info["issues"].append(f"Erro: {e!s}")
             return panel_info
     
     def validate_all_panels(self, dashboard):
@@ -211,7 +212,7 @@ class EddieCentralAPIValidator:
                     print(f"    Valores: {', '.join(panel_result['values'][:3])}")
                 
                 if panel_result["issues"]:
-                    print(f"    Problemas:")
+                    print("    Problemas:")
                     for issue in panel_result["issues"]:
                         print(f"      • {issue}")
                 
@@ -235,7 +236,7 @@ class EddieCentralAPIValidator:
         print("=" * 80)
         
         summary = self.results["summary"]
-        print(f"\n📈 RESUMO:")
+        print("\n📈 RESUMO:")
         print(f"   Total de gauges/stats: {summary['total']}")
         print(f"   ✅ Válidos: {summary['valid']}")
         print(f"   ❌ Inválidos: {summary['invalid']}")
@@ -257,7 +258,7 @@ class EddieCentralAPIValidator:
                 print(f"     Status: {panel['status']}")
                 
                 if panel['queries']:
-                    print(f"     Queries:")
+                    print("     Queries:")
                     for query in panel['queries']:
                         print(f"       - {query}")
                 
@@ -265,7 +266,7 @@ class EddieCentralAPIValidator:
                     print(f"     Valores: {', '.join(panel['values'][:5])}")
                 
                 if panel['issues']:
-                    print(f"     Problemas:")
+                    print("     Problemas:")
                     for issue in panel['issues']:
                         print(f"       - {issue}")
         

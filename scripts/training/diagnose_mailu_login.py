@@ -4,12 +4,9 @@ Mailu Email Server - Login Troubleshooting & Diagnostics
 Diagnostica problemas de login no Mailu e fornece soluções
 """
 
-import os
-import sys
 import subprocess
-import time
 from pathlib import Path
-from typing import Tuple, List
+
 
 class Colors:
     GREEN = '\033[92m'
@@ -36,7 +33,7 @@ def print_warning(msg: str):
 def print_info(msg: str):
     print(f"{Colors.BLUE}ℹ {msg}{Colors.RESET}")
 
-def run_cmd(cmd: list) -> Tuple[int, str]:
+def run_cmd(cmd: list) -> tuple[int, str]:
     """Execute command and return exit code and output"""
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
@@ -180,7 +177,7 @@ def check_dns() -> bool:
         print("  mail.rpa4all.com.  IN  MX  10  mail.rpa4all.com.")
         return False
 
-def get_domains() -> List[str]:
+def get_domains() -> list[str]:
     """Get list of email domains configured"""
     print_header("Domínios de Email Configurados")
     
@@ -209,7 +206,7 @@ def get_domains() -> List[str]:
         print_error("Não conseguiu conectar ao banco de dados")
         return []
 
-def get_users() -> List[dict]:
+def get_users() -> list[dict]:
     """Get list of email users"""
     print_header("Usuários de Email Configurados")
     
@@ -370,7 +367,7 @@ def main():
         print_success("Tudo pronto! Você pode fazer login com:")
         for user in users:
             print(f"  Email: {user['email']}")
-            print(f"  URL: https://mail.rpa4all.com/")
+            print("  URL: https://mail.rpa4all.com/")
     elif not issues_found or len(issues_found) < 2:
         print_warning("Sistema parece estar pronto. Verifique credenciais:")
         print("  • Email deve existir no domínio (ex: usuario@rpa4all.com)")

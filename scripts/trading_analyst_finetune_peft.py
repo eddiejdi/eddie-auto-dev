@@ -110,10 +110,15 @@ def train(dry_run: bool, do_merge: bool) -> int:
         return 0
 
     import torch
-    from transformers import (AutoModelForCausalLM, AutoTokenizer,
-                              DataCollatorForLanguageModeling, Trainer, TrainingArguments)
-    from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
     from datasets import Dataset
+    from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+    from transformers import (
+        AutoModelForCausalLM,
+        AutoTokenizer,
+        DataCollatorForLanguageModeling,
+        Trainer,
+        TrainingArguments,
+    )
 
     if not torch.cuda.is_available():
         log.error("CUDA indisponível!")

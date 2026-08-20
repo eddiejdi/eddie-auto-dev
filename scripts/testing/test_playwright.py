@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Teste do navegador headless Playwright"""
 import asyncio
-import sys
 import os
+import sys
+
 import requests
+
 sys.path.insert(0, '/home/homelab/.local/lib/python3.12/site-packages')
 
 from playwright.async_api import async_playwright

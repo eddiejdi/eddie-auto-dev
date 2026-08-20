@@ -15,14 +15,14 @@ def test_imports():
     
     try:
         from gmail_integration import (
-            GmailClient,
-            EmailCleaner,
-            EmailClassifier,
+            SCOPES,
             Email,
-            get_gmail_client,
+            EmailClassifier,
+            EmailCleaner,
+            GmailClient,
             get_email_cleaner,
+            get_gmail_client,
             process_gmail_command,
-            SCOPES
         )
         print("✅ Imports OK")
         return True
@@ -34,8 +34,9 @@ def test_classifier():
     """Testa o classificador de emails"""
     print("\n🔄 Testando classificador...")
     
-    from gmail_integration import EmailClassifier, Email
     from datetime import datetime
+
+    from gmail_integration import Email, EmailClassifier
     
     classifier = EmailClassifier()
     
@@ -88,7 +89,7 @@ def test_client_creation():
     """Testa criação do cliente"""
     print("\n🔄 Testando criação do cliente...")
     
-    from gmail_integration import get_gmail_client, get_email_cleaner
+    from gmail_integration import get_email_cleaner, get_gmail_client
     
     client = get_gmail_client()
     print(f"  Cliente criado: {type(client).__name__}")

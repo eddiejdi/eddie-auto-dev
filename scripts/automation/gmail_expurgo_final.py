@@ -2,9 +2,11 @@
 """Gmail Expurgo Final - Limpa todas categorias até zerar"""
 import json
 from datetime import datetime, timedelta
-from google.oauth2.credentials import Credentials
+
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+
 
 def main():
     # Carregar token
@@ -74,7 +76,7 @@ def main():
         else:
             print(f'>>> {cat.upper()}: Já estava limpo')
     
-    print(f'\n=== EXPURGO CONCLUÍDO ===')
+    print('\n=== EXPURGO CONCLUÍDO ===')
     print(f'Total de emails movidos para lixeira: {total_limpo}')
     
     # Verificação final

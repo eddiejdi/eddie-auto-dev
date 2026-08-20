@@ -3,12 +3,10 @@
 Training data collector for shared-whatsapp model fine-tuning.
 Collects feedback on compatibility predictions to improve future predictions.
 """
-import os
 import json
+import os
 import sqlite3
 from datetime import datetime
-from typing import Dict, Optional
-
 
 TRAINING_DB = os.getenv("TRAINING_DB", "/tmp/whatsapp_training.db")
 
@@ -53,12 +51,12 @@ def collect_training_sample(
     resume_text: str,
     job_text: str,
     predicted_score: float,
-    actual_score: Optional[float] = None,
-    user_feedback: Optional[str] = None,
+    actual_score: float | None = None,
+    user_feedback: str | None = None,
     was_sent: bool = False,
-    email_status: Optional[str] = None,
-    llm_explanation: Optional[str] = None,
-    jaccard_score: Optional[float] = None,
+    email_status: str | None = None,
+    llm_explanation: str | None = None,
+    jaccard_score: float | None = None,
     method: str = "llm"
 ) -> int:
     """
@@ -110,7 +108,7 @@ def collect_training_sample(
     return sample_id
 
 
-def update_training_feedback(sample_id: int, user_feedback: str, actual_score: Optional[float] = None):
+def update_training_feedback(sample_id: int, user_feedback: str, actual_score: float | None = None):
     """Update training sample with user feedback after review."""
     conn = sqlite3.connect(TRAINING_DB)
     cursor = conn.cursor()
@@ -133,7 +131,7 @@ def update_training_feedback(sample_id: int, user_feedback: str, actual_score: O
     print(f"✅ Feedback updated for sample {sample_id}")
 
 
-def get_training_stats() -> Dict:
+def get_training_stats() -> dict:
     """Get statistics on collected training data."""
     conn = sqlite3.connect(TRAINING_DB)
     cursor = conn.cursor()
@@ -261,14 +259,14 @@ def show_training_dashboard():
     print("📊 DASHBOARD DE TREINAMENTO - shared-whatsapp")
     print("=" * 80)
     
-    print(f"\n📈 Estatísticas Gerais:")
+    print("\n📈 Estatísticas Gerais:")
     print(f"   Total de amostras coletadas: {stats['total_samples']}")
     print(f"   Emails enviados: {stats['sent_emails']}")
     print(f"   Amostras com feedback: {stats['with_feedback']}")
     print(f"   Amostras com correção: {stats['with_correction']}")
     
     if stats['with_correction'] > 0:
-        print(f"\n🎯 Métricas de Acurácia:")
+        print("\n🎯 Métricas de Acurácia:")
         print(f"   Score médio predito: {stats['avg_predicted_score']}%")
         print(f"   Score médio real: {stats['avg_actual_score']}%")
         print(f"   Score Jaccard médio: {stats['avg_jaccard_score']}%")

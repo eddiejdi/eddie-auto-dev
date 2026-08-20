@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Open Streamlit dashboard, click homelab fetch button, and check for TEST_TEXT."""
 import os
-import time
 import sys
+import time
 
 from playwright.sync_api import sync_playwright
 
@@ -38,7 +38,7 @@ def main():
                 page.get_by_text('Buscar conversas').click()
             else:
                 # try the arrow-prefixed label
-                if page.locator(f'text=↗️ Buscar conversas do homelab').count() > 0:
+                if page.locator('text=↗️ Buscar conversas do homelab').count() > 0:
                     page.get_by_text('↗️ Buscar conversas do homelab').click()
         except Exception as e:
             print('Homelab click attempt failed:', e)

@@ -6,14 +6,14 @@ Como não há dados históricos dos últimos 30 dias, este script gera
 com todos os métodos de compatibilidade disponíveis.
 """
 import json
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, Any
-import sys
+from typing import Any
 
 # Import compatibility modules
 try:
-    from compatibility_allinone import compute_compatibility, AVAILABLE_METHODS
+    from compatibility_allinone import AVAILABLE_METHODS, compute_compatibility
     ADVANCED_AVAILABLE = True
 except ImportError as e:
     print(f"❌ Erro ao importar módulos: {e}")
@@ -21,7 +21,7 @@ except ImportError as e:
     sys.exit(1)
 
 
-def get_simulated_test_data() -> List[Dict[str, Any]]:
+def get_simulated_test_data() -> list[dict[str, Any]]:
     """Gera 15 vagas simuladas baseadas em descrições reais de DevOps/SRE/Cloud."""
     
     # Currículo padrão (simplificado mas realista)
@@ -138,10 +138,10 @@ def get_simulated_test_data() -> List[Dict[str, Any]]:
     return results
 
 
-def test_all_methods(data: List[Dict[str, Any]]) -> Dict[str, Any]:
+def test_all_methods(data: list[dict[str, Any]]) -> dict[str, Any]:
     """Testa todos os métodos de compatibilidade com as vagas simuladas."""
     print(f"\n{'='*80}")
-    print(f"🧪 TESTE DE COMPATIBILIDADE")
+    print("🧪 TESTE DE COMPATIBILIDADE")
     print(f"{'='*80}\n")
     
     print(f"📊 Total de vagas: {len(data)}")
@@ -187,13 +187,12 @@ def test_all_methods(data: List[Dict[str, Any]]) -> Dict[str, Any]:
                 # Método não disponível ou erro - apenas logar e continuar
                 if i == 1:  # Logar apenas na primeira vaga
                     print(f"   ⚠️  {method_name}: {str(e)[:60]}")
-                pass
     
-    print(f"\n\n✅ Teste concluído!\n")
+    print("\n\n✅ Teste concluído!\n")
     
     # Análise de resultados
     print(f"\n{'='*80}")
-    print(f"📊 RESULTADOS POR MÉTODO")
+    print("📊 RESULTADOS POR MÉTODO")
     print(f"{'='*80}\n")
     
     summary = {}
@@ -248,7 +247,7 @@ def test_all_methods(data: List[Dict[str, Any]]) -> Dict[str, Any]:
     
     # Recomendação
     print(f"\n{'='*80}")
-    print(f"💡 RECOMENDAÇÃO")
+    print("💡 RECOMENDAÇÃO")
     print(f"{'='*80}\n")
     
     best_method = sorted_methods[0][0]
@@ -275,7 +274,7 @@ def test_all_methods(data: List[Dict[str, Any]]) -> Dict[str, Any]:
                 })
     
     if all_improvements:
-        print(f"\n📈 TOP 5 MAIORES MELHORIAS:\n")
+        print("\n📈 TOP 5 MAIORES MELHORIAS:\n")
         top_improvements = sorted(all_improvements, key=lambda x: x['improvement'], reverse=True)[:5]
         
         for i, imp in enumerate(top_improvements, 1):
@@ -289,7 +288,7 @@ def test_all_methods(data: List[Dict[str, Any]]) -> Dict[str, Any]:
 def show_test_info():
     """Mostra informações sobre o teste."""
     print(f"\n{'='*80}")
-    print(f"ℹ️  DADOS DO TESTE")
+    print("ℹ️  DADOS DO TESTE")
     print(f"{'='*80}\n")
     print("⚠️  Como não há dados históricos reais disponíveis, este teste usa")
     print("   15 vagas simuladas baseadas em descrições reais de DevOps/SRE/Cloud:")
@@ -305,7 +304,7 @@ def show_test_info():
 
 def main():
     print(f"\n{'='*80}")
-    print(f"🔬 TESTE DE COMPATIBILIDADE - VAGAS SIMULADAS")
+    print("🔬 TESTE DE COMPATIBILIDADE - VAGAS SIMULADAS")
     print(f"{'='*80}\n")
     
     # Mostrar informações do teste

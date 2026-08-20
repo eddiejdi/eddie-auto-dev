@@ -4,10 +4,10 @@ Relatório de Treinamento de LLM com Conversas
 Demonstra o estado completo do treinamento e como usar o modelo treinado.
 """
 
-import json
-from pathlib import Path
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
+
 
 def print_section(title: str, char: str = "="):
     """Imprimir seção formatada."""
@@ -27,12 +27,12 @@ def main():
     data_file = Path("artifacts/agent_conversations.json")
     if data_file.exists():
         with open(data_file, 'r') as f:
-            lines = [l for l in f.readlines() if l.strip() and not l.startswith('===')]
+            lines = [l for l in f if l.strip() and not l.startswith('===')]
         
         print(f"✅ Arquivo de conversas: {data_file.name}")
         print(f"   Tamanho: {data_file.stat().st_size / 1024:.1f} KB")
-        print(f"   Conversas: 13")
-        print(f"   Mensagens: 14 documentos de treinamento")
+        print("   Conversas: 13")
+        print("   Mensagens: 14 documentos de treinamento")
     else:
         print(f"❌ Arquivo não encontrado: {data_file}")
     
@@ -49,8 +49,8 @@ def main():
         rag_path = Path(path)
         if rag_path.exists():
             print(f"✅ {lang:15} → {path}")
-            print(f"   Status: TREINADO com 14 documentos")
-            print(f"   Embedding: all-MiniLM-L6-v2 (384-dim)")
+            print("   Status: TREINADO com 14 documentos")
+            print("   Embedding: all-MiniLM-L6-v2 (384-dim)")
         else:
             print(f"⚠️  {lang:15} → Será criado no primeiro uso")
     

@@ -5,10 +5,11 @@ Permite que modelos de IA executem comandos SSH de forma integrada
 """
 
 import json
-import sys
 import logging
+import sys
 from typing import Any
-from ssh_agent import ssh_manager, SSHHost
+
+from ssh_agent import ssh_manager
 
 # Configurar logging para stderr (MCP usa stdout para comunicação)
 logging.basicConfig(
@@ -341,8 +342,9 @@ class MCPServer:
     
     def tool_connect_new(self, arguments: dict) -> dict:
         """Conecta em um servidor novo diretamente"""
-        import paramiko
         import socket
+
+        import paramiko
         
         hostname = arguments['hostname']
         username = arguments['username']
@@ -378,7 +380,7 @@ class MCPServer:
                     username=username,
                     port=port,
                     password=password,
-                    description=f"Adicionado via conexão direta"
+                    description="Adicionado via conexão direta"
                 )
                 ssh_manager.connections[save_as] = client
                 return {
@@ -405,18 +407,18 @@ class MCPServer:
         except paramiko.AuthenticationException:
             return {"status": "error", "message": f"Falha de autenticação em {username}@{hostname}. Verifique usuário/senha."}
         except paramiko.SSHException as e:
-            return {"status": "error", "message": f"Erro SSH: {str(e)}"}
-        except socket.timeout:
+            return {"status": "error", "message": f"Erro SSH: {e!s}"}
+        except TimeoutError:
             return {"status": "error", "message": f"Timeout ao conectar em {hostname}"}
         except socket.gaierror:
             return {"status": "error", "message": f"Não foi possível resolver o hostname: {hostname}"}
         except Exception as e:
-            return {"status": "error", "message": f"Erro: {str(e)}"}
+            return {"status": "error", "message": f"Erro: {e!s}"}
     
     def tool_execute_on(self, arguments: dict) -> dict:
         """Executa comando em servidor sem configuração prévia"""
+
         import paramiko
-        import socket
         
         hostname = arguments['hostname']
         username = arguments['username']
@@ -462,11 +464,11 @@ class MCPServer:
         except paramiko.AuthenticationException:
             return {"status": "error", "message": f"Falha de autenticação em {username}@{hostname}"}
         except paramiko.SSHException as e:
-            return {"status": "error", "message": f"Erro SSH: {str(e)}"}
-        except socket.timeout:
+            return {"status": "error", "message": f"Erro SSH: {e!s}"}
+        except TimeoutError:
             return {"status": "error", "message": f"Timeout ao conectar/executar em {hostname}"}
         except Exception as e:
-            return {"status": "error", "message": f"Erro: {str(e)}"}
+            return {"status": "error", "message": f"Erro: {e!s}"}
     
     def tool_interactive_connect(self, arguments: dict) -> dict:
         """Conexão SSH interativa - guia o processo quando faltam informações"""
@@ -507,8 +509,9 @@ class MCPServer:
         # Se senha não foi fornecida, tentar conexão com chave
         if not password:
             # Primeiro tenta sem senha (usando chave SSH)
-            import paramiko
             import socket
+
+            import paramiko
             
             try:
                 client = paramiko.SSHClient()
@@ -523,7 +526,7 @@ class MCPServer:
                 
                 return {
                     "status": "success",
-                    "message": f"Conectado com sucesso via chave SSH!",
+                    "message": "Conectado com sucesso via chave SSH!",
                     "hostname": hostname,
                     "username": username,
                     "remote_hostname": remote_hostname,
@@ -539,14 +542,14 @@ class MCPServer:
                     "ask_password": f"Qual a senha para {username}@{hostname}?",
                     "instructions": "Pergunte a senha ao usuário e tente novamente com ssh_connect_new"
                 }
-            except socket.timeout:
+            except TimeoutError:
                 return {"status": "error", "message": f"Timeout ao conectar em {hostname}. Verifique se o IP está correto e o servidor está acessível."}
             except socket.gaierror:
                 return {"status": "error", "message": f"Não foi possível resolver: {hostname}. Verifique o hostname/IP."}
             except Exception as e:
                 return {
                     "status": "need_password",
-                    "message": f"Erro na conexão: {str(e)}. Tente fornecer a senha.",
+                    "message": f"Erro na conexão: {e!s}. Tente fornecer a senha.",
                     "hostname": hostname,
                     "username": username,
                     "ask_password": f"Qual a senha para {username}@{hostname}?"

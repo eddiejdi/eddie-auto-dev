@@ -3,6 +3,7 @@
 Script de teste para verificar a integração
 """
 import asyncio
+
 import httpx
 
 from tools.secrets_loader import get_telegram_token

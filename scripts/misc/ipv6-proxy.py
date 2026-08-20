@@ -5,7 +5,6 @@ Bridges IPv6 connections to local IPv4 services on a host. IPv6 bind
 address is optional and can be provided via `IPV6_BIND_ADDR` environment variable.
 """
 import asyncio
-import socket
 import os
 
 SERVICES = {

@@ -18,7 +18,7 @@ auth_response = requests.post(
 )
 
 token = auth_response.json()["token"]
-print(f"✅ Token obtido")
+print("✅ Token obtido")
 
 headers = {
     "Authorization": f"Bearer {token}",
@@ -62,7 +62,7 @@ get_response = requests.get(
 
 for func in get_response.json():
     if func["id"] == FUNCTION_ID:
-        print(f"\n📊 Status Final:")
+        print("\n📊 Status Final:")
         print(f"   Nome: {func['name']}")
         print(f"   Ativo: {'✅' if func['is_active'] else '❌'} {func['is_active']}")
         print(f"   Global: {'✅' if func['is_global'] else '❌'} {func['is_global']}")

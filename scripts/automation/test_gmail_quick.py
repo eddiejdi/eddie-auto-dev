@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Teste rápido do Gmail"""
+import json
+
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-import json
 
 # Carregar token
 with open('/home/homelab/myClaude/gmail_data/token.json') as f:

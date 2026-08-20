@@ -2,12 +2,12 @@
 """
 Busca mensagens no WAHA de produção (homelab)
 """
-import requests
 import json
 import os
-from datetime import datetime
-import sys
-from tools.vault.secret_store import get_field, VaultError
+
+import requests
+
+from tools.vault.secret_store import VaultError, get_field
 
 HOMELAB_WAHA = os.environ.get("HOMELAB_WAHA", "http://192.168.15.2:3001")
 
@@ -108,7 +108,7 @@ def search_waha_production():
                                     
                                     # Verificar se tem mídia
                                     if msg.get('hasMedia') or msg.get('type') == 'document':
-                                        print(f"    📎 TEM MÍDIA/DOCUMENTO!")
+                                        print("    📎 TEM MÍDIA/DOCUMENTO!")
                                         print(f"       hasMedia: {msg.get('hasMedia')}")
                                         print(f"       mediaUrl: {msg.get('mediaUrl', 'N/A')}")
                                         
@@ -147,7 +147,7 @@ def search_waha_production():
                                     print("    " + "-"*76)
                             
                             # Mostrar todas as mensagens recentes
-                            print(f"\n    📋 ÚLTIMAS 10 MENSAGENS:")
+                            print("\n    📋 ÚLTIMAS 10 MENSAGENS:")
                             print("    " + "="*76)
                             
                             for msg in messages[:10]:
@@ -161,10 +161,10 @@ def search_waha_production():
                                 if body:
                                     print(f"    >>> {body[:150]}")
                                 if msg.get('hasMedia'):
-                                    print(f"    📎 Com mídia")
+                                    print("    📎 Com mídia")
                                 print("    " + "-"*76)
                         else:
-                            print(f"    ⚠️  Nenhum endpoint de mensagens funcionou")
+                            print("    ⚠️  Nenhum endpoint de mensagens funcionou")
                             print(f"    Tentados: {endpoints}")
                         
                     except Exception as e:

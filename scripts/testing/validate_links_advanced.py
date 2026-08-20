@@ -6,21 +6,18 @@ Integra técnicas de: test_selenium_endpoints.py, validate_grafana_dashboards_se
 
 import sys
 import time
-import requests
-import threading
-import socketserver
-import http.server
 from urllib.parse import urljoin, urlparse
-from pathlib import Path
+
+import requests
 
 try:
     from selenium import webdriver
+    from selenium.common.exceptions import TimeoutException, WebDriverException
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.chrome.service import Service
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
-    from selenium.common.exceptions import TimeoutException, WebDriverException
+    from selenium.webdriver.support.ui import WebDriverWait
     from webdriver_manager.chrome import ChromeDriverManager
 except ImportError:
     print("❌ Dependências não instaladas. Execute: pip install selenium webdriver-manager requests")
@@ -218,7 +215,7 @@ class AdvancedLinkValidator:
             try:
                 # Tenta encontrar elemento com ID ou data-target
                 elem = self.driver.find_element(By.XPATH, f"//*[@id='{anchor}' or @data-target='{anchor}']")
-                return {"status": 200, "valid": True, "message": f"Âncora encontrada"}
+                return {"status": 200, "valid": True, "message": "Âncora encontrada"}
             except:
                 return {"status": 404, "valid": False, "message": "Âncora não encontrada"}
         
@@ -282,10 +279,10 @@ class AdvancedLinkValidator:
             
             # Screenshot inicial
             self.driver.save_screenshot("links_validation_advanced.png")
-            print(f"   📸 Screenshot salvo: links_validation_advanced.png")
+            print("   📸 Screenshot salvo: links_validation_advanced.png")
             
             # Extrair links
-            print(f"\n📊 Extraindo links...")
+            print("\n📊 Extraindo links...")
             links = self.extract_links()
             
             # Contar totais
@@ -309,7 +306,7 @@ class AdvancedLinkValidator:
             
             # Internos
             if links.get("internal"):
-                print(f"\n📍 LINKS INTERNOS:")
+                print("\n📍 LINKS INTERNOS:")
                 for link in links["internal"]:
                     result = self.validate_link(link, "internal")
                     status_icon = "✅" if result["valid"] else "❌"
@@ -324,7 +321,7 @@ class AdvancedLinkValidator:
             
             # Externos
             if links.get("external"):
-                print(f"\n🌐 LINKS EXTERNOS:")
+                print("\n🌐 LINKS EXTERNOS:")
                 for link in links["external"]:
                     result = self.validate_link(link, "external")
                     status_icon = "✅" if result["valid"] else "❌"
@@ -341,7 +338,7 @@ class AdvancedLinkValidator:
             
             # Âncoras
             if links.get("anchors"):
-                print(f"\n⚓ LINKS DE ÂNCORA:")
+                print("\n⚓ LINKS DE ÂNCORA:")
                 for link in links["anchors"]:
                     result = self.validate_link(link, "anchor")
                     status_icon = "✅" if result["valid"] else "❌"
@@ -356,7 +353,7 @@ class AdvancedLinkValidator:
             
             # Email
             if links.get("email"):
-                print(f"\n📧 EMAILS:")
+                print("\n📧 EMAILS:")
                 for link in links["email"]:
                     print(f"   ✅ {link['href']}")
                     print(f"      └─ Texto: {link['text'][:50]}")
@@ -365,7 +362,7 @@ class AdvancedLinkValidator:
             
             # Telefone
             if links.get("tel"):
-                print(f"\n☎️  TELEFONES:")
+                print("\n☎️  TELEFONES:")
                 for link in links["tel"]:
                     print(f"   ✅ {link['href']}")
                     print(f"      └─ Texto: {link['text'][:50]}")
@@ -374,7 +371,7 @@ class AdvancedLinkValidator:
             
             # Resumo final
             print(f"\n{'='*90}")
-            print(f"📈 RESUMO FINAL")
+            print("📈 RESUMO FINAL")
             print(f"{'='*90}")
             print(f"   Total de links: {self.results['total']}")
             print(f"   ✅ Funcionais: {self.results['success']}")

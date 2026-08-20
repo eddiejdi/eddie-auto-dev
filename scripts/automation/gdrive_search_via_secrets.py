@@ -12,7 +12,6 @@ import base64
 import json
 import subprocess
 import sys
-from pathlib import Path
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -71,7 +70,7 @@ def update_token_in_agent(name: str, field: str, token_json: str):
     ]
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
     if result.returncode == 0:
-        print(f"  ✅ Token atualizado no Secrets Agent")
+        print("  ✅ Token atualizado no Secrets Agent")
     else:
         print(f"  ⚠️  Falha ao atualizar token: {result.stderr}")
 

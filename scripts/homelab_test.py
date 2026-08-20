@@ -10,9 +10,9 @@ Usage:
   python scripts/homelab_test.py
 """
 import os
-import sys
-import requests
 from urllib.parse import urljoin
+
+import requests
 
 
 def call(base, path):

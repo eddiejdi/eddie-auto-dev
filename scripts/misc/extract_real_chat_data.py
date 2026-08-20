@@ -4,13 +4,13 @@ Extrator de dados de conversa real do PostgreSQL para treinamento de LLM.
 Extrai 1939+ mensagens do banco de dados do sistema.
 """
 
-import json
 import asyncio
+import json
 import logging
-from pathlib import Path
-from typing import List, Dict, Any
-from datetime import datetime
 import subprocess
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 logging.basicConfig(
     level=logging.INFO,
@@ -24,7 +24,7 @@ class RealChatExtractor:
     
     def __init__(self, homelab_host: str = "homelab@192.168.15.2"):
         self.homelab_host = homelab_host
-        self.messages: List[Dict[str, Any]] = []
+        self.messages: list[dict[str, Any]] = []
     
     def execute_remote_query(self, query: str) -> str:
         """Executar query no PostgreSQL remoto via SSH."""
@@ -107,7 +107,7 @@ class RealChatExtractor:
             logger.error(f"❌ Erro ao salvar: {e}")
             return False
     
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Obter estatísticas dos dados."""
         if not self.messages:
             return {}
@@ -157,14 +157,14 @@ async def main():
     logger.info("\n📊 ETAPA 2: Analisando dados...")
     stats = extractor.get_statistics()
     
-    print(f"\n✅ Estatísticas dos dados:")
+    print("\n✅ Estatísticas dos dados:")
     print(f"   Total: {stats['total_messages']} mensagens")
-    print(f"\n   Tipos de mensagem:")
+    print("\n   Tipos de mensagem:")
     for msg_type, count in sorted(stats['message_types'].items(), key=lambda x: x[1], reverse=True):
         pct = (count / stats['total_messages']) * 100
         print(f"     • {msg_type:20} {count:4d} ({pct:5.1f}%)")
     
-    print(f"\n   Fontes (top 10):")
+    print("\n   Fontes (top 10):")
     for source, count in sorted(stats['sources'].items(), key=lambda x: x[1], reverse=True)[:10]:
         pct = (count / stats['total_messages']) * 100
         print(f"     • {source:30} {count:4d} ({pct:5.1f}%)")
@@ -184,8 +184,8 @@ async def main():
     print("\n" + "=" * 70)
     print("  ✅ EXTRAÇÃO CONCLUÍDA")
     print("=" * 70)
-    print(f"\n💡 Próximo passo:")
-    print(f"   python3 train_llm_on_real_chats.py\n")
+    print("\n💡 Próximo passo:")
+    print("   python3 train_llm_on_real_chats.py\n")
     
     return 0
 

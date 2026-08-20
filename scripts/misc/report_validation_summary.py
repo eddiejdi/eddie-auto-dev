@@ -3,8 +3,6 @@
 Análise resumida da validação do Shared Central Dashboard
 """
 
-import json
-from datetime import datetime
 
 # Dados consolidados de validação
 VALIDATION_RESULTS = {
@@ -192,7 +190,7 @@ def print_report():
     print("=" * 100)
     print(f"\n🕐 Timestamp: {VALIDATION_RESULTS['timestamp']}")
     print(f"📍 Dashboard: {VALIDATION_RESULTS['dashboard']}")
-    print(f"🔗 URL: https://grafana.rpa4all.com/d/shared-central/shared-auto-dev-e28094-central?orgId=1&from=now-6h&to=now")
+    print("🔗 URL: https://grafana.rpa4all.com/d/shared-central/shared-auto-dev-e28094-central?orgId=1&from=now-6h&to=now")
     
     print("\n" + "=" * 100)
     print("📈 RESUMO EXECUTIVO")
@@ -294,8 +292,8 @@ def print_report():
     """)
     
     print("=" * 100)
-    print(f"\n💾 Relatório detalhado em JSON: /tmp/shared_central_validation_api.json")
-    print(f"📝 Log de execução: /tmp/validation_output.log")
+    print("\n💾 Relatório detalhado em JSON: /tmp/shared_central_validation_api.json")
+    print("📝 Log de execução: /tmp/validation_output.log")
     print("=" * 100)
 
 

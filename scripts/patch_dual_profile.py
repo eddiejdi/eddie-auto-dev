@@ -12,7 +12,6 @@ Uso:
   python3 scripts/patch_dual_profile.py [--dry-run]
 """
 
-import re
 import sys
 from pathlib import Path
 
@@ -170,7 +169,7 @@ def patch_training_db() -> bool:
     # 2. Atualizar INSERT para incluir profile
     patches.append((
         '            cur.execute(f"""\n'
-        f"                INSERT INTO {{SCHEMA}}.trades\n"
+        "                INSERT INTO {SCHEMA}.trades\n"
         "                    (timestamp, symbol, side, price, size, funds,\n"
         "                     order_id, dry_run, metadata)\n"
         "                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)\n"
@@ -181,7 +180,7 @@ def patch_training_db() -> bool:
         "                json.dumps(metadata) if metadata else None\n"
         "            ))\n",
         '            cur.execute(f"""\n'
-        f"                INSERT INTO {{SCHEMA}}.trades\n"
+        "                INSERT INTO {SCHEMA}.trades\n"
         "                    (timestamp, symbol, side, price, size, funds,\n"
         "                     order_id, dry_run, metadata, profile)\n"
         "                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)\n"

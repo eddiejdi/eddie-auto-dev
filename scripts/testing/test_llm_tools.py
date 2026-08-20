@@ -10,11 +10,10 @@ Grupos:
 """
 
 import asyncio
-import json
 import os
 import sys
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 import pytest
 
@@ -26,16 +25,13 @@ except ImportError:
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from specialized_agents.llm_tool_executor import get_llm_tool_executor, LLMToolExecutor
+from specialized_agents.llm_tool_executor import LLMToolExecutor, get_llm_tool_executor
 from specialized_agents.llm_tool_prompts import (
-    parse_tool_calls,
-    get_tool_system_prompt,
     get_tool_result_prompt,
+    get_tool_system_prompt,
+    parse_tool_calls,
     strip_tool_calls,
-    TOOL_CALL_OPEN,
-    TOOL_CALL_CLOSE,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════
 # 1. Unit — Executor Base

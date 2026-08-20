@@ -41,11 +41,12 @@ import json
 import logging
 import random
 import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "misc"))
-import mcp_tool_bridge  # noqa: E402
+import mcp_tool_bridge
 
 logging.basicConfig(
     level=logging.INFO,
@@ -116,7 +117,7 @@ NEAR_MISS_UTTERANCES = [
     ("Vi uma notícia sobre bitcoin subindo forte hoje", "trading_news_sentiment"),
 ]
 
-Generator = Callable[[str, Dict[str, Any], int], List[str]]
+Generator = Callable[[str, dict[str, Any], int], list[str]]
 
 
 # ── Geradores de utterance ───────────────────────────────────────────────
@@ -145,10 +146,10 @@ def _sample_value(schema_type: str, param_name: str, rng: random.Random) -> Any:
     return "teste"
 
 
-def _sample_arguments(parameters: Dict[str, Any], rng: random.Random) -> Dict[str, Any]:
+def _sample_arguments(parameters: dict[str, Any], rng: random.Random) -> dict[str, Any]:
     props = parameters.get("properties", {}) or {}
     required = set(parameters.get("required", []) or [])
-    args: Dict[str, Any] = {}
+    args: dict[str, Any] = {}
     for name, spec in props.items():
         # sempre inclui os obrigatórios; inclui opcionais com 50% de chance
         # pra variar entre chamadas "mínimas" e "completas"
@@ -158,7 +159,7 @@ def _sample_arguments(parameters: Dict[str, Any], rng: random.Random) -> Dict[st
     return args
 
 
-_TEMPLATE_PHRASES: Dict[str, List[str]] = {
+_TEMPLATE_PHRASES: dict[str, list[str]] = {
     "trading_summary": ["resume o trading pra mim", "como tá o {symbol} agora?", "manda um resumo do trading"],
     "trading_positions": ["quais posições eu tenho abertas?", "tô com alguma posição aberta em {symbol}?"],
     "trading_recent_trades": ["mostra os últimos trades", "quais foram minhas últimas operações?"],
@@ -195,11 +196,11 @@ _TEMPLATE_PHRASES: Dict[str, List[str]] = {
 }
 
 
-def template_generator(tool_name: str, parameters: Dict[str, Any], n: int, seed: int = 0) -> List[Tuple[str, Dict[str, Any]]]:
+def template_generator(tool_name: str, parameters: dict[str, Any], n: int, seed: int = 0) -> list[tuple[str, dict[str, Any]]]:
     """Gerador offline/determinístico: template + variação de argumentos."""
     rng = random.Random(f"{tool_name}-{seed}")
     phrases = _TEMPLATE_PHRASES.get(tool_name, [f"executa {tool_name}"])
-    out: List[Tuple[str, Dict[str, Any]]] = []
+    out: list[tuple[str, dict[str, Any]]] = []
     for i in range(n):
         args = _sample_arguments(parameters, rng)
         phrase = phrases[i % len(phrases)]
@@ -211,13 +212,13 @@ def template_generator(tool_name: str, parameters: Dict[str, Any], n: int, seed:
     return out
 
 
-def ollama_generator_factory(host: str, model: str) -> Callable[[str, Dict[str, Any], int], List[Tuple[str, Dict[str, Any]]]]:
+def ollama_generator_factory(host: str, model: str) -> Callable[[str, dict[str, Any], int], list[tuple[str, dict[str, Any]]]]:
     """Gerador via Ollama local — pede pro modelo diversificar/parafrasear
     as frases template, mantendo os mesmos argumentos (a fonte de verdade
     dos argumentos continua sendo _sample_arguments, não o LLM)."""
     import httpx
 
-    def _gen(tool_name: str, parameters: Dict[str, Any], n: int) -> List[Tuple[str, Dict[str, Any]]]:
+    def _gen(tool_name: str, parameters: dict[str, Any], n: int) -> list[tuple[str, dict[str, Any]]]:
         base = template_generator(tool_name, parameters, n)
         prompt = (
             "Reescreva cada frase abaixo em português brasileiro informal, estilo "
@@ -251,9 +252,9 @@ def ollama_generator_factory(host: str, model: str) -> Callable[[str, Dict[str, 
 # ── Montagem dos exemplos ────────────────────────────────────────────────
 
 
-def _positive_examples(gen: Callable, per_tool: int) -> List[Dict[str, Any]]:
+def _positive_examples(gen: Callable, per_tool: int) -> list[dict[str, Any]]:
     schemas = {s["function"]["name"]: s["function"] for s in mcp_tool_bridge.build_ollama_tool_schemas()}
-    examples: List[Dict[str, Any]] = []
+    examples: list[dict[str, Any]] = []
     for tool_name, fn in sorted(schemas.items()):
         for text, args in gen(tool_name, fn.get("parameters", {}), per_tool):
             examples.append({
@@ -265,9 +266,9 @@ def _positive_examples(gen: Callable, per_tool: int) -> List[Dict[str, Any]]:
     return examples
 
 
-def _second_turn_examples(count_per_tool: int, rng: random.Random) -> List[Dict[str, Any]]:
+def _second_turn_examples(count_per_tool: int, rng: random.Random) -> list[dict[str, Any]]:
     schemas = {s["function"]["name"]: s["function"] for s in mcp_tool_bridge.build_ollama_tool_schemas()}
-    examples: List[Dict[str, Any]] = []
+    examples: list[dict[str, Any]] = []
     for tool_name in SECOND_TURN_TOOLS:
         fn = schemas.get(tool_name)
         if fn is None:
@@ -284,14 +285,14 @@ def _second_turn_examples(count_per_tool: int, rng: random.Random) -> List[Dict[
     return examples
 
 
-def _negative_examples() -> List[Dict[str, Any]]:
+def _negative_examples() -> list[dict[str, Any]]:
     return [
         {"instruction": text, "input": "", "output": "(resposta conversacional normal, sem tool_calls)", "tool_calls": []}
         for text in NEGATIVE_UTTERANCES
     ]
 
 
-def _near_miss_examples() -> List[Dict[str, Any]]:
+def _near_miss_examples() -> list[dict[str, Any]]:
     return [
         {
             "instruction": text,
@@ -304,14 +305,14 @@ def _near_miss_examples() -> List[Dict[str, Any]]:
     ]
 
 
-def build_dataset(generator_name: str, per_tool: int, ollama_host: str, ollama_model: str) -> List[Dict[str, Any]]:
+def build_dataset(generator_name: str, per_tool: int, ollama_host: str, ollama_model: str) -> list[dict[str, Any]]:
     if generator_name == "ollama":
         gen = ollama_generator_factory(ollama_host, ollama_model)
     else:
-        gen = lambda tool_name, parameters, n: template_generator(tool_name, parameters, n)  # noqa: E731
+        gen = lambda tool_name, parameters, n: template_generator(tool_name, parameters, n)
 
     rng = random.Random(42)
-    examples: List[Dict[str, Any]] = []
+    examples: list[dict[str, Any]] = []
     examples += _positive_examples(gen, per_tool)
     examples += _second_turn_examples(max(1, per_tool // 4), rng)
     # negativos ~30-40% do total de positivos — repete/perturba a lista curada

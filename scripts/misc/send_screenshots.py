@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Enviar screenshots do Playwright para o Telegram"""
-import requests
-import os
 import glob
+import os
 
-from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+import requests
+
+from tools.secrets_loader import get_telegram_chat_id, get_telegram_token
 
 TELEGRAM_TOKEN = get_telegram_token()
 CHAT_ID = get_telegram_chat_id() or ""

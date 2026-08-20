@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Trocar código de autorização por token OAuth."""
+import base64
 import json
 import subprocess
 import sys
-import base64
-from urllib.parse import parse_qs, urlparse
 
 SECRETS_AGENT_HOST = "192.168.15.2"
 SECRETS_AGENT_DB = "/var/lib/shared/secrets_agent/audit.db"
@@ -16,7 +15,7 @@ print("="*70)
 print("🔄 TROCANDO CÓDIGO POR TOKEN GMAIL")
 print("="*70 + "\n")
 
-print(f"📥 Obtendo credenciais do Secrets Agent...")
+print("📥 Obtendo credenciais do Secrets Agent...")
 
 # Get credentials from agent
 cmd = [
@@ -51,11 +50,11 @@ except Exception as e:
 client_id = creds_json["installed"]["client_id"]
 client_secret = creds_json["installed"]["client_secret"]
 
-print(f"✅ Credenciais obtidas")
+print("✅ Credenciais obtidas")
 print(f"   Project: {client_id[:30]}...")
 
 # Exchange code for token
-print(f"\n🔄 Trocando código por access token...")
+print("\n🔄 Trocando código por access token...")
 
 import requests
 

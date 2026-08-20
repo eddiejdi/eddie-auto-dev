@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Selenium test: Bus Debug output no painel de Saída ao executar prompt."""
-import time
 import sys
+import time
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 URL = "https://www.rpa4all.com/index.html"
 
@@ -44,7 +45,7 @@ def main():
             time.sleep(2)
             ide_list = driver.find_elements(By.CSS_SELECTOR, ".ide-container")
         
-        assert len(ide_list) > 0, f"IDE não carregou — nenhum .ide-container encontrado"
+        assert len(ide_list) > 0, "IDE não carregou — nenhum .ide-container encontrado"
         ide = ide_list[0]
         # Scroll até a IDE para garantir visibilidade
         driver.execute_script("arguments[0].scrollIntoView({block:'center'})", ide)
@@ -152,7 +153,7 @@ def main():
         if editor_content and len(editor_content.strip()) > 10:
             print(f"✅ Editor tem código ({len(editor_content)} chars)")
         else:
-            print(f"⚠️  Editor sem código suficiente: {repr(editor_content[:100])}")
+            print(f"⚠️  Editor sem código suficiente: {editor_content[:100]!r}")
 
         # 10. Testar modo ASK com bus debug
         ask_btn = modes[1]  # ❓ Perguntar

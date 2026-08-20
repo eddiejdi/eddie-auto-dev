@@ -3,17 +3,17 @@
 Monitoramento contínuo de vagas do WhatsApp.
 Executa em loop, verifica periodicamente por novas vagas.
 """
-import time
 import logging
-import sys
 import os
+import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
 # Ensure apply_real_job is importable
 sys.path.insert(0, str(Path(__file__).parent))
 
-from apply_real_job import search_group_chats_for_match, TARGET_EMAIL
+from apply_real_job import TARGET_EMAIL, search_group_chats_for_match
 
 # Config
 CHECK_INTERVAL_MINUTES = int(os.environ.get("CHECK_INTERVAL_MINUTES", "60"))  # Default: 1 hora

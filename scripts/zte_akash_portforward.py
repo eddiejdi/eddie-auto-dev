@@ -10,13 +10,13 @@ Estratégia: lê TODOS os campos hidden do formulário e reenvia junto com os
 novos dados — o firmware ZTE GPON exige que as regras existentes sejam
 incluídas no POST para reconhecer o contexto.
 """
-import sys
+import hashlib
+import http.cookiejar
+import json
 import os
 import re
-import json
-import hashlib
+import sys
 import urllib.parse
-import http.cookiejar
 import urllib.request
 
 BASE = "http://192.168.15.1"
@@ -78,7 +78,7 @@ def build_opener() -> urllib.request.OpenerDirector:
 
 def login(opener: urllib.request.OpenerDirector, user: str, pwd: str) -> bool:
     page = opener.open(BASE + "/", timeout=12).read().decode("utf-8", "ignore")
-    m = re.search(r"Frm_Logintoken['\"]?\)\.value\s*=\s*['\"](\w+)['\"]", page, re.I)
+    m = re.search(r"Frm_Logintoken['\"]?\)\.value\s*=\s*['\"](\w+)['\"]", page, re.IGNORECASE)
     token = m.group(1) if m else "1"
     data = urllib.parse.urlencode({
         "_lang": "", "frashnum": "", "action": "login",
@@ -102,7 +102,7 @@ def parse_pf_page(body: str) -> dict:
     instnum = int(fields.get("IF_INSTNUM", "0")) if fields.get("IF_INSTNUM", "").strip().isdigit() else 0
 
     # WAN interface name
-    wan_opts = re.findall(r"<option[^>]+value=['\"]([^'\"]+)['\"][^>]*>([^<]+)</option>", body, re.I)
+    wan_opts = re.findall(r"<option[^>]+value=['\"]([^'\"]+)['\"][^>]*>([^<]+)</option>", body, re.IGNORECASE)
     wan_iface = next((v for v, _ in wan_opts if not v.isdigit()), "IGD.WD1.WCD1.WCPPP3")
 
     return {"fields": fields, "instnum": instnum, "wan_iface": wan_iface}
@@ -193,7 +193,7 @@ def get_pf_body(opener: urllib.request.OpenerDirector) -> str:
 
 
 def rule_exists(body: str, ext_port: str) -> bool:
-    return (f"MinExtPort" in body
+    return ("MinExtPort" in body
             and f"'{ext_port}'" in body
             and len(body) > 10000)
 
@@ -229,7 +229,7 @@ def configure_rule(user: str, pwd: str, rule: dict) -> bool:
         print(f"  PF page: {len(pf_body)} bytes")
 
         if rule_exists(pf_body, rule["ext"]):
-            print(f"  Regra já existe!")
+            print("  Regra já existe!")
             return True
 
         state = parse_pf_page(pf_body)
@@ -264,13 +264,13 @@ def configure_rule(user: str, pwd: str, rule: dict) -> bool:
             return True
 
         if errtype_val == "-1" and errstr_val == "SUCC":
-            print(f"  ⚠ Servidor reportou SUCC mas porta não confirmada. Verificando com nova sessão...")
+            print("  ⚠ Servidor reportou SUCC mas porta não confirmada. Verificando com nova sessão...")
             op2 = build_opener()
             if login(op2, user, password):
                 pf2 = get_pf_body(op2)
                 state2 = parse_pf_page(pf2)
                 if rule_exists(pf2, rule["ext"]) or state2["instnum"] > state["instnum"]:
-                    print(f"  ✅ Regra confirmada com nova sessão!")
+                    print("  ✅ Regra confirmada com nova sessão!")
                     return True
 
         print(f"  Falhou com [{label}], tentando próximo método...")

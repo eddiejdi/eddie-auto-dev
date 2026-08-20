@@ -9,32 +9,30 @@ Pipeline de matching de vagas:
 6. Criar draft para matches > 75%
 7. Enviar draft para edenilson.adm@gmail.com
 """
+import base64
 import io
 import json
 import os
-import re
-import base64
 import subprocess
 import sys
 import tempfile
-from pathlib import Path
 from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any
-
-from docx import Document
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload
-import pymupdf as fitz  # PyMuPDF for PDF parsing
-import pytesseract  # OCR for image-based PDFs
-from pdf2image import convert_from_path  # Convert PDF to images for OCR
-import smtplib
-from email.mime.multipart import MIMEMultipart
+from email import encoders
 from email.mime.base import MIMEBase
+from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
-from email import encoders
+from pathlib import Path
+from typing import Any
+
+import pymupdf as fitz  # PyMuPDF for PDF parsing
+import pytesseract  # OCR for image-based PDFs
+from docx import Document
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
+from pdf2image import convert_from_path  # Convert PDF to images for OCR
 
 # Config
 SECRETS_AGENT_HOST = "192.168.15.2"
@@ -173,7 +171,7 @@ def get_waha_api_key() -> str:
         raise ValueError("WAHA_API_KEY not found in environment or Secrets Agent")
     return key
 
-def list_whatsapp_groups_with_jobs() -> List[Dict[str, Any]]:
+def list_whatsapp_groups_with_jobs() -> list[dict[str, Any]]:
     """List WhatsApp groups mentioning 'vaga', 'emprego', 'job', etc."""
     print("📱 Listando grupos WhatsApp com vagas...")
     
@@ -208,7 +206,7 @@ def list_whatsapp_groups_with_jobs() -> List[Dict[str, Any]]:
         return job_groups
     except Exception as e:
         print(f"  ⚠️ WAHA API indisponível: {e}")
-        print(f"     Usando dados mockados para draft...")
+        print("     Usando dados mockados para draft...")
         # Fallback: return mock data
         return [{
             'id': 'mock_1',
@@ -216,7 +214,7 @@ def list_whatsapp_groups_with_jobs() -> List[Dict[str, Any]]:
             'type': 'group'
         }]
 
-def fetch_recent_messages(chat_id: str, days: int = 30) -> List[Dict[str, Any]]:
+def fetch_recent_messages(chat_id: str, days: int = 30) -> list[dict[str, Any]]:
     """Fetch recent messages from a WhatsApp chat (last N days)."""
     try:
         api_key = get_waha_api_key()
@@ -265,7 +263,7 @@ def fetch_recent_messages(chat_id: str, days: int = 30) -> List[Dict[str, Any]]:
 # SECTION 4: Job Parsing & Matching
 # ============================================================================
 
-def extract_job_listings_from_messages(messages: List[Dict]) -> List[str]:
+def extract_job_listings_from_messages(messages: list[dict]) -> list[str]:
     """Extract job listings from WhatsApp messages."""
     jobs = []
     for msg in messages:
@@ -316,7 +314,7 @@ def calculate_match_percentage(curriculum: str, letter: str, job_posting: str) -
 # SECTION 5: Email Composition & Sending
 # ============================================================================
 
-def compose_email_draft(curriculum_snippet: str, letter_snippet: str, job_postings: List[str], matches: List[Dict]) -> str:
+def compose_email_draft(curriculum_snippet: str, letter_snippet: str, job_postings: list[str], matches: list[dict]) -> str:
     """Compose email draft with matching job postings."""
     
     high_match_count = sum(1 for m in matches if m['percentage'] > 75)
@@ -354,7 +352,7 @@ Edenilson Teixeira
     
     return body
 
-def send_email_via_gmail(to_email: str, subject: str, body: str, attachments: List[Path]) -> bool:
+def send_email_via_gmail(to_email: str, subject: str, body: str, attachments: list[Path]) -> bool:
     """Send email draft via Gmail (using OAuth token from Secrets Agent)."""
     print(f"📧 Enviando draft para {to_email}...")
     
@@ -404,7 +402,7 @@ def send_email_via_gmail(to_email: str, subject: str, body: str, attachments: Li
         return True
     except Exception as e:
         print(f"  ⚠️ Erro ao enviar via Gmail API: {e}")
-        print(f"     Salvando draft localmente para revisão manual...")
+        print("     Salvando draft localmente para revisão manual...")
         return False
 
 # ============================================================================
@@ -455,7 +453,7 @@ def main():
         # Sort by percentage
         matches.sort(key=lambda x: x['percentage'], reverse=True)
         
-        print(f"\n📊 RESULTADOS DE MATCHING:")
+        print("\n📊 RESULTADOS DE MATCHING:")
         for m in matches[:10]:
             print(f"   {m['company']}: {m['percentage']:.1f}%")
         

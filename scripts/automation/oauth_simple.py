@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Gerar URL OAuth simples."""
-import json, subprocess, sys, base64
+import base64
+import json
+import subprocess
+import sys
 from urllib.parse import urlencode
 
 # Get credentials
@@ -56,6 +59,7 @@ code = "4/0ASc3gC16gYjihHF7ooLJ3R1XSRhwyilZhuo6Da0NuosXSYW6N9vpzGKQ5HoDzRa5OZNPC
 
 # Exchange for token
 import requests
+
 token_url = "https://oauth2.googleapis.com/token"
 client_secret = creds_json["installed"]["client_secret"]
 

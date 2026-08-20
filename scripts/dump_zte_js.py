@@ -16,7 +16,7 @@ except FileNotFoundError:
     print(f"[dump_zte_js] Arquivo não encontrado: {HTML_PATH}")
     sys.exit(0)
 
-blocks = re.findall(r"<script[^>]*>(.*?)</script>", html, re.S | re.I)
+blocks = re.findall(r"<script[^>]*>(.*?)</script>", html, re.DOTALL | re.IGNORECASE)
 print(f"Total de blocos JS inline: {len(blocks)}")
 
 for i, content in enumerate(blocks):

@@ -4,10 +4,10 @@ GPU-Accelerated Model Inference via Ollama
 Run models on GTX 1050 GPU from Python
 """
 
-import requests
-import time
 import json
-from typing import Generator
+from collections.abc import Generator
+
+import requests
 
 OLLAMA_URL = "http://192.168.15.2:11434"
 

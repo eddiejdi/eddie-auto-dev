@@ -2,10 +2,10 @@
 """
 Instala a Function de WhatsApp no Open WebUI via API
 """
-import requests
-import json
 import getpass
 import os
+
+import requests
 
 OPENWEBUI_URL = os.getenv("OPENWEBUI_URL", "http://localhost:3000")
 

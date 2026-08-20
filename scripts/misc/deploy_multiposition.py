@@ -14,7 +14,6 @@ Usage: python3 deploy_multiposition.py
 
 import subprocess
 import sys
-import textwrap
 
 HOST = "homelab@192.168.15.2"
 AGENT_DIR = "/apps/crypto-trader/trading/btc_trading_agent"
@@ -108,7 +107,7 @@ AND NOT EXISTS (
     print(result)
 
     # Verify
-    result = ssh(f'PGPASSWORD=shared_memory_2026 psql -h localhost -p 5433 -U postgres -d postgres -c "SET search_path TO btc; SELECT id, symbol, size, entry_price, dry_run FROM open_positions;"')
+    result = ssh('PGPASSWORD=shared_memory_2026 psql -h localhost -p 5433 -U postgres -d postgres -c "SET search_path TO btc; SELECT id, symbol, size, entry_price, dry_run FROM open_positions;"')
     print(f"Open positions:\n{result}")
 
 

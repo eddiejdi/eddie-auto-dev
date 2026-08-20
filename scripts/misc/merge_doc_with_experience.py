@@ -6,15 +6,14 @@ cria um novo Google Doc com o conteúdo combinado e cria um backup do original.
 import io
 import json
 import subprocess
-import sys
+import tempfile
 from pathlib import Path
 
+from docx import Document
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from docx import Document
-import tempfile
 
 DOC_ID = "1y2eeV4No2zQD_ezeZCaBZiuswvANF8V3"
 SECRETS_AGENT_HOST = "192.168.15.2"

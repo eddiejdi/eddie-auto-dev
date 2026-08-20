@@ -3,11 +3,12 @@
 SOLUÇÃO DEFINITIVA: Ativar função via interface web usando Selenium
 """
 import time
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 WEBUI_URL = "http://192.168.15.2:8002"
 EMAIL = "edenilson.teixeira@rpa4all.com"

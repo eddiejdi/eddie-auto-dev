@@ -3,14 +3,15 @@
 Script para conectar Selenium a Chrome existente e navegar visualmente
 Captura screenshot de cada passo
 """
-import time
 import os
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
+import time
 from datetime import datetime
+
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 # Configuracoes
 SCREENSHOT_DIR = '/home/homelab/myClaude/screenshots/oauth_visual'
@@ -274,7 +275,7 @@ class VisualOAuthNavigator:
         print('\n' + '='*60)
         print('✅ NAVEGACAO COMPLETA!')
         print(f'📁 Screenshots salvos em: {SCREENSHOT_DIR}')
-        print(f'📁 E em: C:\\temp\\oauth_visual')
+        print('📁 E em: C:\\temp\\oauth_visual')
         print('='*60)
         
         # Listar screenshots

@@ -4,8 +4,9 @@ Script de verificação do status do Diretor Shared.
 Execute para ver o estado atual.
 """
 import os
+
 import requests
-import json
+
 BASE = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 session = requests.Session()
 r = session.post(f'{BASE}/api/v1/auths/signin', json={'email':'edenilson.teixeira@rpa4all.com','password':'Shared@2026'})
@@ -21,7 +22,7 @@ print('\n[1] FUNÇÃO director_eddie:')
 r = session.get(f'{BASE}/api/v1/functions/id/director_eddie', headers=headers)
 if r.status_code == 200:
     f = r.json()
-    print(f'    ✅ Existe')
+    print('    ✅ Existe')
     print(f'    Ativa: {f.get("is_active")}')
     print(f'    Tipo: {f.get("type")}')
     print(f'    Conteúdo: {len(f.get("content", ""))} bytes')
@@ -33,7 +34,7 @@ print('\n[2] MODELO INTERNO director_eddie:')
 r = session.get(f'{BASE}/api/v1/models/model?id=director_eddie', headers=headers)
 if r.status_code == 200:
     m = r.json()
-    print(f'    ✅ Existe')
+    print('    ✅ Existe')
     print(f'    base_model_id: {m.get("base_model_id")}')
     print(f'    is_active: {m.get("is_active")}')
 else:
@@ -50,13 +51,13 @@ for m in models:
         found_openai = True
         break
 if not found_openai:
-    print(f'    ❌ NÃO - Precisa reiniciar Open WebUI')
+    print('    ❌ NÃO - Precisa reiniciar Open WebUI')
 
 # 4. Modelo Ollama
 print('\n[4] MODELO OLLAMA diretor-shared:')
 for m in models:
     if m.get('id') == 'diretor-shared':
-        print(f'    ✅ Existe')
+        print('    ✅ Existe')
         print(f'    owned_by: {m.get("owned_by")}')
         break
 
@@ -68,10 +69,10 @@ if r.status_code == 200:
     params = m.get('params', {})
     system = params.get('system', '')
     if 'DIRETOR' in system.upper():
-        print(f'    ✅ SIM - System prompt do Diretor configurado')
+        print('    ✅ SIM - System prompt do Diretor configurado')
         print(f'    Tamanho: {len(system)} chars')
     else:
-        print(f'    ❌ NÃO - System prompt não configurado')
+        print('    ❌ NÃO - System prompt não configurado')
 
 print('\n' + '='*60)
 print('RESUMO:')

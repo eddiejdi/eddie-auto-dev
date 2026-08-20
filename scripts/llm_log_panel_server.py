@@ -354,13 +354,13 @@ class Handler(BaseHTTPRequestHandler):
             return
         self._send(200, path.read_bytes(), content_type)
 
-    def do_OPTIONS(self) -> None:  # noqa: N802
+    def do_OPTIONS(self) -> None:
         self._send(204, b"", "text/plain", {
             "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
             "Access-Control-Allow-Headers": "Content-Type, X-API-KEY, X-Updated-By",
         })
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         route = self._normalize_path()
         qs = parse_qs(urlparse(self.path).query)
 
@@ -483,7 +483,7 @@ class Handler(BaseHTTPRequestHandler):
 
         self._send_json(404, {"error": "rota desconhecida", "path": route})
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         route = self._normalize_path()
         if route != "/api/config":
             self._send_json(404, {"error": "rota desconhecida"})

@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-import os, pickle, logging
+import logging
+import pickle
+from collections import defaultdict
 from datetime import datetime, timedelta
 from pathlib import Path
-from collections import defaultdict
+
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
@@ -63,9 +65,9 @@ class GmailCleaner:
         try:
             results = self.service.users().messages().list(userId="me", q=query, maxResults=max_results).execute()
             messages = results.get("messages", [])
-            logger.info("Encontrados {} emails".format(len(messages)))
+            logger.info(f"Encontrados {len(messages)} emails")
             for i, msg in enumerate(messages):
-                if (i+1) % 50 == 0: logger.info("Analisando {}/{}...".format(i+1, len(messages)))
+                if (i+1) % 50 == 0: logger.info(f"Analisando {i+1}/{len(messages)}...")
                 self.stats["scanned"] += 1
                 try:
                     email = self.service.users().messages().get(userId="me", id=msg["id"], format="metadata", metadataHeaders=["From", "Subject"]).execute()
@@ -81,12 +83,12 @@ class GmailCleaner:
                         self.by_sender[domain] += 1
                         self.stats["to_delete"] += 1
                 except: self.stats["errors"] += 1
-        except HttpError as e: logger.error("Erro: {}".format(e))
+        except HttpError as e: logger.error(f"Erro: {e}")
         return candidates
 
     def delete_emails(self, ids):
         if self.dry_run:
-            logger.info("[SIMULACAO] {} emails seriam excluidos".format(len(ids)))
+            logger.info(f"[SIMULACAO] {len(ids)} emails seriam excluidos")
             return 0
         deleted = 0
         for i in range(0, len(ids), 100):
@@ -94,22 +96,22 @@ class GmailCleaner:
             try:
                 self.service.users().messages().batchModify(userId="me", body={"ids": batch, "addLabelIds": ["TRASH"], "removeLabelIds": ["INBOX"]}).execute()
                 deleted += len(batch)
-                logger.info("Excluidos {}/{}".format(deleted, len(ids)))
-            except Exception as e: logger.error("Erro: {}".format(e))
+                logger.info(f"Excluidos {deleted}/{len(ids)}")
+            except Exception as e: logger.error(f"Erro: {e}")
         self.stats["deleted"] = deleted
         return deleted
 
     def clean_promotions(self, days=30):
         date = (datetime.now() - timedelta(days=days)).strftime("%Y/%m/%d")
-        query = "before:{} category:promotions".format(date)
-        logger.info("Query: {}".format(query))
+        query = f"before:{date} category:promotions"
+        logger.info(f"Query: {query}")
         ids = self.scan_and_clean(query)
         if ids: self.delete_emails(ids)
 
     def clean_social(self, days=60):
         date = (datetime.now() - timedelta(days=days)).strftime("%Y/%m/%d")
-        query = "before:{} category:social".format(date)
-        logger.info("Query: {}".format(query))
+        query = f"before:{date} category:social"
+        logger.info(f"Query: {query}")
         ids = self.scan_and_clean(query)
         if ids: self.delete_emails(ids)
 
@@ -125,7 +127,7 @@ class GmailCleaner:
         if self.by_sender:
             print("\nTop remetentes:")
             for s, c in sorted(self.by_sender.items(), key=lambda x: -x[1])[:10]:
-                print("    {}: {}".format(s, c))
+                print(f"    {s}: {c}")
         print("="*50)
 
 def main():

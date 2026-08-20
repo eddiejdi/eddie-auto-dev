@@ -46,14 +46,14 @@ def main():
             "return window.getComputedStyle(arguments[0]).flexDirection", container
         )
         
-        print(f"\n🔍 Resultado:")
+        print("\n🔍 Resultado:")
         print(f"  display: {display}")
         print(f"  flex-direction: {flex_dir}")
         
         if display == 'flex' and flex_dir == 'column':
-            print(f"\n✅ CORREÇÃO CONFIRMADA - IDE ESPAÇADA CORRETAMENTE!")
+            print("\n✅ CORREÇÃO CONFIRMADA - IDE ESPAÇADA CORRETAMENTE!")
             driver.save_screenshot("/tmp/ide_corrected.png")
-            print(f"   📸 /tmp/ide_corrected.png")
+            print("   📸 /tmp/ide_corrected.png")
             return 0
         else:
             print(f"\n❌ Display ainda {display}")

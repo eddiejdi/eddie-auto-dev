@@ -4,17 +4,17 @@ Gmail Email Trainer & Cleaner
 Treina a IA com emails importantes e remove spam/promoções
 Executa semanalmente via systemd timer
 """
-import os
 import json
 import logging
-from datetime import datetime
-from typing import List, Dict, Tuple
+import os
 from dataclasses import dataclass
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
+from datetime import datetime
+
 import chromadb
 import requests
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 
 # Configuração
 OLLAMA_URL = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
@@ -43,7 +43,7 @@ class Email:
     sender: str
     snippet: str
     body: str = ""
-    labels: List[str] = None
+    labels: list[str] = None
     date: str = ""
 
 class EmailClassifier:
@@ -76,7 +76,7 @@ class EmailClassifier:
     ]
     
     @classmethod
-    def classify(cls, email: Email) -> Tuple[str, float]:
+    def classify(cls, email: Email) -> tuple[str, float]:
         """Retorna (categoria, confiança)"""
         subject_lower = email.subject.lower()
         sender_lower = email.sender.lower()
@@ -118,7 +118,7 @@ class EmailTrainer:
             metadata={"description": "Emails importantes do usuário"}
         )
     
-    def get_embedding(self, text: str) -> List[float]:
+    def get_embedding(self, text: str) -> list[float]:
         """Gera embedding via Ollama"""
         try:
             response = requests.post(
@@ -163,7 +163,7 @@ class EmailTrainer:
         logger.info(f"✅ Email indexado: {email.subject[:50]}")
         return True
     
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """Retorna estatísticas do treinamento"""
         return {
             "total_emails": self.collection.count(),
@@ -201,7 +201,7 @@ class GmailCleaner:
         
         return creds
     
-    def list_emails(self, max_results: int = 100) -> List[Email]:
+    def list_emails(self, max_results: int = 100) -> list[Email]:
         """Lista emails da inbox"""
         results = self.service.users().messages().list(
             userId='me', 
@@ -270,7 +270,7 @@ class GmailCleaner:
             logger.error(f"Erro ao marcar como spam: {e}")
             return False
     
-    def process_emails(self, dry_run: bool = False) -> Dict:
+    def process_emails(self, dry_run: bool = False) -> dict:
         """Processa emails: treina importantes, remove spam/promoções"""
         logger.info("=" * 60)
         logger.info("🔄 INICIANDO PROCESSAMENTO DE EMAILS")

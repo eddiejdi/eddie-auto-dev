@@ -2,8 +2,9 @@
 """
 Script de teste para API de geração de código
 """
-import requests
 import json
+
+import requests
 
 BASE_URL = "http://localhost:8503"
 
@@ -52,7 +53,7 @@ def test_communication_after():
     # Últimas 3 mensagens
     r = requests.get(f"{BASE_URL}/communication/messages?limit=3", timeout=10)
     data = r.json()
-    print(f"\nÚltimas mensagens:")
+    print("\nÚltimas mensagens:")
     for msg in data.get('messages', [])[-3:]:
         print(f"  [{msg['type']}] {msg['source']} -> {msg['target']}: {msg['content'][:50]}...")
 

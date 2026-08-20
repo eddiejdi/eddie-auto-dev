@@ -5,12 +5,13 @@ Usa stdin para inserir o código de autorização
 """
 import json
 import sys
-from pathlib import Path
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-from google_auth_oauthlib.flow import InstalledAppFlow
 from datetime import datetime
+from pathlib import Path
+
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
 
 CREDS_FILE = Path('/home/homelab/myClaude/credentials.json')
 DRIVE_DIR = Path('/home/homelab/myClaude/drive_data')

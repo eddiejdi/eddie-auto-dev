@@ -4,9 +4,10 @@ Servidor de API para envio de mensagens WhatsApp via WAHA
 Este servidor permite que modelos de IA enviem mensagens reais
 """
 
-from flask import Flask, request, jsonify
-import requests
 import logging
+
+import requests
+from flask import Flask, jsonify, request
 
 app = Flask(__name__)
 

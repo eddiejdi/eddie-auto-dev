@@ -14,29 +14,27 @@ Uso:
     python3 llm_tool_client.py --stats      # estatísticas de aprendizado
 """
 
+import argparse
 import asyncio
 import json
 import logging
 import os
-import sys
-import argparse
-from typing import Optional
 
 import httpx
 
 # Imports locais — parsing e formatação de tool calls (legacy mode)
 from specialized_agents.llm_tool_prompts import (
-    parse_tool_calls,
     get_tool_result_prompt,
+    parse_tool_calls,
     strip_tool_calls,
 )
 
 # Imports nativos — tool schemas Ollama (native mode)
 from specialized_agents.llm_tool_schemas import (
+    format_tool_result_message,
     get_ollama_tools,
     get_tool_system_message,
     normalize_tool_calls,
-    format_tool_result_message,
 )
 
 logging.basicConfig(

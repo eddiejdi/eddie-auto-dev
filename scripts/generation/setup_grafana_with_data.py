@@ -6,14 +6,15 @@ Solução: 1. Criar datasources 2. Popular com dados 3. Criar painéis 4. Valida
 """
 
 import json
-import subprocess
 import os
+import subprocess
 import sys
 import time
+from datetime import datetime
 from pathlib import Path
-from datetime import datetime, timedelta
+from typing import Any
+
 import requests
-from typing import Dict, List, Any
 
 # ============ CONFIGURAÇÕES ============
 HOMELAB_HOST = "homelab@192.168.15.2"
@@ -103,7 +104,7 @@ class GrafanaSetup:
             database="training_metrics"
         )
     
-    def collect_training_data(self) -> Dict[str, Any]:
+    def collect_training_data(self) -> dict[str, Any]:
         """Coleta dados de treinamento para popular o Grafana"""
         print("\n📊 Coletando dados de treinamento...")
         
@@ -160,7 +161,7 @@ class GrafanaSetup:
         models_output = self.run_ssh_cmd(cmd)
         data["models"] = [m for m in models_output.strip().split('\n') if m]
         
-        print(f"   ✅ Dados coletados:")
+        print("   ✅ Dados coletados:")
         print(f"      • {len(data['training_files'])} arquivos de treinamento")
         print(f"      • {data['total_conversations']} conversas totais")
         print(f"      • {len(data['models'])} modelos disponíveis")
@@ -176,7 +177,7 @@ class GrafanaSetup:
                 return float(size_str[:-1]) * mult
         return float(size_str)
     
-    def create_dashboard_with_data(self, training_data: Dict[str, Any]) -> bool:
+    def create_dashboard_with_data(self, training_data: dict[str, Any]) -> bool:
         """Cria um dashboard com dados reais"""
         print("\n🎨 Criando dashboard com dados reais...")
         
@@ -219,7 +220,7 @@ class GrafanaSetup:
             print(f"   ❌ Erro ao criar dashboard: {e}")
             return False
     
-    def _build_panels(self, data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def _build_panels(self, data: dict[str, Any]) -> list[dict[str, Any]]:
         """Constrói painéis com dados reais"""
         panels = []
         

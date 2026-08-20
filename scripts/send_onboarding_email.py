@@ -9,14 +9,13 @@ Uso:
     python send_onboarding_email.py novo.membro@empresa.com --dry-run
 """
 
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from pathlib import Path
 import argparse
-import sys
 import getpass
-from typing import List, Optional
+import smtplib
+import sys
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from pathlib import Path
 
 # ════════════════════════════════════════════════════════════════
 # CONFIGURAÇÃO SMTP
@@ -31,7 +30,7 @@ FROM_NAME = "HomeLab Admin"
 def send_onboarding_email(
     recipient_email: str,
     recipient_name: str = "Novo Membro",
-    smtp_password: Optional[str] = None,
+    smtp_password: str | None = None,
     dry_run: bool = False
 ) -> bool:
     """
@@ -144,7 +143,7 @@ Bem-vindo! 🎉
     
     # Modo teste
     if dry_run:
-        print(f"✅ DRY RUN - Email preparado!")
+        print("✅ DRY RUN - Email preparado!")
         print(f"   Destinatário: {recipient_email}")
         print(f"   Remetente: {FROM_EMAIL}")
         print(f"   Assunto: {msg['Subject']}")
@@ -154,7 +153,7 @@ Bem-vindo! 🎉
     # Enviar email
     try:
         if not smtp_password:
-            print(f"\n🔐 Autenticação SMTP")
+            print("\n🔐 Autenticação SMTP")
             print(f"   Host: {SMTP_HOST}:{SMTP_PORT}")
             print(f"   Usuário: {FROM_EMAIL}")
             smtp_password = getpass.getpass("   Senha: ")
@@ -164,7 +163,7 @@ Bem-vindo! 🎉
         server.set_debuglevel(0)
         server.starttls()
         
-        print(f"🔐 Autenticando...")
+        print("🔐 Autenticando...")
         server.login(FROM_EMAIL, smtp_password)
         
         print(f"📧 Enviando para {recipient_email}...")
@@ -175,7 +174,7 @@ Bem-vindo! 🎉
         return True
     
     except smtplib.SMTPAuthenticationError:
-        print(f"❌ Erro: Credenciais SMTP inválidas\n")
+        print("❌ Erro: Credenciais SMTP inválidas\n")
         return False
     except smtplib.SMTPException as e:
         print(f"❌ Erro SMTP: {e}\n")

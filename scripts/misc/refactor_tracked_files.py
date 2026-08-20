@@ -3,10 +3,10 @@
 Refatoração em todos os arquivos rastreados pelo git (extensões seguras).
 Usa `git ls-files` para evitar tocar arquivos ignorados/untracked.
 """
-from pathlib import Path
-import subprocess
-import re
 import logging
+import re
+import subprocess
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)

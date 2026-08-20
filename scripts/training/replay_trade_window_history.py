@@ -12,14 +12,14 @@ import statistics
 import sys
 import time
 import types
-from dataclasses import asdict, dataclass
+from collections.abc import Iterable
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any, Iterable
+from typing import Any
 
 import requests
-
 
 ROOT = Path(__file__).resolve().parents[2]
 AGENT_DIR = ROOT / "btc_trading_agent"
@@ -57,8 +57,7 @@ def _bootstrap_agent_import() -> None:
 
 
 _bootstrap_agent_import()
-from trading_agent import BitcoinTradingAgent  # type: ignore  # noqa: E402
-
+from trading_agent import BitcoinTradingAgent  # type: ignore
 
 KUCOIN_BASE = "https://api.kucoin.com"
 DEFAULT_LOG = ROOT / "btc_trading_agent" / "logs" / "agent.log"

@@ -7,11 +7,10 @@ Compara: KuCoin API vs PostgreSQL vs Agent Logs
 import json
 import logging
 import os
-import sys
 import subprocess
+import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
-from datetime import datetime, timedelta
+from typing import Any
 
 import psycopg2
 import psycopg2.extras
@@ -51,7 +50,7 @@ def _connect():
     return psycopg2.connect(_db_url())
 
 
-def get_kucoin_trades(symbol: str = "BTC-USDT", limit: int = 100) -> List[Dict[str, Any]]:
+def get_kucoin_trades(symbol: str = "BTC-USDT", limit: int = 100) -> list[dict[str, Any]]:
     """Obtém ultimas operações da KuCoin API"""
     try:
         fills = kucoin_api.get_fills(symbol=symbol, limit=limit) or []
@@ -62,7 +61,7 @@ def get_kucoin_trades(symbol: str = "BTC-USDT", limit: int = 100) -> List[Dict[s
         return []
 
 
-def get_db_trades(conn, days: int = 7) -> Dict[str, Dict[str, Any]]:
+def get_db_trades(conn, days: int = 7) -> dict[str, dict[str, Any]]:
     """Obtém operações do banco de dados"""
     import time
     cutoff_ts = time.time() - (days * 86400)
@@ -86,7 +85,7 @@ def get_db_trades(conn, days: int = 7) -> Dict[str, Dict[str, Any]]:
         return trades
 
 
-def get_agent_logs_trades(days: int = 7) -> Dict[str, Dict[str, Any]]:
+def get_agent_logs_trades(days: int = 7) -> dict[str, dict[str, Any]]:
     """Extrai operações dos logs do agent (journalctl)"""
     trades = {}
     try:
@@ -110,7 +109,7 @@ def get_agent_logs_trades(days: int = 7) -> Dict[str, Dict[str, Any]]:
     return trades
 
 
-def find_missing_trades() -> Dict[str, List[str]]:
+def find_missing_trades() -> dict[str, list[str]]:
     """Encontra operações perdidas comparando fontes"""
     
     log.info("\n" + "="*70)
@@ -216,7 +215,7 @@ def find_missing_trades() -> Dict[str, List[str]]:
     return results
 
 
-def sync_missing_trades(missing_in_db: List[str], conn) -> int:
+def sync_missing_trades(missing_in_db: list[str], conn) -> int:
     """Sincroniza operações perdidas"""
     if not missing_in_db:
         log.info("✅ Nenhuma operação para sincronizar")

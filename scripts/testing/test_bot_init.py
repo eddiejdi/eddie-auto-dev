@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Script para testar o bot"""
 import asyncio
+
 from telegram_bot import TelegramBot
+
 
 async def test():
     print("Iniciando teste...")

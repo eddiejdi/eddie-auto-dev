@@ -4,19 +4,16 @@ Test Suite para Agent Conversation Interceptor
 Valida todas as funcionalidades do sistema de interceptação
 """
 import sys
-import asyncio
 from pathlib import Path
-from datetime import datetime, timedelta
-from typing import List, Dict, Any
 
 # Adicionar path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from specialized_agents.agent_interceptor import (
-    get_agent_interceptor, ConversationPhase, AgentConversationInterceptor
-)
+from specialized_agents.agent_interceptor import get_agent_interceptor
+
 from specialized_agents.agent_communication_bus import (
-    get_communication_bus, MessageType, AgentCommunicationBus
+    MessageType,
+    get_communication_bus,
 )
 
 
@@ -196,7 +193,7 @@ def test_interceptor():
     
     # Teste 9: Finalizar conversa
     success = interceptor.finalize_conversation(conv_id)
-    print_test("Finalizar conversa", success, f"Conversa movida para histórico")
+    print_test("Finalizar conversa", success, "Conversa movida para histórico")
     
     # Teste 10: Verificar histórico
     history = interceptor.list_conversations(limit=10)
@@ -387,14 +384,14 @@ def test_streamlit_dashboard():
     
     # Verificar imports
     try:
-        import streamlit
-        import plotly
         import pandas
+        import plotly
+        import streamlit
         print_test("Dependências do Streamlit", True,
                    "Todas as bibliotecas disponíveis")
     except ImportError as e:
         print_test("Dependências do Streamlit", False,
-                   f"Faltando: {str(e)}")
+                   f"Faltando: {e!s}")
 
 
 def main():
@@ -424,7 +421,7 @@ def main():
             results[test_name] = "✅"
         except Exception as e:
             print(f"\n{Colors.RED}❌ Erro em {test_name}:{Colors.RESET}")
-            print(f"   {str(e)}")
+            print(f"   {e!s}")
             results[test_name] = "❌"
     
     # Resumo

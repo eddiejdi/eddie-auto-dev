@@ -5,6 +5,7 @@ This produces `docs/api.drawio` with one box per top-level path group.
 """
 import sys
 from pathlib import Path
+
 try:
     import yaml
 except Exception:
@@ -59,7 +60,7 @@ def main():
         # fallback: extract lines that look like '  /path:'
         spec = {'paths': {}}
         import re
-        for m in re.finditer(r'^\s*(/[^:\s]+)\s*:\s*$', text, flags=re.M):
+        for m in re.finditer(r'^\s*(/[^:\s]+)\s*:\s*$', text, flags=re.MULTILINE):
             p = m.group(1)
             spec['paths'][p] = {}
     paths = spec.get('paths', {}) if isinstance(spec, dict) else {}

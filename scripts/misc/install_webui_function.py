@@ -3,9 +3,11 @@
 Instalador de Função no Open WebUI
 Uso: python install_webui_function.py <email> <senha>
 """
-import requests
-import sys
 import os
+import sys
+
+import requests
+
 
 def main():
     if len(sys.argv) < 3:
@@ -31,7 +33,7 @@ def main():
             sys.exit(1)
         
         token = r.json().get("token")
-        print(f"✅ Login OK! Token obtido.")
+        print("✅ Login OK! Token obtido.")
     except Exception as e:
         print(f"❌ Erro de conexão: {e}")
         sys.exit(1)

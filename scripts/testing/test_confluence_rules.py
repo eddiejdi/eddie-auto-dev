@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Teste de validação das regras herdadas do Confluence Agent"""
 
-from specialized_agents.confluence_agent import ConfluenceAgent, AGENT_RULES, get_confluence_agent
+from specialized_agents.confluence_agent import AGENT_RULES, get_confluence_agent
+
 
 def test_confluence_rules():
     print("✅ Confluence Agent Validação")
@@ -16,7 +17,7 @@ def test_confluence_rules():
     
     # 2. Verificar capabilities
     caps = agent.get_capabilities()
-    print(f"\n📊 Capabilities:")
+    print("\n📊 Capabilities:")
     print(f"   Nome: {caps['name']}")
     print(f"   Versão: {caps['version']}")
     print(f"   Templates: {len(caps['templates'])}")
@@ -43,7 +44,7 @@ def test_confluence_rules():
             print(f"   ❌ {template}: {e}")
     
     # 5. Verificar métodos obrigatórios
-    print(f"\n🔍 Métodos obrigatórios (Regra 0.2):")
+    print("\n🔍 Métodos obrigatórios (Regra 0.2):")
     print(f"   validate_page: {hasattr(agent, 'validate_page')}")
     print(f"   get_rules: {hasattr(agent, 'get_rules')}")
     print(f"   get_capabilities: {hasattr(agent, 'get_capabilities')}")

@@ -5,13 +5,11 @@ Salva resultados incrementalmente + cache + resumo de progresso
 """
 
 import asyncio
+import hashlib
 import json
 import logging
-import subprocess
-import hashlib
-from pathlib import Path
-from typing import Optional
 import sys
+from pathlib import Path
 
 # Configurar logging
 logging.basicConfig(
@@ -37,7 +35,7 @@ def get_cache_key(file_path: Path) -> str:
     return hashlib.md5(key_str.encode()).hexdigest()
 
 
-def load_cached(file_path: Path) -> Optional[dict]:
+def load_cached(file_path: Path) -> dict | None:
     """Carrega resultado em cache."""
     cache_file = CACHE_DIR / f"{get_cache_key(file_path)}.json"
     if cache_file.exists():
@@ -187,7 +185,7 @@ async def process_lote_1():
         json.dump(all_summary, f, indent=2)
     
     logger.info(f"\n{'='*70}")
-    logger.info(f"✅ LOTE 1 COMPLETO")
+    logger.info("✅ LOTE 1 COMPLETO")
     logger.info(f"   Resumo: {summary_file}")
     logger.info(f"{'='*70}")
     
@@ -197,9 +195,9 @@ async def process_lote_1():
 if __name__ == "__main__":
     try:
         output = asyncio.run(process_lote_1())
-        print(f"\n🎯 Resultados salvos em: analysis_results/")
+        print("\n🎯 Resultados salvos em: analysis_results/")
         print(f"   Resumo: {output.name}")
     except KeyboardInterrupt:
         print("\n⚠️  Interrompido pelo usuário (resultados parciais salvos)")
-        print(f"   Verifique: analysis_results/")
+        print("   Verifique: analysis_results/")
         sys.exit(130)

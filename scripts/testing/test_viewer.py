@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Testar funções do viewer"""
 import sys
+
 sys.path.insert(0, '/home/shared/myClaude')
 
 from specialized_agents.simple_conversation_viewer import fetch_conversations, get_stats

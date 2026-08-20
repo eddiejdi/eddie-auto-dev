@@ -4,10 +4,9 @@ Script para testar o fluxo completo de auto-aprendizado.
 Simula uma conversa com o bot.
 """
 import asyncio
-import httpx
-import json
 import time
-from datetime import datetime
+
+import httpx
 
 from tools.secrets_loader import get_telegram_token
 
@@ -41,8 +40,8 @@ async def test_auto_dev():
     
     # 1. Importar e iniciar o bot
     print("\n[1] Iniciando bot...")
-    from telegram_bot import TelegramBot, AutoDeveloper, INABILITY_PATTERNS
-    import re
+
+    from telegram_bot import TelegramBot
     
     bot = TelegramBot()
     await bot.clear_old_updates()

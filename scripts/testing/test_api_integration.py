@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Teste rápido da integração do interceptador na API."""
 import sys
+
 import pytest
 
 sys.path.insert(0, '.')

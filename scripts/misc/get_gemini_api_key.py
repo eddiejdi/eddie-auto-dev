@@ -3,14 +3,14 @@
 Obtém uma GOOGLE_AI_API_KEY via Google Cloud REST API.
 Fluxo: OAuth (scope cloud-platform) → habilita Generative Language API → cria API Key → salva.
 """
-import json
 import http.server
+import json
+import os
+import sys
 import threading
+import time
 import urllib.parse
 import webbrowser
-import time
-import sys
-import os
 
 # --- Credenciais do projeto ---
 with open("credentials_google.json") as f:
@@ -24,8 +24,8 @@ PROJECT_ID = _inst["project_id"]  # homelab-483803
 REDIRECT_URI = "http://localhost:8085"
 SCOPE = "https://www.googleapis.com/auth/cloud-platform"
 
-import urllib.request
 import urllib.error
+import urllib.request
 
 auth_code = None
 
@@ -63,7 +63,7 @@ def get_access_token():
     thread = threading.Thread(target=server.handle_request, daemon=True)
     thread.start()
     
-    print(f"\n🌐 Abrindo navegador para autorização...")
+    print("\n🌐 Abrindo navegador para autorização...")
     print(f"   Se não abrir automaticamente, acesse:\n   {auth_url}\n")
     webbrowser.open(auth_url)
     
@@ -126,7 +126,7 @@ def enable_api(token):
         print("   ✅ API já estava habilitada.")
         return True
     else:
-        print(f"   ❌ Falha ao habilitar API.")
+        print("   ❌ Falha ao habilitar API.")
         return False
 
 
@@ -184,7 +184,7 @@ def create_api_key(token):
                 break
         return None
     else:
-        print(f"   ❌ Falha ao criar key.")
+        print("   ❌ Falha ao criar key.")
         return None
 
 
@@ -204,7 +204,7 @@ def store_in_secrets_agent(api_key):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
         if r.returncode == 0 and "error" not in r.stdout.lower():
-            print(f"   ✅ Armazenado no Secrets Agent: shared-google-ai-api-key")
+            print("   ✅ Armazenado no Secrets Agent: shared-google-ai-api-key")
             return True
         else:
             print(f"   ⚠️  Resposta: {r.stdout[:200]}")
@@ -220,13 +220,13 @@ def save_locally(api_key):
     lines = []
     if os.path.exists(env_file):
         with open(env_file) as f:
-            lines = [l for l in f.readlines() if not l.startswith("GOOGLE_AI_API_KEY=")]
+            lines = [l for l in f if not l.startswith("GOOGLE_AI_API_KEY=")]
     
     lines.append(f"GOOGLE_AI_API_KEY={api_key}\n")
     
     with open(env_file, "w") as f:
         f.writelines(lines)
-    print(f"   ✅ Salvo em .env")
+    print("   ✅ Salvo em .env")
 
 
 def main():
@@ -245,7 +245,7 @@ def main():
     existing = list_existing_keys(token)
     if existing:
         api_key = existing
-        print(f"\n✅ API Key existente encontrada!")
+        print("\n✅ API Key existente encontrada!")
     else:
         # 4. Criar nova key
         api_key = create_api_key(token)
@@ -255,7 +255,7 @@ def main():
         print("   Acesse manualmente: https://aistudio.google.com/apikey")
         sys.exit(1)
     
-    print(f"\n🎉 GOOGLE_AI_API_KEY obtida com sucesso!")
+    print("\n🎉 GOOGLE_AI_API_KEY obtida com sucesso!")
     print(f"   Key: {api_key[:10]}...{api_key[-4:]}")
     
     # 5. Salvar
@@ -263,9 +263,9 @@ def main():
     store_in_secrets_agent(api_key)
     
     # 6. Exportar
-    print(f"\n📋 Para usar agora:")
+    print("\n📋 Para usar agora:")
     print(f"   export GOOGLE_AI_API_KEY={api_key}")
-    print(f"\n✅ Gemini pronto para uso!")
+    print("\n✅ Gemini pronto para uso!")
 
 
 if __name__ == "__main__":

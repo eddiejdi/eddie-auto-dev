@@ -7,8 +7,8 @@ Uso:
 O servidor usa http.server e loga requisições. Projetado apenas para desenvolvimento local.
 """
 import http.server
-import socketserver
 import os
+import socketserver
 import sys
 
 PORT = int(os.environ.get('DEV_SITE_PORT', '3000'))

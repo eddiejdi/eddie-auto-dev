@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Cria modelo Diretor no Open WebUI que usa a função"""
+
 import requests
-import json
 
 email = 'edenilson.teixeira@rpa4all.com'
 password = 'Shared@2026'

@@ -10,7 +10,7 @@ except FileNotFoundError:
     print("Arquivo /tmp/zte_login.html não encontrado")
     sys.exit(1)
 
-for m in re.finditer(r"<script[^>]*>(.*?)</script>", page, re.S | re.I):
+for m in re.finditer(r"<script[^>]*>(.*?)</script>", page, re.DOTALL | re.IGNORECASE):
     script_content = m.group(1)
     if any(kw in script_content for kw in ["dosubmit", "Password", "MD5", "md5", "Logintoken"]):
         print("=== Script block ===")

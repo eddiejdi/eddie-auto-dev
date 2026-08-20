@@ -9,15 +9,15 @@ top-level tests in the repository root.
 """
 
 import os
-import re
 import pathlib
-import pytest
+import re
 import sys
+
+import pytest
 
 # Prevent pytest from discovering tests inside OTHER virtualenv/site-packages
 # but keep the current interpreter's site-packages so venv-installed packages remain importable.
 orig_sys_path = list(sys.path)
-import site as _site
 import sys as _sys
 
 _current_prefix = _sys.prefix

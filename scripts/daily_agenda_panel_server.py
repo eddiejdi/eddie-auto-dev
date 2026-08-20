@@ -37,7 +37,7 @@ TOOLS_DIR = REPO_ROOT / "tools"
 sys.path.insert(0, str(REPO_ROOT))
 sys.path.insert(0, str(TOOLS_DIR))
 
-from daily_agenda_config import (  # noqa: E402
+from daily_agenda_config import (
     DEFAULT_ARTIFACTS_DIR,
     DEFAULT_JOB_PATH,
     default_prompt_templates,
@@ -46,8 +46,8 @@ from daily_agenda_config import (  # noqa: E402
     load_prompt_templates,
     save_config,
 )
-from daily_agenda_job_status import ingest_job_report  # noqa: E402
-from youtube_agenda_publisher import publish_edition, youtube_auth_status  # noqa: E402
+from daily_agenda_job_status import ingest_job_report
+from youtube_agenda_publisher import publish_edition, youtube_auth_status
 
 logging.basicConfig(
     level=logging.INFO,
@@ -603,7 +603,7 @@ class Handler(BaseHTTPRequestHandler):
         def _emit(event: str, payload: dict) -> bool:
             try:
                 data = json.dumps(payload, ensure_ascii=False)
-                msg = f"event: {event}\ndata: {data}\n\n".encode("utf-8")
+                msg = f"event: {event}\ndata: {data}\n\n".encode()
                 self.wfile.write(msg)
                 self.wfile.flush()
                 return True
@@ -648,7 +648,7 @@ class Handler(BaseHTTPRequestHandler):
             "meta": day_dir / "publish_meta.json",
         }
 
-    def do_GET(self) -> None:  # noqa: N802
+    def do_GET(self) -> None:
         route = urlparse(self.path).path
         if route in ("/", "/index.html"):
             self._serve_static("index.html", "text/html; charset=utf-8")
@@ -770,7 +770,7 @@ class Handler(BaseHTTPRequestHandler):
             return
         self._send_json(404, {"error": "rota desconhecida"})
 
-    def do_POST(self) -> None:  # noqa: N802
+    def do_POST(self) -> None:
         route = urlparse(self.path).path
         if not self._authorized():
             self._send_json(401, {"error": "unauthorized"})

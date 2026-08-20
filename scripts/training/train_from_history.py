@@ -3,12 +3,10 @@
 Script completo para treinar o modelo Ollama com histórico de conversas
 """
 
-import os
 import json
 import subprocess
-from pathlib import Path
 from datetime import datetime
-from typing import List, Dict
+from pathlib import Path
 
 # Configurações
 OLLAMA_HOST = "192.168.15.2"
@@ -22,7 +20,7 @@ OUTPUT_DIR = Path("/home/homelab/myClaude/training_data")
 TODAY = datetime.now().strftime("%Y-%m-%d")
 
 
-def extract_conversations() -> List[Dict]:
+def extract_conversations() -> list[dict]:
     """Extrai todas as conversas dos arquivos JSON"""
     conversations = []
     
@@ -79,7 +77,7 @@ def extract_conversations() -> List[Dict]:
                                     'source': json_file.name
                                 })
                                 file_convs += 1
-                except Exception as e:
+                except Exception:
                     continue
             
             if file_convs > 0:
@@ -92,7 +90,7 @@ def extract_conversations() -> List[Dict]:
     return conversations
 
 
-def create_training_data(conversations: List[Dict]) -> str:
+def create_training_data(conversations: list[dict]) -> str:
     """Cria arquivo JSONL para treinamento"""
     output_file = OUTPUT_DIR / f"training_{TODAY}_full.jsonl"
     
@@ -112,7 +110,7 @@ def create_training_data(conversations: List[Dict]) -> str:
     return str(output_file)
 
 
-def create_system_prompt(conversations: List[Dict]) -> str:
+def create_system_prompt(conversations: list[dict]) -> str:
     """Cria system prompt baseado no estilo das conversas"""
     # Analisar tópicos comuns
     topics = set()
@@ -272,7 +270,7 @@ def main():
         test_model()
         
         print("\n" + "=" * 60)
-        print(f"✅ TREINAMENTO COMPLETO!")
+        print("✅ TREINAMENTO COMPLETO!")
         print(f"   Modelo: {NEW_MODEL}")
         print(f"   Servidor: {OLLAMA_HOST}")
         print(f"   Conversas usadas: {len(conversations)}")

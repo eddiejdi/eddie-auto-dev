@@ -5,11 +5,12 @@ version: 2.0.0
 description: Integra Open WebUI com o Agent Coordinator - Análise de requisitos, geração de código, execução e RAG.
 """
 
-import httpx
-import os
 import json
+import os
 import uuid
-from typing import Optional, Callable, Awaitable, Dict, List
+from collections.abc import Awaitable, Callable
+
+import httpx
 from pydantic import BaseModel, Field
 
 
@@ -50,13 +51,13 @@ class Pipe:
         self.valves = self.Valves()
         self.name = "Agent Coordinator"
         # Armazena sessões de projetos em análise
-        self.project_sessions: Dict[str, dict] = {}
+        self.project_sessions: dict[str, dict] = {}
 
     async def pipe(
         self,
         body: dict,
-        __user__: Optional[dict] = None,
-        __event_emitter__: Optional[Callable[[dict], Awaitable[None]]] = None,
+        __user__: dict | None = None,
+        __event_emitter__: Callable[[dict], Awaitable[None]] | None = None,
     ) -> str:
         """
         Processa mensagens e roteia para o Agent Coordinator.
@@ -102,7 +103,7 @@ class Pipe:
                 return result
                 
         except Exception as e:
-            error_msg = f"❌ Erro ao conectar com Agent Coordinator: {str(e)}"
+            error_msg = f"❌ Erro ao conectar com Agent Coordinator: {e!s}"
             if __event_emitter__:
                 await __event_emitter__({
                     "type": "status",
@@ -116,7 +117,7 @@ class Pipe:
         message: str, 
         user_id: str,
         messages: list,
-        emitter: Optional[Callable]
+        emitter: Callable | None
     ) -> str:
         """Processa comandos especiais."""
         
@@ -197,7 +198,7 @@ O Agent de Operações irá:
         client: httpx.AsyncClient, 
         description: str, 
         user_id: str,
-        emitter: Optional[Callable]
+        emitter: Callable | None
     ) -> str:
         """Inicia análise de requisitos para um novo projeto."""
         
@@ -277,7 +278,7 @@ Use `/cancelar` para cancelar ou `/gerar` quando estiver satisfeito com os requi
                 return f"Erro ao iniciar análise: {response.status_code}"
                 
         except Exception as e:
-            return f"❌ Erro na análise: {str(e)}"
+            return f"❌ Erro na análise: {e!s}"
 
     async def _continue_analysis(
         self, 
@@ -285,7 +286,7 @@ Use `/cancelar` para cancelar ou `/gerar` quando estiver satisfeito com os requi
         user_response: str, 
         user_id: str,
         messages: list,
-        emitter: Optional[Callable]
+        emitter: Callable | None
     ) -> str:
         """Continua a análise de requisitos com a resposta do usuário."""
         
@@ -405,13 +406,13 @@ Preciso de mais alguns esclarecimentos:
                 return f"Erro ao processar: {response.status_code}"
                 
         except Exception as e:
-            return f"❌ Erro: {str(e)}"
+            return f"❌ Erro: {e!s}"
 
     async def _generate_from_requirements(
         self, 
         client: httpx.AsyncClient, 
         user_id: str,
-        emitter: Optional[Callable]
+        emitter: Callable | None
     ) -> str:
         """Gera código baseado nos requisitos coletados."""
         
@@ -483,7 +484,7 @@ Esclarecimentos do usuário:
                 return await self._generate_with_ollama(client, context, language)
                 
         except Exception as e:
-            return f"❌ Erro ao gerar código: {str(e)}"
+            return f"❌ Erro ao gerar código: {e!s}"
 
     async def _generate_with_ollama(
         self, 
@@ -529,7 +530,7 @@ Responda APENAS com o código, sem explicações adicionais."""
 """
             return f"Erro ao gerar: {response.status_code}"
         except Exception as e:
-            return f"❌ Erro: {str(e)}"
+            return f"❌ Erro: {e!s}"
 
     async def _show_requirements(self, user_id: str) -> str:
         """Mostra requisitos do projeto atual."""
@@ -563,7 +564,7 @@ Responda APENAS com o código, sem explicações adicionais."""
         client: httpx.AsyncClient, 
         message: str, 
         history: list,
-        emitter: Optional[Callable]
+        emitter: Callable | None
     ) -> str:
         """Resposta inteligente para mensagens sem comando."""
         
@@ -601,7 +602,7 @@ Ou use `/help` para ver todos os comandos disponíveis.
             except:
                 pass
         
-        return f"""Não entendi completamente. Aqui estão algumas opções:
+        return """Não entendi completamente. Aqui estão algumas opções:
 
 📋 **Para iniciar um projeto:**
 `/projeto <descrição do que você quer criar>`
@@ -632,7 +633,7 @@ Ou use `/help` para ver todos os comandos disponíveis.
                 return result
             return f"Erro ao listar agentes: {response.status_code}"
         except Exception as e:
-            return f"❌ Erro: {str(e)}"
+            return f"❌ Erro: {e!s}"
 
     async def _get_status(self, client: httpx.AsyncClient) -> str:
         """Obtém status do sistema."""
@@ -652,7 +653,7 @@ Ou use `/help` para ver todos os comandos disponíveis.
                 return result
             return f"Erro ao obter status: {response.status_code}"
         except Exception as e:
-            return f"❌ Erro: {str(e)}"
+            return f"❌ Erro: {e!s}"
 
     async def _execute_code(self, client: httpx.AsyncClient, code: str) -> str:
         """Executa código Python."""
@@ -671,7 +672,7 @@ Ou use `/help` para ver todos os comandos disponíveis.
                 error = data.get("error", "")
                 exit_code = data.get("exit_code", 0)
                 
-                result = f"⚡ **Execução:**\n\n"
+                result = "⚡ **Execução:**\n\n"
                 if output:
                     result += f"**Output:**\n```\n{output}\n```\n"
                 if error:
@@ -680,7 +681,7 @@ Ou use `/help` para ver todos os comandos disponíveis.
                 return result
             return f"Erro ao executar: {response.status_code}"
         except Exception as e:
-            return f"❌ Erro: {str(e)}"
+            return f"❌ Erro: {e!s}"
 
     async def _search_rag(self, client: httpx.AsyncClient, query: str) -> str:
         """Busca no sistema RAG."""
@@ -706,14 +707,14 @@ Ou use `/help` para ver todos os comandos disponíveis.
                 return result
             return f"Erro na busca RAG: {response.status_code}"
         except Exception as e:
-            return f"❌ Erro: {str(e)}"
+            return f"❌ Erro: {e!s}"
 
     async def _report_bug(
         self, 
         client: httpx.AsyncClient, 
         description: str, 
         user_id: str,
-        emitter: Optional[Callable]
+        emitter: Callable | None
     ) -> str:
         """Reporta bug e aciona Agent de Operações para troubleshooting."""
         
@@ -825,7 +826,7 @@ Formato da resposta:
 
 **Problema:** {description}
 
-⚠️ **Agent de Operações indisponível:** {str(e)}
+⚠️ **Agent de Operações indisponível:** {e!s}
 
 **Ações manuais sugeridas:**
 1. Verifique se o Ollama está rodando: `curl http://192.168.15.2:11434/api/tags`

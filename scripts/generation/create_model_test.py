@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Criar modelo no Ollama usando API correta"""
 
+
 import requests
-import json
-import time
 
 OLLAMA_HOST = "http://192.168.15.2:11434"
 

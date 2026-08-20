@@ -3,33 +3,29 @@
 Dry-run: processa TODAS as mensagens do WhatsApp, calcula compatibilidade
 e imprime o email gerado para cada match (sem enviar).
 """
-import sys
-import os
 import json
-import subprocess
 import logging
+import os
+import subprocess
 from datetime import datetime, timedelta
-from pathlib import Path
 
 # Force threshold from env or default
 os.environ.setdefault("COMPATIBILITY_THRESHOLD", "20.0")
 os.environ.setdefault("COMPATIBILITY_METHOD", "semantic")
 
 from apply_real_job import (
-    load_curriculum_text,
-    extract_skills_summary,
-    classify_message_strict,
-    classify_message_llm,
-    compute_compatibility,
-    generate_application_email_llm,
-    extract_contact_email,
-    get_waha_api_key,
-    review_compatibility_with_llm,
-    WAHA_API,
-    CURRICULUM_TEXT,
-    CURRICULUM_SKILLS,
     COMPATIBILITY_THRESHOLD,
     MESSAGE_MIN_LENGTH,
+    WAHA_API,
+    classify_message_llm,
+    classify_message_strict,
+    compute_compatibility,
+    extract_contact_email,
+    extract_skills_summary,
+    generate_application_email_llm,
+    get_waha_api_key,
+    load_curriculum_text,
+    review_compatibility_with_llm,
 )
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -224,9 +220,9 @@ def main():
                 subject, body = generate_application_email_llm(job, compat)
                 print(f"\n  📬 PARA: {contact}")
                 print(f"  📌 ASSUNTO: {subject}")
-                print(f"  📎 ANEXO: Curriculo_Edenilson.docx")
+                print("  📎 ANEXO: Curriculo_Edenilson.docx")
                 print(f"\n  {'─' * 50}")
-                print(f"  CORPO DO EMAIL:")
+                print("  CORPO DO EMAIL:")
                 print(f"  {'─' * 50}")
                 for line in body.split('\n'):
                     print(f"  {line}")
@@ -238,7 +234,7 @@ def main():
             try:
                 review = review_compatibility_with_llm(CURRICULUM_TEXT, job['description'], compat, job.get('details', {}))
                 if review:
-                    print(f"\n  🔍 REVISÃO LLM:")
+                    print("\n  🔍 REVISÃO LLM:")
                     for line in review.split('\n')[:15]:
                         print(f"    {line}")
             except Exception as e:

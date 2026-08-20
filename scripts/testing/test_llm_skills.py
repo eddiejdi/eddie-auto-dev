@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Test LLM skill extraction."""
 import json
-import sys
 import os
+import sys
 
 # Ensure we import from current dir
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from apply_real_job import extract_skills_llm, compute_compatibility
+from apply_real_job import compute_compatibility, extract_skills_llm
 
 # Teste 1: Vaga Data Science
 job_text = """Data Science - Thera Consulting

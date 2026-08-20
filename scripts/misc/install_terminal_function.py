@@ -3,8 +3,10 @@
 Instala a Function de Terminal no Open WebUI via API Key
 """
 import os
-import requests
 from pathlib import Path
+
+import requests
+
 from tools.secrets_loader import get_openwebui_api_key
 
 OPENWEBUI_URL = os.getenv("OPENWEBUI_URL", "http://localhost:3000")

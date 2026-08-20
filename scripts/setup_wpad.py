@@ -196,7 +196,7 @@ def validate_wpad(host: str = HOMELAB_IP) -> bool:
     urls = [
         f"http://{host}/wpad.dat",
         f"http://{host}/proxy.pac",
-        f"http://wpad/wpad.dat",
+        "http://wpad/wpad.dat",
     ]
     all_ok = True
     for url in urls:

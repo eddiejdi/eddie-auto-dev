@@ -7,10 +7,15 @@ Saída:
 """
 import sys
 
+
 def main():
     errors = []
     try:
-        from tools.secrets_loader import get_telegram_token, get_openwebui_api_key, get_telegram_chat_id
+        from tools.secrets_loader import (
+            get_openwebui_api_key,
+            get_telegram_chat_id,
+            get_telegram_token,
+        )
     except Exception as e:
         print("Erro: não foi possível importar helpers de secrets:", e)
         sys.exit(2)

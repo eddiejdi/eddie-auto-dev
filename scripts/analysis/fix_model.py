@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Corrigir modelo diretor-shared usando API correta"""
-import os
-import requests
 import json
+import os
+
+import requests
 
 BASE = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 

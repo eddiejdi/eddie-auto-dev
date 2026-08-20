@@ -2,6 +2,7 @@
 """Script para atualizar modelos do Ollama com conhecimento de relatórios"""
 
 import json
+
 import requests
 
 OLLAMA_HOST = "http://192.168.15.2:11434"

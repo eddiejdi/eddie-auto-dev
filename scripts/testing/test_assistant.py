@@ -2,6 +2,7 @@
 """Testa o shared-assistant sem restrições"""
 
 import os
+
 import requests
 
 OLLAMA_URL = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"

@@ -5,8 +5,8 @@ Verifica se todas as conexões estão funcionando
 """
 
 import os
+
 import requests
-import json
 
 # Configurações
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", os.environ.get('HOMELAB_HOST', 'localhost'))
@@ -87,7 +87,7 @@ def test_agent_parse():
     """Testa parsing de intenção"""
     print("\n🧪 Testando parsing de intenção...")
     
-    from github_agent import GitHubAgent, GitHubAction
+    from github_agent import GitHubAction, GitHubAgent
     
     agent = GitHubAgent()
     
@@ -110,12 +110,12 @@ def main():
     print("=" * 60)
     print("🔍 Teste do GitHub Agent")
     print("=" * 60)
-    print(f"\n📋 Configurações:")
+    print("\n📋 Configurações:")
     print(f"   OLLAMA_HOST: {OLLAMA_HOST}")
     print(f"   OLLAMA_PORT: {OLLAMA_PORT}")
     print(f"   OLLAMA_MODEL: {OLLAMA_MODEL}")
     print(f"   GITHUB_TOKEN: {'***' if GITHUB_TOKEN else 'não configurado'}")
-    print("")
+    print()
     
     ollama_ok = test_ollama()
     

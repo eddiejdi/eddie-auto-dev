@@ -40,7 +40,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 log = logging.getLogger("whatsapp-toolcall-finetune")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "misc"))
-import mcp_tool_bridge  # noqa: E402
+import mcp_tool_bridge
 
 # Mesmo repo HF pré-quantizado 4-bit já usado (e comprovado no mesmo venv/GPU)
 # pelo pipeline de fine-tuning do trading-analyst — casa com o `FROM llama3.1:8b`
@@ -91,7 +91,7 @@ SYSTEM = (
 )
 
 
-def _subset_schema(all_schemas: list[dict], ex: dict, k: int, rng: "random.Random") -> list[dict]:
+def _subset_schema(all_schemas: list[dict], ex: dict, k: int, rng: random.Random) -> list[dict]:
     """Monta um schema reduzido para um exemplo: a(s) ferramenta(s) realmente
     chamada(s) (ou mencionada(s) no near-miss) + distratoras aleatórias até
     completar `k`. Determinístico dado o mesmo `rng` (chamado em ordem fixa
@@ -196,10 +196,14 @@ def train(dry_run: bool, do_merge: bool) -> int:
         return 0
 
     import torch
-    from transformers import (AutoModelForCausalLM,
-                              DataCollatorForLanguageModeling, Trainer, TrainingArguments)
-    from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
     from datasets import Dataset
+    from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+    from transformers import (
+        AutoModelForCausalLM,
+        DataCollatorForLanguageModeling,
+        Trainer,
+        TrainingArguments,
+    )
 
     if not torch.cuda.is_available():
         log.error("CUDA indisponível!")
@@ -219,7 +223,7 @@ def train(dry_run: bool, do_merge: bool) -> int:
     ))
     model.print_trainable_parameters()
 
-    def to_text(ex: dict, rng: "random.Random") -> str:
+    def to_text(ex: dict, rng: random.Random) -> str:
         user = (ex["instruction"] + (ex.get("input") or "")).strip()
         tool_calls = ex.get("tool_calls") or []
         tool_result = ex.get("tool_result")

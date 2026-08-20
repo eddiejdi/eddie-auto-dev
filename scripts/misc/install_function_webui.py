@@ -4,12 +4,12 @@ Instala a função Agent Coordinator no Open WebUI automaticamente.
 Uso: python install_function_webui.py <email> <senha>
 """
 
-import sys
 import os
-import requests
-import json
 import re
+import sys
 from pathlib import Path
+
+import requests
 
 HOST = os.environ.get('HOMELAB_HOST', 'localhost')
 WEBUI_URL = os.environ.get('WEBUI_URL', f"http://{HOST}:3000")

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Teste de conexão e instalação da função no Open WebUI"""
 
-import requests
-import sys
 import os
+import sys
+
+import requests
 
 WEBUI_URL = "http://192.168.15.2:3000"
 

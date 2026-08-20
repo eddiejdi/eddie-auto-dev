@@ -9,15 +9,13 @@ Relatórios disponíveis:
 - Homelab (homelab, servidores, docker)
 """
 
-import os
-import sys
-import json
-import sqlite3
-import requests
-from datetime import datetime, timedelta
-from typing import Dict, Any, List, Optional
-from pathlib import Path
 import logging
+import os
+import sqlite3
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import requests
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -29,7 +27,7 @@ BTC_AGENT_DIR = BASE_DIR / "btc_trading_agent"
 
 # ======================== BITCOIN TRADING REPORT ========================
 
-def get_btc_price() -> Optional[float]:
+def get_btc_price() -> float | None:
     """Obtém preço atual do BTC"""
     try:
         response = requests.get(
@@ -54,7 +52,7 @@ def get_btc_price() -> Optional[float]:
     return None
 
 
-def get_btc_trades(hours: int = 24) -> List[Dict]:
+def get_btc_trades(hours: int = 24) -> list[dict]:
     """Busca trades das últimas N horas"""
     trades = []
     try:
@@ -77,7 +75,7 @@ def get_btc_trades(hours: int = 24) -> List[Dict]:
     return trades
 
 
-def get_btc_engine_status() -> Dict:
+def get_btc_engine_status() -> dict:
     """Obtém status do engine de trading"""
     try:
         response = requests.get("http://localhost:8511/api/status", timeout=5)
@@ -88,7 +86,7 @@ def get_btc_engine_status() -> Dict:
     return {"engine": {"state": "offline"}}
 
 
-def get_btc_model_stats() -> Dict:
+def get_btc_model_stats() -> dict:
     """Obtém estatísticas do modelo ML"""
     stats = {"episodes": 0, "reward": 0.0}
     try:
@@ -104,7 +102,7 @@ def get_btc_model_stats() -> Dict:
     return stats
 
 
-def calculate_btc_stats(trades: List[Dict]) -> Dict:
+def calculate_btc_stats(trades: list[dict]) -> dict:
     """Calcula estatísticas dos trades"""
     stats = {
         "total_trades": 0, "buys": 0, "sells": 0,
@@ -170,7 +168,7 @@ def generate_btc_report(hours: int = 24) -> str:
     mode = "🧪 SIMULAÇÃO" if dry_run else "💰 MODO REAL"
     
     # Preço
-    price_str = "${:,.2f}".format(current_price) if current_price else "N/A"
+    price_str = f"${current_price:,.2f}" if current_price else "N/A"
     
     # PnL
     pnl = stats["total_pnl"]
@@ -180,12 +178,12 @@ def generate_btc_report(hours: int = 24) -> str:
     if stats["open_position"] > 0:
         op = stats["open_position"]
         op_price = stats["open_position_price"]
-        position_str = "🔵 {:.8f} BTC".format(op)
+        position_str = f"🔵 {op:.8f} BTC"
         if current_price and op_price > 0:
             unrealized = (current_price - op_price) * op
             unrealized_pct = ((current_price / op_price) - 1) * 100
-            position_str += "\n├ Entrada: ${:,.2f}".format(op_price)
-            position_str += "\n└ P&L: ${:,.2f} ({:+.2f}%)".format(unrealized, unrealized_pct)
+            position_str += f"\n├ Entrada: ${op_price:,.2f}"
+            position_str += f"\n└ P&L: ${unrealized:,.2f} ({unrealized_pct:+.2f}%)"
     else:
         position_str = "💤 Sem posição"
     
@@ -241,7 +239,7 @@ def generate_btc_report(hours: int = 24) -> str:
 # API Key do WAHA (deve ser a mesma configurada no serviço)
 WAHA_API_KEY = os.getenv("WAHA_API_KEY", "96263ae8a9804541849ebc5efa212e0e")
 
-def get_system_services() -> Dict[str, str]:
+def get_system_services() -> dict[str, str]:
     """Verifica status dos serviços"""
     services = {}
     
@@ -257,7 +255,7 @@ def get_system_services() -> Dict[str, str]:
             if response.status_code == 200:
                 services[name] = "🟢 Online"
             else:
-                services[name] = "🟡 Erro {}".format(response.status_code)
+                services[name] = f"🟡 Erro {response.status_code}"
         except requests.exceptions.ConnectionError:
             services[name] = "🔴 Offline"
         except:
@@ -273,7 +271,7 @@ def get_system_services() -> Dict[str, str]:
         if response.status_code == 200:
             services["WAHA (WhatsApp)"] = "🟢 Online"
         else:
-            services["WAHA (WhatsApp)"] = "🟡 Erro {}".format(response.status_code)
+            services["WAHA (WhatsApp)"] = f"🟡 Erro {response.status_code}"
     except requests.exceptions.ConnectionError:
         services["WAHA (WhatsApp)"] = "🔴 Offline"
     except:
@@ -282,7 +280,7 @@ def get_system_services() -> Dict[str, str]:
     return services
 
 
-def get_ollama_models() -> List[str]:
+def get_ollama_models() -> list[str]:
     """Lista modelos Ollama disponíveis"""
     try:
         response = requests.get("http://192.168.15.2:11434/api/tags", timeout=5)
@@ -301,12 +299,12 @@ def generate_system_report() -> str:
     now = datetime.now()
     
     # Serviços
-    services_str = "\n".join(["{} {}".format(v, k) for k, v in services.items()])
+    services_str = "\n".join([f"{v} {k}" for k, v in services.items()])
     
     # Modelos (top 5)
-    models_str = "\n".join(["• {}".format(m) for m in models[:5]])
+    models_str = "\n".join([f"• {m}" for m in models[:5]])
     if len(models) > 5:
-        models_str += "\n• ... e mais {} modelos".format(len(models) - 5)
+        models_str += f"\n• ... e mais {len(models) - 5} modelos"
     
     report = """🖥️ *STATUS DO SISTEMA*
 ━━━━━━━━━━━━━━━━━━━━━
@@ -327,7 +325,7 @@ def generate_system_report() -> str:
 
 # ======================== HOMELAB REPORT ========================
 
-def get_docker_containers() -> List[Dict]:
+def get_docker_containers() -> list[dict]:
     """Lista containers Docker (requer acesso SSH ou API)"""
     # Por enquanto retorna info estática - pode ser expandido
     containers = [
@@ -363,7 +361,7 @@ def generate_homelab_report() -> str:
 🕐 {}
 """.format(
         containers_str,
-        "\n".join(["{} {}".format(v, k) for k, v in services.items()]),
+        "\n".join([f"{v} {k}" for k, v in services.items()]),
         now.strftime("%d/%m/%Y %H:%M")
     )
     return report
@@ -378,7 +376,7 @@ REPORT_KEYWORDS = {
     "system": ["sistema", "server", "servidor", "serviços", "servicos", "docker", "containers"],
 }
 
-def detect_report_type(text: str) -> Optional[str]:
+def detect_report_type(text: str) -> str | None:
     """Detecta tipo de relatório baseado no texto"""
     text_lower = text.lower()
     
@@ -419,7 +417,7 @@ def generate_report(report_type: str, **kwargs) -> str:
         return "❌ Tipo de relatório não reconhecido. Use: btc, sistema ou homelab"
 
 
-async def process_report_request(text: str) -> Optional[str]:
+async def process_report_request(text: str) -> str | None:
     """Processa solicitação de relatório e retorna o relatório gerado"""
     report_type = detect_report_type(text)
     if report_type:

@@ -4,11 +4,10 @@ MCP Helper para PyCharm
 Facilita a chamada de MCP servers remotos do homelab diretamente do Python Console
 """
 
-import subprocess
 import json
+import subprocess
 import sys
-from typing import Dict, Any, List, Optional
-from pathlib import Path
+from typing import Any
 
 # Configurações
 HOMELAB_HOST = "homelab@192.168.15.2"
@@ -38,7 +37,7 @@ class MCPClient:
         self.server_name = server_name
         self.server_path = MCP_SERVERS[server_name]
 
-    def execute(self, tool_name: str, params: Dict[str, Any] = None, timeout: int = 30) -> Dict[str, Any]:
+    def execute(self, tool_name: str, params: dict[str, Any] = None, timeout: int = 30) -> dict[str, Any]:
         """
         Executa uma ferramenta no MCP server
 
@@ -90,7 +89,7 @@ class MCPClient:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def list_tools(self) -> List[str]:
+    def list_tools(self) -> list[str]:
         """Lista ferramentas disponíveis no servidor"""
         cmd = [
             "ssh", HOMELAB_HOST,
@@ -120,12 +119,12 @@ class GitHubMCP(MCPClient):
     def __init__(self):
         super().__init__("github")
 
-    def list_repos(self, owner: Optional[str] = None) -> Dict[str, Any]:
+    def list_repos(self, owner: str | None = None) -> dict[str, Any]:
         """Lista repositórios"""
         params = {"owner": owner} if owner else {}
         return self.execute("github_list_repos", params)
 
-    def create_issue(self, repo: str, title: str, body: str, owner: Optional[str] = None) -> Dict[str, Any]:
+    def create_issue(self, repo: str, title: str, body: str, owner: str | None = None) -> dict[str, Any]:
         """Cria uma issue"""
         return self.execute("github_create_issue", {
             "repo": repo,
@@ -134,14 +133,14 @@ class GitHubMCP(MCPClient):
             "owner": owner
         })
 
-    def search_code(self, query: str, repo: Optional[str] = None) -> Dict[str, Any]:
+    def search_code(self, query: str, repo: str | None = None) -> dict[str, Any]:
         """Busca código"""
         params = {"query": query}
         if repo:
             params["repo"] = repo
         return self.execute("github_search_code", params)
 
-    def list_prs(self, repo: str, owner: Optional[str] = None, state: str = "open") -> Dict[str, Any]:
+    def list_prs(self, repo: str, owner: str | None = None, state: str = "open") -> dict[str, Any]:
         """Lista Pull Requests"""
         return self.execute("github_list_prs", {
             "repo": repo,
@@ -156,11 +155,11 @@ class SSHAgentMCP(MCPClient):
     def __init__(self):
         super().__init__("ssh")
 
-    def list_hosts(self) -> Dict[str, Any]:
+    def list_hosts(self) -> dict[str, Any]:
         """Lista hosts SSH configurados"""
         return self.execute("ssh_list_hosts")
 
-    def execute_command(self, host: str, command: str, timeout: int = 30) -> Dict[str, Any]:
+    def execute_command(self, host: str, command: str, timeout: int = 30) -> dict[str, Any]:
         """Executa comando em host remoto"""
         return self.execute("ssh_execute", {
             "host": host,
@@ -168,7 +167,7 @@ class SSHAgentMCP(MCPClient):
             "timeout": timeout
         })
 
-    def get_system_info(self, host: str) -> Dict[str, Any]:
+    def get_system_info(self, host: str) -> dict[str, Any]:
         """Obtém informações do sistema"""
         return self.execute("ssh_get_system_info", {"host": host})
 
@@ -179,7 +178,7 @@ class RAGMCP(MCPClient):
     def __init__(self):
         super().__init__("rag")
 
-    def search(self, query: str, collection: str = "default", limit: int = 5) -> Dict[str, Any]:
+    def search(self, query: str, collection: str = "default", limit: int = 5) -> dict[str, Any]:
         """Busca semântica em documentos"""
         return self.execute("rag_search", {
             "query": query,
@@ -187,7 +186,7 @@ class RAGMCP(MCPClient):
             "limit": limit
         })
 
-    def index_document(self, content: str, collection: str = "default", metadata: Dict[str, Any] = None) -> Dict[str, Any]:
+    def index_document(self, content: str, collection: str = "default", metadata: dict[str, Any] = None) -> dict[str, Any]:
         """Indexa novo documento"""
         return self.execute("rag_index", {
             "content": content,
@@ -195,7 +194,7 @@ class RAGMCP(MCPClient):
             "metadata": metadata or {}
         })
 
-    def list_collections(self) -> Dict[str, Any]:
+    def list_collections(self) -> dict[str, Any]:
         """Lista coleções disponíveis"""
         return self.execute("rag_list_collections")
 
@@ -206,15 +205,15 @@ class HomelabMCP(MCPClient):
     def __init__(self):
         super().__init__("homelab")
 
-    def docker_ps(self) -> Dict[str, Any]:
+    def docker_ps(self) -> dict[str, Any]:
         """Lista containers Docker"""
         return self.execute("homelab_docker_ps")
 
-    def systemctl_status(self, service: str) -> Dict[str, Any]:
+    def systemctl_status(self, service: str) -> dict[str, Any]:
         """Verifica status de serviço systemd"""
         return self.execute("homelab_systemctl_status", {"service": service})
 
-    def system_metrics(self) -> Dict[str, Any]:
+    def system_metrics(self) -> dict[str, Any]:
         """Obtém métricas do sistema"""
         return self.execute("homelab_system_metrics")
 
@@ -243,7 +242,7 @@ def quick_ssh(command: str, host: str = "homelab") -> str:
         return f"ERROR: {result.get('error')}"
 
 
-def quick_github_search(query: str, repo: Optional[str] = None) -> List[Dict]:
+def quick_github_search(query: str, repo: str | None = None) -> list[dict]:
     """
     Busca rápida no GitHub
 
@@ -264,7 +263,7 @@ def quick_github_search(query: str, repo: Optional[str] = None) -> List[Dict]:
         return []
 
 
-def quick_rag_search(query: str, collection: str = "homelab") -> List[Dict]:
+def quick_rag_search(query: str, collection: str = "homelab") -> list[dict]:
     """
     Busca rápida no RAG
 

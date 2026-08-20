@@ -5,10 +5,15 @@ Tudo no mesmo processo para garantir que o interceptor capture
 """
 import sys
 import time
+
 sys.path.insert(0, '/home/shared/myClaude')
 
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 from specialized_agents.agent_interceptor import get_agent_interceptor
+
+from specialized_agents.agent_communication_bus import (
+    MessageType,
+    get_communication_bus,
+)
 
 # Primeiro, obter o interceptor (isso registra no bus automaticamente)
 print("🔧 Inicializando interceptor...")

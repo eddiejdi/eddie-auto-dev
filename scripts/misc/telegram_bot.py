@@ -5,19 +5,24 @@ Implementa todas as funcionalidades da API do Telegram
 Com Auto-Desenvolvimento: quando não consegue responder, desenvolve a solução
 Com Busca Web: pesquisa na internet para enriquecer respostas e desenvolvimento
 """
-import os
 import asyncio
-import httpx
-import json
-import re
-import time
 import fcntl
-from urllib.parse import urlparse
-from datetime import datetime
-from typing import Optional, Dict, Any, List, Tuple
-from pathlib import Path
+import json
+import os
+import re
 import sys
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+from urllib.parse import urlparse
+
+import httpx
+
+from specialized_agents.agent_communication_bus import (
+    MessageType,
+    get_communication_bus,
+)
 
 # Adicionar diretório atual ao path para imports locais
 sys.path.insert(0, str(Path(__file__).parent))
@@ -33,7 +38,9 @@ except ImportError:
 # Import do módulo de Google Calendar
 try:
     from google_calendar_integration import (
-        get_calendar_assistant, process_calendar_request, CalendarAssistant
+        CalendarAssistant,
+        get_calendar_assistant,
+        process_calendar_request,
     )
     CALENDAR_AVAILABLE = True
 except ImportError:
@@ -43,8 +50,10 @@ except ImportError:
 # Import do módulo de Gmail
 try:
     from gmail_integration import (
-        get_gmail_client, get_email_cleaner, process_gmail_command,
-        read_email_for_ai
+        get_email_cleaner,
+        get_gmail_client,
+        process_gmail_command,
+        read_email_for_ai,
     )
     GMAIL_AVAILABLE = True
 except ImportError:
@@ -54,7 +63,9 @@ except ImportError:
 # Import do módulo de Localização
 try:
     from location_integration.telegram_location import (
-        handle_location_command, get_location_help, LOCATION_COMMANDS
+        LOCATION_COMMANDS,
+        get_location_help,
+        handle_location_command,
     )
     LOCATION_AVAILABLE = True
 except ImportError:
@@ -64,7 +75,9 @@ except ImportError:
 # Import do módulo de Home Assistant
 try:
     from homeassistant_integration.telegram_homeassistant import (
-        handle_homeassistant_command, get_homeassistant_help, HOMEASSISTANT_COMMANDS
+        HOMEASSISTANT_COMMANDS,
+        get_homeassistant_help,
+        handle_homeassistant_command,
     )
     HOMEASSISTANT_AVAILABLE = True
 except ImportError:
@@ -74,7 +87,9 @@ except ImportError:
 # Import do módulo de Trading (BTC)
 try:
     from btc_trading_agent.telegram_trading import (
-        TelegramTradingClient, TRADING_COMMANDS, get_trading_help
+        TRADING_COMMANDS,
+        TelegramTradingClient,
+        get_trading_help,
     )
     trading_client = TelegramTradingClient()
     TRADING_AVAILABLE = True
@@ -86,8 +101,11 @@ except ImportError:
 # Import do módulo de integração OpenWebUI + Modelos
 try:
     from openwebui_integration import (
-        IntegrationClient, get_integration_client, close_integration,
-        MODEL_PROFILES, ChatResponse
+        MODEL_PROFILES,
+        ChatResponse,
+        IntegrationClient,
+        close_integration,
+        get_integration_client,
     )
     INTEGRATION_AVAILABLE = True
 except ImportError:
@@ -554,8 +572,8 @@ class AutoDeveloper:
         self.agents = agents_client
         self.ollama = ollama_client
         self.client = httpx.AsyncClient(timeout=600.0)  # 10 min para CPU
-        self.developments: Dict[str, dict] = {}  # Histórico de desenvolvimentos
-        self.pending_tests: Dict[str, dict] = {}  # Testes pendentes pós-deploy
+        self.developments: dict[str, dict] = {}  # Histórico de desenvolvimentos
+        self.pending_tests: dict[str, dict] = {}  # Testes pendentes pós-deploy
         
         # Inicializar motor de busca web
         if WEB_SEARCH_AVAILABLE:
@@ -563,7 +581,7 @@ class AutoDeveloper:
         else:
             self.web_search = None
         # Known agents cache (populated async)
-        self.known_agents: List[str] = []
+        self.known_agents: list[str] = []
 
         async def _load_agents():
             try:
@@ -581,7 +599,7 @@ class AutoDeveloper:
             # If event loop isn't running, ignore; callers can call `await auto_dev.agents.list_agents()` later
             pass
     
-    async def search_web(self, query: str, num_results: int = 3) -> Dict[str, Any]:
+    async def search_web(self, query: str, num_results: int = 3) -> dict[str, Any]:
         """
         Realiza busca na internet para enriquecer contexto.
         Usado para:
@@ -634,7 +652,7 @@ class AutoDeveloper:
         
         return False
     
-    async def analyze_request(self, user_request: str, use_web_search: bool = True) -> Dict[str, Any]:
+    async def analyze_request(self, user_request: str, use_web_search: bool = True) -> dict[str, Any]:
         """
         Analista de Requisitos analisa o pedido do usuário.
         Utiliza busca web para enriquecer a análise quando disponível.
@@ -719,7 +737,7 @@ Retorne APENAS um JSON válido com:
                         print(f"[Analyze] JSON parseado com sucesso: {result.get('titulo', 'N/A')}")
                         return result
                     else:
-                        print(f"[Analyze] Não encontrou JSON na resposta")
+                        print("[Analyze] Não encontrou JSON na resposta")
                 except Exception as parse_err:
                     print(f"[Analyze] Erro ao parsear JSON: {parse_err}")
             else:
@@ -745,7 +763,7 @@ Retorne APENAS um JSON válido com:
             print(f"[Analyze] Traceback: {traceback.format_exc()}")
             return {"error": f"{type(e).__name__}: {str(e) or 'sem mensagem'}"}
     
-    async def develop_solution(self, requirements: Dict[str, Any]) -> Dict[str, Any]:
+    async def develop_solution(self, requirements: dict[str, Any]) -> dict[str, Any]:
         """Dev Agent desenvolve a solução baseada nos requisitos"""
         try:
             language = requirements.get("linguagem_sugerida", "python")
@@ -834,7 +852,7 @@ Retorne o código em blocos markdown."""
         except Exception as e:
             return {"success": False, "error": str(e)}
     
-    async def execute_and_validate(self, solution: Dict[str, Any]) -> Dict[str, Any]:
+    async def execute_and_validate(self, solution: dict[str, Any]) -> dict[str, Any]:
         """Executa e valida a solução desenvolvida"""
         if not solution.get("success"):
             return {"validated": False, "error": solution.get("error")}
@@ -859,7 +877,7 @@ Retorne o código em blocos markdown."""
             # Se não conseguir executar, considera válido mas não testado
             return {"validated": True, "output": "Código gerado (não executado)", "note": str(e)}
     
-    async def auto_develop(self, user_request: str, original_response: str) -> Tuple[bool, str]:
+    async def auto_develop(self, user_request: str, original_response: str) -> tuple[bool, str]:
         """
         Fluxo completo de auto-desenvolvimento:
         1. Detecta se precisa desenvolver
@@ -962,7 +980,7 @@ Retorne o código em blocos markdown."""
         except Exception as e:
             print(f"Erro no teste pós-deploy {dev_id}: {e}")
     
-    async def _check_github_workflow_status(self, dev_id: str) -> Dict[str, Any]:
+    async def _check_github_workflow_status(self, dev_id: str) -> dict[str, Any]:
         """Verifica status do workflow de deploy no GitHub"""
         try:
             import os
@@ -1011,7 +1029,7 @@ Retorne o código em blocos markdown."""
         except Exception as e:
             return {"completed": True, "error": str(e)}
     
-    async def _test_with_original_request(self, dev_id: str, original_request: str) -> Dict[str, Any]:
+    async def _test_with_original_request(self, dev_id: str, original_request: str) -> dict[str, Any]:
         """
         Testa a solução deployada fazendo a mesma solicitação original.
         Verifica se agora consegue responder adequadamente.
@@ -1054,7 +1072,7 @@ Se ainda não consegue, explique o que está faltando.""",
         except Exception as e:
             return {"success": False, "error": str(e)}
     
-    async def _notify_test_result(self, dev_id: str, original_request: str, test_result: Dict[str, Any]):
+    async def _notify_test_result(self, dev_id: str, original_request: str, test_result: dict[str, Any]):
         """Notifica o resultado do teste pós-deploy via Telegram"""
         try:
             if test_result.get("success"):
@@ -1096,9 +1114,9 @@ _O sistema de auto-aprendizado {"incorporou" if test_result.get("learned") else 
     async def deploy_solution(
         self, 
         dev_id: str, 
-        requirements: Dict[str, Any], 
-        solution: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        requirements: dict[str, Any], 
+        solution: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Faz deploy da solução desenvolvida:
         1. Salva arquivos localmente
@@ -1106,7 +1124,6 @@ _O sistema de auto-aprendizado {"incorporou" if test_result.get("learned") else 
         3. CI/CD faz deploy no servidor
         """
         try:
-            import subprocess
             from pathlib import Path
             
             # Diretório da solução
@@ -1263,7 +1280,7 @@ echo "Deploy concluído!"
                 "message": f"Erro ao fazer deploy: {e}"
             }
     
-    async def _direct_ssh_deploy(self, dev_id: str, solution_dir) -> Dict[str, Any]:
+    async def _direct_ssh_deploy(self, dev_id: str, solution_dir) -> dict[str, Any]:
         """Deploy direto via SSH para o servidor local (não depende de GitHub Actions)"""
         try:
             import subprocess
@@ -1331,7 +1348,7 @@ echo "Deploy concluído!"
                 "message": f"Erro no deploy SSH: {e}"
             }
     
-    async def _git_commit_and_push(self, dev_id: str, title: str) -> Dict[str, Any]:
+    async def _git_commit_and_push(self, dev_id: str, title: str) -> dict[str, Any]:
         """Commit e push para GitHub"""
         try:
             import subprocess
@@ -1391,10 +1408,10 @@ echo "Deploy concluído!"
 
     def _format_development_response(
         self, 
-        requirements: Dict, 
-        solution: Dict, 
-        validation: Dict,
-        deploy: Dict,
+        requirements: dict, 
+        solution: dict, 
+        validation: dict,
+        deploy: dict,
         dev_id: str
     ) -> str:
         """Formata a resposta explicando o desenvolvimento"""
@@ -1467,7 +1484,7 @@ class TelegramBot:
             self.keep_alive_seconds = 3600
         self.last_update_id = 0
         self.running = True
-        self.user_contexts: Dict[int, List[dict]] = {}  # Contexto por usuário
+        self.user_contexts: dict[int, list[dict]] = {}  # Contexto por usuário
         self.auto_dev_enabled = True  # Flag para habilitar/desabilitar auto-dev
         self._lock_file = None
         self._last_state_save = 0.0
@@ -1476,7 +1493,7 @@ class TelegramBot:
         
         # Integração de Modelos
         self.integration = get_integration_client() if INTEGRATION_AVAILABLE else None
-        self.user_profiles: Dict[int, str] = {}  # Perfil por usuário
+        self.user_profiles: dict[int, str] = {}  # Perfil por usuário
         self.auto_profile = True  # Seleção automática de perfil
         
         self._load_state()
@@ -2354,7 +2371,7 @@ class TelegramBot:
                 result = await self.auto_dev.search_web(args, num_results=3)
                 
                 if result.get("success"):
-                    response = f"🌐 *Resultados da Busca*\n\n"
+                    response = "🌐 *Resultados da Busca*\n\n"
                     response += f"🔎 Query: _{args}_\n"
                     response += f"📊 Encontrados: {result.get('results_count', 0)} resultados\n"
                     response += f"💾 Salvo no RAG: {'✅' if result.get('saved_to_rag') else '❌'}\n\n"
@@ -2789,8 +2806,8 @@ class TelegramBot:
         3. Fallback com yt-dlp quando necessário.
         4. Envia texto + mídias individuais no Telegram.
         """
-        import tempfile
         import shutil
+        import tempfile
 
         TWITTER_URL_RE = re.compile(
             r"https?://(?:(?:www\.)?(?:twitter|x)\.com|t\.co)/(?P<user>[^/]+)/status/(?P<id>\d+)"
@@ -3288,7 +3305,7 @@ class TelegramBot:
         print(f"[Debug] Incapacidade detectada: {inability_detected}")
         
         if self.auto_dev_enabled and inability_detected:
-            print(f"[Auto-Dev] Detectada incapacidade, iniciando desenvolvimento...")
+            print("[Auto-Dev] Detectada incapacidade, iniciando desenvolvimento...")
             
             # Informar usuário que está desenvolvendo
             await self.api.send_message(
@@ -3329,7 +3346,7 @@ class TelegramBot:
                     result = await self.api.send_message(chat_id, dev_response, reply_to_message_id=msg_id)
                     print(f"[Auto-Dev] Mensagem enviada: {result}")
                 
-                print(f"[Auto-Dev] Desenvolvimento concluído com sucesso!")
+                print("[Auto-Dev] Desenvolvimento concluído com sucesso!")
                 return
             else:
                 # Se auto-dev falhou, informa e envia resposta original

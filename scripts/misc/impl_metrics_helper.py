@@ -6,6 +6,7 @@ Script auxiliar para implementar métricas Prometheus no Shared Central
 import os
 import subprocess
 
+
 def print_status(msg, status="info"):
     emoji = {
         "info": "ℹ️",

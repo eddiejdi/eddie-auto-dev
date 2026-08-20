@@ -4,16 +4,17 @@ Validação Selenium para gauges do dashboard Shared WhatsApp no Grafana
 Verifica painéis tipo 'gauge' e 'stat' para conteúdos inválidos
 """
 
-import time
 import json
 import sys
+import time
 from datetime import datetime
+
 from selenium import webdriver
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.webdriver.support.ui import WebDriverWait
 
 GRAFANA_URL = "http://192.168.15.2:3002/grafana"
 DASHBOARD_UID = "shared-whatsapp-training"
@@ -55,7 +56,7 @@ class GrafanaGaugeValidator:
             return True
         except Exception as e:
             print(f"❌ Erro ao iniciar Chrome: {e}")
-            self.results["errors"].append(f"Driver init: {str(e)}")
+            self.results["errors"].append(f"Driver init: {e!s}")
             return False
     
     def login(self):
@@ -88,7 +89,7 @@ class GrafanaGaugeValidator:
             return True
         except Exception as e:
             print(f"❌ Erro no login: {e}")
-            self.results["errors"].append(f"Login failed: {str(e)}")
+            self.results["errors"].append(f"Login failed: {e!s}")
             return False
     
     def navigate_to_dashboard(self):
@@ -108,7 +109,7 @@ class GrafanaGaugeValidator:
             return True
         except TimeoutException as e:
             print(f"❌ Timeout ao carregar dashboard: {e}")
-            self.results["errors"].append(f"Dashboard load timeout: {str(e)}")
+            self.results["errors"].append(f"Dashboard load timeout: {e!s}")
             return False
     
     def validate_panels(self):
@@ -140,11 +141,11 @@ class GrafanaGaugeValidator:
                 
                 except Exception as e:
                     print(f"   ⚠️  Erro ao processar painel {idx}: {e}")
-                    self.results["errors"].append(f"Panel {idx}: {str(e)}")
+                    self.results["errors"].append(f"Panel {idx}: {e!s}")
         
         except Exception as e:
             print(f"❌ Erro ao buscar painéis: {e}")
-            self.results["errors"].append(f"Panel discovery: {str(e)}")
+            self.results["errors"].append(f"Panel discovery: {e!s}")
     
     def validate_single_panel(self, panel, title, is_gauge=False, is_stat=False):
         """Validar um painel individual"""
@@ -345,7 +346,7 @@ class GrafanaGaugeValidator:
         
         except Exception as e:
             print(f"❌ Erro geral: {e}")
-            self.results["errors"].append(f"General: {str(e)}")
+            self.results["errors"].append(f"General: {e!s}")
             return False
         
         finally:

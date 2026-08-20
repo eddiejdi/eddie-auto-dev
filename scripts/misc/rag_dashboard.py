@@ -5,14 +5,15 @@ Monitora desempenho, acurácia e métricas do sistema RAG
 Inclui controle da Casa Inteligente (Home Assistant)
 """
 
-import streamlit as st
-import requests
 import json
-import time
-from datetime import datetime, timedelta
 
 # Configuração
 import os
+import time
+from datetime import datetime
+
+import requests
+import streamlit as st
 
 HOST = os.environ.get('HOMELAB_HOST', '192.168.15.2')
 RAG_API = os.environ.get('RAG_API', f"http://{HOST}:8001/api/v1")

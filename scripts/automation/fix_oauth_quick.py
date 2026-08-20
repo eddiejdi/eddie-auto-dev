@@ -8,6 +8,7 @@ Execute este script para contornar o erro 400
 import subprocess
 import sys
 
+
 def main():
     print("\n" + "🔧 "*20)
     print("\n  CORRIGINDO ERRO OAUTH 400: invalid_request\n")

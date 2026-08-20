@@ -2,9 +2,15 @@
 """Debug de relatórios"""
 
 import sys
+
 sys.path.insert(0, '/home/homelab/myClaude')
 
-from reports_integration import generate_btc_report, generate_system_report, generate_report, detect_report_type
+from reports_integration import (
+    detect_report_type,
+    generate_btc_report,
+    generate_report,
+    generate_system_report,
+)
 
 print("=== Debug de Relatórios ===\n")
 

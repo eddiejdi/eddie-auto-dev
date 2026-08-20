@@ -4,10 +4,8 @@ Atualizar os painéis do Grafana com queries PromQL — FASE 2
 Adiciona as 11 queries faltantes para completar o dashboard Shared Central
 """
 import os
-import json
-import sys
+
 import requests
-from typing import Optional
 
 # Configuração
 GRAFANA_URL = os.getenv("GRAFANA_URL", "http://192.168.15.2:3002")  # Local homelab
@@ -48,7 +46,7 @@ def get_auth() -> tuple:
         return None
     return (GRAFANA_USER, GRAFANA_PASS)
 
-def get_dashboard() -> Optional[dict]:
+def get_dashboard() -> dict | None:
     """Obter dashboard Shared Central"""
     try:
         url = f"{GRAFANA_URL}/api/dashboards/uid/{DASHBOARD_UID}"
@@ -59,7 +57,7 @@ def get_dashboard() -> Optional[dict]:
         print(f"❌ Erro ao obter dashboard: {e}")
         return None
 
-def get_datasource_id() -> Optional[int]:
+def get_datasource_id() -> int | None:
     """Obter ID da datasource Prometheus"""
     try:
         url = f"{GRAFANA_URL}/api/datasources"
@@ -183,10 +181,10 @@ def main():
         print(f"        Query: {query}")
         
         if update_panel_query(panel_id, query, ds_id):
-            print(f"        ✅ Atualizado")
+            print("        ✅ Atualizado")
             updated += 1
         else:
-            print(f"        ❌ Falha")
+            print("        ❌ Falha")
     
     print(f"\n{'=' * 80}")
     print(f"📊 RESULTADO: {updated}/{len(PHASE2_QUERIES)} painéis atualizados")

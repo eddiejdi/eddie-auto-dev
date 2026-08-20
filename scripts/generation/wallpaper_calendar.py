@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Optional
 
 
 @dataclass(frozen=True, slots=True)
@@ -149,7 +148,7 @@ def get_holidays(year: int) -> list[Holiday]:
 
 
 def get_upcoming_holidays(
-    reference: Optional[date] = None,
+    reference: date | None = None,
     days_ahead: int = 90,
 ) -> list[Holiday]:
     """Retorna feriados entre hoje e ``days_ahead`` dias a frente."""

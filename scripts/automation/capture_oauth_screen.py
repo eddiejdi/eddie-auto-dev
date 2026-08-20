@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Captura rapida de screenshot do Google Cloud Console"""
-import time
 import os
+import time
+
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 

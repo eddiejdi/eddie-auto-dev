@@ -31,16 +31,15 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+
+# ── Configuração ────────────────────────────────────────────────────────────────
+import os
 import shutil
 import sys
 import time
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List
-
-# ── Configuração ────────────────────────────────────────────────────────────────
-import os
 
 OLLAMA_NAS_HOST = os.environ.get("OLLAMA_NAS_HOST", "http://192.168.15.4:11436")
 
@@ -125,11 +124,11 @@ def run_qlora_training(data_path: Path, adapters_only: bool = False) -> bool:
              BASE_MODEL_HF, LORA_RANK, EPOCHS)
     log.info("=" * 60)
     try:
-        from unsloth import FastLanguageModel  # type: ignore[import-untyped]
-        from datasets import load_dataset  # type: ignore[import-untyped]
-        from trl import SFTTrainer  # type: ignore[import-untyped]
-        from transformers import TrainingArguments  # type: ignore[import-untyped]
         import torch
+        from datasets import load_dataset  # type: ignore[import-untyped]
+        from transformers import TrainingArguments  # type: ignore[import-untyped]
+        from trl import SFTTrainer  # type: ignore[import-untyped]
+        from unsloth import FastLanguageModel  # type: ignore[import-untyped]
 
         if not torch.cuda.is_available():
             log.error("CUDA não disponível na NAS!")

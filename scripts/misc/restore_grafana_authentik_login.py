@@ -7,11 +7,9 @@ Causa: Variáveis de ambiente GF_AUTH_GENERIC_OAUTH_* não configuradas ou desat
 Solução: Restaurar configuração de OAuth2 com Authentik
 """
 
-import subprocess
-import json
 import os
+import subprocess
 import sys
-from pathlib import Path
 
 # Configurações
 HOMELAB_HOST = "192.168.15.2"
@@ -60,7 +58,7 @@ def check_grafana_container() -> bool:
         print(f"   ✅ Grafana container encontrado:\n   {stdout}")
         return True
     else:
-        print(f"   ❌ Grafana container não encontrado")
+        print("   ❌ Grafana container não encontrado")
         return False
 
 def get_grafana_client_secret() -> str | None:
@@ -79,7 +77,7 @@ def get_grafana_client_secret() -> str | None:
     if returncode == 0 and stdout and "NOTFOUND" not in stdout:
         secret = stdout.strip()
         if secret and len(secret) > 10:
-            print(f"   ✅ Client Secret obtido via API REST")
+            print("   ✅ Client Secret obtido via API REST")
             return secret
     
     # Tentar 2: Via Django shell
@@ -104,7 +102,7 @@ except Exception as e:
     if returncode == 0 and stdout and "ERROR" not in stdout:
         secret = stdout.split('\n')[0].strip()
         if secret and len(secret) > 10:
-            print(f"   ✅ Client Secret obtido via Django")
+            print("   ✅ Client Secret obtido via Django")
             return secret
     
     # Tentar 3: Procurar em .env ou Docker secrets
@@ -121,12 +119,12 @@ except Exception as e:
         if "=" in stdout:
             secret = stdout.split("=")[-1].strip().strip('"').strip("'")
             if secret and len(secret) > 10:
-                print(f"   ✅ Client Secret encontrado em config")
+                print("   ✅ Client Secret encontrado em config")
                 return secret
     
-    print(f"   ⚠️  Não foi possível obter client secret automaticamente")
-    print(f"      Opções:")
-    print(f"      a) Verificar manualmente em: https://auth.rpa4all.com/admin/applications → grafana")
+    print("   ⚠️  Não foi possível obter client secret automaticamente")
+    print("      Opções:")
+    print("      a) Verificar manualmente em: https://auth.rpa4all.com/admin/applications → grafana")
     print(f"      b) Executar: curl -sH 'Authorization: Bearer {AUTHENTIK_API_TOKEN}' https://auth.rpa4all.com/api/v3/providers/oauth2/ | jq '.results[] | select(.name | contains(\"grafana\")) | .client_secret'")
     return None
 
@@ -156,15 +154,15 @@ def configure_grafana_oauth(client_secret: str | None) -> bool:
     
     # Tentar atualizar via Docker (se for container)
     print("\n   💾 Tentando atualizar container Grafana...")
-    cmd = f"docker restart grafana"
+    cmd = "docker restart grafana"
     returncode, stdout, stderr = ssh_cmd(cmd)
     
     if returncode == 0:
-        print(f"   ✅ Container Grafana reiniciado")
+        print("   ✅ Container Grafana reiniciado")
         return True
     else:
         print(f"   ❌ Erro ao reiniciar: {stderr}")
-        print(f"      Você pode precisar reiniciar manualmente via docker-compose ou systemd")
+        print("      Você pode precisar reiniciar manualmente via docker-compose ou systemd")
         return False
 
 def verify_oauth_config() -> bool:
@@ -179,7 +177,7 @@ def verify_oauth_config() -> bool:
     returncode, stdout, _ = ssh_cmd(cmd)
     
     if returncode == 0:
-        print(f"   ✅ Grafana API respondendo")
+        print("   ✅ Grafana API respondendo")
         
         # Verificar se OAuth está habilitado
         cmd = """
@@ -193,10 +191,10 @@ def verify_oauth_config() -> bool:
             print(f"   ✅ OAuth2 configurado:\n{stdout}")
             return True
         else:
-            print(f"   ⚠️  OAuth2 não encontrado na configuração")
+            print("   ⚠️  OAuth2 não encontrado na configuração")
             return False
     else:
-        print(f"   ⚠️  Grafana não está respondendo na porta 3000")
+        print("   ⚠️  Grafana não está respondendo na porta 3000")
         return False
 
 def main():
@@ -212,7 +210,7 @@ def main():
         print(f"   ❌ Erro SSH: {stderr}")
         sys.exit(1)
     else:
-        print(f"   ✅ SSH conectado")
+        print("   ✅ SSH conectado")
     
     # Step 2: Verificar Grafana
     if not check_grafana_container():

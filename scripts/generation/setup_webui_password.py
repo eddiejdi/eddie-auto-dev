@@ -5,10 +5,9 @@ Script para configurar Open WebUI:
 2. Adicionar senha local para usuário OAuth
 """
 
-import sqlite3
-import hashlib
-import secrets
 import os
+import secrets
+import sqlite3
 import sys
 
 # Possíveis locais do banco de dados

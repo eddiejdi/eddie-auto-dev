@@ -4,11 +4,10 @@ Teste de integração MCP via PyCharm
 Valida conectividade e funcionamento dos MCP servers do homelab
 """
 
-import subprocess
 import json
+import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Tuple
 
 HOMELAB_HOST = "homelab@192.168.15.2"
 HOMELAB_BASE = "/home/homelab/shared-auto-dev"
@@ -43,7 +42,7 @@ def print_info(text: str):
     print(f"{YELLOW}ℹ️  {text}{RESET}")
 
 
-def run_ssh_command(command: str, timeout: int = 10) -> Tuple[int, str, str]:
+def run_ssh_command(command: str, timeout: int = 10) -> tuple[int, str, str]:
     """Executa comando via SSH no homelab"""
     try:
         result = subprocess.run(
@@ -250,7 +249,7 @@ def test_mcp_config_files() -> bool:
         return False
 
 
-def generate_report(results: Dict[str, bool]):
+def generate_report(results: dict[str, bool]):
     """Gera relatório final dos testes"""
     print_header("RELATÓRIO FINAL")
 

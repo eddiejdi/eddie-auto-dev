@@ -5,7 +5,6 @@ Relatório Final Consolidado - Todos os LOTES 1-10
 
 import json
 from pathlib import Path
-from collections import defaultdict
 
 RESULTS_DIR = Path("/home/edenilson/shared-auto-dev/analysis_results")
 
@@ -189,19 +188,19 @@ if __name__ == "__main__":
     output = save_report(report)
     
     print(f"\n{'='*70}")
-    print(f"✅ RELATÓRIO FINAL CONSOLIDADO")
+    print("✅ RELATÓRIO FINAL CONSOLIDADO")
     print(f"{'='*70}")
     print(f"Total de arquivos analisados: {report['resumo_global']['total_arquivos']}")
     print(f"Referências SHARED encontradas: {report['resumo_global']['total_shared_refs']}")
     print(f"Taxa de sucesso: {report['resumo_global']['taxa_sucesso']}")
     
-    print(f"\n📌 COMPONENTES PRINCIPAIS:")
+    print("\n📌 COMPONENTES PRINCIPAIS:")
     for comp, dados in report['componentes_principais'].items():
         print(f"  {comp}: {dados['arquivos']} arquivos, {dados['shared_refs']} refs SHARED")
         print(f"    → {dados['novo_nome']}")
         print(f"    → {dados['acao']}")
     
-    print(f"\n⚡ PRÓXIMOS PASSOS:")
+    print("\n⚡ PRÓXIMOS PASSOS:")
     for step in report['proximos_passos'][:3]:
         print(f"  {step}")
     

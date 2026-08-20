@@ -5,11 +5,11 @@ JSON com UIDs duplicados, mantendo apenas o mais recente de cada UID.
 
 Uso: python3 grafana_dedup_provisioning.py <provisioning_dir>
 """
+import datetime
 import glob
 import json
 import os
 import sys
-import datetime
 
 
 def main():

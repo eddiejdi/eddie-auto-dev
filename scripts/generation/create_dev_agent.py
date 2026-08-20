@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """Script para criar todos os arquivos do Dev Agent"""
-import os
 from pathlib import Path
 
 BASE_DIR = Path("/home/homelab/myClaude/dev_agent")

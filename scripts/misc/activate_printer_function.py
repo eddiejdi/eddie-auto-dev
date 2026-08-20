@@ -2,8 +2,8 @@
 """
 Script para ativar a função de impressora no Open WebUI
 """
+
 import requests
-import json
 
 WEBUI_URL = "http://127.0.0.1:8002"
 EMAIL = "edenilson.teixeira@rpa4all.com"
@@ -56,7 +56,7 @@ if r.status_code in [200, 201]:
         headers=headers
     )
     func_updated = r.json()
-    print(f"\n📊 Status atualizado:")
+    print("\n📊 Status atualizado:")
     print(f"   Ativo: {'✅ SIM' if func_updated.get('is_active') else '❌ NÃO'}")
     print(f"   Global: {'✅ SIM' if func_updated.get('is_global') else '❌ NÃO'}")
 else:

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Teste de busca no RAG."""
 
+
 import requests
-import json
 
 RAG_API = "http://localhost:8001"
 

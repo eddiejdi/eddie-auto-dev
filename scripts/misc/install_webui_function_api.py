@@ -4,18 +4,18 @@ Script para instalar função no Open WebUI via API
 Requer autenticação - usa variáveis de ambiente ou solicita credenciais
 """
 
+import getpass
+import json
 import os
 import sys
-import json
-import getpass
 
 # Tentar usar requests, senão urllib
 try:
     import requests
     HAS_REQUESTS = True
 except ImportError:
-    import urllib.request
     import urllib.error
+    import urllib.request
     HAS_REQUESTS = False
 
 WEBUI_URL = os.getenv("WEBUI_URL", os.environ.get('HOMELAB_URL', 'http://localhost:3000'))

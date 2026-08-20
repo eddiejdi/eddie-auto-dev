@@ -4,14 +4,13 @@ Script para coletar e treinar o LLM local com dados de conversa.
 Colete dados, indexe no RAG, e opcionalmente faça fine-tuning do Ollama.
 """
 
+import asyncio
 import json
+import logging
 import os
 import sys
-import asyncio
 from pathlib import Path
-from typing import List, Dict, Any
-from datetime import datetime
-import logging
+from typing import Any
 
 # Configurar logging
 logging.basicConfig(
@@ -31,7 +30,7 @@ class ConversationCollector:
     
     def __init__(self, data_dir: str = "artifacts"):
         self.data_dir = Path(data_dir)
-        self.conversations: List[Dict[str, Any]] = []
+        self.conversations: list[dict[str, Any]] = []
         
     def collect_from_json(self, filepath: Path) -> int:
         """Coletar conversas de arquivo JSON."""
@@ -77,7 +76,7 @@ class ConversationCollector:
         logger.info(f"📊 Total de conversas coletadas: {total}")
         return total
     
-    def extract_training_docs(self) -> List[str]:
+    def extract_training_docs(self) -> list[str]:
         """Extrair documentos de treinamento das conversas."""
         docs = []
         
@@ -104,7 +103,7 @@ class ConversationCollector:
         return docs
 
 
-async def train_rag(docs: List[str], language: str = "python") -> bool:
+async def train_rag(docs: list[str], language: str = "python") -> bool:
     """Treinar RAG Manager com documentos."""
     try:
         logger.info(f"🧠 Iniciando treinamento RAG ({language})...")
@@ -134,7 +133,7 @@ async def train_rag(docs: List[str], language: str = "python") -> bool:
         return False
 
 
-async def test_rag(query: str, language: str = "python") -> List[Dict[str, Any]]:
+async def test_rag(query: str, language: str = "python") -> list[dict[str, Any]]:
     """Testar RAG com query de busca."""
     try:
         logger.info(f"🔍 Testando RAG com query: {query}")
@@ -212,7 +211,7 @@ async def main():
     logger.info("✅ TREINAMENTO COMPLETO")
     logger.info(f"  📊 Conversas coletadas: {total}")
     logger.info(f"  📝 Documentos indexados: {len(docs)}")
-    logger.info(f"  🧠 RAG pronto para queries")
+    logger.info("  🧠 RAG pronto para queries")
     logger.info("="*60 + "\n")
     
     return 0

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Teste de validação das regras herdadas do BPM Agent"""
 
-from specialized_agents.bpm_agent import BPMAgent, AGENT_RULES, get_bpm_agent
+from specialized_agents.bpm_agent import AGENT_RULES, get_bpm_agent
+
 
 def test_bpm_rules():
     print("✅ BPM Agent Validação")
@@ -16,13 +17,13 @@ def test_bpm_rules():
     
     # 2. Verificar capabilities
     caps = agent.get_capabilities()
-    print(f"\n📊 Capabilities:")
+    print("\n📊 Capabilities:")
     print(f"   Versão: {caps['version']}")
     print(f"   Regras herdadas: {caps['rules_inherited']}")
     print(f"   Validação ativa: {caps['validation_enabled']}")
     
     # 3. Verificar métodos de validação
-    print(f"\n🔍 Métodos disponíveis:")
+    print("\n🔍 Métodos disponíveis:")
     print(f"   validate_diagram: {hasattr(agent, 'validate_diagram')}")
     print(f"   get_rules: {hasattr(agent, 'get_rules')}")
     
@@ -31,7 +32,6 @@ def test_bpm_rules():
     print(f"\n📜 get_rules() retorna: {len(rules)} regras")
     
     # 5. Testar validação de diagrama existente
-    import os
     from pathlib import Path
     diagrams_dir = Path(__file__).parent / "specialized_agents" / "diagrams"
     if diagrams_dir.exists():

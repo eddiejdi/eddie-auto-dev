@@ -4,13 +4,12 @@ Extrator de Chats do VS Code para Treinamento de LLM
 Coleta chats de hoje e prepara dados para fine-tuning do Ollama
 """
 
-import os
-import sys
-import json
 import glob
-import base64
+import json
+import os
+from datetime import date, datetime
 from pathlib import Path
-from datetime import datetime, date
+
 import requests
 
 # Configurações (override via environment variables if needed)
@@ -278,9 +277,9 @@ def main():
         print("=" * 60)
         print(f"\n📦 Modelo criado: {model_name}")
         print(f"📂 Dados em: {OUTPUT_DIR}")
-        print(f"\n💡 Para usar o modelo:")
+        print("\n💡 Para usar o modelo:")
         print(f"   ollama run {model_name}")
-        print(f"\n   Ou no Continue/Cline, configure:")
+        print("\n   Ou no Continue/Cline, configure:")
         print(f'   "model": "{model_name}"')
 
 if __name__ == "__main__":

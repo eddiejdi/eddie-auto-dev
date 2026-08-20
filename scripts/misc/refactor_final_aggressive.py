@@ -3,11 +3,10 @@
 Refactor final e agressivo: remove todas as ocorrências restantes de 'eddie'/'EDDIE'
 Preserva imports e contextos importantes.
 """
-import os
+import logging
 import re
 import sys
 from pathlib import Path
-import logging
 
 logging.basicConfig(
     level=logging.INFO,

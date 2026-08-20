@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Investigação FINAL - Ver conteúdo real das funções e modelos"""
-import requests
 import json
+
+import requests
 
 BASE = "http://192.168.15.2:3000"
 
@@ -14,7 +15,7 @@ r = session.post(f"{BASE}/api/v1/auths/signin", json={
 })
 token = r.json().get("token")
 headers = {"Authorization": f"Bearer {token}"}
-print(f"Login: OK\n")
+print("Login: OK\n")
 
 # Pegar função director_eddie
 print("=" * 60)
@@ -53,7 +54,7 @@ for m in models:
     
     # Procurar qualquer coisa relacionada ao Diretor
     if "diretor" in mid.lower() or "diretor" in mname.lower() or "shared" in mid.lower():
-        print(f"!!! MODELO DIRETOR ENCONTRADO !!!")
+        print("!!! MODELO DIRETOR ENCONTRADO !!!")
         print(f"    id: {mid}")
         print(f"    name: {mname}")
         print(f"    base_model_id: {base}")

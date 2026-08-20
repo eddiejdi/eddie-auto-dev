@@ -4,16 +4,17 @@ Validação FASE 2 — Verificar se as métricas estendidas estão sendo coletad
 Este script valida diretamente no Prometheus, não precisa de API key do Grafana
 """
 
-import requests
-import json
 from datetime import datetime
-from typing import Dict, List, Any
+from typing import Any
+
+import requests
+
 
 class PrometheusValidator:
     def __init__(self, prometheus_url: str = 'http://192.168.15.2:9090'):
         self.url = prometheus_url.rstrip('/')
     
-    def query(self, promql: str) -> Dict[str, Any]:
+    def query(self, promql: str) -> dict[str, Any]:
         """Executar query PromQL"""
         try:
             response = requests.get(
@@ -27,7 +28,7 @@ class PrometheusValidator:
             print(f"❌ Erro ao executar query: {e}")
             return {'status': 'error', 'data': {}}
     
-    def get_value(self, result: Dict) -> Any:
+    def get_value(self, result: dict) -> Any:
         """Extrair valor do resultado PromQL"""
         try:
             if result.get('status') == 'success':
@@ -44,7 +45,7 @@ def main():
     print("✅ VALIDAÇÃO FASE 2 — Métricas Estendidas")
     print("=" * 80)
     print(f"🕐 Timestamp: {datetime.now().isoformat()}")
-    print(f"🔗 Prometheus: http://192.168.15.2:9090")
+    print("🔗 Prometheus: http://192.168.15.2:9090")
     print()
     
     validator = PrometheusValidator()
@@ -192,14 +193,14 @@ def main():
     
     if valid_count >= 11:
         print("✅ FASE 2 COMPLETA! Todas as 11 métricas estendidas estão sendo coletadas.")
-        print("")
+        print()
         print("Próximos passos:")
         print("  1. Atualizar Grafana dashboard com as queries PromQL")
         print("  2. Aguardar 1 minuto para visualização dos dados")
         print("  3. Validar no dashboard: https://grafana.rpa4all.com/d/shared-central/")
     elif valid_count >= 6:
         print(f"⚠️  Progresso: {valid_count}/11 métricas implementadas")
-        print("")
+        print()
         print("Ações necessárias:")
         if invalid_count > 0:
             print(f"  • {invalid_count} métrica(s) ainda não respondendo")
@@ -208,7 +209,7 @@ def main():
             print("    - FASE 2: ssh homelab@192.168.15.2 'sudo journalctl -u shared-central-extended-metrics -n 20'")
     else:
         print("❌ Falha geral: Múltiplas métricas sem dados")
-        print("")
+        print()
         print("Ações necessárias:")
         print("  1. Verificar status dos serviços no homelab:")
         print("     ssh homelab@192.168.15.2 'sudo systemctl status shared-central-*'")

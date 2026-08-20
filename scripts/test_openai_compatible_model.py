@@ -11,10 +11,8 @@ Variáveis de ambiente:
     OPENAI_COMPATIBLE_MODEL     — opcional; padrão: openrouter/auto
 """
 
-import json
-import os
-import sys
 import logging
+import sys
 from pathlib import Path
 
 import requests
@@ -26,7 +24,11 @@ logger = logging.getLogger(__name__)
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from specialized_agents.config import LLM_OPENAI_COMPATIBLE_CONFIG, LLM_CONFIG, LLM_GPU1_CONFIG
+from specialized_agents.config import (
+    LLM_CONFIG,
+    LLM_GPU1_CONFIG,
+    LLM_OPENAI_COMPATIBLE_CONFIG,
+)
 
 
 def test_ollama_availability():

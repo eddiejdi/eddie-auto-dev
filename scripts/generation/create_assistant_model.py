@@ -2,8 +2,9 @@
 """
 Cria modelo shared-assistant no Ollama com system prompt versátil
 """
-import httpx
 import json
+
+import httpx
 
 OLLAMA_HOST = "http://192.168.15.2:11434"
 

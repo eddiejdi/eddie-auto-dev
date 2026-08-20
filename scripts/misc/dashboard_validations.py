@@ -7,13 +7,12 @@ Visualiza histórico de validações da landing page
 import json
 import sys
 from pathlib import Path
-from datetime import datetime
 
 try:
-    import streamlit as st
     import pandas as pd
-    import plotly.graph_objects as go
     import plotly.express as px
+    import plotly.graph_objects as go
+    import streamlit as st
 except ImportError:
     print("❌ Dependências não instaladas: pip install streamlit pandas plotly")
     sys.exit(1)

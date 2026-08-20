@@ -6,21 +6,20 @@ Deploy dos painéis funcionais para o servidor
 """
 
 import json
-import subprocess
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
+
+import requests
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
-import requests
-from datetime import datetime
-import urllib.parse
 
 # ============ CONFIGURAÇÕES ============
 LOCALHOST_GRAFANA = "http://localhost:3002"
@@ -140,7 +139,7 @@ class GrafanaDashboardValidator:
             except:
                 panels = self.driver.find_elements(By.CSS_SELECTOR, ".panel-container, [data-testid='panel']")
                 if not panels:
-                    print(f"   ⚠️ Nenhum painel de visualização encontrado")
+                    print("   ⚠️ Nenhum painel de visualização encontrado")
                     return {"status": "empty", "reason": "No visualization panels"}
             
             # Verificar se há dados
@@ -176,7 +175,7 @@ class GrafanaDashboardValidator:
                     "has_data": has_data
                 }
             else:
-                print(f"   ✅ Painel válido com dados!")
+                print("   ✅ Painel válido com dados!")
                 return {
                     "status": "valid",
                     "panels_count": len(panels),
@@ -302,9 +301,9 @@ class GrafanaDashboardValidator:
                 
                 # Upload para servidor via curl + SSH
                 if self._upload_to_server(json_file, uid, title):
-                    print(f"   ✅ Deploy bem-sucedido para servidor!")
+                    print("   ✅ Deploy bem-sucedido para servidor!")
                 else:
-                    print(f"   ❌ Falha no deploy")
+                    print("   ❌ Falha no deploy")
             
             except Exception as e:
                 print(f"   ❌ Erro: {e}")
@@ -332,7 +331,7 @@ class GrafanaDashboardValidator:
                 return True
             
             # Alternativa: Usar arquivo local e transferir
-            print(f"   🔄 Usando método alternativo de upload...")
+            print("   🔄 Usando método alternativo de upload...")
             
             # Transferir arquivo via SCP
             scp_cmd = f"scp -i {SSH_KEY} {json_file} {HOMELAB_HOST}:/tmp/"

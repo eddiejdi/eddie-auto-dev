@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Script de teste para simular o GitHub Agent"""
-import requests
 import json
 import re
+
+import requests
 
 OLLAMA_HOST = "192.168.15.2"
 OLLAMA_PORT = "11434"
@@ -69,7 +70,7 @@ def test_parse():
         
         # Testa API GitHub
         if owner and repo:
-            print(f"\n=== Testando GitHub API ===")
+            print("\n=== Testando GitHub API ===")
             gh_url = f"https://api.github.com/repos/{owner}/{repo}/issues?state=open&per_page=2"
             print(f"URL: {gh_url}")
             gh_response = requests.get(gh_url, timeout=30)

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Test script for SecurityAgent"""
 
-import json
 import sys
+
 sys.path.insert(0, '/home/shared/myClaude')
 
 from specialized_agents.security_agent import SecurityAgent
@@ -12,7 +12,7 @@ agent = SecurityAgent('/home/shared/myClaude')
 
 print('=== SecurityAgent Test ===')
 print(f'Version: {agent.VERSION}')
-print(f'Capabilities:')
+print('Capabilities:')
 for k,v in agent.capabilities.items():
     print(f'  {k}: {v}')
 print(f'Rules inherited: {list(agent.AGENT_RULES.keys())}')
@@ -30,13 +30,13 @@ print(f'  Low: {report.summary.get("low", 0)}')
 
 # Validar
 validation = agent.validate_scan(report)
-print(f'\n=== Validation (Regra 0.2) ===')
+print('\n=== Validation (Regra 0.2) ===')
 print(f'Valid: {validation["valid"]}')
 print(f'Compliance: {report.compliance_status}')
 
 # Mostrar algumas vulnerabilidades se houver
 if report.vulnerabilities:
-    print(f'\n=== Top 3 Vulnerabilities ===')
+    print('\n=== Top 3 Vulnerabilities ===')
     for v in report.vulnerabilities[:3]:
         print(f'  [{v.severity.value}] {v.id}: {v.type.value}')
         print(f'    File: {v.file_path}:{v.line_number}')

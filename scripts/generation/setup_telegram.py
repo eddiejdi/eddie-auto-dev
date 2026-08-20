@@ -2,9 +2,9 @@
 """
 Script para configurar e testar integração com Telegram
 """
+import asyncio
 import os
 import sys
-import asyncio
 
 sys.path.insert(0, "/home/homelab/myClaude")
 
@@ -21,7 +21,7 @@ async def setup_telegram():
     existing_chat = os.getenv("TELEGRAM_CHAT_ID", "")
     
     if existing_token and existing_chat:
-        print(f"\n📋 Configuração existente encontrada:")
+        print("\n📋 Configuração existente encontrada:")
         print(f"   Token: {existing_token[:15]}...")
         print(f"   Chat ID: {existing_chat}")
         
@@ -92,13 +92,12 @@ async def save_config(token: str, chat_id: str):
     existing_lines = []
     if os.path.exists(env_path):
         with open(env_path, 'r') as f:
-            existing_lines = [l for l in f.readlines() 
+            existing_lines = [l for l in f 
                            if not l.startswith("TELEGRAM_")]
     
     # Adicionar novas configurações
     with open(env_path, 'w') as f:
-        for line in existing_lines:
-            f.write(line)
+        f.writelines(existing_lines)
         f.write(f"TELEGRAM_BOT_TOKEN={token}\n")
         f.write(f"TELEGRAM_CHAT_ID={chat_id}\n")
     

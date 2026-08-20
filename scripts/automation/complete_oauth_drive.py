@@ -5,7 +5,7 @@ Este é um wrapper interativo para o interactive_auth.py no servidor
 """
 import subprocess
 import sys
-from pathlib import Path
+
 
 def main():
     print("""

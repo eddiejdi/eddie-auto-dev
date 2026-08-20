@@ -22,10 +22,10 @@ Alternativamente, vá em:
 Settings (engrenagem) → Account → API Keys → Create new API key
 """
 
-import os
 import json
-import urllib.request
+import os
 import urllib.error
+import urllib.request
 
 WEBUI_URL = os.getenv("WEBUI_URL", "http://192.168.15.2:3000")
 API_KEY = os.getenv("WEBUI_API_KEY", "")

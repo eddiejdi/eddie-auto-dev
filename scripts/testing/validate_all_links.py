@@ -2,9 +2,9 @@
 """Validação completa de todos os links da landing page com Selenium"""
 
 import sys
-import requests
-from urllib.parse import urljoin
 import time
+
+import requests
 
 try:
     from selenium import webdriver
@@ -165,17 +165,17 @@ def validate_all_links(base_url="https://www.rpa4all.com/"):
         print(f"  Taxa de sucesso: {total_ok/total_links*100:.1f}%")
         
         if internal_fail:
-            print(f"\n⚠️  Links internos com problema:")
+            print("\n⚠️  Links internos com problema:")
             for url, status, text in internal_fail:
                 print(f"   • {url} ({status})")
         
         if external_fail:
-            print(f"\n⚠️  Links externos com problema:")
+            print("\n⚠️  Links externos com problema:")
             for url, status, text in external_fail:
                 print(f"   • {url} ({status})")
         
         if anchor_fail:
-            print(f"\n⚠️  Âncoras não encontradas:")
+            print("\n⚠️  Âncoras não encontradas:")
             for anchor, text in anchor_fail:
                 print(f"   • #{anchor}")
         
@@ -185,7 +185,7 @@ def validate_all_links(base_url="https://www.rpa4all.com/"):
         
         # Screenshot
         driver.save_screenshot("links_validation.png")
-        print(f"\n📸 Screenshot: links_validation.png")
+        print("\n📸 Screenshot: links_validation.png")
         
         return success
         

@@ -2,10 +2,10 @@
 """
 Obter novo token Gmail - tudo em um script, rápido.
 """
+import base64
 import json
 import subprocess
 import sys
-import base64
 
 SECRETS_AGENT_HOST = "192.168.15.2"
 SECRETS_AGENT_DB = "/var/lib/shared/secrets_agent/audit.db"
@@ -38,7 +38,7 @@ res = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
 try:
     creds_json = json.loads(res.stdout)
 except:
-    print(f"❌ Erro ao obter credenciais")
+    print("❌ Erro ao obter credenciais")
     sys.exit(1)
 
 client_id = creds_json["installed"]["client_id"]
@@ -76,7 +76,7 @@ if not auth_code:
     print("❌ Código não fornecido!")
     sys.exit(1)
 
-print(f"\n🔄 Trocando código por token...")
+print("\n🔄 Trocando código por token...")
 
 import requests
 

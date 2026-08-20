@@ -4,10 +4,10 @@ Script para executar apply_real_job.py em modo contínuo controlado.
 Monitora o banco até atingir N envios e então cria arquivo de stop.
 """
 import os
-import sys
-import time
 import sqlite3
 import subprocess
+import sys
+import time
 from pathlib import Path
 
 VENV_PYTHON = Path(__file__).parent / ".venv" / "bin" / "python3"
@@ -64,7 +64,7 @@ def main():
         "STOP_AUTO_SEND": "0",
     })
     
-    print(f"\n🔄 Iniciando processo em background...")
+    print("\n🔄 Iniciando processo em background...")
     process = subprocess.Popen(
         [str(VENV_PYTHON), str(SCRIPT)],
         stdout=open(OUT_LOG, 'w'),
@@ -76,7 +76,7 @@ def main():
     print(f"✅ Processo iniciado (PID: {process.pid})")
     
     # Monitor
-    print(f"\n📡 Monitorando banco de dados...")
+    print("\n📡 Monitorando banco de dados...")
     iteration = 0
     while True:
         iteration += 1
@@ -93,7 +93,7 @@ def main():
         time.sleep(5)
     
     # Wait for process to finish
-    print(f"\n⏳ Aguardando processo finalizar...")
+    print("\n⏳ Aguardando processo finalizar...")
     try:
         process.wait(timeout=30)
     except subprocess.TimeoutExpired:
@@ -104,18 +104,18 @@ def main():
         except subprocess.TimeoutExpired:
             process.kill()
     
-    print(f"\n✅ Processo finalizado")
+    print("\n✅ Processo finalizado")
     
     # Show final summary
     final_count = get_sent_count()
-    print(f"\n📊 RESUMO FINAL:")
+    print("\n📊 RESUMO FINAL:")
     print(f"   Início: {start} emails")
     print(f"   Final: {final_count} emails")
     print(f"   Enviados nesta execução: {final_count - start}")
     
     # Show last logs
     if OUT_LOG.exists():
-        print(f"\n📋 Últimas 50 linhas do log:")
+        print("\n📋 Últimas 50 linhas do log:")
         print("=" * 70)
         with open(OUT_LOG) as f:
             lines = f.readlines()

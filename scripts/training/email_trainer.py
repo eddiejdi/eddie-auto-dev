@@ -7,14 +7,15 @@ Autor: Shared Assistant
 Data: 2026
 """
 
-import os
-import json
 import hashlib
-import requests
+import json
+import logging
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
-import logging
+from typing import Any
+
+import requests
 
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
@@ -71,7 +72,7 @@ class EmailTrainer:
         except Exception as e:
             logger.error(f"Erro ao inicializar ChromaDB: {e}")
     
-    def get_embedding(self, text: str) -> Optional[List[float]]:
+    def get_embedding(self, text: str) -> list[float] | None:
         """Gera embedding usando Ollama"""
         try:
             response = requests.post(
@@ -85,7 +86,7 @@ class EmailTrainer:
             logger.warning(f"Erro ao gerar embedding: {e}")
         return None
     
-    def extract_email_knowledge(self, email_data: Dict[str, Any]) -> Dict[str, str]:
+    def extract_email_knowledge(self, email_data: dict[str, Any]) -> dict[str, str]:
         """Extrai conhecimento útil de um email"""
         subject = email_data.get('subject', '')
         sender = email_data.get('sender', '')
@@ -121,7 +122,7 @@ Conteúdo:
             'metadata': metadata
         }
     
-    def is_worth_training(self, email_data: Dict[str, Any]) -> Tuple[bool, str]:
+    def is_worth_training(self, email_data: dict[str, Any]) -> tuple[bool, str]:
         """Verifica se o email vale a pena ser treinado"""
         
         # Emails classificados como spam/promocional não vale treinar
@@ -164,7 +165,7 @@ Conteúdo:
         
         return False, "Sem valor de treinamento identificado"
     
-    def train_single_email(self, email_data: Dict[str, Any]) -> Tuple[bool, str]:
+    def train_single_email(self, email_data: dict[str, Any]) -> tuple[bool, str]:
         """Treina com um único email"""
         
         # Verificar se vale treinar
@@ -199,7 +200,7 @@ Conteúdo:
             # Sem ChromaDB, salvar localmente
             return self._save_locally(knowledge)
     
-    def _save_locally(self, knowledge: Dict) -> Tuple[bool, str]:
+    def _save_locally(self, knowledge: dict) -> tuple[bool, str]:
         """Salva conhecimento localmente como fallback"""
         try:
             file_path = EMAIL_TRAINING_DIR / f"{knowledge['id']}.json"
@@ -209,8 +210,8 @@ Conteúdo:
         except Exception as e:
             return False, f"Erro ao salvar: {e}"
     
-    def train_batch(self, emails: List[Dict[str, Any]], 
-                   progress_callback=None) -> Dict[str, Any]:
+    def train_batch(self, emails: list[dict[str, Any]], 
+                   progress_callback=None) -> dict[str, Any]:
         """Treina com um lote de emails"""
         
         results = {
@@ -243,7 +244,7 @@ Conteúdo:
         
         return results
     
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Retorna estatísticas do treinamento"""
         stats = {
             'chromadb_available': CHROMADB_AVAILABLE,
@@ -259,7 +260,7 @@ Conteúdo:
         
         return stats
     
-    def search_emails(self, query: str, n_results: int = 5) -> List[Dict]:
+    def search_emails(self, query: str, n_results: int = 5) -> list[dict]:
         """Busca emails treinados por similaridade"""
         if not self.collection:
             return []
@@ -303,7 +304,7 @@ class EmailCleanerWithTraining:
     def _get_gmail(self):
         """Obtém cliente Gmail"""
         if not self._gmail_client:
-            from gmail_integration import get_gmail_client, get_email_cleaner
+            from gmail_integration import get_email_cleaner, get_gmail_client
             self._gmail_client = get_gmail_client()
             self._cleaner = get_email_cleaner()
         return self._gmail_client, self._cleaner
@@ -311,7 +312,7 @@ class EmailCleanerWithTraining:
     async def clean_with_training(self, 
                                    max_emails: int = 100,
                                    dry_run: bool = True,
-                                   train_important: bool = True) -> Dict[str, Any]:
+                                   train_important: bool = True) -> dict[str, Any]:
         """Limpa emails, treinando os importantes primeiro"""
         
         gmail, cleaner = self._get_gmail()
@@ -406,8 +407,8 @@ class EmailCleanerWithTraining:
 
 
 # Instância global
-_trainer: Optional[EmailTrainer] = None
-_cleaner_with_training: Optional[EmailCleanerWithTraining] = None
+_trainer: EmailTrainer | None = None
+_cleaner_with_training: EmailCleanerWithTraining | None = None
 
 
 def get_email_trainer() -> EmailTrainer:

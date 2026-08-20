@@ -33,14 +33,14 @@ def main():
     with open(GMAIL_TOKEN) as f:
         token_data = json.load(f)
     
-    print(f"\n✓ Token Gmail carregado")
+    print("\n✓ Token Gmail carregado")
     print(f"  Escopos atuais: {len(token_data.get('scopes', []))}")
     
     # Adicionar escopos do Drive
     current_scopes = token_data.get('scopes', [])
     new_scopes = list(set(current_scopes + DRIVE_SCOPES))
     
-    print(f"\n📂 Adicionando escopos do Drive...")
+    print("\n📂 Adicionando escopos do Drive...")
     print(f"  Novos escopos totais: {len(new_scopes)}")
     
     # Criar novo token

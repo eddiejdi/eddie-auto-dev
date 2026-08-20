@@ -3,17 +3,14 @@
 Publica uma versão atualizada do currículo no Google Drive usando o token
 armazenado no Secrets Agent (homelab). Cria um novo Google Doc com o conteúdo.
 """
-import base64
 import io
 import json
 import subprocess
-import sys
-from pathlib import Path
 
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaIoBaseUpload
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
 
 # Conteúdo atualizado (aprovado)
 UPDATED_SECTION = """

@@ -3,12 +3,13 @@
 Autenticar e buscar currículo automaticamente
 """
 import json
-from pathlib import Path
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
+
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
 
 CREDS_FILE = Path('/home/homelab/myClaude/credentials.json')
 DRIVE_DIR = Path('/home/homelab/myClaude/drive_data')
@@ -81,7 +82,7 @@ def main():
                     'scopes': creds.scopes
                 }, f, indent=2)
             
-            print(f"\n✅ Autenticação completa!")
+            print("\n✅ Autenticação completa!")
             
         except Exception as e:
             print(f"❌ Erro na autenticação: {e}")

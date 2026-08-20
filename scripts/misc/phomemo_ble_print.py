@@ -8,9 +8,7 @@ Projetado para rodar no homelab com bleak instalado.
 import argparse
 import asyncio
 import sys
-import os
 from pathlib import Path
-from typing import Optional
 
 # Adiciona o driver ao path
 DRIVER_DIR = Path(__file__).parent / "phomemo-q30-driver"

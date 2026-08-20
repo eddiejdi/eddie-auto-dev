@@ -2,10 +2,10 @@
 """
 Teste rápido de geração de código com LLM
 """
-import httpx
-import json
-import sys
 import os
+import sys
+
+import httpx
 
 OLLAMA_URL = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
 MODEL = sys.argv[1] if len(sys.argv) > 1 else "mistral:7b"
@@ -32,7 +32,7 @@ REGRAS:
 3. O código deve ser executável imediatamente"""
 
 print(f"[*] Usando modelo: {MODEL}")
-print(f"[*] Gerando código...")
+print("[*] Gerando código...")
 
 try:
     with httpx.Client(timeout=120) as client:
@@ -68,7 +68,7 @@ try:
                 code = code.split("```")[1].split("```")[0]
             f.write(code.strip())
         
-        print(f"\n[OK] Código salvo em /tmp/calculator_test.py")
+        print("\n[OK] Código salvo em /tmp/calculator_test.py")
         
 except Exception as e:
     print(f"[ERRO] {e}")

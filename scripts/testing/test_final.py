@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Teste final do modelo corrigido"""
 import os
+
 import requests
 
 print("=" * 50)
@@ -49,9 +50,9 @@ for m in models:
         print(f"    base_model_id: {base}")
         
         if base == 'qwen2.5-coder:7b':
-            print(f"    ✅ CORRETO!")
+            print("    ✅ CORRETO!")
         else:
-            print(f"    ❌ ERRADO!")
+            print("    ❌ ERRADO!")
 
 # 3. Testar via Open WebUI proxy
 print("\n[3] Testando Ollama via Open WebUI proxy...")
@@ -71,7 +72,7 @@ try:
         'options': {'num_predict': 5}
     }, timeout=30)
     if r.status_code == 200:
-        print(f"    ✅ Open WebUI -> Ollama: OK")
+        print("    ✅ Open WebUI -> Ollama: OK")
     else:
         print(f"    ❌ Erro: {r.status_code}")
 except Exception as e:

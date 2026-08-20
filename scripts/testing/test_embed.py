@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Teste de embedding"""
 import os
+
 import requests
 
 OLLAMA_URL = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"

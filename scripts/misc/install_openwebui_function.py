@@ -4,10 +4,10 @@ Instalador de Função para Open WebUI
 Instala a função Agent Coordinator automaticamente
 """
 
-import requests
-import json
-import sys
 import getpass
+import sys
+
+import requests
 
 WEBUI_URL = "http://192.168.15.2:3000"
 

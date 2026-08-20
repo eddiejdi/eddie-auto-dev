@@ -39,11 +39,14 @@ REDIRECT_PORT = int(os.environ.get("GCAL_OAUTH_PORT", "8771"))
 
 
 def main() -> int:
-    from google_calendar_integration import (  # noqa: E402
-        GoogleCalendarClient, CREDENTIALS_FILE, TOKEN_FILE, SCOPES,
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from google_calendar_integration import (
+        CREDENTIALS_FILE,
         GOOGLE_OAUTH_SECRET,
+        SCOPES,
+        TOKEN_FILE,
+        GoogleCalendarClient,
     )
-    from google_auth_oauthlib.flow import InstalledAppFlow  # noqa: E402
 
     integ = GoogleCalendarClient()
     if integ.is_authenticated():

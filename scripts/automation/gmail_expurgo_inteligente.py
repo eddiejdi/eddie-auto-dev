@@ -13,20 +13,20 @@ Autor: Shared Assistant
 Data: 2026
 """
 
-import os
-import sys
-import json
 import asyncio
-import hashlib
-import requests
-import httpx
-import re
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
+import json
 import logging
+import os
+import re
+import sys
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from enum import Enum
+from pathlib import Path
+from typing import Any
+
+import httpx
+import requests
 
 # Configurar logging
 logging.basicConfig(
@@ -51,8 +51,8 @@ ADMIN_PHONE = os.getenv("ADMIN_PHONE", "5511999999999")
 
 # Imports do ecossistema
 try:
-    from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
     GOOGLE_AVAILABLE = True
 except ImportError:
@@ -89,11 +89,11 @@ class SmartReminder:
     """Lembrete inteligente extraído do email"""
     title: str
     description: str
-    due_date: Optional[datetime]
+    due_date: datetime | None
     source_email_id: str
     source_subject: str
     priority: MessagePriority
-    keywords: List[str]
+    keywords: list[str]
     action_required: bool
 
 
@@ -108,7 +108,7 @@ class NotificationService:
         self.telegram_api = f"https://api.telegram.org/bot{self.telegram_token}"
         
     async def send_telegram(self, message: str, chat_id: int = None, 
-                           parse_mode: str = "Markdown") -> Tuple[bool, str]:
+                           parse_mode: str = "Markdown") -> tuple[bool, str]:
         """Envia mensagem via Telegram"""
         chat_id = chat_id or self.admin_chat_id
         
@@ -131,7 +131,7 @@ class NotificationService:
         except Exception as e:
             return False, f"Telegram erro: {e}"
     
-    def send_whatsapp(self, message: str, phone: str = None) -> Tuple[bool, str]:
+    def send_whatsapp(self, message: str, phone: str = None) -> tuple[bool, str]:
         """Envia mensagem via WhatsApp (WAHA)"""
         phone = phone or self.admin_phone
         
@@ -167,8 +167,8 @@ class NotificationService:
     
     async def notify(self, message: str, 
                     notification_type: NotificationType = NotificationType.INFO,
-                    channels: List[str] = None,
-                    priority: MessagePriority = MessagePriority.NORMAL) -> Dict[str, Any]:
+                    channels: list[str] = None,
+                    priority: MessagePriority = MessagePriority.NORMAL) -> dict[str, Any]:
         """Envia notificação por múltiplos canais"""
         
         channels = channels or ["telegram", "whatsapp"]
@@ -203,7 +203,7 @@ class NotificationService:
         return results
     
     async def send_reminder(self, reminder: SmartReminder, 
-                           channels: List[str] = None) -> Dict[str, Any]:
+                           channels: list[str] = None) -> dict[str, Any]:
         """Envia lembrete inteligente"""
         
         priority_emoji = {
@@ -267,7 +267,7 @@ class SmartReminderExtractor:
             r'next (monday|tuesday|wednesday|thursday|friday|saturday|sunday)'
         ]
     
-    def extract_dates(self, text: str) -> List[datetime]:
+    def extract_dates(self, text: str) -> list[datetime]:
         """Extrai datas do texto"""
         dates = []
         
@@ -294,7 +294,7 @@ class SmartReminderExtractor:
         
         return dates
     
-    def calculate_priority(self, email_data: Dict[str, Any]) -> MessagePriority:
+    def calculate_priority(self, email_data: dict[str, Any]) -> MessagePriority:
         """Calcula prioridade baseada no conteúdo"""
         
         text = f"{email_data.get('subject', '')} {email_data.get('body', '')}".lower()
@@ -317,7 +317,7 @@ class SmartReminderExtractor:
         
         return MessagePriority.NORMAL
     
-    def extract_keywords(self, text: str) -> List[str]:
+    def extract_keywords(self, text: str) -> list[str]:
         """Extrai palavras-chave relevantes"""
         keywords = []
         text_lower = text.lower()
@@ -328,7 +328,7 @@ class SmartReminderExtractor:
         
         return list(set(keywords))[:10]
     
-    def extract_reminder(self, email_data: Dict[str, Any]) -> Optional[SmartReminder]:
+    def extract_reminder(self, email_data: dict[str, Any]) -> SmartReminder | None:
         """Extrai lembrete de um email"""
         
         subject = email_data.get('subject', '')
@@ -370,7 +370,7 @@ class SmartReminderExtractor:
             action_required=action_required
         )
     
-    async def analyze_with_ai(self, email_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    async def analyze_with_ai(self, email_data: dict[str, Any]) -> dict[str, Any] | None:
         """Usa IA para análise mais profunda do email"""
         
         try:
@@ -483,7 +483,7 @@ class ExpurgoInteligente:
             self.stats['errors'].append(f"Gmail init: {e}")
             return False
     
-    def _get_email_details(self, msg_id: str) -> Optional[Dict[str, Any]]:
+    def _get_email_details(self, msg_id: str) -> dict[str, Any] | None:
         """Obtém detalhes completos de um email"""
         try:
             msg = self.gmail_service.users().messages().get(
@@ -523,7 +523,7 @@ class ExpurgoInteligente:
             logger.warning(f"Erro ao obter email {msg_id}: {e}")
             return None
     
-    def _is_important_email(self, email_data: Dict[str, Any]) -> bool:
+    def _is_important_email(self, email_data: dict[str, Any]) -> bool:
         """Verifica se email é importante para treinamento"""
         
         # Labels que indicam importância
@@ -547,8 +547,8 @@ class ExpurgoInteligente:
         
         return False
     
-    async def process_emails_for_training(self, emails: List[Dict], 
-                                         notify_progress: bool = True) -> Dict[str, Any]:
+    async def process_emails_for_training(self, emails: list[dict], 
+                                         notify_progress: bool = True) -> dict[str, Any]:
         """Processa emails para treinamento antes de excluir"""
         
         if not self.trainer:
@@ -581,8 +581,8 @@ class ExpurgoInteligente:
             'reminders': reminders
         }
     
-    async def send_reminders(self, reminders: List[SmartReminder], 
-                            channels: List[str] = None) -> int:
+    async def send_reminders(self, reminders: list[SmartReminder], 
+                            channels: list[str] = None) -> int:
         """Envia lembretes extraídos"""
         
         sent = 0
@@ -602,7 +602,7 @@ class ExpurgoInteligente:
     async def run_expurgo(self, dry_run: bool = True, 
                          train_emails: bool = True,
                          send_notifications: bool = True,
-                         notification_channels: List[str] = None) -> Dict[str, Any]:
+                         notification_channels: list[str] = None) -> dict[str, Any]:
         """Executa o expurgo inteligente"""
         
         notification_channels = notification_channels or ["telegram"]
@@ -728,7 +728,7 @@ class ExpurgoInteligente:
             'report': report
         }
     
-    def _generate_report(self, results: Dict, reminders: List, dry_run: bool) -> str:
+    def _generate_report(self, results: dict, reminders: list, dry_run: bool) -> str:
         """Gera relatório do expurgo"""
         
         mode = "SIMULAÇÃO" if dry_run else "EXECUÇÃO"
@@ -791,7 +791,7 @@ _{datetime.now().strftime('%d/%m/%Y %H:%M')}_
 
 # ============ Funções de Interface ============
 
-async def run_once(dry_run: bool = True, channels: List[str] = None):
+async def run_once(dry_run: bool = True, channels: list[str] = None):
     """Executa expurgo uma vez"""
     expurgo = ExpurgoInteligente()
     result = await expurgo.run_expurgo(

@@ -4,15 +4,13 @@ Mailu Deployment Automation Script
 Automates setup, validation, and initial configuration of Mailu email server
 """
 
-import os
-import sys
-import subprocess
-import secrets
 import argparse
-from pathlib import Path
-from typing import Optional, Dict, Tuple
-import json
+import secrets
+import subprocess
+import sys
 from datetime import datetime
+from pathlib import Path
+
 
 # Colors for terminal output
 class Colors:
@@ -45,7 +43,7 @@ def print_info(text: str):
     """Print info message"""
     print(f"{Colors.BLUE}ℹ {text}{Colors.RESET}")
 
-def run_command(cmd: list, capture: bool = False) -> Tuple[int, str]:
+def run_command(cmd: list, capture: bool = False) -> tuple[int, str]:
     """Run shell command and return exit code and output"""
     try:
         if capture:
@@ -99,7 +97,7 @@ def check_network() -> bool:
             print_error("Failed to create network")
             return False
 
-def generate_secrets() -> Dict[str, str]:
+def generate_secrets() -> dict[str, str]:
     """Generate secure random secrets"""
     return {
         "MAILU_SECRET_KEY": secrets.token_urlsafe(32),
@@ -107,7 +105,7 @@ def generate_secrets() -> Dict[str, str]:
         "MAILU_REDIS_PASSWORD": secrets.token_urlsafe(32),
     }
 
-def ask_for_config() -> Dict[str, str]:
+def ask_for_config() -> dict[str, str]:
     """Interactively ask for configuration values"""
     print_header("Mailu Configuration")
     
@@ -126,7 +124,7 @@ def ask_for_config() -> Dict[str, str]:
     config["ADMIN_EMAIL"] = admin_email
     
     # TLS flavor
-    print(f"\nTLS/SSL Options:")
+    print("\nTLS/SSL Options:")
     print("  1. letsencrypt (recommended, auto-renewal)")
     print("  2. selfsigned (self-signed certificates)")
     print("  3. notls (no SSL, not recommended)")
@@ -135,7 +133,7 @@ def ask_for_config() -> Dict[str, str]:
     config["MAILU_TLS_FLAVOR"] = tls_map.get(tls_choice, "letsencrypt")
     
     # Ports
-    print(f"\nPort Configuration (press Enter to keep defaults):")
+    print("\nPort Configuration (press Enter to keep defaults):")
     config["MAILU_HTTP_PORT"] = input(f"{Colors.BOLD}HTTP port (default 80): {Colors.RESET}").strip() or "80"
     config["MAILU_HTTPS_PORT"] = input(f"{Colors.BOLD}HTTPS port (default 443): {Colors.RESET}").strip() or "443"
     config["MAILU_SMTP_PORT"] = input(f"{Colors.BOLD}SMTP port (default 25): {Colors.RESET}").strip() or "25"
@@ -145,7 +143,7 @@ def ask_for_config() -> Dict[str, str]:
     
     return config
 
-def create_env_file(config: Dict[str, str]):
+def create_env_file(config: dict[str, str]):
     """Create .env.mailu from configuration"""
     env_path = Path(".env.mailu")
     
@@ -270,7 +268,7 @@ def display_status():
     code, output = run_command(["docker-compose", "-f", "docker-compose.mailu.yml", "ps"], capture=True)
     print(output)
 
-def display_next_steps(config: Dict[str, str]):
+def display_next_steps(config: dict[str, str]):
     """Display next steps for user"""
     print_header("Next Steps")
     

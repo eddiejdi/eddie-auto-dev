@@ -3,14 +3,13 @@
 Script simplificado para atualizar RAG usando Ollama embeddings
 """
 
-import os
 import json
-import hashlib
-import requests
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict
+
 import chromadb
+import requests
 
 # Configurações
 BASE_DIR = Path(__file__).parent
@@ -61,7 +60,7 @@ KNOWLEDGE = [
     }
 ]
 
-def get_ollama_embedding(text: str) -> List[float]:
+def get_ollama_embedding(text: str) -> list[float]:
     """Gera embedding usando Ollama"""
     try:
         response = requests.post(
@@ -127,8 +126,7 @@ def save_training_jsonl():
     
     filename = TRAINING_DIR / f"training_{datetime.now().strftime('%Y-%m-%d')}_knowledge.jsonl"
     with open(filename, "w") as f:
-        for q, a in pairs:
-            f.write(json.dumps({"prompt": q, "completion": a}, ensure_ascii=False) + "\n")
+        f.writelines(json.dumps({"prompt": q, "completion": a}, ensure_ascii=False) + "\n" for q, a in pairs)
     
     print(f"✅ Treino salvo: {filename} ({len(pairs)} pares)")
     return filename

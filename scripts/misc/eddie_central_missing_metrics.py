@@ -3,11 +3,11 @@
 Shared Central Missing Metrics Exporter
 Exporta agent_count_total e message_rate_total com dados REAIS
 """
+import logging
 import os
 import time
-from prometheus_client import start_http_server, Gauge
-import logging
-from datetime import datetime, timedelta
+
+from prometheus_client import Gauge, start_http_server
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ message_rate_total = Gauge('message_rate_total', 'Taxa de mensagens por segundo'
 def get_database_connection():
     """Conecta ao database"""
     try:
-        from sqlalchemy import create_engine, text
+        from sqlalchemy import create_engine
         database_url = os.environ.get("DATABASE_URL")
         
         if not database_url:

@@ -3,7 +3,6 @@
 import json
 import subprocess
 import sys
-from pathlib import Path
 
 SECRETS_AGENT_HOST = "192.168.15.2"
 SECRETS_AGENT_DB = "/var/lib/shared/secrets_agent/audit.db"
@@ -36,7 +35,7 @@ if res.returncode != 0:
 try:
     creds_json = json.loads(res.stdout)
 except:
-    print(f"❌ Erro ao parsear credenciais")
+    print("❌ Erro ao parsear credenciais")
     sys.exit(1)
 
 client_id = creds_json["installed"]["client_id"]
@@ -58,6 +57,7 @@ params = {
 }
 
 from urllib.parse import urlencode
+
 auth_url = f"{base_url}?{urlencode(params)}"
 
 print("="*70)
@@ -81,7 +81,7 @@ if not auth_code:
 # Now exchange code for token
 import requests
 
-print(f"\n🔄 Trocando código por token...")
+print("\n🔄 Trocando código por token...")
 
 token_url = "https://oauth2.googleapis.com/token"
 data = {

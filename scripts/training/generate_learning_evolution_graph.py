@@ -9,14 +9,13 @@ Analisa:
 """
 
 import json
-import subprocess
 import os
-from pathlib import Path
+import subprocess
 from datetime import datetime
-from typing import Dict, List, Tuple
-import matplotlib.pyplot as plt
+from pathlib import Path
+
 import matplotlib.dates as mdates
-from collections import defaultdict
+import matplotlib.pyplot as plt
 
 # Configurações
 HOMELAB_HOST = os.environ.get('HOMELAB_SSH') or f"homelab@{os.environ.get('HOMELAB_HOST','localhost')}"
@@ -38,7 +37,7 @@ def run_ssh_cmd(cmd: str) -> str:
         print(f"❌ Erro SSH: {e}")
         return ""
 
-def get_training_files_metrics() -> List[Tuple[str, datetime, int, int]]:
+def get_training_files_metrics() -> list[tuple[str, datetime, int, int]]:
     """Retorna (arquivo, data, tamanho_bytes, num_linhas)"""
     cmd = f"find {TRAINING_DIR} -name 'training_*.jsonl' -exec ls -l {{}} \\;"
     output = run_ssh_cmd(cmd)
@@ -100,7 +99,7 @@ def get_training_files_metrics() -> List[Tuple[str, datetime, int, int]]:
     
     return sorted(result, key=lambda x: x[1])
 
-def get_ollama_models_info() -> List[Tuple[str, datetime, int]]:
+def get_ollama_models_info() -> list[tuple[str, datetime, int]]:
     """Retorna (modelo, data_modificacao, tamanho_mb)"""
     cmd = f"curl -s {OLLAMA_URL}/api/tags"
     output = run_ssh_cmd(cmd)
@@ -127,7 +126,7 @@ def get_ollama_models_info() -> List[Tuple[str, datetime, int]]:
     
     return sorted(models, key=lambda x: x[1])
 
-def create_evolution_graph(training_metrics: List, models_info: List):
+def create_evolution_graph(training_metrics: list, models_info: list):
     """Cria gráfico de evolução com múltiplas métricas"""
     
     if not training_metrics:
@@ -226,17 +225,17 @@ def create_evolution_graph(training_metrics: List, models_info: List):
     print("\n" + "="*60)
     print("📊 ESTATÍSTICAS DE APRENDIZADO")
     print("="*60)
-    print(f"\n📈 Crescimento de Conversas:")
+    print("\n📈 Crescimento de Conversas:")
     print(f"   Início: {lines_count[0]} conversas ({dates_train[0].strftime('%d/%m/%Y')})")
     print(f"   Atual: {lines_count[-1]} conversas ({dates_train[-1].strftime('%d/%m/%Y')})")
     print(f"   Crescimento: {lines_count[-1] - lines_count[0]} (+{((lines_count[-1]/lines_count[0]-1)*100):.1f}%)")
     
-    print(f"\n📁 Tamanho Total de Dados:")
+    print("\n📁 Tamanho Total de Dados:")
     total_size_mb = sum(m[2] for m in training_metrics) / (1024 * 1024)
     print(f"   Total indexado: {total_size_mb:.2f} MB")
     
     if models_info:
-        print(f"\n🤖 Modelos Treinados:")
+        print("\n🤖 Modelos Treinados:")
         shared_models = [m for m in models_info if 'shared' in m[0].lower()]
         for name, date, size_mb in shared_models:
             print(f"   - {name}: {size_mb:.1f}MB (atualizado em {date.strftime('%d/%m/%Y')})")
@@ -261,12 +260,12 @@ def main():
         print("❌ Nenhum arquivo de treinamento encontrado")
         return
     
-    print(f"\n✅ Dados coletados:")
+    print("\n✅ Dados coletados:")
     print(f"   - {len(training_metrics)} arquivos de treinamento")
     print(f"   - {len(models_info)} modelos no Ollama")
     
     # Exibir detalhes
-    print(f"\n📂 Arquivos de Treinamento:")
+    print("\n📂 Arquivos de Treinamento:")
     for filename, date, size_bytes, lines in training_metrics:
         print(f"   {filename}")
         print(f"      Data: {date.strftime('%d/%m/%Y')}")

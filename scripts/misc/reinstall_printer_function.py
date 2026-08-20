@@ -2,9 +2,8 @@
 """
 Remove função de impressora e reinstala com código correto
 """
+
 import requests
-import json
-import os
 
 WEBUI_URL = "http://127.0.0.1:8002"
 EMAIL = "edenilson.teixeira@rpa4all.com"
@@ -31,7 +30,7 @@ r = requests.delete(
 if r.status_code in [200, 204]:
     print("   ✅ Função anterior removida")
 elif r.status_code == 405:
-    print(f"   ⚠️ Método DELETE não permitido (405), tentando via POST...")
+    print("   ⚠️ Método DELETE não permitido (405), tentando via POST...")
     r = requests.post(
         f"{WEBUI_URL}/api/v1/functions/id/{FUNCTION_ID}/delete",
         headers=headers
@@ -93,8 +92,8 @@ else:
     print(r.text[:300])
     exit(1)
 
-print(f"\n✅ CONCLUÍDO!")
+print("\n✅ CONCLUÍDO!")
 print(f"   • Função: {FUNCTION_ID}")
-print(f"   • Status: ATIVO ✅")
-print(f"   • Global: SIM ✅")
-print(f"\n🎯 Agora teste no chat: 'Imprima TESTE 123'")
+print("   • Status: ATIVO ✅")
+print("   • Global: SIM ✅")
+print("\n🎯 Agora teste no chat: 'Imprima TESTE 123'")

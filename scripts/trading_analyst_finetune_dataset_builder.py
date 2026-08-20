@@ -30,11 +30,11 @@ import logging
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 # Reusa o resolvedor de DSN e o pool do próprio agente.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "btc_trading_agent"))
-from training_db import TrainingDatabase  # noqa: E402
+from training_db import TrainingDatabase
 
 logging.basicConfig(
     level=logging.INFO,
@@ -54,7 +54,7 @@ DEFAULT_DAYS = 45
 
 
 def _pnl_in_window(
-    trades: List[Dict[str, Any]], start_ts: float, end_ts: float,
+    trades: list[dict[str, Any]], start_ts: float, end_ts: float,
 ) -> tuple[float, int]:
     """Soma o PnL realizado dos trades com timestamp em [start_ts, end_ts)."""
     total = 0.0
@@ -70,7 +70,7 @@ def _pnl_in_window(
     return total, n
 
 
-def _build_example(call: Dict[str, Any], call_type: str) -> Optional[Dict[str, str]]:
+def _build_example(call: dict[str, Any], call_type: str) -> dict[str, str] | None:
     """Converte uma linha de btc.llm_calls num exemplo SFT instruction/input/output.
 
     O prompt logado JÁ é o formato exato de produção; a resposta bruta do modelo é
@@ -110,18 +110,18 @@ def build_for_call_type(
     since: float,
     min_pnl: float,
     max_calls: int = 20000,
-) -> tuple[List[Dict[str, str]], Dict[str, int]]:
+) -> tuple[list[dict[str, str]], dict[str, int]]:
     """Gera exemplos SFT para um call_type, filtrando por PnL realizado positivo."""
     calls = db.get_llm_calls(call_type=call_type, since=since, limit=max_calls)
     stats = {"calls": len(calls), "kept": 0, "no_output": 0, "bad_pnl": 0, "no_trades": 0}
 
     # Agrupa por (symbol, profile) para calcular a janela de validade de cada chamada
     # (até a próxima chamada do mesmo grupo) e o PnL realizado nessa janela.
-    by_group: Dict[tuple, List[Dict[str, Any]]] = {}
+    by_group: dict[tuple, list[dict[str, Any]]] = {}
     for c in calls:
         by_group.setdefault((c["symbol"], c["profile"]), []).append(c)
 
-    examples: List[Dict[str, str]] = []
+    examples: list[dict[str, str]] = []
     now = time.time()
     for (symbol, profile), group in by_group.items():
         group.sort(key=lambda c: c["timestamp"])
@@ -167,7 +167,7 @@ def main() -> int:
     args.out.mkdir(parents=True, exist_ok=True)
 
     total_kept = 0
-    manifest: Dict[str, Any] = {"generated_at": time.time(), "days": args.days,
+    manifest: dict[str, Any] = {"generated_at": time.time(), "days": args.days,
                                 "min_pnl": args.min_pnl, "call_types": {}}
 
     for call_type in CALL_TYPES:

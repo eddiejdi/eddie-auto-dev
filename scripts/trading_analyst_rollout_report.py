@@ -38,7 +38,7 @@ import psycopg2
 
 # Reusa o scorer contrafactual do backfill.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from trading_analyst_backfill_window_dataset import score_price_path  # noqa: E402
+from trading_analyst_backfill_window_dataset import score_price_path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s",
                     datefmt="%H:%M:%S")

@@ -14,22 +14,19 @@ Recursos:
 Número configurado: 5511981193899
 """
 
-import os
 import asyncio
-import httpx
 import json
-import re
-import base64
 import logging
-from datetime import datetime
-from typing import Optional, Dict, Any, List, Tuple
-from pathlib import Path
-from dataclasses import dataclass, field
+import os
+import re
 import sys
-import threading
 import time
-import psycopg2
-from psycopg2.extras import RealDictCursor
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import httpx
 from psycopg2.pool import SimpleConnectionPool
 
 # Adicionar diretório atual ao path para imports locais
@@ -57,8 +54,11 @@ except ImportError:
 # Import do módulo de integração OpenWebUI + Modelos
 try:
     from openwebui_integration import (
-        IntegrationClient, get_integration_client, close_integration,
-        MODEL_PROFILES, ChatResponse
+        MODEL_PROFILES,
+        ChatResponse,
+        IntegrationClient,
+        close_integration,
+        get_integration_client,
     )
     INTEGRATION_AVAILABLE = True
 except ImportError:
@@ -68,7 +68,9 @@ except ImportError:
 # Import do módulo de Google Calendar
 try:
     from google_calendar_integration import (
-        get_calendar_assistant, process_calendar_request, CalendarAssistant
+        CalendarAssistant,
+        get_calendar_assistant,
+        process_calendar_request,
     )
     CALENDAR_AVAILABLE = True
 except ImportError:
@@ -78,7 +80,9 @@ except ImportError:
 # Import do módulo de Gmail
 try:
     from gmail_integration import (
-        get_gmail_client, get_email_cleaner, process_gmail_command
+        get_email_cleaner,
+        get_gmail_client,
+        process_gmail_command,
     )
     GMAIL_AVAILABLE = True
 except ImportError:
@@ -88,8 +92,10 @@ except ImportError:
 # Import do módulo de Relatórios
 try:
     from reports_integration import (
-        process_report_request, detect_report_type, generate_report,
-        get_report_commands
+        detect_report_type,
+        generate_report,
+        get_report_commands,
+        process_report_request,
     )
     REPORTS_AVAILABLE = True
 except ImportError:
@@ -99,7 +105,9 @@ except ImportError:
 # Import do módulo de Home Assistant
 try:
     from home_assistant_integration import (
-        process_home_command, detect_home_intent, get_home_commands
+        detect_home_intent,
+        get_home_commands,
+        process_home_command,
     )
     HOME_AVAILABLE = True
 except ImportError:
@@ -178,7 +186,7 @@ OWNER_SELF_CHAT_IDS = {
     OWNER_NUMBER,
     f"{OWNER_NUMBER}@c.us",
     f"{OWNER_NUMBER}@s.whatsapp.net",
-    OWNER_NUMBER[2:] if OWNER_NUMBER.startswith("55") else OWNER_NUMBER,
+    OWNER_NUMBER.removeprefix("55"),
     f"{OWNER_NUMBER[2:]}@c.us" if OWNER_NUMBER.startswith("55") else f"{OWNER_NUMBER}@c.us",
     OWNER_LID,
     f"{OWNER_LID}@lid",
@@ -212,10 +220,10 @@ PERSONA_CONFIG_PATH = Path(
         str(_REPO_ROOT / "artifacts" / "whatsapp_persona" / "config.json"),
     )
 )
-_PERSONA_CONFIG_CACHE: Dict[str, Any] = {"mtime": None, "data": {}}
+_PERSONA_CONFIG_CACHE: dict[str, Any] = {"mtime": None, "data": {}}
 
 
-def load_persona_config(force: bool = False) -> Dict[str, Any]:
+def load_persona_config(force: bool = False) -> dict[str, Any]:
     """Lê artifacts/whatsapp_persona/config.json com cache por mtime."""
     global _PERSONA_CONFIG_CACHE
     try:
@@ -375,7 +383,7 @@ class WhatsAppMessage:
             OWNER_NUMBER,
             WHATSAPP_NUMBER,
             OWNER_LID,
-            OWNER_NUMBER[2:] if OWNER_NUMBER.startswith("55") else OWNER_NUMBER,
+            OWNER_NUMBER.removeprefix("55"),
         }
 
 
@@ -383,11 +391,11 @@ class WhatsAppMessage:
 class ChatSession:
     """Sessão de chat com histórico"""
     chat_id: str
-    messages: List[Dict[str, str]] = field(default_factory=list)
+    messages: list[dict[str, str]] = field(default_factory=list)
     current_profile: str = "assistant"
     last_activity: datetime = field(default_factory=datetime.now)
     rolling_summary: str = ""
-    pending_summary_messages: List[Dict[str, str]] = field(default_factory=list)
+    pending_summary_messages: list[dict[str, str]] = field(default_factory=list)
 
     def add_message(self, role: str, content: str):
         self.messages.append({"role": role, "content": content})
@@ -399,8 +407,8 @@ class ChatSession:
         while len(self.messages) > WHATSAPP_CONTEXT_RECENT_MESSAGES:
             self.pending_summary_messages.append(self.messages.pop(0))
 
-    def get_history(self) -> List[Dict[str, str]]:
-        history: List[Dict[str, str]] = []
+    def get_history(self) -> list[dict[str, str]]:
+        history: list[dict[str, str]] = []
         if self.rolling_summary:
             history.append({
                 "role": "system",
@@ -425,7 +433,7 @@ class ChatSession:
             )
         )
 
-    def build_summary_prompt(self) -> Optional[str]:
+    def build_summary_prompt(self) -> str | None:
         """Monta prompt incremental para consolidar histórico antigo."""
         if not self.pending_summary_messages:
             return None
@@ -576,7 +584,7 @@ class ConversationDB:
         finally:
             self.release_connection(conn)
     
-    def get_history(self, chat_id: str, limit: int = 20) -> List[Dict[str, str]]:
+    def get_history(self, chat_id: str, limit: int = 20) -> list[dict[str, str]]:
         """Recupera histórico de mensagens"""
         conn = self.get_connection()
         try:
@@ -658,7 +666,7 @@ class ConversationDB:
             self.release_connection(conn)
 
     def save_fact(self, chat_id: str, sender: str, fact_type: str,
-                  content: str, query: str = None) -> Optional[int]:
+                  content: str, query: str = None) -> int | None:
         """Salva um fato aprendido (correção do dono ou achado de pesquisa web)."""
         content = (content or "").strip()
         if not content:
@@ -682,7 +690,7 @@ class ConversationDB:
         finally:
             self.release_connection(conn)
 
-    def get_recent_facts(self, chat_id: str, limit: int = 8) -> List[Dict[str, str]]:
+    def get_recent_facts(self, chat_id: str, limit: int = 8) -> list[dict[str, str]]:
         """Recupera os fatos aprendidos mais recentes para esse chat."""
         conn = self.get_connection()
         try:
@@ -706,7 +714,7 @@ class ConversationDB:
             self.release_connection(conn)
 
     @staticmethod
-    def _chat_id_aliases(chat_id: str) -> List[str]:
+    def _chat_id_aliases(chat_id: str) -> list[str]:
         """Variantes de chat_id (telefone/LID) para limpar juntas."""
         if not chat_id:
             return []
@@ -745,7 +753,7 @@ class NullConversationDB:
 
     available = False
 
-    def get_history(self, chat_id: str, limit: int = 20) -> List[Dict[str, str]]:
+    def get_history(self, chat_id: str, limit: int = 20) -> list[dict[str, str]]:
         return []
 
     def get_session_profile(self, chat_id: str) -> str:
@@ -765,7 +773,7 @@ class NullConversationDB:
                   content: str, query: str = None):
         return None
 
-    def get_recent_facts(self, chat_id: str, limit: int = 8) -> List[Dict[str, str]]:
+    def get_recent_facts(self, chat_id: str, limit: int = 8) -> list[dict[str, str]]:
         return []
 
 
@@ -814,7 +822,7 @@ class OllamaClient:
         self._gpu_lock = asyncio.Lock()
 
     @staticmethod
-    def _normalize_validator_result(result: Any) -> Tuple[bool, str]:
+    def _normalize_validator_result(result: Any) -> tuple[bool, str]:
         """Normaliza retorno do validator para ok/reason."""
         if isinstance(result, tuple):
             ok = bool(result[0])
@@ -823,7 +831,7 @@ class OllamaClient:
         return bool(result), ""
 
     @staticmethod
-    def _default_text_validator(text: str) -> Tuple[bool, str]:
+    def _default_text_validator(text: str) -> tuple[bool, str]:
         """Rejeita saídas vazias ou mensagens de erro da camada HTTP."""
         normalized = (text or "").strip()
         if not normalized:
@@ -833,7 +841,7 @@ class OllamaClient:
         return True, ""
 
     @staticmethod
-    def _build_retry_message(reason: str) -> Dict[str, str]:
+    def _build_retry_message(reason: str) -> dict[str, str]:
         """Instrução curta para o modelo corrigir a resposta no retry."""
         return {
             "role": "system",
@@ -852,7 +860,7 @@ class OllamaClient:
     async def _post_with_retries(
         self,
         path: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         *,
         label: str,
     ) -> httpx.Response:
@@ -864,13 +872,13 @@ class OllamaClient:
     async def _post_with_retries_unlocked(
         self,
         path: str,
-        payload: Dict[str, Any],
+        payload: dict[str, Any],
         *,
         label: str,
     ) -> httpx.Response:
         url = f"{self.host}{path}"
-        last_exc: Optional[BaseException] = None
-        last_resp: Optional[httpx.Response] = None
+        last_exc: BaseException | None = None
+        last_resp: httpx.Response | None = None
 
         for attempt in range(1, self.http_retries + 1):
             t0 = time.monotonic()
@@ -937,10 +945,10 @@ class OllamaClient:
     
     async def chat(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         model: str = MODEL,
         system: str = None,
-        temperature: Optional[float] = None,
+        temperature: float | None = None,
     ) -> str:
         """Envia mensagem para o modelo (com tolerância a demora de GPU)."""
         try:
@@ -1022,7 +1030,7 @@ class OllamaClient:
                 "Tenta de novo em alguns segundos."
             )
 
-    async def warmup(self, model: str, keep_alive: Optional[str] = None) -> bool:
+    async def warmup(self, model: str, keep_alive: str | None = None) -> bool:
         """Carrega o modelo na VRAM com um generate mínimo (anti cold-start)."""
         ka = keep_alive or self.keep_alive
         try:
@@ -1054,11 +1062,11 @@ class OllamaClient:
 
     async def chat_with_tools(
         self,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         model: str = MODEL,
         system: str = None,
-        tools: Optional[List[Dict[str, Any]]] = None,
-    ) -> Tuple[str, List[Dict[str, Any]]]:
+        tools: list[dict[str, Any]] | None = None,
+    ) -> tuple[str, list[dict[str, Any]]]:
         """Como chat(), mas envia `tools=` (function-calling do Ollama) e
         retorna (content, tool_calls) em vez de só o texto.
 
@@ -1079,7 +1087,7 @@ class OllamaClient:
             except (TypeError, ValueError):
                 num_predict = 384
 
-            payload: Dict[str, Any] = {
+            payload: dict[str, Any] = {
                 "model": model,
                 "messages": full_messages,
                 "stream": False,
@@ -1115,7 +1123,7 @@ class OllamaClient:
 
     async def chat_validated(
         self,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         model: str = MODEL,
         system: str = None,
         validator=None,
@@ -1142,7 +1150,7 @@ class OllamaClient:
     async def generate(self, prompt: str, model: str = MODEL, system: str = None) -> str:
         """Gera texto simples (mesma tolerância de GPU do chat)."""
         try:
-            data: Dict[str, Any] = {
+            data: dict[str, Any] = {
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
@@ -1198,7 +1206,7 @@ class OllamaClient:
 
         return last_response
 
-    async def list_models(self) -> List[str]:
+    async def list_models(self) -> list[str]:
         """Lista modelos disponíveis"""
         try:
             response = await self.client.get(f"{self.host}/api/tags")
@@ -1223,7 +1231,7 @@ class WhatsAppBot:
             logger.error(f"DB indisponível, usando fallback em memória: {e}")
             self.db = NullConversationDB()
         self.ollama = OllamaClient()
-        self.sessions: Dict[str, ChatSession] = {}
+        self.sessions: dict[str, ChatSession] = {}
         self.search_engine = None
         self.running = False
         self.whatsapp_client = None
@@ -1231,7 +1239,7 @@ class WhatsAppBot:
         # main() — permite que uma tarefa de fundo (aprovação de ferramenta
         # travada) mande uma mensagem WhatsApp minutos depois, fora do ciclo
         # request/response do webhook.
-        self._notifier: Optional[Any] = None
+        self._notifier: Any | None = None
 
         # Inicializar busca web se disponível
         if WEB_SEARCH_AVAILABLE:
@@ -1264,7 +1272,7 @@ class WhatsAppBot:
         return self.sessions[chat_id]
 
     @staticmethod
-    def _response_validator(text: str) -> Tuple[bool, str]:
+    def _response_validator(text: str) -> tuple[bool, str]:
         """Aceita respostas úteis e rejeita saídas vazias/erro."""
         normalized = (text or "").strip()
         if not normalized:
@@ -1311,7 +1319,7 @@ class WhatsAppBot:
         number = sender.split("@")[0]
         return number in ADMIN_NUMBERS or sender in ADMIN_NUMBERS
     
-    async def handle_command(self, message: WhatsAppMessage) -> Optional[str]:
+    async def handle_command(self, message: WhatsAppMessage) -> str | None:
         """Processa comandos especiais"""
         text = message.text.strip().lower()
         
@@ -1572,7 +1580,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
     @staticmethod
     def _extract_search_query(
         text: str,
-        history: Optional[List[Dict[str, str]]] = None,
+        history: list[dict[str, str]] | None = None,
     ) -> str:
         """Query limpa para busca.
 
@@ -1618,7 +1626,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         user_l = user_part.lower()
         has_action = any(k in user_l for k in action_keys) and len(user_part) >= 8
 
-        parts: List[str] = []
+        parts: list[str] = []
         if has_action:
             parts.append(user_part)
         else:
@@ -1657,7 +1665,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         return " ".join(combined.split())[:320]
 
     @staticmethod
-    def _extract_correction(text: str) -> Optional[str]:
+    def _extract_correction(text: str) -> str | None:
         """Detecta se a mensagem do dono é uma correção/ensinamento a guardar.
 
         Aceita comando explícito ("/aprende ...", "anota: ...") ou frases
@@ -1723,7 +1731,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         return any(k in lower for k in keys)
 
     @staticmethod
-    def _engine_search_queries(user_query: str) -> List[str]:
+    def _engine_search_queries(user_query: str) -> list[str]:
         """Gera queries tópicas para o DDG.
 
         Queries em PT imperativo ("busque os contatos…") levam 403/ruído.
@@ -1731,7 +1739,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         """
         q = (user_query or "").strip()
         ql = q.lower()
-        variants: List[str] = []
+        variants: list[str] = []
 
         # remoção de imperativos PT
         fluff = (
@@ -1931,7 +1939,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         return peer
 
     @staticmethod
-    def resolve_remote_peer(msg_data: Dict[str, Any], from_me: bool) -> str:
+    def resolve_remote_peer(msg_data: dict[str, Any], from_me: bool) -> str:
         """Peer remoto da conversa 1:1 (nunca o 'from' em mensagens fromMe).
 
         - Entrante: chatId/from = contatos
@@ -1965,7 +1973,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
         return from_f or to_f
 
     @staticmethod
-    def extract_quoted_text(msg_data: Dict[str, Any]) -> str:
+    def extract_quoted_text(msg_data: dict[str, Any]) -> str:
         """Extrai o texto da mensagem citada (reply do WhatsApp) no payload WAHA.
 
         WAHA/WEBJS varia o formato: replyTo, quotedMsg, _data.quotedMsg,
@@ -2208,7 +2216,7 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
 
     async def _process_with_tools(
         self,
-        messages: List[Dict[str, Any]],
+        messages: list[dict[str, Any]],
         model: str,
         system_prompt: str,
         chat_id: str,
@@ -2675,9 +2683,9 @@ Olá! Sou um assistente de IA integrado ao WhatsApp.
     _is_nsfw_refusal = _is_obedience_refusal
 
     @staticmethod
-    def _scrub_refusal_history(messages: List[Dict[str, str]]) -> List[Dict[str, str]]:
+    def _scrub_refusal_history(messages: list[dict[str, str]]) -> list[dict[str, str]]:
         """Remove turns de assistente com recusa + system de resumo tóxico."""
-        cleaned: List[Dict[str, str]] = []
+        cleaned: list[dict[str, str]] = []
         for msg in messages:
             role = msg.get("role", "")
             content = msg.get("content") or ""
@@ -2897,13 +2905,13 @@ class WAHAClient:
         # número puro (com ou sem 55)
         return f"{chat_id}@s.whatsapp.net"
 
-    def _outbound_chat_id_candidates(self, chat_id: str) -> List[str]:
+    def _outbound_chat_id_candidates(self, chat_id: str) -> list[str]:
         """Lista ordenada de chatIds a tentar no sendText.
 
         Ordem: JID normalizado → LID cru → telefone mapeado → @c.us.
         """
         raw = (chat_id or "").strip()
-        candidates: List[str] = []
+        candidates: list[str] = []
 
         def _add(value: str) -> None:
             if value and value not in candidates:
@@ -3037,7 +3045,7 @@ class WAHAClient:
         return f"{tag}{sep}{body}"
 
     @staticmethod
-    def _split_message_chunks(text: str, max_len: int = None) -> List[str]:
+    def _split_message_chunks(text: str, max_len: int = None) -> list[str]:
         """Quebra uma mensagem grande em partes que cabem no limite de saída.
 
         Prioriza cortar em fronteira de parágrafo, depois linha, depois
@@ -3050,7 +3058,7 @@ class WAHAClient:
         if len(body) <= max_len:
             return [body]
 
-        chunks: List[str] = []
+        chunks: list[str] = []
         remaining = body
         min_cut = max(1, int(max_len * 0.5))
         while len(remaining) > max_len:
@@ -3247,7 +3255,7 @@ class WAHAClient:
                 headers=self.headers
             )
             return response.json()
-        except Exception as e:
+        except Exception:
             return []
     
     async def get_messages(self, chat_id: str, limit: int = 20) -> list:
@@ -3259,7 +3267,7 @@ class WAHAClient:
                 headers=self.headers
             )
             return response.json()
-        except Exception as e:
+        except Exception:
             return []
     
     async def mark_as_read(self, chat_id: str, message_id: str = None) -> dict:
@@ -3309,6 +3317,7 @@ class WAHAClient:
 # ============== Servidor Webhook para receber mensagens ==============
 from aiohttp import web
 
+
 class WebhookServer:
     """Servidor webhook para receber mensagens do WAHA/Evolution"""
     
@@ -3324,7 +3333,7 @@ class WebhookServer:
         # pra uma única mensagem recebida. Dedupe pelo id real da mensagem do
         # WhatsApp (payload.id), não pelo id do evento de webhook, porque é a
         # única coisa estável entre as entregas duplicadas.
-        self._recent_message_ids: Dict[str, float] = {}
+        self._recent_message_ids: dict[str, float] = {}
         self._recent_message_ids_ttl = 300.0  # segundos
     
     def setup_routes(self):
@@ -3653,7 +3662,7 @@ async def main():
         if qr:
             logger.info("=" * 50)
             logger.info("📱 Escaneie o QR Code no WhatsApp:")
-            logger.info(f"Acesse: http://localhost:5001/qr")
+            logger.info("Acesse: http://localhost:5001/qr")
             logger.info("=" * 50)
     
     # Iniciar servidor

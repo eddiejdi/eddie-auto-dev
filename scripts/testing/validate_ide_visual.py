@@ -7,18 +7,16 @@ Validação Visual Completa da IDE Python Online
 - Testa integração com backend
 """
 
-import subprocess
 import sys
 import time
-from pathlib import Path
 
 try:
     from selenium import webdriver
+    from selenium.common.exceptions import TimeoutException, WebDriverException
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
     from selenium.webdriver.support import expected_conditions as EC
-    from selenium.common.exceptions import TimeoutException, WebDriverException
+    from selenium.webdriver.support.ui import WebDriverWait
 except ImportError:
     print("❌ Selenium não instalado. Execute: pip install selenium")
     sys.exit(1)
@@ -165,7 +163,7 @@ def validate_ide_visual(driver):
             msg = error['message'][:100]
             print(f"      - {msg}")
     else:
-        print(f"  ✅ Nenhum erro JavaScript grave detectado")
+        print("  ✅ Nenhum erro JavaScript grave detectado")
     
     if warnings:
         print(f"  ℹ️  {len(warnings)} aviso(s)")
@@ -238,21 +236,21 @@ def check_backend_connection(driver):
         # Procurar o botão de executar
         execute_buttons = driver.find_elements(By.XPATH, "//*[contains(text(), 'Executar')]")
         if execute_buttons:
-            print(f"  ✅ Botão Executar encontrado")
+            print("  ✅ Botão Executar encontrado")
             # Não clicamos para não afetar o estado da página
         else:
-            print(f"  ⚠️  Botão Executar não encontrado")
+            print("  ⚠️  Botão Executar não encontrado")
         
         # Verificar se há mensagens de erro na página
         error_elements = driver.find_elements(By.XPATH, "//*[contains(text(), 'ERRO')]")
         if error_elements:
-            print(f"  ⚠️  Página contém mensagens de erro:")
+            print("  ⚠️  Página contém mensagens de erro:")
             for elem in error_elements[:3]:
                 text = elem.text[:80]
                 print(f"      - {text}")
             return False
         else:
-            print(f"  ✅ Nenhuma mensagem de erro visível")
+            print("  ✅ Nenhuma mensagem de erro visível")
             return True
     except Exception as e:
         print(f"  ❌ Erro ao verificar backend: {e}")

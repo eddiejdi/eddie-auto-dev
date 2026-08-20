@@ -3,13 +3,12 @@
 Scan WhatsApp groups for job postings and analyze compatibility using LLM skill extraction.
 Fetches from job-specific groups, extracts skills via Ollama, scores compatibility.
 """
-import os
-import sys
 import json
-import time
-import subprocess
 import logging
-import re
+import os
+import subprocess
+import sys
+import time
 
 # Config
 os.environ.setdefault("SEND_TO_CONTACT", "0")
@@ -19,8 +18,10 @@ os.environ.setdefault("COMPATIBILITY_THRESHOLD", "20.0")
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from apply_real_job import (
-    extract_contact_email, extract_skills_llm, compute_compatibility,
-    load_curriculum_text
+    compute_compatibility,
+    extract_contact_email,
+    extract_skills_llm,
+    load_curriculum_text,
 )
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -140,7 +141,7 @@ def main():
     print(f"\n  Total vagas para analise: {len(all_job_msgs)}")
 
     # Step 5: LLM analysis of each job posting
-    print(f"\n[5/5] Analisando vagas com LLM (pode demorar ~60s por vaga)...")
+    print("\n[5/5] Analisando vagas com LLM (pode demorar ~60s por vaga)...")
     vagas = []
     for i, job_msg in enumerate(all_job_msgs):
         text = job_msg["text"]

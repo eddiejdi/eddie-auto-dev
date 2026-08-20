@@ -1,12 +1,13 @@
 
-import sys
 import os
+import sys
 from pathlib import Path
 
 # Adicionar o diretório atual ao path para importar web_search
 sys.path.insert(0, str(Path(__file__).parent))
 
 from web_search import create_search_engine
+
 
 def train_coordinator():
     # RAG API URL do usuário

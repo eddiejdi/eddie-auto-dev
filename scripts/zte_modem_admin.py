@@ -38,13 +38,11 @@ import sys
 import time
 import urllib.request
 from pathlib import Path
-from typing import Optional
 
 from selenium import webdriver
 from selenium.common.exceptions import (
     NoSuchElementException,
     TimeoutException,
-    UnexpectedAlertPresentException,
     WebDriverException,
 )
 from selenium.webdriver.chrome.options import Options
@@ -117,7 +115,7 @@ def _create_driver() -> webdriver.Chrome:
         )
 
 
-def _dismiss_alert(driver: webdriver.Chrome, accept: bool = True) -> Optional[str]:
+def _dismiss_alert(driver: webdriver.Chrome, accept: bool = True) -> str | None:
     """Fecha alert JS se presente. Retorna o texto ou None."""
     try:
         alert = driver.switch_to.alert
@@ -344,7 +342,7 @@ def op_diagnose(driver: webdriver.Chrome, dry_run: bool) -> int:
     log.info("DNS via Pi-hole (192.168.15.2):")
     for domain in ["youtube.com", "connectivitycheck.gstatic.com"]:
         r = subprocess.run(
-            ["dig", f"@192.168.15.2", domain, "+short", "+time=3"],
+            ["dig", "@192.168.15.2", domain, "+short", "+time=3"],
             capture_output=True, text=True,
         )
         ans = r.stdout.strip().split("\n")[0] if r.stdout.strip() else "SEM RESPOSTA"

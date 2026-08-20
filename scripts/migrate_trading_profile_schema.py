@@ -9,7 +9,6 @@ from pathlib import Path
 
 import psycopg2
 
-
 MIGRATION_SQL = """
 CREATE SCHEMA IF NOT EXISTS btc;
 

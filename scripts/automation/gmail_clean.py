@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Gmail Cleaner - Versão Ultra Simples"""
-import os, json, base64
+import json
+import os
 from datetime import datetime
-from google.oauth2.credentials import Credentials
+
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 TOKEN = "/home/homelab/myClaude/gmail_data/token.json"

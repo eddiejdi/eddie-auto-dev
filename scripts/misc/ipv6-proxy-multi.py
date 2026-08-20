@@ -9,7 +9,6 @@ Ambientes:
 - CER:  portas 8101-8105
 """
 import asyncio
-import socket
 
 # Mapeamento de portas para servicos locais
 SERVICES = {

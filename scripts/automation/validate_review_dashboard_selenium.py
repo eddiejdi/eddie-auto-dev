@@ -4,18 +4,18 @@ Valida o dashboard Review Quality Gate System no Grafana
 Verifica todos os 10 painéis e métricas após as correções aplicadas
 """
 
-import os
+import json
 import sys
 import time
-import json
+
+import requests
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
-import requests
 
 # ============ CONFIGURAÇÕES ============
 GRAFANA_URL = "http://192.168.15.2:3002"
@@ -133,13 +133,13 @@ class ReviewDashboardValidator:
         
         # Verificar health check
         if self.validation_results["service_health"] == "1":
-            print(f"\n  ✅ Service Health: UP (review_service_up = 1)")
+            print("\n  ✅ Service Health: UP (review_service_up = 1)")
         else:
             print(f"\n  ❌ Service Health: DOWN (review_service_up = {self.validation_results['service_health']})")
     
     def login_grafana(self):
         """Login no Grafana"""
-        print(f"\n🔐 Fazendo login no Grafana...")
+        print("\n🔐 Fazendo login no Grafana...")
         
         try:
             self.driver.get(f"{GRAFANA_URL}/login")
@@ -244,7 +244,7 @@ class ReviewDashboardValidator:
             print(f"\n   📸 Screenshot salvo: {screenshot_path}")
             
             # Resumo da validação
-            print(f"\n   📋 Resumo:")
+            print("\n   📋 Resumo:")
             print(f"      Total de painéis: {panels_count}")
             print(f"      Painéis com erro: {error_count}")
             print(f"      Painéis sem dados: {no_data_count}")
@@ -306,7 +306,7 @@ class ReviewDashboardValidator:
         
         print(f"\n🎯 Status Geral: {results['overall_status']}")
         
-        print(f"\n📊 Métricas Prometheus:")
+        print("\n📊 Métricas Prometheus:")
         metrics_ok = sum(1 for m in results['metrics_available'].values() if m['status'] == 'OK')
         metrics_total = len(results['metrics_available'])
         print(f"   {metrics_ok}/{metrics_total} métricas disponíveis")
@@ -315,19 +315,19 @@ class ReviewDashboardValidator:
             status_icon = "✅" if data['status'] == 'OK' else "❌"
             print(f"   {status_icon} {metric}: {data.get('value', 'N/A')}")
         
-        print(f"\n🏥 Service Health:")
+        print("\n🏥 Service Health:")
         if results['service_health'] == "1":
-            print(f"   ✅ review_service_up = 1 (ONLINE)")
+            print("   ✅ review_service_up = 1 (ONLINE)")
         else:
             print(f"   ❌ review_service_up = {results['service_health']} (OFFLINE)")
         
-        print(f"\n🖼️ Dashboard:")
+        print("\n🖼️ Dashboard:")
         print(f"   Carregado: {'✅ Sim' if results['dashboard_loaded'] else '❌ Não'}")
         print(f"   Painéis encontrados: {results['panels_found']}")
         print(f"   Painéis com erros: {len(results['panels_with_errors'])}")
         
         if results['panels_with_errors']:
-            print(f"\n   ❌ Erros encontrados:")
+            print("\n   ❌ Erros encontrados:")
             for error in results['panels_with_errors']:
                 print(f"      • Painel {error['panel_index']}: {error['error']}")
         

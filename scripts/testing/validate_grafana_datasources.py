@@ -8,11 +8,9 @@ Uso: python3 validate_grafana_datasources.py
 """
 
 import sys
-import json
-import urllib.request
 import urllib.error
-from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Optional
+import urllib.request
+from datetime import datetime
 
 try:
     import psycopg2
@@ -66,7 +64,7 @@ def print_info(text: str):
 # PROMETHEUS VALIDATION
 # ═══════════════════════════════════════════════════════════════
 
-def validate_prometheus() -> Dict:
+def validate_prometheus() -> dict:
     """Valida conexão e métricas do Prometheus"""
     result = {
         "status": "error",
@@ -107,10 +105,10 @@ def validate_prometheus() -> Dict:
             result["status"] = "ok"
             
     except urllib.error.URLError as e:
-        result["error_msg"] = f"Erro de conexão: {str(e)}"
+        result["error_msg"] = f"Erro de conexão: {e!s}"
         result["status"] = "error"
     except Exception as e:
-        result["error_msg"] = f"Erro inesperado: {str(e)}"
+        result["error_msg"] = f"Erro inesperado: {e!s}"
         result["status"] = "error"
     
     return result
@@ -120,7 +118,7 @@ def validate_prometheus() -> Dict:
 # POSTGRESQL VALIDATION
 # ═══════════════════════════════════════════════════════════════
 
-def validate_postgresql() -> Dict:
+def validate_postgresql() -> dict:
     """Valida conexão e dados do PostgreSQL"""
     result = {
         "status": "error",
@@ -131,7 +129,7 @@ def validate_postgresql() -> Dict:
 
     try:
         dsn = "host=localhost port=5433 user=postgres password=shared_memory_2026 dbname=btc_trading"
-        print_info(f"Conectando ao PostgreSQL: localhost:5433/btc_trading")
+        print_info("Conectando ao PostgreSQL: localhost:5433/btc_trading")
         
         conn = psycopg2.connect(dsn)
         conn.autocommit = True
@@ -227,10 +225,10 @@ def validate_postgresql() -> Dict:
         result["status"] = "ok"
         
     except psycopg2.OperationalError as e:
-        result["error_msg"] = f"Erro de conexão: {str(e)}"
+        result["error_msg"] = f"Erro de conexão: {e!s}"
         result["status"] = "error"
     except Exception as e:
-        result["error_msg"] = f"Erro inesperado: {str(e)}"
+        result["error_msg"] = f"Erro inesperado: {e!s}"
         result["status"] = "error"
     
     return result
@@ -274,7 +272,7 @@ def main():
     print(f"    • Equity: ${equity:,.2f} USDT" if equity > 0 else f"    • Equity: {Colors.RED}$0.00{Colors.END} ⚠️")
     
     open_btc = metrics.get("btc_trading_open_position_btc", 0)
-    print(f"    • Open Position: {open_btc:.8f} BTC" if open_btc > 0 else f"    • Open Position: 0.00000000 BTC")
+    print(f"    • Open Position: {open_btc:.8f} BTC" if open_btc > 0 else "    • Open Position: 0.00000000 BTC")
     
     rsi = metrics.get("btc_trading_rsi", None)
     if rsi is not None:
@@ -352,7 +350,7 @@ def main():
                     h = int(delta.total_seconds() // 3600)
                     m = int((delta.total_seconds() % 3600) // 60)
                     print(f"    • {tipo.title()}: {dt.isoformat()[:19]} (há {h}h {m}m atrás)")
-                except Exception as e:
+                except Exception:
                     print(f"    • {tipo.title()}: {ts}")
             else:
                 print(f"    • {tipo.title()}: Sem dados")
@@ -397,17 +395,17 @@ def main():
             print_error(f"RSI fora do range 0-100: {rsi}")
             anomalies_found = True
         else:
-            print_ok(f"RSI dentro do range (0-100)")
+            print_ok("RSI dentro do range (0-100)")
     
     if not (0 <= win_rate <= 1):
         print_error(f"Win rate fora do range 0-1: {win_rate}")
         anomalies_found = True
     else:
-        print_ok(f"Win rate dentro do range (0-1)")
+        print_ok("Win rate dentro do range (0-1)")
     
     # Verificar equity sensata
     if equity == 0:
-        print_warn(f"Equity zerada — verifique agent state")
+        print_warn("Equity zerada — verifique agent state")
         anomalies_found = True
     elif equity < 10:
         print_warn(f"Equity muito baixa: ${equity:.2f} — risco de liquidação")
@@ -425,16 +423,16 @@ def main():
     print_ok("PostgreSQL datasource operacional")
     
     if live_mode == 1 and agent_running == 1:
-        print_ok(f"Trading agent ATIVO em LIVE MODE")
+        print_ok("Trading agent ATIVO em LIVE MODE")
     elif agent_running == 1:
-        print_warn(f"Trading agent ativo mas em DRY RUN")
+        print_warn("Trading agent ativo mas em DRY RUN")
     else:
-        print_warn(f"Trading agent INATIVO")
+        print_warn("Trading agent INATIVO")
     
     if data["trades"] > 0:
         print_ok(f"Histórico de trades disponível ({data['trades']} registros)")
     else:
-        print_warn(f"Sem histórico de trades")
+        print_warn("Sem histórico de trades")
     
     print(f"\n{Colors.BOLD}{Colors.GREEN}{'═' * 70}{Colors.END}")
     print(f"{Colors.BOLD}{Colors.GREEN}Todos os datasources validados com sucesso!{Colors.END}")
@@ -451,7 +449,7 @@ if __name__ == "__main__":
         print(f"\n{Colors.YELLOW}Interrompido pelo usuário{Colors.END}")
         sys.exit(130)
     except Exception as e:
-        print(f"\n{Colors.RED}Erro não capturado: {str(e)}{Colors.END}")
+        print(f"\n{Colors.RED}Erro não capturado: {e!s}{Colors.END}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

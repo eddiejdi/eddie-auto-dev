@@ -148,7 +148,7 @@ def test_ollama_connection():
             shared_models = [m['name'] for m in models if 'shared' in m['name'].lower()]
             
             if shared_models:
-                print(f"🧠 Modelos Shared encontrados:")
+                print("🧠 Modelos Shared encontrados:")
                 for model in shared_models:
                     print(f"   • {model}")
             else:
@@ -263,7 +263,7 @@ def test_embedding_generation():
                 print(f"   ✅ Embedding gerado: {len(embedding)} dimensões")
                 print(f"   📊 Primeiros valores: {embedding[:5]}")
             else:
-                print(f"   ⚠️ Não foi possível gerar embedding")
+                print("   ⚠️ Não foi possível gerar embedding")
         
         return True
         

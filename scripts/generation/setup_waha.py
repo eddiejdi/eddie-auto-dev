@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Script para configurar sessão WAHA"""
-import requests
-import json
-
 import os
+
+import requests
 
 WAHA_URL = os.environ.get("WAHA_URL", "http://localhost:3001")
 try:

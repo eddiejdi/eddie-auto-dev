@@ -28,8 +28,8 @@ import argparse
 import json
 import re
 import sys
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable
 
 DEFAULT_SYSTEM_DIR = Path("/etc/systemd/system")
 # Fonte única do que PODE ser instalado — opt-in por arquivo, criada no PR #248.

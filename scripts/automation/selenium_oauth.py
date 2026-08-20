@@ -282,21 +282,21 @@ def main():
     # 2. Servidor callback
     print(f"[2/6] Servidor callback em 127.0.0.1:{port}…")
     srv, srv_thread = start_callback_server(port)
-    print(f"  ✅ Servidor ativo, aguardando redirect do Google")
+    print("  ✅ Servidor ativo, aguardando redirect do Google")
 
     # 3. Gerar URL OAuth
-    print(f"[3/6] Gerando URL de autorização…")
+    print("[3/6] Gerando URL de autorização…")
     flow, auth_url, state = create_flow(port)
     print(f"  ✅ URL contém redirect_uri=http://localhost:{port}")
 
     # 4. Selenium
-    print(f"\n[4/6] Abrindo navegador…")
+    print("\n[4/6] Abrindo navegador…")
     driver = create_driver()
     try:
         selenium_login_and_consent(driver, auth_url)
 
         # 5. Esperar código
-        print(f"\n[5/6] Aguardando código via callback server…")
+        print("\n[5/6] Aguardando código via callback server…")
         srv_thread.join(timeout=90)
 
         code = CallbackHandler.auth_code
@@ -309,7 +309,7 @@ def main():
                 m = re.search(r"code=([^&]+)", url)
                 if m:
                     code = m.group(1)
-                    print(f"  ✓ Código extraído da URL do browser (fallback)")
+                    print("  ✓ Código extraído da URL do browser (fallback)")
             except Exception:
                 pass
     finally:
@@ -330,7 +330,7 @@ def main():
     print(f"  ✅ Código: {code[:20]}…")
 
     # 6. Token + busca
-    print(f"\n[6/6] Trocando código por token…")
+    print("\n[6/6] Trocando código por token…")
     flow.fetch_token(code=code)
     creds = flow.credentials
 
@@ -357,7 +357,7 @@ def main():
              "homelab@192.168.15.2:/home/homelab/myClaude/drive_data/token.json"],
             capture_output=True, timeout=15,
         )
-        print(f"  ✅ Token copiado para servidor")
+        print("  ✅ Token copiado para servidor")
     except Exception as e:
         print(f"  ⚠️  Falha ao copiar token: {e}")
 

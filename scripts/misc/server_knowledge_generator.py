@@ -4,12 +4,11 @@ Server knowledge generator (cleaned).
 Collects basic info via SSH and generates a small Markdown doc suitable for RAG.
 """
 
-import subprocess
-import os
 import json
+import os
+import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict
 
 HOST = os.environ.get('HOMELAB_SSH') or f"homelab@{os.environ.get('HOMELAB_HOST','localhost')}"
 
@@ -23,7 +22,7 @@ def run_ssh_command(cmd: str) -> str:
         return f"Erro: {e}"
 
 
-def collect_server_info() -> Dict[str, str]:
+def collect_server_info() -> dict[str, str]:
     """Collects simple server info via SSH with fallbacks."""
     hostname = run_ssh_command("hostname -f || hostname") or "unknown"
     ip = run_ssh_command("ip -6 addr show scope global | awk '/inet6/ {print $2; exit}' | cut -d'/' -f1")
@@ -48,7 +47,7 @@ def collect_server_info() -> Dict[str, str]:
     }
 
 
-def collect_docker_info() -> List[Dict[str, str]]:
+def collect_docker_info() -> list[dict[str, str]]:
     """Return list of running containers (name, image, status, ports)."""
     out = run_ssh_command("docker ps --format '{{json .}}' || true")
     containers = []
@@ -68,7 +67,7 @@ def collect_docker_info() -> List[Dict[str, str]]:
     return containers
 
 
-def collect_ollama_models() -> List[str]:
+def collect_ollama_models() -> list[str]:
     out = run_ssh_command("curl -s http://127.0.0.1:11434/api/tags 2>/dev/null || true")
     try:
         data = json.loads(out)
@@ -77,7 +76,7 @@ def collect_ollama_models() -> List[str]:
         return []
 
 
-def collect_systemd_services() -> List[Dict[str, str]]:
+def collect_systemd_services() -> list[dict[str, str]]:
     svcs = ["ollama", "docker", "specialized-agents"]
     res = []
     for s in svcs:
@@ -86,7 +85,7 @@ def collect_systemd_services() -> List[Dict[str, str]]:
     return res
 
 
-def collect_project_structure() -> Dict[str, List[str]]:
+def collect_project_structure() -> dict[str, list[str]]:
     out = run_ssh_command("find ~/projects -maxdepth 2 -type d 2>/dev/null | head -50 || true")
     dirs = [d for d in out.splitlines() if d]
     return {"directories": dirs}

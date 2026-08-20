@@ -11,16 +11,17 @@ Passos automatizados:
 3. Clicar Free Trial / Renew
 4. Autorizar o projeto "agent"
 """
-import time, os
+import os
+import time
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import (
-    NoSuchElementException, TimeoutException,
-    ElementClickInterceptedException, StaleElementReferenceException
+    ElementClickInterceptedException,
+    NoSuchElementException,
+    StaleElementReferenceException,
 )
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 
 SCREENSHOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots", "tuya_setup")
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
@@ -245,7 +246,7 @@ try:
                 try:
                     add_btn = driver.find_element(By.XPATH, "//span[contains(text(),'Add App Account')]/..")
                     if add_btn.is_displayed():
-                        print(f"  Clicando Add App Account...")
+                        print("  Clicando Add App Account...")
                         add_btn.click()
                         time.sleep(3)
                         ss(driver, "qr_code")

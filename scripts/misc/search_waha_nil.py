@@ -2,11 +2,12 @@
 """
 Busca mensagens do WhatsApp via WAHA API diretamente
 """
-import requests
 import json
 import os
-from datetime import datetime
-from tools.vault.secret_store import get_field, VaultError
+
+import requests
+
+from tools.vault.secret_store import VaultError, get_field
 
 WAHA_URL = os.environ.get("WAHA_URL", "http://localhost:3000")
 

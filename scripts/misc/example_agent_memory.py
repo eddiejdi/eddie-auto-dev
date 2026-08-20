@@ -3,14 +3,12 @@
 Exemplo Prático - Agent Memory System
 Demonstra como usar o sistema de memória para tomar decisões informadas
 """
+import asyncio
 import os
 import sys
-import asyncio
-from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from specialized_agents.base_agent import SpecializedAgent, Task
 from specialized_agents.language_agents import PythonAgent
 
 
@@ -42,7 +40,7 @@ async def example_deployment_decision():
     print(f"   Mensagem: {error_msg}")
     
     # Consultar memória antes de decidir
-    print(f"\n🔍 Consultando experiências passadas...")
+    print("\n🔍 Consultando experiências passadas...")
     past_decisions = agent.recall_past_decisions(
         application, component, error_type, error_msg
     )
@@ -56,10 +54,10 @@ async def example_deployment_decision():
             if pd.get('feedback_score'):
                 print(f"     Feedback: {pd['feedback_score']:.2f}")
     else:
-        print(f"  Nenhuma decisão anterior encontrada.")
+        print("  Nenhuma decisão anterior encontrada.")
     
     # Tomar decisão informada usando LLM + memória
-    print(f"\n🤖 Tomando decisão informada...")
+    print("\n🤖 Tomando decisão informada...")
     decision = await agent.make_informed_decision(
         application=application,
         component=component,
@@ -72,7 +70,7 @@ async def example_deployment_decision():
         }
     )
     
-    print(f"\n📋 DECISÃO TOMADA:")
+    print("\n📋 DECISÃO TOMADA:")
     print(f"   Tipo: {decision['decision_type'].upper()}")
     print(f"   Decisão: {decision['decision']}")
     print(f"   Raciocínio: {decision['reasoning'][:200]}...")
@@ -84,7 +82,7 @@ async def example_deployment_decision():
         print(f"   Registrado em memória: ID {decision['memory_id']}")
     
     # Simular resultado e atualizar feedback
-    print(f"\n⏳ Simulando aplicação da decisão...")
+    print("\n⏳ Simulando aplicação da decisão...")
     await asyncio.sleep(1)
     
     # Para este exemplo, vamos simular sucesso
@@ -136,7 +134,7 @@ async def example_repeated_error():
     print(f"   Erro: {error}")
     
     # 1ª tentativa - aumentar limite
-    print(f"\n--- Tentativa 1 ---")
+    print("\n--- Tentativa 1 ---")
     dec1_id = agent.should_remember_decision(
         application=app,
         component=comp,
@@ -148,10 +146,10 @@ async def example_repeated_error():
         confidence=0.6
     )
     agent.update_decision_feedback(dec1_id, False, {"issue": "Still hitting limit"})
-    print(f"  Decisão: Aumentar limite → FALHOU")
+    print("  Decisão: Aumentar limite → FALHOU")
     
     # 2ª tentativa - caching
-    print(f"\n--- Tentativa 2 ---")
+    print("\n--- Tentativa 2 ---")
     dec2_id = agent.should_remember_decision(
         application=app,
         component=comp,
@@ -163,10 +161,10 @@ async def example_repeated_error():
         confidence=0.8
     )
     agent.update_decision_feedback(dec2_id, True, {"reduction": "90% less API calls"})
-    print(f"  Decisão: Implementar cache → SUCESSO!")
+    print("  Decisão: Implementar cache → SUCESSO!")
     
     # 3ª ocorrência do mesmo erro - consultar memória
-    print(f"\n--- Nova Ocorrência do Mesmo Erro ---")
+    print("\n--- Nova Ocorrência do Mesmo Erro ---")
     similar = agent.recall_past_decisions(app, comp, error, msg)
     
     print(f"\n🧠 Memória consultada - {len(similar)} experiências:")
@@ -174,8 +172,8 @@ async def example_repeated_error():
         outcome_emoji = "✓" if s['outcome'] == 'success' else "✗"
         print(f"  {outcome_emoji} {s['decision_type']}: {s['decision'][:50]}...")
     
-    print(f"\n💡 Agente agora sabe que 'implementar cache' funciona!")
-    print(f"   E que apenas 'aumentar limite' não resolve o problema.")
+    print("\n💡 Agente agora sabe que 'implementar cache' funciona!")
+    print("   E que apenas 'aumentar limite' não resolve o problema.")
 
 
 async def main():

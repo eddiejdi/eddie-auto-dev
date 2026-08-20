@@ -13,7 +13,8 @@ Block detection uses indentation, not XML depth counting, so nested
 garbage <file> entries don't confuse the parser.
 """
 
-import re, sys, argparse
+import argparse
+import re
 
 REQUIRED_FILE_TAGS = [
     b'name', b'length', b'fileuid',

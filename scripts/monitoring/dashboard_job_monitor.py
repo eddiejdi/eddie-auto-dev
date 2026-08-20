@@ -3,11 +3,10 @@
 Dashboard de Monitoramento - Sistema de Aplicação Automática de Vagas.
 Exibe estatísticas de emails enviados, vagas encontradas, grupos monitorados.
 """
-import sqlite3
 import json
-from pathlib import Path
+import sqlite3
 from datetime import datetime, timedelta
-from typing import Dict, List
+from pathlib import Path
 
 # Paths
 LOG_DIR = Path("/tmp/email_logs")
@@ -15,7 +14,7 @@ LOG_DB = LOG_DIR / "email_sends.db"
 MONITOR_LOG = Path("/tmp/job_monitor/monitor.log")
 
 
-def get_email_stats() -> Dict:
+def get_email_stats() -> dict:
     """Get email sending statistics from database."""
     if not LOG_DB.exists():
         return {
@@ -66,7 +65,7 @@ def get_email_stats() -> Dict:
     }
 
 
-def get_recent_emails(limit: int = 10) -> List[Dict]:
+def get_recent_emails(limit: int = 10) -> list[dict]:
     """Get recent email records."""
     if not LOG_DB.exists():
         return []
@@ -97,7 +96,7 @@ def get_recent_emails(limit: int = 10) -> List[Dict]:
     return emails
 
 
-def get_monitor_stats() -> Dict:
+def get_monitor_stats() -> dict:
     """Parse monitor log for statistics."""
     if not MONITOR_LOG.exists():
         return {

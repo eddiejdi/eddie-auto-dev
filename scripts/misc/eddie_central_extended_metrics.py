@@ -12,11 +12,12 @@ Métricas implementadas:
 6. agent_feedback_score - Feedback médio dos agentes
 + Labels por agent_type (copilot, local_agents, etc)
 """
+import logging
 import os
 import time
-import logging
-from prometheus_client import start_http_server, Gauge, Counter
 from datetime import datetime, timedelta
+
+from prometheus_client import Gauge, start_http_server
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -175,7 +176,7 @@ def update_conversation_metrics(engine):
             local_24h = result.scalar() or 82
             local_agents_interactions_24h.set(local_24h)
             
-            logger.debug(f"✅ Conversas atualizadas")
+            logger.debug("✅ Conversas atualizadas")
             
     except Exception as e:
         logger.error(f"❌ Erro ao atualizar métricas de conversas: {e}")
@@ -246,7 +247,7 @@ def update_memory_metrics(engine):
                     count = row[1]
                     ipc_pending_requests.labels(request_type=req_type).set(count)
                 
-                logger.debug(f"✅ IPC pendentes atualizados")
+                logger.debug("✅ IPC pendentes atualizados")
             except Exception as e:
                 logger.warning(f"⚠️ Erro ao contar IPC: {e}")
                 ipc_pending_requests.labels(request_type='error').set(0)

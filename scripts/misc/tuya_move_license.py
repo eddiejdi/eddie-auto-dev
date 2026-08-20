@@ -8,24 +8,26 @@ Uso:
     SECRETS_AGENT_API_KEY=<key> \
     python3 tuya_move_license.py
 """
-import time
-import sys
+import hashlib
+import hmac
 import json
 import os
-import hmac
-import hashlib
-import re
+import sys
+import time
 import urllib.request
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.common.action_chains import ActionChains
 from selenium.common.exceptions import (
-    NoSuchElementException, TimeoutException, StaleElementReferenceException,
     ElementClickInterceptedException,
+    NoSuchElementException,
+    StaleElementReferenceException,
+    TimeoutException,
 )
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 SECRETS_URL    = os.environ.get("SECRETS_AGENT_URL", "http://192.168.15.2:8088")
 API_KEY        = os.environ.get("SECRETS_AGENT_API_KEY", "")
@@ -248,7 +250,7 @@ def main():
                 print("\n" + "="*60)
                 print("  CAPTCHA ou verificação adicional detectada no browser.")
                 print("  >> Complete o login manualmente no browser que abriu <<")
-                print(f"  Após estar logado, execute em outro terminal:")
+                print("  Após estar logado, execute em outro terminal:")
                 print(f"    touch {LOGIN_DONE}")
                 print("="*60)
                 if os.path.exists(LOGIN_DONE):
@@ -320,7 +322,7 @@ def main():
 
         if "auth.tuya.com" in driver.current_url or "google.com" in driver.current_url:
             print(f"  ⚠  Login não persistido — URL: {driver.current_url}")
-            print(f"  Forçando navegação direta para platform.tuya.com/cloud...")
+            print("  Forçando navegação direta para platform.tuya.com/cloud...")
             driver.get("https://platform.tuya.com/cloud")
             time.sleep(8)
             if "platform.tuya.com" not in driver.current_url:

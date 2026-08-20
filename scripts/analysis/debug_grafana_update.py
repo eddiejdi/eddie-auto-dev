@@ -2,9 +2,9 @@
 """
 Debug: Entender erro 400 do Grafana
 """
-import requests
 import json
-import os
+
+import requests
 import urllib3
 
 urllib3.disable_warnings()
@@ -29,7 +29,7 @@ if response.status_code != 200:
     exit(1)
 
 dashboard_data = response.json()
-print(f"✅ Dashboard obtido")
+print("✅ Dashboard obtido")
 
 # 2. Verificar estrutura
 dashboard = dashboard_data.get("dashboard", {})

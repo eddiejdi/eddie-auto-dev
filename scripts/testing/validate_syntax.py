@@ -3,11 +3,10 @@
 Validador de Sintaxe Python - Verifica todos os arquivos do LOTE 1-2
 """
 
-import py_compile
 import json
 import logging
+import py_compile
 from pathlib import Path
-from collections import defaultdict
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -69,7 +68,7 @@ def main():
     
     # Resumo
     logger.info(f"\n{'='*70}")
-    logger.info(f"✅ VALIDAÇÃO COMPLETA")
+    logger.info("✅ VALIDAÇÃO COMPLETA")
     logger.info(f"{'='*70}")
     
     total_arquivos = sum(r["total_arquivos"] for r in all_results)

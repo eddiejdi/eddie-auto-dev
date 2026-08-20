@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 """Simula um depósito de 2000 BRL no banco e testa se o agente o detecta."""
-import json
 import sys
-from pathlib import Path
-from datetime import datetime, timezone
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:
@@ -58,7 +57,7 @@ def main():
         
         result = cur.fetchone()
         if result:
-            print(f"✅ Depósito inserido:")
+            print("✅ Depósito inserido:")
             print(f"   Ledger ID: {result['ledger_id']}")
             print(f"   Moeda: {result['currency']}")
             print(f"   Valor: {result['amount']}")
@@ -66,7 +65,7 @@ def main():
             print(f"   Timestamp: {result['created_at_ms']} ms")
         
         # 2. Verificar balance por conta
-        print(f"\n📊 BALANCES ATUAIS (TRADE vs MAIN):")
+        print("\n📊 BALANCES ATUAIS (TRADE vs MAIN):")
         cur.execute("""
             SELECT 
                 account_type,
@@ -83,7 +82,7 @@ def main():
             print(f"   {row['account_type']} / {row['currency']}: {row['total_in']} ({row['tx_count']} transações)")
         
         # 3. Procurar o depósito recém-inserido
-        print(f"\n🔍 VERIFICANDO DETECÇÃO:")
+        print("\n🔍 VERIFICANDO DETECÇÃO:")
         cur.execute("""
             SELECT 
                 id, timestamp, side, size, order_id, metadata
@@ -100,8 +99,8 @@ def main():
             for t in recent_trades:
                 print(f"      Trade {t['id']}: {t['side']} {t['size']} BTC @ {datetime.fromtimestamp(t['timestamp'], tz=timezone.utc)}")
         else:
-            print(f"   ⚠️ Nenhum trade external_deposit detectado nos últimos 60 segundos")
-            print(f"   Isso é normal se o agente não está rodando em tempo real.")
+            print("   ⚠️ Nenhum trade external_deposit detectado nos últimos 60 segundos")
+            print("   Isso é normal se o agente não está rodando em tempo real.")
         
         print("\n" + "="*80)
         print("💡 PRÓXIMO PASSO: Dispare o agente para testar _detect_external_deposits()")

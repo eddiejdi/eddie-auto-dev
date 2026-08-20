@@ -5,8 +5,8 @@ Consolida LOTE1_RESUMO.json + LOTE2_RESUMO.json + etc.
 """
 
 import json
-from pathlib import Path
 from collections import defaultdict
+from pathlib import Path
 
 RESULTS_DIR = Path("/home/edenilson/shared-auto-dev/analysis_results")
 
@@ -134,16 +134,16 @@ if __name__ == "__main__":
     output = save_report(report)
     
     print(f"\n{'='*70}")
-    print(f"✅ Relatório Consolidado")
+    print("✅ Relatório Consolidado")
     print(f"{'='*70}")
     print(f"Total de arquivos: {report['total_arquivos']}")
     print(f"Referências SHARED: {report['total_shared_refs']}")
     print(f"Lotes processados: {report['lotes_processados']}")
-    print(f"\nArquivos críticos (5+ refs):")
+    print("\nArquivos críticos (5+ refs):")
     for arq in report['arquivos_críticos'][:5]:
         print(f"  - {arq['nome']}: {arq['shared_refs']} refs")
     
-    print(f"\nComponentes isoláveis:")
+    print("\nComponentes isoláveis:")
     for comp, dados in report['componentes_isoláveis'].items():
         print(f"  {comp}: {dados['arquivos']} arquivos, {dados['shared_refs']} refs SHARED")
     

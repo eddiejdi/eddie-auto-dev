@@ -16,8 +16,8 @@ Autor: Shared Assistant
 Data: 2026
 """
 
-import os
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -56,7 +56,7 @@ def check_credentials():
         print(f"\n📁 Caminho esperado: {CREDENTIALS_FILE}")
         print("\n📋 Instruções para configurar:")
         print("="*60)
-        print("""
+        print(f"""
 1. Acesse: https://console.cloud.google.com/
 
 2. Crie um novo projeto ou selecione existente
@@ -76,10 +76,10 @@ def check_credentials():
 9. Baixe o JSON clicando no ícone de download
 
 10. Renomeie para 'credentials.json' e mova para:
-    {path}
+    {DATA_DIR}
 
 11. Execute este script novamente
-""".format(path=DATA_DIR))
+""")
         
         sample_file = create_sample_credentials()
         print(f"\n💡 Arquivo de exemplo criado em: {sample_file}")
@@ -144,9 +144,10 @@ def authenticate():
     print("\n🔐 Iniciando autenticação...")
     
     try:
+        import pickle
+
         from google_auth_oauthlib.flow import InstalledAppFlow
         from googleapiclient.discovery import build
-        import pickle
         
         SCOPES = [
             'https://www.googleapis.com/auth/calendar',

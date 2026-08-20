@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-import os, json, traceback
-from pathlib import Path
+import json
+import os
+import traceback
+
 in_dir = '/home/homelab/gdrive_downloads'
 out_dir = '/home/homelab/gdrive_docling_out'
 os.makedirs(out_dir, exist_ok=True)
@@ -23,16 +25,16 @@ for root,_,files in os.walk(in_dir):
             if hasattr(res, 'document'):
                 doc = res.document
                 if hasattr(doc, 'title'):
-                    obj['title'] = getattr(doc,'title')
+                    obj['title'] = doc.title
                 if hasattr(doc, 'export_to_text'):
                     try:
                         obj['text'] = doc.export_to_text()
                     except Exception:
                         obj['text'] = ''
                 elif hasattr(doc,'text'):
-                    obj['text'] = getattr(doc,'text')
+                    obj['text'] = doc.text
                 if hasattr(doc,'pages'):
-                    obj['pages'] = getattr(doc,'pages')
+                    obj['pages'] = doc.pages
             else:
                 obj['_raw'] = str(res)
             with open(outp, 'w', encoding='utf-8') as wf:

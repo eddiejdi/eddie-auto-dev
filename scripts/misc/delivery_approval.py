@@ -4,15 +4,15 @@ Sistema de Lições Aprendidas e Aprovação de Entregas
 Envia relatório pelo Telegram com botões de Aprovação/Reprovação
 """
 
-import os
-import json
 import asyncio
+import json
+import os
 from datetime import datetime
+
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.constants import ParseMode
 
 # Configuração
-from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+from tools.secrets_loader import get_telegram_token
 
 TELEGRAM_TOKEN = get_telegram_token()
 CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "948686300")  # ID do chat do Shared
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     result = asyncio.run(send_agent_chat_delivery())
     
     if result["success"]:
-        print(f"\n✅ Solicitação de aprovação enviada!")
+        print("\n✅ Solicitação de aprovação enviada!")
         print(f"   Delivery ID: {result['delivery_id']}")
         print(f"   Message ID: {result['message_id']}")
     else:

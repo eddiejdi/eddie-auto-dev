@@ -2,12 +2,13 @@
 """
 Script Selenium com captura de tela para configurar OAuth no Google Cloud
 """
-import time
 import os
+import time
 from datetime import datetime
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+
 
 class GoogleOAuthSetup:
     def __init__(self, headless=True):

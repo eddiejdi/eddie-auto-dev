@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Testa os modelos atualizados"""
-import httpx
-import json
-
 import os
+
+import httpx
 
 OLLAMA_HOST = os.environ.get('OLLAMA_HOST', 'http://192.168.15.2:11434')
 

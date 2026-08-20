@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Instala a função Diretor no Open WebUI"""
-import requests
 import sys
+
+import requests
 
 email = 'edenilson.teixeira@rpa4all.com'
 password = 'Shared@2026'

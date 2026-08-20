@@ -4,10 +4,9 @@ Refatoração Automática LOTE 1 - Trading Bot
 Remove refs SHARED, renomeia para CRYPTO
 """
 
+import logging
 import re
 from pathlib import Path
-from typing import Tuple
-import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -42,7 +41,7 @@ REPLACEMENTS = [
     (r'Shared', 'Crypto'),
 ]
 
-def refactor_file(file_path: Path) -> Tuple[bool, str]:
+def refactor_file(file_path: Path) -> tuple[bool, str]:
     """Refatora um arquivo Python."""
     
     try:
@@ -103,17 +102,17 @@ def main():
                 logger.debug(f"  {py_file.name}: {message}")
     
     logger.info(f"\n{'='*70}")
-    logger.info(f"✅ REFATORAÇÃO CONCLUÍDA")
+    logger.info("✅ REFATORAÇÃO CONCLUÍDA")
     logger.info(f"{'='*70}")
     logger.info(f"Arquivos processados: {total_files}")
     logger.info(f"Arquivos modificados: {modified_files}")
     logger.info(f"Taxa de mudança: {modified_files/total_files*100:.1f}%")
     
     # Próximos passos
-    logger.info(f"\n⚠️  PRÓXIMOS PASSOS:")
-    logger.info(f"1. Validar sintaxe: python -m py_compile btc_trading_agent/*.py")
-    logger.info(f"2. Executar testes: pytest tests/unit/trading_bot/")
-    logger.info(f"3. Verificar imports: python -c 'import btc_trading_agent'")
+    logger.info("\n⚠️  PRÓXIMOS PASSOS:")
+    logger.info("1. Validar sintaxe: python -m py_compile btc_trading_agent/*.py")
+    logger.info("2. Executar testes: pytest tests/unit/trading_bot/")
+    logger.info("3. Verificar imports: python -c 'import btc_trading_agent'")
 
 if __name__ == "__main__":
     main()

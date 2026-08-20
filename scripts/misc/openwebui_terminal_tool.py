@@ -5,9 +5,8 @@ version: 1.0.0
 description: Executa comandos no terminal do servidor com controles de segurança.
 """
 
-import os
 import subprocess
-from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -36,8 +35,8 @@ class Tools:
     def run_terminal_command(
         self,
         command: str,
-        cwd: Optional[str] = None,
-        timeout: Optional[int] = None,
+        cwd: str | None = None,
+        timeout: int | None = None,
         __user__: dict = {},
     ) -> str:
         """
@@ -79,7 +78,7 @@ class Tools:
         except subprocess.TimeoutExpired:
             return f"⏱️ Timeout: comando excedeu {exec_timeout}s."
         except Exception as e:
-            return f"❌ Erro ao executar: {str(e)}"
+            return f"❌ Erro ao executar: {e!s}"
 
         stdout = result.stdout or ""
         stderr = result.stderr or ""
@@ -97,7 +96,7 @@ class Tools:
         if not user:
             return ""
         for key in ["model", "model_id", "model_name", "modelId", "modelName"]:
-            if key in user and user[key]:
+            if user.get(key):
                 return str(user[key])
         settings = user.get("settings") or {}
         if isinstance(settings, dict):

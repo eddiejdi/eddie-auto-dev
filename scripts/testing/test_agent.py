@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-import requests
 import json
 import re
+
+import requests
 
 print("=== TESTE COMPLETO DO GITHUB AGENT ===\n")
 
