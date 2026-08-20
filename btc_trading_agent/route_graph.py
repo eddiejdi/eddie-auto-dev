@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import asdict, dataclass, field
-from typing import Any, Callable, Dict, Iterable, List, Optional, Sequence, Set, Tuple
+from typing import Any
 
 from fee_spread_estimator import LegEstimate, estimate_leg
 
@@ -42,7 +43,7 @@ class RouteLeg:
     fee_pct: float
     slip_bps: float
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -54,21 +55,21 @@ class RoutePlan:
     est_out: float
     total_cost_pct: float
     hops: int
-    path_assets: List[str]
-    legs: List[RouteLeg] = field(default_factory=list)
+    path_assets: list[str]
+    legs: list[RouteLeg] = field(default_factory=list)
     via: str = ""  # direct | via:USDT | ...
     score: float = 0.0
     rejected: bool = False
     reject_reason: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         d = asdict(self)
         return d
 
 
 def _pair_orientation(
     base: str, quote: str, asset_from: str, asset_to: str
-) -> Optional[Tuple[str, str, str, str]]:
+) -> tuple[str, str, str, str] | None:
     """Return (symbol, side, currency_in, currency_out) if edge connects from→to."""
     base_u, quote_u = base.upper(), quote.upper()
     a, b = asset_from.upper(), asset_to.upper()
@@ -87,13 +88,13 @@ class RouteGraph:
 
     def __init__(
         self,
-        symbols: Optional[List[Dict[str, Any]]] = None,
+        symbols: list[dict[str, Any]] | None = None,
         *,
-        vol_by_symbol: Optional[Dict[str, float]] = None,
-        get_symbols_fn: Optional[Callable[[], List[Dict[str, Any]]]] = None,
+        vol_by_symbol: dict[str, float] | None = None,
+        get_symbols_fn: Callable[[], list[dict[str, Any]]] | None = None,
     ):
-        self.edges: Dict[Tuple[str, str], Dict[str, Any]] = {}
-        self.adj: Dict[str, Set[str]] = {}
+        self.edges: dict[tuple[str, str], dict[str, Any]] = {}
+        self.adj: dict[str, set[str]] = {}
         self.vol_by_symbol = {k.upper(): float(v) for k, v in (vol_by_symbol or {}).items()}
         if symbols is None:
             if get_symbols_fn is None:
@@ -101,7 +102,7 @@ class RouteGraph:
             symbols = get_symbols_fn() or []
         self._build(symbols)
 
-    def _build(self, symbols: List[Dict[str, Any]]) -> None:
+    def _build(self, symbols: list[dict[str, Any]]) -> None:
         for item in symbols:
             if not item.get("enableTrading", True):
                 continue
@@ -124,13 +125,13 @@ class RouteGraph:
             self.adj.setdefault(base, set()).add(quote)
             self.adj.setdefault(quote, set()).add(base)
 
-    def neighbors(self, asset: str) -> Set[str]:
+    def neighbors(self, asset: str) -> set[str]:
         return set(self.adj.get(asset.upper(), set()))
 
-    def edge_meta(self, a: str, b: str) -> Optional[Dict[str, Any]]:
+    def edge_meta(self, a: str, b: str) -> dict[str, Any] | None:
         return self.edges.get((a.upper(), b.upper()))
 
-    def edge_allowed(self, a: str, b: str, opts: RouteOptions) -> Tuple[bool, str]:
+    def edge_allowed(self, a: str, b: str, opts: RouteOptions) -> tuple[bool, str]:
         meta = self.edge_meta(a, b)
         if not meta:
             return False, "no_edge"
@@ -142,7 +143,7 @@ class RouteGraph:
 
 def _estimate_path(
     graph: RouteGraph,
-    path: List[str],
+    path: list[str],
     amount_in: float,
     opts: RouteOptions,
     *,
@@ -151,7 +152,7 @@ def _estimate_path(
     asset_in = path[0]
     asset_out = path[-1]
     amount = float(amount_in)
-    legs: List[RouteLeg] = []
+    legs: list[RouteLeg] = []
     total_cost = 0.0
 
     for i in range(len(path) - 1):
@@ -275,13 +276,13 @@ def _candidate_paths(
     asset_in: str,
     asset_out: str,
     opts: RouteOptions,
-) -> List[List[str]]:
+) -> list[list[str]]:
     a = asset_in.upper()
     b = asset_out.upper()
     if a == b:
         return []
 
-    paths: List[List[str]] = []
+    paths: list[list[str]] = []
     # direct
     if b in graph.neighbors(a):
         paths.append([a, b])
@@ -319,8 +320,8 @@ def _candidate_paths(
                     paths.append([a, h1, h2, b])
 
     # de-dupe
-    seen: Set[Tuple[str, ...]] = set()
-    unique: List[List[str]] = []
+    seen: set[tuple[str, ...]] = set()
+    unique: list[list[str]] = []
     for p in paths:
         key = tuple(p)
         if key not in seen:
@@ -334,14 +335,14 @@ def compare_routes(
     asset_out: str,
     amount_in: float,
     *,
-    opts: Optional[RouteOptions] = None,
-    graph: Optional[RouteGraph] = None,
+    opts: RouteOptions | None = None,
+    graph: RouteGraph | None = None,
     estimate_leg_fn: Callable[..., LegEstimate] = estimate_leg,
-) -> List[RoutePlan]:
+) -> list[RoutePlan]:
     """Retorna candidatos ordenados por score (menor = melhor)."""
     opts = opts or RouteOptions()
     graph = graph or RouteGraph()
-    plans: List[RoutePlan] = []
+    plans: list[RoutePlan] = []
     for path in _candidate_paths(graph, asset_in, asset_out, opts):
         plan = _estimate_path(graph, path, amount_in, opts, estimate_leg_fn=estimate_leg_fn)
         if plan.rejected:
@@ -358,10 +359,10 @@ def find_best_route(
     asset_out: str,
     amount_in: float,
     *,
-    opts: Optional[RouteOptions] = None,
-    graph: Optional[RouteGraph] = None,
+    opts: RouteOptions | None = None,
+    graph: RouteGraph | None = None,
     estimate_leg_fn: Callable[..., LegEstimate] = estimate_leg,
-) -> Optional[RoutePlan]:
+) -> RoutePlan | None:
     """Escolhe a rota de menor custo, com preferência leve a par direto."""
     opts = opts or RouteOptions()
     candidates = compare_routes(
@@ -386,7 +387,7 @@ def find_best_route(
     return best
 
 
-def savings_vs_usdt_bps(best: RoutePlan, candidates: Iterable[RoutePlan]) -> Optional[float]:
+def savings_vs_usdt_bps(best: RoutePlan, candidates: Iterable[RoutePlan]) -> float | None:
     """Economia em bps do best vs rota via USDT (se existir)."""
     via_usdt = None
     for c in candidates:

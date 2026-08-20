@@ -8,14 +8,15 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 DEFAULT_TAKER_FEE_PCT = 0.001  # VIP0 Class A
 FEE_CACHE_TTL_SEC = 600.0
-_fee_cache: Dict[str, Tuple[float, float]] = {}  # symbol -> (fee_pct, expires_at)
+_fee_cache: dict[str, tuple[float, float]] = {}  # symbol -> (fee_pct, expires_at)
 
 
 @dataclass
@@ -36,7 +37,7 @@ class LegEstimate:
     min_ok: bool
     reason: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -49,7 +50,7 @@ def get_fee_pct(
     *,
     use_live: bool = True,
     fallback: float = DEFAULT_TAKER_FEE_PCT,
-    get_trade_fees_fn: Optional[Callable[[str], List[Dict[str, Any]]]] = None,
+    get_trade_fees_fn: Callable[[str], list[dict[str, Any]]] | None = None,
 ) -> float:
     """Retorna taker fee rate para o symbol (cache TTL)."""
     sym = (symbol or "").upper()
@@ -62,7 +63,9 @@ def get_fee_pct(
     if use_live:
         try:
             if get_trade_fees_fn is None:
-                from kucoin_api import get_trade_fees as get_trade_fees_fn  # type: ignore
+                from kucoin_api import (
+                    get_trade_fees as get_trade_fees_fn,  # type: ignore
+                )
             rows = get_trade_fees_fn(sym) or []
             for row in rows:
                 if str(row.get("symbol") or "").upper() == sym:
@@ -80,11 +83,11 @@ def get_fee_pct(
 
 
 def _walk_book(
-    levels: List[Tuple[float, float]],
+    levels: list[tuple[float, float]],
     amount: float,
     *,
     is_buy: bool,
-) -> Tuple[float, float, float]:
+) -> tuple[float, float, float]:
     """Walk order book.
 
     For sell: amount is base size → returns (quote_out, vwap, filled_base)
@@ -134,11 +137,11 @@ def estimate_leg(
     *,
     currency_in: str,
     currency_out: str,
-    fee_pct: Optional[float] = None,
+    fee_pct: float | None = None,
     slip_buffer_pct: float = 0.0005,
     use_live_fees: bool = True,
-    get_orderbook_fn: Optional[Callable[..., Dict[str, Any]]] = None,
-    get_symbol_meta_fn: Optional[Callable[[str], Dict[str, Any]]] = None,
+    get_orderbook_fn: Callable[..., dict[str, Any]] | None = None,
+    get_symbol_meta_fn: Callable[[str], dict[str, Any]] | None = None,
 ) -> LegEstimate:
     """Estima output e custo de uma perna market taker."""
     side_l = (side or "").lower()
@@ -165,14 +168,14 @@ def estimate_leg(
         try:
             from kucoin_api import get_symbols
 
-            def get_symbol_meta_fn(sym: str) -> Dict[str, Any]:
+            def get_symbol_meta_fn(sym: str) -> dict[str, Any]:
                 for item in get_symbols():
                     if str(item.get("symbol") or "").upper() == sym.upper():
                         return item
                 return {}
 
         except Exception:
-            get_symbol_meta_fn = lambda _s: {}  # noqa: E731
+            get_symbol_meta_fn = lambda _s: {}
 
     meta = get_symbol_meta_fn(symbol) or {}
     base_min = float(meta.get("baseMinSize") or 0) or 0.0

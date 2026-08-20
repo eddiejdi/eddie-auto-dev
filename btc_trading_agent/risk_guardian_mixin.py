@@ -9,7 +9,7 @@ Nota: o veredito final do guardrail permanece em trading_agent.py (hook de prote
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 logger = logging.getLogger("btc_trading_agent")
 
@@ -19,7 +19,7 @@ _TRADING_FEE_PCT = 0.001  # 0.1% — espelho da constante em trading_agent.py
 class RiskGuardianMixin:
     """Mixin com suporte à proteção de risco de SELL (configuração, estimativa e permissão)."""
 
-    def _get_guardrail_sell_protection_cfg(self) -> Dict[str, Any]:
+    def _get_guardrail_sell_protection_cfg(self) -> dict[str, Any]:
         """Resolve a proteção de SELL quando os guardrails estão ativos."""
         live_cfg = self._load_live_config()
         explicit_active = live_cfg.get("guardrails_active")
@@ -54,7 +54,7 @@ class RiskGuardianMixin:
             "min_sell_pnl_pct": min_pnl_pct,
         }
 
-    def _estimate_sell_outcome(self, price: float) -> Dict[str, float]:
+    def _estimate_sell_outcome(self, price: float) -> dict[str, float]:
         """Estima o resultado líquido de um SELL da posição atual."""
         fee_pct = getattr(self, "_trading_fee_pct", _TRADING_FEE_PCT)
         size = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)

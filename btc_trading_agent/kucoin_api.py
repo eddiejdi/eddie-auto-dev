@@ -4,19 +4,19 @@ KuCoin API Module - Autenticação e Operações de Trading
 Baseado no AutoCoinBot com otimizações para trading de alta frequência
 """
 
-import os
-import time
-import hmac
-import hashlib
 import base64
+import hashlib
+import hmac
 import json
 import logging
+import os
+import time
+from functools import wraps
+from pathlib import Path
+from typing import Any
 from urllib.parse import urlencode
 
 import requests
-from typing import List, Dict, Any, Optional
-from functools import wraps
-from pathlib import Path
 from dotenv import load_dotenv
 
 # ====================== CONFIGURAÇÃO ======================
@@ -42,7 +42,7 @@ if ENV_PATH.exists():
 # ====================== SECRETS AGENT INTEGRATION ======================
 # Centralizado em secrets_helper.py — manter _fetch_from_secrets_agent para
 # compatibilidade com training_db.py e outros que importam dele.
-def _fetch_from_secrets_agent(secret_name: str, field: str = "password") -> Optional[str]:
+def _fetch_from_secrets_agent(secret_name: str, field: str = "password") -> str | None:
     """Busca um segredo via secrets_helper centralizado.
 
     Mantido para compatibilidade — delega ao secrets_helper.get_secret().
@@ -192,7 +192,7 @@ def _format_market_order_notification(
     size: float | None = None,
     order_id: str | None = None,
     error: str | None = None,
-    notify_extra: Dict[str, float] | None = None,
+    notify_extra: dict[str, float] | None = None,
 ) -> str:
     """Monta mensagem Telegram para execução de ordem de mercado.
 
@@ -289,7 +289,10 @@ def _load_credentials(
 
     for attempt in range(1, max(1, int(max_attempts)) + 1):
         try:
-            from secrets_helper import clear_secret_cache, get_kucoin_credentials_with_source
+            from secrets_helper import (
+                clear_secret_cache,
+                get_kucoin_credentials_with_source,
+            )
 
             # Evita reusar cache parcial/vazio de tentativas anteriores sob race.
             if attempt > 1:
@@ -391,7 +394,7 @@ _SERVER_TIME_OFFSET_MS = 0
 _SERVER_TIME_SYNC_TTL_SECONDS = 30.0
 _SERVER_TIME_LAST_SYNC = 0.0
 _SYMBOLS_CACHE_TTL_SECONDS = 300.0
-_SYMBOLS_CACHE: Dict[str, Any] = {
+_SYMBOLS_CACHE: dict[str, Any] = {
     "expires_at": 0.0,
     "symbols": [],
 }
@@ -482,8 +485,8 @@ def _build_headers(
     method: str,
     endpoint: str,
     body_str: str = "",
-    timestamp_ms: Optional[int] = None,
-) -> Dict[str, str]:
+    timestamp_ms: int | None = None,
+) -> dict[str, str]:
     """Constrói headers autenticados para API."""
     validate_credentials()
 
@@ -511,7 +514,7 @@ def _build_headers(
         "Content-Type": "application/json"
     }
 
-def _is_invalid_timestamp_response(result: Dict[str, Any]) -> bool:
+def _is_invalid_timestamp_response(result: dict[str, Any]) -> bool:
     """Detecta rejeição de timestamp inválido retornada pela KuCoin."""
     code = str(result.get("code", ""))
     message = str(result.get("msg", "")).upper()
@@ -521,7 +524,7 @@ def _signed_request(
     method: str,
     endpoint: str,
     *,
-    params: Optional[Dict[str, Any]] = None,
+    params: dict[str, Any] | None = None,
     body_str: str = "",
     timeout: float = 10,
     max_timestamp_retries: int = 2,
@@ -590,7 +593,7 @@ def normalize_symbol(symbol: str) -> str:
 
 
 @retry_on_failure(max_retries=2)
-def get_symbols(refresh: bool = False, include_disabled: bool = False) -> List[Dict[str, Any]]:
+def get_symbols(refresh: bool = False, include_disabled: bool = False) -> list[dict[str, Any]]:
     """Lista símbolos negociáveis da KuCoin com cache curto."""
     now = time.time()
     cached_symbols = _SYMBOLS_CACHE.get("symbols", [])
@@ -609,7 +612,7 @@ def get_symbols(refresh: bool = False, include_disabled: bool = False) -> List[D
         r = requests.get(url, timeout=10)
         r.raise_for_status()
         raw_items = r.json().get("data", [])
-        parsed: List[Dict[str, Any]] = []
+        parsed: list[dict[str, Any]] = []
         for item in raw_items:
             symbol = normalize_symbol(str(item.get("symbol") or ""))
             if not symbol:
@@ -640,8 +643,8 @@ def get_symbols(refresh: bool = False, include_disabled: bool = False) -> List[D
 def resolve_symbol(
     query: str,
     default_quote: str = "USDT",
-    preferred_quotes: Optional[List[str]] = None,
-) -> Optional[Dict[str, Any]]:
+    preferred_quotes: list[str] | None = None,
+) -> dict[str, Any] | None:
     """Resolve consulta livre para um par listado na KuCoin."""
     normalized = normalize_symbol(query)
     if not normalized:
@@ -660,7 +663,7 @@ def resolve_symbol(
         return None
 
     base_asset = normalized
-    quote_order: List[str] = []
+    quote_order: list[str] = []
     for quote in [default_quote, *(preferred_quotes or []), "USDT", "BRL", "USD", "USDC", "BTC", "ETH", "EUR"]:
         quote_up = str(quote or "").upper()
         if quote_up and quote_up not in quote_order:
@@ -671,7 +674,7 @@ def resolve_symbol(
         if str(item.get("baseCurrency") or "").upper() == base_asset
     ]
     if candidates:
-        def _candidate_sort(item: Dict[str, Any]) -> tuple[int, str]:
+        def _candidate_sort(item: dict[str, Any]) -> tuple[int, str]:
             quote = str(item.get("quoteCurrency") or "").upper()
             try:
                 rank = quote_order.index(quote)
@@ -696,14 +699,14 @@ def resolve_symbol(
     return None
 
 
-def search_symbols(query: str, limit: int = 5) -> List[Dict[str, Any]]:
+def search_symbols(query: str, limit: int = 5) -> list[dict[str, Any]]:
     """Busca pares próximos quando a consulta não resolve diretamente."""
     needle = normalize_symbol(query)
     if not needle:
         return []
 
     compact = needle.replace("-", "")
-    matches: List[Dict[str, Any]] = []
+    matches: list[dict[str, Any]] = []
     for item in get_symbols():
         symbol = str(item.get("symbol") or "")
         base = str(item.get("baseCurrency") or "")
@@ -722,7 +725,7 @@ def search_symbols(query: str, limit: int = 5) -> List[Dict[str, Any]]:
 
 
 @retry_on_failure(max_retries=2)
-def get_ticker(symbol: str) -> Dict[str, Any]:
+def get_ticker(symbol: str) -> dict[str, Any]:
     """Obtém snapshot level1 de um par."""
     normalized = normalize_symbol(symbol)
     if not normalized:
@@ -761,8 +764,8 @@ def get_ticker(symbol: str) -> Dict[str, Any]:
 def get_quote_snapshot(
     query: str,
     default_quote: str = "USDT",
-    preferred_quotes: Optional[List[str]] = None,
-) -> Dict[str, Any]:
+    preferred_quotes: list[str] | None = None,
+) -> dict[str, Any]:
     """Resolve uma moeda/par e retorna snapshot pronto para exibição."""
     match = resolve_symbol(
         query,
@@ -784,7 +787,7 @@ def get_quote_snapshot(
 
 
 @retry_on_failure(max_retries=2)
-def get_price(symbol: str = "BTC-USDT") -> Optional[float]:
+def get_price(symbol: str = "BTC-USDT") -> float | None:
     """Obtém preço atual de um par"""
     try:
         ticker = get_ticker(symbol)
@@ -799,7 +802,7 @@ def get_price(symbol: str = "BTC-USDT") -> Optional[float]:
         logger.warning(f"⚠️ Error getting price: {e}")
     return None
 
-def get_price_fast(symbol: str = "BTC-USDT", timeout: float = 1.5) -> Optional[float]:
+def get_price_fast(symbol: str = "BTC-USDT", timeout: float = 1.5) -> float | None:
     """Versão ultra-rápida sem retry"""
     try:
         normalized = normalize_symbol(symbol)
@@ -818,7 +821,7 @@ def get_price_fast(symbol: str = "BTC-USDT", timeout: float = 1.5) -> Optional[f
     return None
 
 @retry_on_failure(max_retries=2)
-def get_orderbook(symbol: str = "BTC-USDT", depth: int = 20) -> Dict[str, Any]:
+def get_orderbook(symbol: str = "BTC-USDT", depth: int = 20) -> dict[str, Any]:
     """Obtém order book"""
     url = f"{KUCOIN_BASE}/api/v1/market/orderbook/level2_{depth}?symbol={symbol}"
     try:
@@ -837,7 +840,7 @@ def get_orderbook(symbol: str = "BTC-USDT", depth: int = 20) -> Dict[str, Any]:
 
 @retry_on_failure(max_retries=2)
 def get_candles(symbol: str = "BTC-USDT", ktype: str = "1min", 
-                limit: int = 100) -> List[Dict[str, float]]:
+                limit: int = 100) -> list[dict[str, float]]:
     """Obtém candles históricos"""
     url = f"{KUCOIN_BASE}/api/v1/market/candles?type={ktype}&symbol={symbol}"
     try:
@@ -864,7 +867,7 @@ def get_candles(symbol: str = "BTC-USDT", ktype: str = "1min",
         return []
 
 @retry_on_failure(max_retries=2)
-def get_recent_trades(symbol: str = "BTC-USDT", limit: int = 50) -> List[Dict]:
+def get_recent_trades(symbol: str = "BTC-USDT", limit: int = 50) -> list[dict]:
     """Obtém trades recentes do mercado"""
     url = f"{KUCOIN_BASE}/api/v1/market/histories?symbol={symbol}"
     try:
@@ -879,7 +882,7 @@ def get_recent_trades(symbol: str = "BTC-USDT", limit: int = 50) -> List[Dict]:
 
 # ====================== PRIVATE ENDPOINTS ======================
 @retry_on_failure(max_retries=3)
-def get_balances(account_type: str = "trade") -> List[Dict[str, Any]]:
+def get_balances(account_type: str = "trade") -> list[dict[str, Any]]:
     """Obtém saldos da conta"""
     endpoint = "/api/v1/accounts"
     r = _signed_request("GET", endpoint, timeout=10)
@@ -897,7 +900,7 @@ def get_balances(account_type: str = "trade") -> List[Dict[str, Any]]:
         for a in accounts if a.get("type") == account_type
     ]
 
-def get_sub_account_balances() -> List[Dict[str, Any]]:
+def get_sub_account_balances() -> list[dict[str, Any]]:
     """Obtém saldos de todas as subcontas da conta master.
 
     Retorna lista plana com um item por (subconta, tipo, moeda):
@@ -911,7 +914,7 @@ def get_sub_account_balances() -> List[Dict[str, Any]]:
     data = r.json().get("data") or []
     # v1 retorna lista; formatos paginados usam {"items": [...]}
     subs = data.get("items", []) if isinstance(data, dict) else data
-    out: List[Dict[str, Any]] = []
+    out: list[dict[str, Any]] = []
     for sub in subs:
         name = sub.get("subName") or sub.get("subUserId") or "sub"
         for bucket, acc_type in (
@@ -957,7 +960,7 @@ def get_total_balance(currency: str = "USDT") -> float:
 
 def inner_transfer(currency: str, amount: float,
                    from_account: str = "main",
-                   to_account: str = "trade") -> Dict[str, Any]:
+                   to_account: str = "trade") -> dict[str, Any]:
     """Transferência interna entre contas KuCoin (main ↔ trade).
 
     Args:
@@ -1001,7 +1004,7 @@ def inner_transfer(currency: str, amount: float,
 def sub_transfer(currency: str, amount: float, sub_user_id: str,
                  direction: str = "OUT",
                  account_type: str = "TRADE",
-                 sub_account_type: str = "TRADE") -> Dict[str, Any]:
+                 sub_account_type: str = "TRADE") -> dict[str, Any]:
     """Transferência master ↔ subconta KuCoin.
 
     Args:
@@ -1046,10 +1049,10 @@ def sub_transfer(currency: str, amount: float, sub_user_id: str,
     return {"success": True, "orderId": order_id}
 
 
-_symbol_increment_cache: Dict[str, Dict[str, str]] = {}
+_symbol_increment_cache: dict[str, dict[str, str]] = {}
 
 
-def get_symbol_increments(symbol: str) -> Dict[str, str]:
+def get_symbol_increments(symbol: str) -> dict[str, str]:
     """Retorna baseIncrement/quoteIncrement do símbolo (cache por processo).
 
     Fallback conservador (8 casas) se a API falhar — equivale ao
@@ -1077,7 +1080,7 @@ def _floor_to_increment(value: float, increment: str) -> str:
     KuCoin rejeita ordens com mais casas que o increment do símbolo
     ('Order size increment invalid' — ex.: ETH-USDT usa 7 casas, não 8).
     """
-    from decimal import Decimal, ROUND_DOWN
+    from decimal import ROUND_DOWN, Decimal
     inc = Decimal(increment)
     quantized = (Decimal(str(value)) / inc).to_integral_value(rounding=ROUND_DOWN) * inc
     return format(quantized.normalize(), "f")
@@ -1085,7 +1088,7 @@ def _floor_to_increment(value: float, increment: str) -> str:
 
 def place_market_order(symbol: str, side: str, funds: float = None,
                        size: float = None,
-                       notify_extra: Dict[str, float] = None) -> Dict[str, Any]:
+                       notify_extra: dict[str, float] = None) -> dict[str, Any]:
     """Executa ordem de mercado.
 
     notify_extra: contexto opcional para a notificação Telegram
@@ -1123,8 +1126,8 @@ def place_market_order(symbol: str, side: str, funds: float = None,
     body_str = json.dumps(payload, separators=(",", ":"))
 
     max_attempts = 3
-    last_error: Optional[Exception] = None
-    result: Optional[Dict[str, Any]] = None
+    last_error: Exception | None = None
+    result: dict[str, Any] | None = None
 
     for attempt in range(max_attempts):
         if attempt > 0:
@@ -1211,7 +1214,7 @@ def place_stop_loss_order(
     client_oid: str = None,
     order_type: str = "market",
     price: float = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Coloca ordem stop-loss na KuCoin.
 
     A ordem é executada automaticamente quando o preço atinge o stopPrice.
@@ -1251,8 +1254,8 @@ def place_stop_loss_order(
     body_str = json.dumps(payload, separators=(",", ":"))
 
     max_attempts = 3
-    last_error: Optional[Exception] = None
-    result: Optional[Dict[str, Any]] = None
+    last_error: Exception | None = None
+    result: dict[str, Any] | None = None
 
     for attempt in range(max_attempts):
         if attempt > 0:
@@ -1313,7 +1316,7 @@ def place_take_profit_order(
     client_oid: str = None,
     order_type: str = "market",
     price: float = None,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Coloca ordem take-profit na KuCoin.
 
     Args:
@@ -1351,8 +1354,8 @@ def place_take_profit_order(
     body_str = json.dumps(payload, separators=(",", ":"))
 
     max_attempts = 3
-    last_error: Optional[Exception] = None
-    result: Optional[Dict[str, Any]] = None
+    last_error: Exception | None = None
+    result: dict[str, Any] | None = None
 
     for attempt in range(max_attempts):
         if attempt > 0:
@@ -1392,7 +1395,7 @@ def place_take_profit_order(
     return {"success": True, "orderId": order_id, "raw": result}
 
 
-def cancel_stop_order(order_id: str = None, client_oid: str = None) -> Dict[str, Any]:
+def cancel_stop_order(order_id: str = None, client_oid: str = None) -> dict[str, Any]:
     """Cancela uma ordem stop na KuCoin.
 
     Args:
@@ -1408,7 +1411,7 @@ def cancel_stop_order(order_id: str = None, client_oid: str = None) -> Dict[str,
         raise ValueError("Must specify order_id or client_oid")
 
     if client_oid:
-        endpoint = f"/api/v1/stop-order/cancelOrderByClientOid"
+        endpoint = "/api/v1/stop-order/cancelOrderByClientOid"
         payload = {"clientOid": client_oid, "symbol": "BTC-USDT"}
     else:
         endpoint = f"/api/v1/stop-order/{order_id}"
@@ -1431,7 +1434,7 @@ def cancel_stop_order(order_id: str = None, client_oid: str = None) -> Dict[str,
         return {"success": False, "error": str(e)}
 
 
-def cancel_all_stop_orders(symbol: str = "BTC-USDT") -> Dict[str, Any]:
+def cancel_all_stop_orders(symbol: str = "BTC-USDT") -> dict[str, Any]:
     """Cancela todas as ordens stop de um símbolo.
 
     Args:
@@ -1462,7 +1465,7 @@ def cancel_all_stop_orders(symbol: str = "BTC-USDT") -> Dict[str, Any]:
 def get_stop_orders(
     symbol: str = "BTC-USDT",
     status: str = "active",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Lista ordens stop de um símbolo.
 
     Args:
@@ -1491,7 +1494,7 @@ def get_stop_orders(
         return {"success": False, "error": str(e), "orders": []}
 
 
-def get_stop_order_by_client_oid(client_oid: str) -> Optional[Dict[str, Any]]:
+def get_stop_order_by_client_oid(client_oid: str) -> dict[str, Any] | None:
     """Busca uma stop-order pelo clientOid.
 
     Args:
@@ -1519,7 +1522,7 @@ def get_stop_order_by_client_oid(client_oid: str) -> Optional[Dict[str, Any]]:
 
 # ====================== WITHDRAWAL / DEPOSIT / FEES ======================
 @retry_on_failure(max_retries=2)
-def get_withdrawal_quotas(currency: str, chain: Optional[str] = None) -> Dict[str, Any]:
+def get_withdrawal_quotas(currency: str, chain: str | None = None) -> dict[str, Any]:
     """Obtém limites e taxas de saque para uma moeda/chain.
 
     Requer permissão: Withdrawal + IP Restriction habilitada.
@@ -1532,7 +1535,7 @@ def get_withdrawal_quotas(currency: str, chain: Optional[str] = None) -> Dict[st
         Dict com limitAvailable, withdrawMinFee, withdrawMinSize, etc.
     """
     endpoint = "/api/v1/withdrawals/quotas"
-    params: Dict[str, str] = {"currency": currency}
+    params: dict[str, str] = {"currency": currency}
     if chain:
         params["chain"] = chain
 
@@ -1554,7 +1557,7 @@ def get_withdrawal_quotas(currency: str, chain: Optional[str] = None) -> Dict[st
 
 
 @retry_on_failure(max_retries=2)
-def get_deposit_addresses(currency: str, chain: Optional[str] = None) -> Dict[str, Any]:
+def get_deposit_addresses(currency: str, chain: str | None = None) -> dict[str, Any]:
     """Obtém endereço(s) de depósito para uma moeda.
 
     Args:
@@ -1565,7 +1568,7 @@ def get_deposit_addresses(currency: str, chain: Optional[str] = None) -> Dict[st
         Dict com address, memo (se aplicável) e chain.
     """
     endpoint = "/api/v3/deposit-addresses"
-    params: Dict[str, str] = {"currency": currency}
+    params: dict[str, str] = {"currency": currency}
     if chain:
         params["chain"] = chain
 
@@ -1581,7 +1584,7 @@ def get_deposit_addresses(currency: str, chain: Optional[str] = None) -> Dict[st
 
 
 @retry_on_failure(max_retries=2)
-def create_deposit_address(currency: str, chain: Optional[str] = None) -> Dict[str, Any]:
+def create_deposit_address(currency: str, chain: str | None = None) -> dict[str, Any]:
     """Cria um novo endereço de depósito.
 
     Args:
@@ -1592,7 +1595,7 @@ def create_deposit_address(currency: str, chain: Optional[str] = None) -> Dict[s
         Dict com address, memo e chain.
     """
     endpoint = "/api/v1/deposit-addresses"
-    payload: Dict[str, str] = {"currency": currency}
+    payload: dict[str, str] = {"currency": currency}
     if chain:
         payload["chain"] = chain
 
@@ -1610,12 +1613,12 @@ def create_deposit_address(currency: str, chain: Optional[str] = None) -> Dict[s
 
 @retry_on_failure(max_retries=2)
 def list_deposits(
-    currency: Optional[str] = None,
-    status: Optional[str] = None,
-    start_at: Optional[int] = None,
-    end_at: Optional[int] = None,
+    currency: str | None = None,
+    status: str | None = None,
+    start_at: int | None = None,
+    end_at: int | None = None,
     limit: int = 50,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Lista depósitos recentes.
 
     Args:
@@ -1629,7 +1632,7 @@ def list_deposits(
         Lista de depósitos.
     """
     endpoint = "/api/v1/deposits"
-    params: Dict[str, Any] = {"pageSize": limit}
+    params: dict[str, Any] = {"pageSize": limit}
     if currency:
         params["currency"] = currency
     if status:
@@ -1652,12 +1655,12 @@ def apply_withdrawal(
     currency: str,
     address: str,
     amount: float,
-    chain: Optional[str] = None,
-    memo: Optional[str] = None,
+    chain: str | None = None,
+    memo: str | None = None,
     is_inner: bool = False,
-    remark: Optional[str] = None,
+    remark: str | None = None,
     fee_deduct_type: str = "INTERNAL",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Solicita saque de criptomoeda.
 
     ⚠️ REQUER: API Key com permissão 'Withdrawal' + IP Restriction habilitada.
@@ -1679,7 +1682,7 @@ def apply_withdrawal(
     validate_credentials()
 
     endpoint = "/api/v3/withdrawals"
-    payload: Dict[str, Any] = {
+    payload: dict[str, Any] = {
         "currency": currency,
         "address": address,
         "amount": str(round(amount, 8)),
@@ -1737,7 +1740,7 @@ def apply_withdrawal(
 
 
 @retry_on_failure(max_retries=2)
-def cancel_withdrawal(withdrawal_id: str) -> Dict[str, Any]:
+def cancel_withdrawal(withdrawal_id: str) -> dict[str, Any]:
     """Cancela um saque pendente.
 
     Args:
@@ -1759,12 +1762,12 @@ def cancel_withdrawal(withdrawal_id: str) -> Dict[str, Any]:
 
 @retry_on_failure(max_retries=2)
 def list_withdrawals(
-    currency: Optional[str] = None,
-    status: Optional[str] = None,
-    start_at: Optional[int] = None,
-    end_at: Optional[int] = None,
+    currency: str | None = None,
+    status: str | None = None,
+    start_at: int | None = None,
+    end_at: int | None = None,
     limit: int = 50,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Lista saques recentes.
 
     Args:
@@ -1778,7 +1781,7 @@ def list_withdrawals(
         Lista de saques.
     """
     endpoint = "/api/v1/withdrawals"
-    params: Dict[str, Any] = {"pageSize": limit}
+    params: dict[str, Any] = {"pageSize": limit}
     if currency:
         params["currency"] = currency
     if status:
@@ -1819,7 +1822,7 @@ def get_transferable(currency: str, account_type: str = "MAIN") -> float:
     return float(result.get("data", {}).get("transferable", 0))
 
 
-def get_base_fee(currency_type: str = "1") -> Dict[str, Any]:
+def get_base_fee(currency_type: str = "1") -> dict[str, Any]:
     """Obtém taxas base de trading.
 
     Args:
@@ -1845,7 +1848,7 @@ def get_base_fee(currency_type: str = "1") -> Dict[str, Any]:
     }
 
 
-def get_trade_fees(symbols: str) -> List[Dict[str, Any]]:
+def get_trade_fees(symbols: str) -> list[dict[str, Any]]:
     """Obtém taxas de trading para pares específicos.
 
     Args:
@@ -1867,7 +1870,7 @@ def get_trade_fees(symbols: str) -> List[Dict[str, Any]]:
 
 
 @retry_on_failure(max_retries=2)
-def get_order_details(order_id: str) -> Optional[Dict[str, Any]]:
+def get_order_details(order_id: str) -> dict[str, Any] | None:
     """Obtém detalhes de uma ordem"""
     endpoint = f"/api/v1/orders/{order_id}"
     r = _signed_request("GET", endpoint, timeout=10)
@@ -1876,7 +1879,7 @@ def get_order_details(order_id: str) -> Optional[Dict[str, Any]]:
     return None
 
 @retry_on_failure(max_retries=2)
-def get_order_by_client_oid(client_oid: str) -> Optional[Dict[str, Any]]:
+def get_order_by_client_oid(client_oid: str) -> dict[str, Any] | None:
     """Obtém detalhes de uma ordem pelo clientOid (idempotency token).
 
     Usado para checar se uma ordem já foi criada antes de reenviar o mesmo
@@ -1890,7 +1893,7 @@ def get_order_by_client_oid(client_oid: str) -> Optional[Dict[str, Any]]:
     return None
 
 @retry_on_failure(max_retries=2)
-def get_fills(symbol: str = None, limit: int = 50) -> List[Dict]:
+def get_fills(symbol: str = None, limit: int = 50) -> list[dict]:
     """Obtém execuções recentes"""
     endpoint = "/api/v1/fills"
     params = {"pageSize": limit}
@@ -1905,11 +1908,11 @@ def get_fills(symbol: str = None, limit: int = 50) -> List[Dict]:
 
 def get_fills_for_order(
     order_id: str,
-    symbol: Optional[str] = None,
+    symbol: str | None = None,
     *,
     max_retries: int = 4,
     retry_delay: float = 2.0,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Retorna resumo de fills de uma ordem específica.
 
     Faz polling com retry porque fills podem não aparecer imediatamente após
@@ -1925,7 +1928,7 @@ def get_fills_for_order(
       liquidity     — "taker" ou "maker"
       fills_count   — número de parciais preenchidas
     """
-    params: Dict[str, Any] = {"orderId": order_id, "pageSize": 20}
+    params: dict[str, Any] = {"orderId": order_id, "pageSize": 20}
     if symbol:
         params["symbol"] = symbol
 
@@ -1968,7 +1971,7 @@ def get_fills_for_order(
 
 
 # ====================== MARKET ANALYSIS ======================
-def analyze_orderbook(symbol: str = "BTC-USDT") -> Dict[str, Any]:
+def analyze_orderbook(symbol: str = "BTC-USDT") -> dict[str, Any]:
     """Analisa desequilíbrio do order book"""
     ob = get_orderbook(symbol)
 
@@ -1988,7 +1991,7 @@ def analyze_orderbook(symbol: str = "BTC-USDT") -> Dict[str, Any]:
         "spread": ob["asks"][0][0] - ob["bids"][0][0] if ob["bids"] and ob["asks"] else 0
     }
 
-def analyze_trade_flow(symbol: str = "BTC-USDT") -> Dict[str, Any]:
+def analyze_trade_flow(symbol: str = "BTC-USDT") -> dict[str, Any]:
     """Analisa fluxo de trades recentes"""
     trades = get_recent_trades(symbol, limit=100)
 

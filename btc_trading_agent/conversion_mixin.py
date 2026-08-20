@@ -2,15 +2,13 @@
 
 from __future__ import annotations
 
-import json
 import logging
-import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
 
-def _conversion_cfg(config: Dict[str, Any]) -> Dict[str, Any]:
+def _conversion_cfg(config: dict[str, Any]) -> dict[str, Any]:
     raw = config.get("conversion") or {}
     return raw if isinstance(raw, dict) else {}
 
@@ -47,12 +45,12 @@ class ConversionMixin:
             return bool(cfg.get("dry_run"))
         return bool(getattr(self.state, "dry_run", True))
 
-    def _conversion_whitelist(self) -> List[str]:
+    def _conversion_whitelist(self) -> list[str]:
         cfg = _conversion_cfg(self.config)
         raw = cfg.get("assets_whitelist") or ["BRL", "USDT", "BTC", "ETH", "SOL", "DOGE"]
         return [str(x).upper() for x in raw]
 
-    def _conversion_transfer_currencies(self) -> List[str]:
+    def _conversion_transfer_currencies(self) -> list[str]:
         """Moedas para MAIN→TRADE além de base/quote do par."""
         if not self._conversion_enabled():
             return []

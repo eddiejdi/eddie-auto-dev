@@ -21,7 +21,7 @@ from __future__ import annotations
 import logging
 import os
 import re
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger("btc_trading_agent.conversation")
 
@@ -56,7 +56,7 @@ SYSTEM_PROMPT = (
 
 # ─────────────────────────  Acesso ao banco (read-only)  ──────────────────────
 
-def _resolve_db_url() -> Optional[str]:
+def _resolve_db_url() -> str | None:
     """Resolve a connection string do trading DB sem hardcodar credenciais.
 
     Segue a mesma ordem do relatório diário e do MCP homelab.
@@ -248,7 +248,7 @@ def _collect_symbol(symbol: str, profile: str) -> dict[str, Any]:
 
 
 def collect_trading_context(
-    symbols: Optional[list[str]] = None, profile: str = DEFAULT_PROFILE
+    symbols: list[str] | None = None, profile: str = DEFAULT_PROFILE
 ) -> dict[str, Any]:
     """Reúne o contexto ao vivo dos agentes de trading para o prompt."""
     symbols = symbols or SYMBOLS
@@ -390,9 +390,9 @@ def generate_reply(question: str, context_digest: str, model: str, host: str) ->
 def answer_trading_question(
     question: str,
     *,
-    symbols: Optional[list[str]] = None,
+    symbols: list[str] | None = None,
     profile: str = DEFAULT_PROFILE,
-    metadata: Optional[dict[str, Any]] = None,
+    metadata: dict[str, Any] | None = None,
 ) -> str:
     """Ponto de entrada orquestrado: contexto ao vivo + trading-analyst.
 

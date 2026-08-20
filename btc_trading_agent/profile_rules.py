@@ -7,7 +7,8 @@ BTC-USDT is intentionally restricted to the dual-profile runtime:
 
 from __future__ import annotations
 
-from typing import Any, Mapping
+from collections.abc import Mapping
+from typing import Any
 
 BTC_STRICT_SYMBOL = "BTC-USDT"
 BTC_ALLOWED_PROFILES = {"conservative", "aggressive", "shadow"}
