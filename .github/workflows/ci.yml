@@ -169,7 +169,7 @@ jobs:
 
             echo "🧩 Configurando DATABASE_URL do crypto-exporter..."
             sudo install -d -m 0755 /etc/systemd/system/crypto-exporter@.service.d
-            printf '[Service]\nEnvironmentFile=-/home/homelab/myClaude/btc_trading_agent/envfiles/%%I.env\nEnvironment=\"DATABASE_URL=%s\"\n' "${TRADING_DATABASE_URL}" | \
+            printf '[Service]\nEnvironmentFile=-/home/homelab/myClaude/btc_trading_agent/envfiles/%%I.env\nEnvironment="DATABASE_URL=%s"\n' "${TRADING_DATABASE_URL}" | \
               sudo tee /etc/systemd/system/crypto-exporter@.service.d/env.conf > /dev/null
             sudo systemctl daemon-reload
 
@@ -192,6 +192,33 @@ jobs:
             echo "✅ Deploy concluído!"
           DEPLOY_SCRIPT
 
+      - name: Health check pós-deploy (regression guard)
+        if: steps.connectivity.outputs.accessible == 'true'
+        id: healthcheck
+        continue-on-error: true
+        run: |
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} \
+            "bash -s" < scripts/health-check-post-deploy.sh
+          echo "HEALTHCHECK_EXIT=$?" >> $GITHUB_OUTPUT
+
+      - name: Rollback automático em regressão detectada
+        if: steps.connectivity.outputs.accessible == 'true' && steps.healthcheck.outputs.HEALTHCHECK_EXIT != '0'
+        run: |
+          echo "⚠️ Health check falhou — tentando rollback do último deploy..."
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=5 ${{ env.DEPLOY_USER }}@${{ env.DEPLOY_HOST }} << 'ROLLBACK'
+            set -e
+            cd ${{ env.DEPLOY_PATH }}
+            echo "⏪ Revertendo para o commit anterior..."
+            git log --oneline -3 || true
+            git reset --hard HEAD~1 || true
+            sudo systemctl restart shared-telegram-bot.service 2>/dev/null || true
+            sudo systemctl restart shared-whatsapp-bot.service 2>/dev/null || true
+            sudo systemctl restart specialized-agents.service 2>/dev/null || true
+            ./scripts/deploy_btc_trading_profiles.sh 2>/dev/null || true
+            sudo systemctl restart autocoinbot-exporter.service 2>/dev/null || true
+            echo "⏪ Rollback aplicado"
+          ROLLBACK
+
       - name: Deploy pulado (servidor inacessível)
         if: steps.connectivity.outputs.accessible == 'false'
         run: |
@@ -204,16 +231,23 @@ jobs:
         if: always()
         run: |
           if [ "${{ steps.connectivity.outputs.accessible }}" == "true" ]; then
-            if [ "${{ job.status }}" == "success" ]; then
+            if [ "${{ job.status }}" == "success" ] && [ "${{ steps.healthcheck.outputs.HEALTHCHECK_EXIT }}" != "0" ]; then
+              EMOJI="⏪"
+              MSG="Deploy concluído, mas health-check falhou — rollback aplicado."
+              STATUS_COLOR="warning"
+            elif [ "${{ job.status }}" == "success" ]; then
               EMOJI="✅"
-              MSG="Deploy concluído com sucesso!"
+              MSG="Deploy concluído com sucesso! Health-check OK."
+              STATUS_COLOR="success"
             else
               EMOJI="❌"
-              MSG="Deploy falhou (verificar logs)"
+              MSG="Deploy falhou (verificar logs + health)."
+              STATUS_COLOR="failure"
             fi
           else
             EMOJI="⏭️"
             MSG="Deploy pulado - servidor inacessível (OK em GitHub-hosted runner)"
+            STATUS_COLOR="neutral"
           fi
 
           curl -s -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
