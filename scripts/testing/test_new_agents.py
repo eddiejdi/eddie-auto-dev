@@ -2,10 +2,12 @@
 """Test script for DataAgent and PerformanceAgent"""
 
 import sys
+
 sys.path.insert(0, '/home/shared/myClaude')
 
 print('=== Testing DataAgent ===')
 from specialized_agents.data_agent import get_data_agent
+
 data_agent = get_data_agent()
 print(f'DataAgent v{data_agent.VERSION}')
 print(f'Rules: {list(data_agent.AGENT_RULES.keys())}')
@@ -20,6 +22,7 @@ print('✅ DataAgent OK')
 print()
 print('=== Testing PerformanceAgent ===')
 from specialized_agents.performance_agent import get_performance_agent
+
 perf_agent = get_performance_agent()
 print(f'PerformanceAgent v{perf_agent.VERSION}')
 print(f'Rules: {list(perf_agent.AGENT_RULES.keys())}')

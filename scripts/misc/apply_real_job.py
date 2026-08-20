@@ -2,29 +2,28 @@
 """
 Busca vaga real do WhatsApp, gera PDF do currículo e envia draft com anexo.
 """
+import argparse
+import base64
 import io
 import json
+import logging
+import os
+import re
+import sqlite3
 import subprocess
 import sys
-import base64
-import sqlite3
-import logging
 import time
-import re
-import os
-import argparse
-from pathlib import Path
 from datetime import datetime
-from typing import Optional, Dict, Any
+from pathlib import Path
 
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, PageBreak
-from reportlab.lib.units import inch
-from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
+from googleapiclient.http import MediaIoBaseDownload
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import inch
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
 # Logging
 LOG_DIR = Path("/tmp/email_logs")
@@ -231,7 +230,7 @@ def classify_message_llm(text: str) -> tuple[str, str]:
     return classify_message_strict(text)
 
 
-def extract_contact_email(text: str) -> Optional[str]:
+def extract_contact_email(text: str) -> str | None:
     if not text:
         return None
     match = re.search(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", text, re.IGNORECASE)
@@ -239,7 +238,9 @@ def extract_contact_email(text: str) -> Optional[str]:
 
 # Import compatibility modules
 try:
-    from compatibility_allinone import compute_compatibility as compute_compatibility_advanced
+    from compatibility_allinone import (
+        compute_compatibility as compute_compatibility_advanced,
+    )
     from llm_compatibility import call_ollama, temperature_for_match
     ADVANCED_AVAILABLE = True
 except ImportError as e:
@@ -333,7 +334,7 @@ CURRICULUM_TEXT = None  # Será preenchido por load_curriculum_text()
 CURRICULUM_SKILLS = None  # Resumo de skills para comparação semântica
 
 
-def _call_ollama_for_skills(prompt: str, timeout: int = 180) -> Optional[str]:
+def _call_ollama_for_skills(prompt: str, timeout: int = 180) -> str | None:
     """Call Ollama API to extract skills via LLM.
     
     Uses qwen2.5-coder:1.5b (fastest on CPU) first, falls back to llama3.2:3b.
@@ -427,8 +428,7 @@ REGRAS:
             clean = response.strip()
             if clean.startswith("```"):
                 clean = clean.split("\n", 1)[1] if "\n" in clean else clean[3:]
-            if clean.endswith("```"):
-                clean = clean[:-3]
+            clean = clean.removesuffix("```")
             clean = clean.strip()
             if clean.startswith("json"):
                 clean = clean[4:].strip()
@@ -726,7 +726,7 @@ def fetch_whatsapp_messages(limit: int = 20, max_retries: int = 3) -> list:
     return None
 
 
-def extract_job_from_message(message: str) -> Dict[str, str]:
+def extract_job_from_message(message: str) -> dict[str, str]:
     """Parse job details from a message."""
     lines = [line.strip() for line in message.split('\n') if line.strip()]
     title = lines[0] if lines else "Oportunidade de Emprego"
@@ -771,7 +771,7 @@ def load_curriculum_text() -> str:
             CURRICULUM_TEXT = "DevOps Engineer | SRE | Platform Engineer com experiência em Kubernetes, AWS, Python, Terraform, CI/CD"
             return CURRICULUM_TEXT
         
-        print(f"📄 Extraindo texto do currículo com Docling...")
+        print("📄 Extraindo texto do currículo com Docling...")
         import subprocess
         
         if _is_homelab():
@@ -819,7 +819,7 @@ def load_curriculum_text() -> str:
 
 def get_curriculum_from_drive() -> str:
     """Download curriculum from Google Drive."""
-    print(f"📄 Buscando currículo no Google Drive...")
+    print("📄 Buscando currículo no Google Drive...")
     
     try:
         gmail_token_json = get_secret_from_agent("google/gmail_token")
@@ -850,7 +850,7 @@ def get_curriculum_from_drive() -> str:
         
         files = results.get('files', [])
         if not files:
-            print(f"  ⚠️  Nenhum currículo encontrado no Drive")
+            print("  ⚠️  Nenhum currículo encontrado no Drive")
             return None
         
         # Get first curriculum file
@@ -863,19 +863,19 @@ def get_curriculum_from_drive() -> str:
         
         # Determine output format
         if 'pdf' in mime_type.lower():
-            output_path = f"Curriculo_Edenilson.pdf"
+            output_path = "Curriculo_Edenilson.pdf"
         elif 'document' in mime_type.lower() or 'word' in mime_type.lower() or file_name.endswith('.docx'):
-            output_path = f"Curriculo_Edenilson.docx"
+            output_path = "Curriculo_Edenilson.docx"
         else:
             output_path = f"Curriculo_Edenilson_{Path(file_name).suffix.lstrip('.')}"
         
         # Download file
-        print(f"  ⏳ Baixando arquivo...")
+        print("  ⏳ Baixando arquivo...")
         # If it's a Google Doc/Sheet, export as PDF; otherwise download as-is
         try:
             if 'google' in mime_type.lower() and '.google' in mime_type.lower():
                 request = drive_service.files().export_media(fileId=file_id, mimeType='application/pdf')
-                output_path = f"Curriculo_Edenilson.pdf"
+                output_path = "Curriculo_Edenilson.pdf"
             else:
                 # Download the actual file (DOCX, PDF, etc.)
                 request = drive_service.files().get_media(fileId=file_id)
@@ -893,7 +893,7 @@ def get_curriculum_from_drive() -> str:
             return output_path
         except Exception as download_error:
             print(f"  ⚠️  Erro ao baixar arquivo: {download_error}")
-            print(f"     Tentando gerar PDF padrão...")
+            print("     Tentando gerar PDF padrão...")
             return None
         
     except Exception as e:
@@ -968,7 +968,7 @@ def create_curriculum_pdf(output_path: str = "Curriculo_Edenilson.pdf"):
     return output_path
 
 
-def generate_application_email(job: Dict[str, str]) -> tuple:
+def generate_application_email(job: dict[str, str]) -> tuple:
     """Generate professional application email."""
     title = job.get("title", "Oportunidade")
     company = job.get("company", "sua empresa")
@@ -1004,7 +1004,7 @@ def generate_application_email(job: Dict[str, str]) -> tuple:
     return subject, "\n".join(body_lines)
 
 
-def generate_application_email_llm(job: Dict[str, str], compatibility: float) -> tuple:
+def generate_application_email_llm(job: dict[str, str], compatibility: float) -> tuple:
     """Generate application email using shared-whatsapp with temperature tied to match."""
     if not ADVANCED_AVAILABLE:
         return generate_application_email(job)
@@ -1062,13 +1062,13 @@ def review_compatibility_with_llm(resume_text: str, job_text: str, compatibility
         # Build diagnostic prompt
         prompt = (
             "Você é um auditor técnico que analisa comparações entre um currículo e uma descrição de vaga.\n"
-            "A compatibilidade calculada foi de {compat:.1f}%. Identifique possíveis falhas da comparação, como: tokenização fraca, falta de sinônimos, diferença de contexto (ex.: Python em DevOps vs Data Science), extração incompleta e ruído de texto.\n"
+            f"A compatibilidade calculada foi de {compatibility:.1f}%. Identifique possíveis falhas da comparação, como: tokenização fraca, falta de sinônimos, diferença de contexto (ex.: Python em DevOps vs Data Science), extração incompleta e ruído de texto.\n"
             "Responda em português, objetivo e técnico, no formato abaixo:\n"
             "1) Diagnóstico geral (1-2 linhas)\n"
             "2) Causas prováveis (até 5 bullets)\n"
             "3) Correções recomendadas (até 5 bullets)\n"
             "4) Confiança do diagnóstico (0-100)\n\n"
-        ).format(compat=compatibility)
+        )
 
         prompt += "=== VAGA ===\n" + (job_text or '')[:4000] + "\n\n"
         prompt += "=== CURRÍCULO ===\n" + (resume_text or '')[:4000] + "\n\n"
@@ -1223,7 +1223,7 @@ def compute_compatibility(resume_text: str, job_text: str) -> tuple:
             
         except Exception as e:
             logger.warning(f"Advanced compatibility failed: {e}")
-            logger.warning(f"Falling back to simple Jaccard")
+            logger.warning("Falling back to simple Jaccard")
     
     # Fallback to simple Jaccard
     stopwords = {
@@ -1302,10 +1302,10 @@ def process_single_job(job: dict):
         
         success = send_gmail_with_attachment(dest_email, subject, body, curriculum_path)
         if success:
-            print(f"✅ Aplicação enviada com sucesso!")
+            print("✅ Aplicação enviada com sucesso!")
             logger.info(f"✅ EMAIL ENVIADO (one-by-one): {dest_email} | {subject}")
         else:
-            print(f"⚠️ Email não foi enviado, mas draft foi criado.")
+            print("⚠️ Email não foi enviado, mas draft foi criado.")
             logger.warning(f"⚠️ EMAIL NÃO ENVIADO (one-by-one): {dest_email} | {subject}")
             
         # Long delay após processamento para evitar sobrecarga
@@ -1314,10 +1314,10 @@ def process_single_job(job: dict):
         
     except Exception as e:
         print(f"❌ Erro ao processar job: {e}")
-        logger.error(f"❌ ERRO no processamento one-by-one: {str(e)}")
+        logger.error(f"❌ ERRO no processamento one-by-one: {e!s}")
         # Log da falha para circuit breaker
         try:
-            log_email_send("error@error.com", "ERROR", "", "FAILED", notes=f"Exception: {str(e)}")
+            log_email_send("error@error.com", "ERROR", "", "FAILED", notes=f"Exception: {e!s}")
         except:
             pass
 
@@ -1563,11 +1563,11 @@ def send_gmail_with_attachment(to_email: str, subject: str, body: str, attachmen
         gmail_service = build('gmail', 'v1', credentials=creds, cache_discovery=False)
         
         # Build message
+        from email import encoders
         from email.mime.base import MIMEBase
         from email.mime.multipart import MIMEMultipart
         from email.mime.text import MIMEText
         from email.utils import formatdate
-        from email import encoders
         
         msg = MIMEMultipart()
         msg['From'] = 'edenilson.adm@gmail.com'
@@ -1593,7 +1593,7 @@ def send_gmail_with_attachment(to_email: str, subject: str, body: str, attachmen
         # Send
         raw_message = base64.urlsafe_b64encode(msg.as_bytes()).decode()
         result = gmail_service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
-        print(f"  ✅ Email enviado com sucesso!")
+        print("  ✅ Email enviado com sucesso!")
         
         # Log to database
         message_id = result.get('id')
@@ -1601,9 +1601,9 @@ def send_gmail_with_attachment(to_email: str, subject: str, body: str, attachmen
         return True
     except Exception as e:
         print(f"  ⚠️  Erro ao enviar via Gmail API: {e}")
-        print(f"     Salvando draft localmente...")
+        print("     Salvando draft localmente...")
         # Log error
-        log_email_send(to_email, subject, attachment_path, "FAILED", notes=f"Error: {str(e)}")
+        log_email_send(to_email, subject, attachment_path, "FAILED", notes=f"Error: {e!s}")
         return save_draft_locally(to_email, subject, body, attachment_path)
 
 
@@ -1611,11 +1611,11 @@ def save_draft_locally(to_email: str, subject: str, body: str, attachment_path: 
     """Save email draft locally when Gmail API fails."""
     draft_path = f"draft_{datetime.now().strftime('%Y%m%d_%H%M%S')}.eml"
     
+    from email import encoders
     from email.mime.base import MIMEBase
     from email.mime.multipart import MIMEMultipart
     from email.mime.text import MIMEText
     from email.utils import formatdate
-    from email import encoders
     
     msg = MIMEMultipart()
     msg['From'] = 'edenilson.adm@gmail.com'
@@ -1642,7 +1642,7 @@ def save_draft_locally(to_email: str, subject: str, body: str, attachment_path: 
         f.write(msg.as_string())
     
     print(f"  ✅ Draft salvo em: {draft_path}")
-    print(f"     Você pode enviar manualmente ou via script posterior.")
+    print("     Você pode enviar manualmente ou via script posterior.")
     
     # Log to database
     log_email_send(to_email, subject, draft_path, "DRAFT_SAVED", notes="Saved locally as EML")
@@ -1826,7 +1826,7 @@ def main():
 
         subject, body = generate_application_email_llm(job, compat)
 
-        print(f"\n📝 Email draft:")
+        print("\n📝 Email draft:")
         print("="*70)
         print(f"PARA: {dest_email}")
         print(f"ASSUNTO: {subject}")
@@ -1836,17 +1836,17 @@ def main():
 
         success = send_gmail_with_attachment(dest_email, subject, body, curriculum_path)
         if success:
-            print(f"\n✅ Aplicação enviada com sucesso!")
+            print("\n✅ Aplicação enviada com sucesso!")
             logger.info(f"✅ EMAIL ENVIADO: {dest_email} | {subject}")
         else:
-            print(f"\n⚠️  Email não foi enviado, mas draft foi criado.")
+            print("\n⚠️  Email não foi enviado, mas draft foi criado.")
             logger.warning(f"⚠️  EMAIL NÃO ENVIADO: {dest_email} | {subject}")
 
         print_log_summary()
 
     except Exception as e:
         print(f"\n❌ Erro: {e}")
-        logger.error(f"❌ ERRO: {str(e)}")
+        logger.error(f"❌ ERRO: {e!s}")
         import traceback
         traceback.print_exc()
         sys.exit(1)

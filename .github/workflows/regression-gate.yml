@@ -1,0 +1,234 @@
+# Regression Gate — CI para Pull Requests
+#
+# Roda a suíte completa de testes (excluindo integration/external) no
+# self-hosted runner do homelab. Bloqueia o merge se qualquer teste falhar.
+# Roda ruff (lint) e py_compile (sintaxe) como gates adicionais.
+#
+# Diferente do ci.yml (que roda em push para main e faz deploy),
+# este workflow roda em PRs para main e serve como gate de qualidade
+# ANTES do merge — capturando regressões antes que atinjam a main.
+#
+# Racional: o pre-push hook bloqueia localmente, este é o gate no GitHub.
+# Em conjunto, formam a barreira anti-regressão completa.
+
+name: Regression Gate
+
+on:
+  workflow_dispatch: {}
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  PYTEST_TIMEOUT_S: 300
+  PYTEST_SMOKE_FLAGS: "-q --tb=short -m 'not integration and not external' --ignore=.venv --ignore=venv --ignore=env"
+
+jobs:
+  ruff-lint:
+    name: Ruff Lint
+    runs-on: [self-hosted, homelab]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve Python
+        shell: bash
+        run: |
+          PY_BIN="$(command -v python3 || command -v python)"
+          echo "PY_BIN=$PY_BIN" >> "$GITHUB_ENV"
+          "$PY_BIN" --version
+
+      - name: Install ruff
+        run: |
+          "$PY_BIN" -m pip install --quiet --upgrade ruff 2>/dev/null || true
+
+      - name: ruff check (src dirs)
+        id: ruff
+        continue-on-error: true
+        run: |
+          set +e
+          ruff check --quiet \
+            btc_trading_agent/ \
+            clear_trading_agent/ \
+            specialized_agents/ \
+            tools/ \
+            scripts/ \
+            2>&1 | tee /tmp/ruff_output.txt
+          echo "RUFF_EXIT=${PIPESTATUS[0]}" >> "$GITHUB_ENV"
+
+      - name: Report ruff
+        if: always()
+        run: |
+          if [ "${RUFF_EXIT:-1}" -ne 0 ]; then
+            echo "::error title=Ruff Lint::❌ ruff encontrou erros de lint."
+            echo "::error::Corrija com: ruff check --fix btc_trading_agent/ clear_trading_agent/ specialized_agents/ tools/ scripts/"
+            exit 1
+          fi
+          echo "✅ ruff OK"
+
+  py-compile:
+    name: Syntax Check (py_compile)
+    runs-on: [self-hosted, homelab]
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve Python
+        shell: bash
+        run: |
+          PY_BIN="$(command -v python3 || command -v python)"
+          echo "PY_BIN=$PY_BIN" >> "$GITHUB_ENV"
+
+      - name: py_compile em todos os .py do repo
+        run: |
+          set +e
+          FAIL=0
+          while IFS= read -r f; do
+            if ! "$PY_BIN" -m py_compile "$f" 2>/dev/null; then
+              echo "::error title=SyntaxError::❌ $f"
+              FAIL=$((FAIL + 1))
+            fi
+          done < <(find . -name '*.py' -type f \
+              ! -path './.git/*' \
+              ! -path './.venv/*' \
+              ! -path './venv/*' \
+              ! -path './env/*' \
+              ! -path './node_modules/*' \
+              ! -path './btc_trading_agent/.venv/*' \
+              ! -path './.archive/*')
+          if [ "$FAIL" -gt 0 ]; then
+            echo "::error title=py_compile::$FAIL arquivo(s) com erro de sintaxe."
+            exit 1
+          fi
+          echo "✅ py_compile OK em todos os arquivos"
+
+  pytest-unit:
+    name: Pytest Unit (regression gate)
+    runs-on: [self-hosted, homelab]
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve Python
+        shell: bash
+        run: |
+          PY_BIN="$(command -v python3 || command -v python)"
+          echo "PY_BIN=$PY_BIN" >> "$GITHUB_ENV"
+          "$PY_BIN" --version
+
+      - name: Setup venv
+        run: |
+          "$PY_BIN" -m venv .venv
+          echo "${GITHUB_WORKSPACE}/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt 2>/dev/null || true; fi
+          python -m pip install --quiet pytest pytest-cov requests httpx numpy psycopg2-binary 2>/dev/null || true
+
+      - name: pytest unit tests (gate)
+        run: |
+          set +e
+          pytest tests/ -q --tb=short -m "not integration and not external" \
+            --ignore=.venv --ignore=venv --ignore=env \
+            --maxfail=10 \
+            2>&1 | tee /tmp/pytest_regression_gate.txt
+          exit ${PIPESTATUS[0]}
+
+      - name: Report pytest failure
+        if: failure()
+        run: |
+          echo "::error title=Pytest Regression Gate FAILED::❌ Testes unitários falharam."
+          echo ""
+          echo "::error::=== RESUMO DOS ERROS (top 40 linhas) ==="
+          grep -E "^(FAILED|ERROR|  File|>.*Error|>.*assert)" /tmp/pytest_regression_gate.txt | head -40 | while IFS= read -r line; do
+            echo "::error::$line"
+          done
+          echo ""
+          echo "::error::=== COMANDO PARA REPRODUZIR LOCALMENTE ==="
+          echo "::error::  python -m pytest tests/ -v -m 'not integration and not external' --maxfail=10"
+          echo ""
+          echo "::error::Adicione testes que cubram as regressões detectadas antes de reabrir o PR."
+
+      - name: Upload pytest output (failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-regression-gate-${{ github.run_id }}
+          path: /tmp/pytest_regression_gate.txt
+          retention-days: 14
+
+  pre-commit-hooks:
+    name: Custom Pre-commit Hooks (domain validations)
+    runs-on: [self-hosted, homelab]
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve Python
+        shell: bash
+        run: |
+          PY_BIN="$(command -v python3 || command -v python)"
+          echo "PY_BIN=$PY_BIN" >> "$GITHUB_ENV"
+
+      - name: Rodar pre-commit hooks customizados (staged)
+        run: |
+          set +e
+          echo "Rodando checks de domínio (CMDB, taxonomias, incomplete markers)..."
+          "$PY_BIN" tools/hooks/incomplete_markers.py --staged 2>&1 | tee /tmp/hooks_check.txt
+          RC=$?
+          # Código 2 = incompletude → bloqueia. Outro != 0 é erro interno → não-bloqueante.
+          if [ "$RC" -eq 2 ]; then
+            echo "::error title=Incomplete Markers::❌ Marcadores de trabalho incompleto detectados."
+            exit 1
+          fi
+          "$PY_BIN" tools/hooks/variable_registry_validate.py --staged 2>&1 | tee -a /tmp/hooks_check.txt
+          RC=$?
+          if [ "$RC" -ne 0 ]; then
+            echo "::error title=Variable Registry::❌ Duplicata detectada no catálogo de variáveis."
+            exit 1
+          fi
+          "$PY_BIN" tools/hooks/table_registry_validate.py --staged 2>&1 | tee -a /tmp/hooks_check.txt
+          RC=$?
+          if [ "$RC" -ne 0 ]; then
+            echo "::error title=Table Registry::❌ Duplicata detectada no catálogo de tabelas."
+            exit 1
+          fi
+          "$PY_BIN" tools/hooks/api_registry_validate.py --staged 2>&1 | tee -a /tmp/hooks_check.txt
+          RC=$?
+          if [ "$RC" -ne 0 ]; then
+            echo "::error title=API Registry::❌ Duplicata detectada no catálogo de APIs."
+            exit 1
+          fi
+          echo "✅ Hooks de domínio OK"
+
+  regression-gate-summary:
+    name: Regression Gate Summary
+    runs-on: [self-hosted, homelab]
+    needs: [ruff-lint, py-compile, pytest-unit, pre-commit-hooks]
+    if: always()
+    steps:
+      - name: Consolidate gate status
+        run: |
+          RUFF="${{ needs.ruff-lint.result }}"
+          PYC="${{ needs.py-compile.result }}"
+          PYTEST="${{ needs.pytest-unit.result }}"
+          HOOKS="${{ needs.pre-commit-hooks.result }}"
+
+          echo "ruff-lint:       $RUFF"
+          echo "py-compile:      $PYC"
+          echo "pytest-unit:     $PYTEST"
+          echo "pre-commit-hooks: $HOOKS"
+
+          if [ "$RUFF" = "failure" ] || [ "$PYC" = "failure" ] || [ "$PYTEST" = "failure" ] || [ "$HOOKS" = "failure" ]; then
+            echo "::error::❌ Regression Gate FALHOU. Merge bloqueado até corrigir."
+            exit 1
+          fi
+          echo "✅ Regression Gate PASSOU. PR aprovado para merge."

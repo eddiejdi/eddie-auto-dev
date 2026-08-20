@@ -3,10 +3,10 @@
 
 set -e
 
-echo "🔍 Running pre-commit checks (13 checks)..."
+echo "🔍 Running pre-commit checks (15 checks)..."
 
 # ─── Check 1: Blocked hardcoded tokens ───────────────────────────────────────
-echo "  [1/6] Checking for hardcoded API tokens..."
+echo "  [1/15] Checking for hardcoded API tokens..."
 # Patterns: sk-ant-*, sk-proj-*, ghp_*, glpat-*, 40+ hex chars
 # Note: \bsk- with word boundary avoids false positives like "disk-"
 if git diff --cached | grep -PE "(\bsk-ant|\bsk-proj|ghp_|glpat-|[a-f0-9]{40,})" >/dev/null 2>&1; then
@@ -16,7 +16,7 @@ if git diff --cached | grep -PE "(\bsk-ant|\bsk-proj|ghp_|glpat-|[a-f0-9]{40,})"
 fi
 
 # ─── Check 2: No .env files (only .env.consolidated) ───────────────────────────
-echo "  [2/6] Checking .env file restrictions..."
+echo "  [2/15] Checking .env file restrictions..."
 
 # Check for NEW or MODIFIED .env files (not deleted ones).
 # Exceção: .env.example* / .env.sample* são templates por convenção — não têm
@@ -37,7 +37,7 @@ if [ ! -z "$ADDED_OR_MODIFIED_ENV" ]; then
 fi
 
 # ─── Check 3: GPU configuration validation ───────────────────────────────────
-echo "  [3/6] Validating GPU-first configuration..."
+echo "  [3/15] Validating GPU-first configuration..."
 if [ ! -f ".env.consolidated" ]; then
     echo "⚠️  WARNING: .env.consolidated not found (will be needed for GPU-first)"
 fi
@@ -46,7 +46,7 @@ if ! grep -q "OLLAMA_HOST" .env.consolidated 2>/dev/null; then
 fi
 
 # ─── Check 4: Python code changes — Test coverage validation ──────────────────
-echo "  [4/6] Checking Python code has corresponding tests..."
+echo "  [4/15] Checking Python code has corresponding tests..."
 
 # Get changed Python files (excluding certain patterns)
 PY_FILES=$(git diff --cached --name-only | grep "\.py$" | grep -v "__pycache__\|\.pyc\|test_\|conftest" || true)
@@ -90,7 +90,7 @@ if [ ! -z "$PY_FILES" ]; then
 fi
 
 # ─── Check 5: Run GPU-first validator (10 second timeout) ─────────────────────
-echo "  [5/6] Running GPU-first compliance validator..."
+echo "  [5/15] Running GPU-first compliance validator..."
 if command -v python3 >/dev/null 2>&1; then
     if [ -f "tools/gpu_first_validator.py" ]; then
         timeout 10 python3 tools/gpu_first_validator.py >/dev/null 2>&1 || {
@@ -109,7 +109,7 @@ fi
 # zzz-dual-model.conf) — não é config de cliente, e mandá-lo ao coordenador
 # criaria um laço serviço → coordenador → serviço no boot. A regra continua
 # valendo integralmente para qualquer `Environment=OLLAMA_HOST=`.
-echo "  [6/6] Validating OLLAMA_HOST coordinator port in systemd files..."
+echo "  [6/15] Validating OLLAMA_HOST coordinator port in systemd files..."
 
 SYSTEMD_FILES=$(git diff --cached --name-only | grep -E "\.(service|conf)$" || true)
 
@@ -136,7 +136,7 @@ fi
 # ─── Check 7: Grafana dashboard UID uniqueness ────────────────────────────────
 # Detecta UIDs duplicados em monitoring/grafana/provisioning/dashboards/**
 # Arquivos .disabled.* e .bak são ignorados. Bloqueia commit se houver duplicata.
-echo "  [7/8] Checking Grafana dashboard UID uniqueness..."
+echo "  [7/15] Checking Grafana dashboard UID uniqueness..."
 GRAFANA_JSON=$(git diff --cached --name-only | grep -E "\.json$" | grep -E "grafana" || true)
 if [ -n "$GRAFANA_JSON" ]; then
     python3 - <<'PYEOF' || exit 1
@@ -173,7 +173,7 @@ fi
 # Rejeita commit com marcadores de alto sinal de trabalho incompleto nas linhas staged.
 # Cobre qualquer ferramenta (Copilot, Codex, Claude Code, edição manual) — todas commitam.
 # Escape: ALLOW_INCOMPLETE=1, `# stub-ok` na linha, ou git commit --no-verify.
-echo "  [8/9] Checking for incomplete tasks (stubs / NotImplementedError)..."
+echo "  [8/15] Checking for incomplete tasks (stubs / NotImplementedError)..."
 if [ -z "$ALLOW_INCOMPLETE" ]; then
     if [ -f "tools/hooks/incomplete_markers.py" ]; then
         # Código 2 = incompletude → bloqueia. Qualquer outro código != 0 é erro
@@ -191,7 +191,7 @@ else
 fi
 
 # ─── Check 9: CMDB baseline + trading overrides (mesmo commit, sem post-commit orphan) ──
-echo "  [9/9] Regenerating CMDB baseline and trading overrides..."
+echo "  [9/15] Regenerating CMDB baseline and trading overrides..."
 if [ -z "${SKIP_CMDB_HOOK:-}" ] && [ -f "scripts/cmdb/generate_cmdb_baseline.py" ]; then
     PY_CMDB="$(dirname "$0")/../.venv/bin/python"
     [ -x "$PY_CMDB" ] || PY_CMDB="python3"
@@ -212,7 +212,7 @@ fi
 # ─── Check 10: Taxonomia de variáveis — bloqueia duplicatas ──────────────────
 # Consulta .variables-catalog/catalog.json antes de aceitar variável nova.
 # Cobre qualquer ferramenta (Copilot, Codex, Claude Code, edição manual).
-echo "  [10/12] Checking variable taxonomy (duplicates)..."
+echo "  [10/15] Checking variable taxonomy (duplicates)..."
 if [ -f "tools/hooks/variable_registry_validate.py" ]; then
     if ! python3 tools/hooks/variable_registry_validate.py --staged; then
         exit 1
@@ -220,7 +220,7 @@ if [ -f "tools/hooks/variable_registry_validate.py" ]; then
 fi
 
 # ─── Check 11: Taxonomia de tabelas — bloqueia duplicatas ────────────────────
-echo "  [11/12] Checking table taxonomy (duplicates)..."
+echo "  [11/15] Checking table taxonomy (duplicates)..."
 if [ -f "tools/hooks/table_registry_validate.py" ]; then
     if ! python3 tools/hooks/table_registry_validate.py --staged; then
         exit 1
@@ -228,7 +228,7 @@ if [ -f "tools/hooks/table_registry_validate.py" ]; then
 fi
 
 # ─── Check 12: Taxonomia de APIs — bloqueia duplicatas ───────────────────────
-echo "  [12/12] Checking API taxonomy (duplicates)..."
+echo "  [12/15] Checking API taxonomy (duplicates)..."
 if [ -f "tools/hooks/api_registry_validate.py" ]; then
     if ! python3 tools/hooks/api_registry_validate.py --staged; then
         exit 1
@@ -238,7 +238,7 @@ fi
 # ─── Check 13: Wiki documentation analysis ────────────────────────────────────
 # Valida estrutura, extrai termos-chave e detecta duplicatas em .md staged.
 # Alimenta memória do agente wiki para decisões futuras.
-echo "  [13/13] Analyzing wiki documentation..."
+echo "  [13/15] Analyzing wiki documentation..."
 if [ -f "tools/hooks/wiki_doc_analyzer.py" ]; then
     PY_WIKI="$(dirname "$0")/../.venv/bin/python"
     [ -x "$PY_WIKI" ] || PY_WIKI="python3"
@@ -249,7 +249,50 @@ if [ -f "tools/hooks/wiki_doc_analyzer.py" ]; then
     fi
 fi
 
+# ─── Check 14: ruff lint nos arquivos Python staged (regressão de estilo) ───────
+# Lint rápido de sintaxe/estilo para detectar bugs óbvios antes do commit.
+# ruff é ~100x mais rápido que flake8 — não justifica pular.
+echo "  [14/15] ruff check (arquivos staged)..."
+RUFF_BIN="$(command -v ruff 2>/dev/null || echo "${REPO_ROOT:-.}/.venv/bin/ruff")"
+if [ -x "$RUFF_BIN" ]; then
+    STAGED_PY=$(git diff --cached --name-only --diff-filter=AM | grep '\.py$' || true)
+    if [ -n "$STAGED_PY" ]; then
+        if ! echo "$STAGED_PY" | xargs "$RUFF_BIN" check --quiet --no-cache 2>&1; then
+            echo "❌ BLOCKED: ruff encontrou erros de lint nos arquivos staged."
+            echo "   Corrija com: ruff check --fix <arquivos>"
+            echo "   Ou use: git commit --no-verify (não recomendado para main)."
+            exit 1
+        fi
+    fi
+    echo "  ✅ ruff OK (ou sem arquivos Python staged)"
+else
+    echo "  ⚠️ ruff não instalado — pulando lint (instale: pip install ruff)"
+fi
+
+# ─── Check 15: py_compile nos arquivos Python staged (sintaxe válida) ───────────
+# Verificação ultra-rápida de sintaxe — captura SyntaxError antes do commit.
+echo "  [15/15] py_compile (sintaxe)..."
+PY_BIN="$(command -v python3 || command -v python)"
+STAGED_PY=$(git diff --cached --name-only --diff-filter=AM | grep '\.py$' || true)
+if [ -n "$STAGED_PY" ] && [ -x "$PY_BIN" ]; then
+    COMPILE_FAILED=0
+    for f in $STAGED_PY; do
+        if ! "$PY_BIN" -m py_compile "$f" 2>/dev/null; then
+            echo "❌ BLOCKED: Sintaxe inválida em $f"
+            "$PY_BIN" -m py_compile "$f" 2>&1 || true
+            COMPILE_FAILED=$((COMPILE_FAILED + 1))
+        fi
+    done
+    if [ $COMPILE_FAILED -gt 0 ]; then
+        echo "❌ $COMPILE_FAILED arquivo(s) com erro de sintaxe. Commit bloqueado."
+        exit 1
+    fi
+    echo "  ✅ py_compile OK"
+else
+    echo "  ✅ (sem arquivos Python staged ou python indisponível)"
+fi
+
 echo ""
-echo "✅ Pre-commit checks passed!"
+echo "✅ Pre-commit checks passed! (15/15)"
 echo "   Ready to commit. Use --no-verify to skip checks if needed."
 echo ""

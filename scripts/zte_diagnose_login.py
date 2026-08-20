@@ -3,11 +3,11 @@
 
 Extrai a função dosubmit() completa com contagem de chaves balanceadas.
 """
-import urllib.request
-import urllib.error
 import http.cookiejar
 import re
 import sys
+import urllib.error
+import urllib.request
 
 BASE = "http://192.168.14.1"
 
@@ -23,11 +23,11 @@ except urllib.error.URLError as exc:
     sys.exit(1)
 
 # Form tags
-for fm in re.findall(r"<form[^>]+>", page, re.I):
+for fm in re.findall(r"<form[^>]+>", page, re.IGNORECASE):
     print("FORM:", fm[:200])
 
 # Campos relevantes
-inputs = re.findall(r"<input[^>]+>", page, re.I)
+inputs = re.findall(r"<input[^>]+>", page, re.IGNORECASE)
 for inp in inputs:
     if any(k in inp.lower() for k in ["user", "pass", "login", "token", "frm", "action"]):
         print("INPUT:", re.sub(r"\s+", " ", inp[:200]))
@@ -38,7 +38,7 @@ print()
 def extract_function_body(text: str, func_name: str) -> str:
     """Extrai o corpo completo de uma função JS por contagem de chaves balanceadas."""
     pattern = rf"function\s+{func_name}\s*\([^)]*\)\s*\{{"
-    m = re.search(pattern, text, re.S)
+    m = re.search(pattern, text, re.DOTALL)
     if not m:
         return ""
     start = m.start()
@@ -68,11 +68,11 @@ def extract_function_body(text: str, func_name: str) -> str:
 
 
 # Buscar scripts externos
-ext_scripts = re.findall(r'<script[^>]+src=["\']?([^"\'>\s]+)', page, re.I)
+ext_scripts = re.findall(r'<script[^>]+src=["\']?([^"\'>\s]+)', page, re.IGNORECASE)
 print(f"Scripts externos: {ext_scripts}")
 
 # Processar scripts inline — dump COMPLETO
-inline_blocks = re.findall(r"<script[^>]*>(.*?)</script>", page, re.I | re.S)
+inline_blocks = re.findall(r"<script[^>]*>(.*?)</script>", page, re.IGNORECASE | re.DOTALL)
 print(f"Blocos JS inline: {len(inline_blocks)}")
 
 for idx, s in enumerate(inline_blocks):

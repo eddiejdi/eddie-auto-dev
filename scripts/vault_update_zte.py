@@ -3,8 +3,8 @@
 
 Uso: python3 vault_update_zte.py <username> <password>
 """
-import sys
 import os
+import sys
 from pathlib import Path
 
 
@@ -24,7 +24,7 @@ def main() -> None:
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
 
-    from tools.secrets_agent.secrets_agent import local_vault  # noqa: PLC0415
+    from tools.secrets_agent.secrets_agent import local_vault
 
     ok_user = local_vault.store("network/zte_gpon_modem", username, field="username")
     ok_pass = local_vault.store("network/zte_gpon_modem", password, field="password")

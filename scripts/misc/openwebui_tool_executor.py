@@ -31,10 +31,8 @@ Referência:
     - specialized_agents/llm_tools_api.py (API endpoints)
 """
 
-import os
-import json
 import logging
-from typing import Optional
+import os
 
 # ── Tentar importar httpx (preferido) ou requests como fallback ──
 try:
@@ -112,7 +110,7 @@ class Tools:
         self,
         command: str,
         timeout: int = 30,
-        cwd: Optional[str] = None,
+        cwd: str | None = None,
     ) -> str:
         """
         Execute a shell command on the Shared homelab system.
@@ -146,7 +144,7 @@ class Tools:
     def read_file(
         self,
         filepath: str,
-        max_lines: Optional[int] = None,
+        max_lines: int | None = None,
     ) -> str:
         """
         Read the contents of a file on the Shared homelab system.

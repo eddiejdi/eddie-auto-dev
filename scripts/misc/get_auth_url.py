@@ -2,9 +2,10 @@
 """
 Gerar URL de autenticação do Google Drive
 """
-from google_auth_oauthlib.flow import InstalledAppFlow
-from pathlib import Path
 import json
+from pathlib import Path
+
+from google_auth_oauthlib.flow import InstalledAppFlow
 
 CREDS_FILE = Path('/home/homelab/myClaude/credentials.json')
 

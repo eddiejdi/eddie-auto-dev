@@ -221,6 +221,6 @@ if __name__ == "__main__":
     if result.returncode == 0:
         print(result.stdout.strip())
     else:
-        print(f"  ❌ trading_agent.py: SYNTAX ERROR")
+        print("  ❌ trading_agent.py: SYNTAX ERROR")
         print(result.stderr)
         sys.exit(1)

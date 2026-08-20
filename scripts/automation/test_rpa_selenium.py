@@ -4,17 +4,17 @@ Teste automatizado do Agent Chat usando Selenium
 RPA - Robotic Process Automation
 """
 
+import json
 import os
 import time
-import json
 from datetime import datetime
+
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.support.ui import WebDriverWait
 
 HOST = os.environ.get('HOMELAB_HOST', 'localhost')
 # Configuração (apontando para o open-webui na porta 3000 para testes de contexto)
@@ -382,7 +382,7 @@ def main():
             "total": total
         }, f, indent=2)
     
-    print(f"\n📄 Resultados salvos em /tmp/rpa_test_results.json")
+    print("\n📄 Resultados salvos em /tmp/rpa_test_results.json")
 
     # IDE Generate and Agent Chat are allowed to fail in CI (Monaco may not load
     # without a real IDE server; Agent Chat textarea may not be interactable on

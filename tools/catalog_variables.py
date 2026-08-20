@@ -12,15 +12,15 @@ Sources scanned:
 - Environment variable exports in scripts
 """
 
-import os
-import re
 import json
-import yaml
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Set, Any, Tuple
-from collections import defaultdict
 import logging
+import re
+from collections import defaultdict
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import yaml
 
 logging.basicConfig(level=logging.INFO, format='%(message)s')
 logger = logging.getLogger(__name__)
@@ -46,10 +46,10 @@ class VariablesCatalog:
                 "serviceCount": 0
             }
         }
-        self.variables_found: Set[str] = set()
-        self.sources_scanned: List[Tuple[str, str]] = []
+        self.variables_found: set[str] = set()
+        self.sources_scanned: list[tuple[str, str]] = []
         
-    def scan_env_files(self) -> Dict[str, Any]:
+    def scan_env_files(self) -> dict[str, Any]:
         """Scan .env and .env.example files."""
         logger.info("📋 Scanning .env files...")
         env_vars = {}
@@ -65,7 +65,7 @@ class VariablesCatalog:
                 
         return env_vars
     
-    def _parse_env_file(self, filepath: Path, env_vars: Dict):
+    def _parse_env_file(self, filepath: Path, env_vars: dict):
         """Parse a single .env file."""
         logger.info(f"  └─ {filepath.relative_to(self.root)}")
         self.sources_scanned.append((str(filepath.relative_to(self.root)), "env"))
@@ -101,7 +101,7 @@ class VariablesCatalog:
         except Exception as e:
             logger.error(f"    Error parsing {filepath}: {e}")
     
-    def scan_docker_compose(self) -> Dict[str, Any]:
+    def scan_docker_compose(self) -> dict[str, Any]:
         """Scan docker-compose.yml files."""
         logger.info("🐳 Scanning docker-compose files...")
         docker_vars = {}
@@ -140,7 +140,7 @@ class VariablesCatalog:
         
         return docker_vars
     
-    def scan_systemd_services(self) -> Dict[str, Any]:
+    def scan_systemd_services(self) -> dict[str, Any]:
         """Scan systemd service files."""
         logger.info("⚙️  Scanning systemd services...")
         systemd_vars = {}
@@ -191,7 +191,7 @@ class VariablesCatalog:
         
         return systemd_vars
     
-    def scan_python_configs(self) -> Dict[str, Any]:
+    def scan_python_configs(self) -> dict[str, Any]:
         """Scan Python configuration files and code."""
         logger.info("🐍 Scanning Python configs...")
         python_vars = {}
@@ -235,7 +235,7 @@ class VariablesCatalog:
         
         return python_vars
     
-    def scan_yaml_configs(self) -> Dict[str, Any]:
+    def scan_yaml_configs(self) -> dict[str, Any]:
         """Scan YAML configuration files."""
         logger.info("📝 Scanning YAML configs...")
         yaml_vars = {}
@@ -257,7 +257,7 @@ class VariablesCatalog:
         
         return yaml_vars
     
-    def _extract_vars_from_dict(self, obj: Any, vars_dict: Dict, context: str, prefix: str = ""):
+    def _extract_vars_from_dict(self, obj: Any, vars_dict: dict, context: str, prefix: str = ""):
         """Recursively extract variables from dictionary."""
         if isinstance(obj, dict):
             for key, value in obj.items():
@@ -272,7 +272,7 @@ class VariablesCatalog:
                         if isinstance(item, dict):
                             self._extract_vars_from_dict(item, vars_dict, context, f"{full_key}_{i}")
     
-    def _add_variable(self, vars_dict: Dict, key: str, value: Any, source: str, context: str):
+    def _add_variable(self, vars_dict: dict, key: str, value: Any, source: str, context: str):
         """Add variable to dictionary."""
         if key not in vars_dict:
             vars_dict[key] = {
@@ -335,7 +335,7 @@ class VariablesCatalog:
 
     _DSN_CRED_RE = re.compile(r"://[^/@\s]+:[^/@\s]+@")
     
-    def categorize_variables(self, all_vars: Dict[str, Any]):
+    def categorize_variables(self, all_vars: dict[str, Any]):
         """Categorize variables into semantic groups."""
         logger.info("\n🏷️  Categorizing variables...")
         
@@ -365,7 +365,7 @@ class VariablesCatalog:
                     var_data['contexts'] = list(var_data.get('contexts', set()))
                     self.catalog["categories"]["services"][var_name] = var_data
     
-    def generate_catalog(self) -> Dict[str, Any]:
+    def generate_catalog(self) -> dict[str, Any]:
         """Generate complete variables catalog."""
         logger.info("\n" + "="*70)
         logger.info("🔍 HOMELAB VARIABLES CATALOG SCANNER")

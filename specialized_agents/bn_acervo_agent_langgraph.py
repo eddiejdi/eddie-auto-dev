@@ -56,7 +56,7 @@ class BnAcervoStoryAgent(HomelabAgent):
         return f"BN Acervo story: {query}"
 
     def _execute_work(self, state: AgentState) -> dict:
-        from specialized_agents.bn_acervo_agent import BnAcervoAgent, AcervoStoryRequest
+        from specialized_agents.bn_acervo_agent import AcervoStoryRequest, BnAcervoAgent
         extra  = state.get("extra", {})
         req    = AcervoStoryRequest(**extra)
         agent  = BnAcervoAgent()
@@ -84,7 +84,7 @@ class BnAcervoDossierAgent(HomelabAgent):
         return f"BN Acervo dossier: {query}"
 
     def _execute_work(self, state: AgentState) -> dict:
-        from specialized_agents.bn_acervo_agent import BnAcervoAgent, AcervoStoryRequest
+        from specialized_agents.bn_acervo_agent import AcervoStoryRequest, BnAcervoAgent
         extra  = state.get("extra", {})
         req    = AcervoStoryRequest(**extra)
         req    = req.model_copy(update={"output_mode": "dossier"})
@@ -112,11 +112,15 @@ class BnAcervoJobAgent(HomelabAgent):
         return f"BN Acervo criar job: {query}"
 
     def _execute_work(self, state: AgentState) -> dict:
-        from specialized_agents.bn_acervo_agent import (
-            BnAcervoAgent, AcervoStoryRequest,
-            _reconcile_active_jobs, _run_bn_acervo_job, _JOB_TASKS,
-        )
         from fastapi import HTTPException
+
+        from specialized_agents.bn_acervo_agent import (
+            _JOB_TASKS,
+            AcervoStoryRequest,
+            BnAcervoAgent,
+            _reconcile_active_jobs,
+            _run_bn_acervo_job,
+        )
         extra  = state.get("extra", {})
         req    = AcervoStoryRequest(**extra)
         agent  = BnAcervoAgent()
@@ -160,7 +164,9 @@ class BnAcervoCancelAgent(HomelabAgent):
 
     def _execute_work(self, state: AgentState) -> dict:
         from specialized_agents.bn_acervo_agent import (
-            BnAcervoAgent, _reconcile_active_jobs, _cancel_job,
+            BnAcervoAgent,
+            _cancel_job,
+            _reconcile_active_jobs,
         )
         agent = BnAcervoAgent()
         active_jobs = _reconcile_active_jobs(agent.job_store)

@@ -5,10 +5,11 @@ Run as: DATABASE_URL=... python3 tools/diretor_latency_exporter.py
 Exposes /metrics on port 9410 by default.
 """
 import os
-import time
 import sys
+import time
+
 try:
-    from prometheus_client import start_http_server, Histogram, Gauge
+    from prometheus_client import Gauge, Histogram, start_http_server
 except Exception:
     print('prometheus_client not installed')
     raise

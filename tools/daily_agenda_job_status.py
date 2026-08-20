@@ -16,7 +16,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from urllib import error, request
+from urllib import request
 
 from daily_agenda_config import DEFAULT_ARTIFACTS_DIR, DEFAULT_JOB_PATH
 
@@ -305,7 +305,7 @@ class PanelJobReporter:
         lvl = self.log_level if level is None else level
 
         class _Handler(logging.Handler):
-            def emit(self, record: logging.LogRecord) -> None:  # noqa: N802
+            def emit(self, record: logging.LogRecord) -> None:
                 try:
                     if record.levelno < lvl:
                         return

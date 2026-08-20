@@ -1,8 +1,10 @@
 
-import requests
 import hashlib
 from datetime import datetime
 from pathlib import Path
+
+import requests
+
 
 def index_file_to_rag(file_path, rag_api_url):
     path = Path(file_path)

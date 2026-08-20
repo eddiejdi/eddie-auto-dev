@@ -17,7 +17,6 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger("secret_store")
 
@@ -125,7 +124,7 @@ def get_item_json(name: str) -> dict:
     raise VaultError("BW_SESSION not set and bw CLI unavailable/unlocked")
 
 
-def get_password(name: str) -> Optional[str]:
+def get_password(name: str) -> str | None:
     """Fetch password field for item `name`.
 
     Tries Bitwarden first, then env vars, then simple_vault.
@@ -190,7 +189,7 @@ def get_field(name: str, field: str = "password") -> str:
     raise VaultError(f"field '{field}' not found in item '{name}'")
 
 
-def _try_simple_gpg_fallback(name: str, field: str = "password") -> Optional[str]:
+def _try_simple_gpg_fallback(name: str, field: str = "password") -> str | None:
     """Attempt to read a GPG-encrypted secret file from tools/simple_vault/secrets.
 
     The expected filename is `tools/simple_vault/secrets/{name_with_underscores}.gpg`.

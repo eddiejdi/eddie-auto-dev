@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
 """Teste detalhado de captura de conversa."""
 import sys
+
 sys.path.insert(0, '/home/shared/myClaude')
 
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 import time
+
 import requests
-import json
+
+from specialized_agents.agent_communication_bus import (
+    MessageType,
+    get_communication_bus,
+)
 
 bus = get_communication_bus()
 
@@ -72,7 +77,7 @@ if data.get("count", 0) > 0:
         print(f"  Duração: {conv.get('duration_seconds', 0):.2f}s")
         
         # Obter detalhes da conversa
-        print(f"\n  Mensagens capturadas:")
+        print("\n  Mensagens capturadas:")
         msg_response = requests.get(f"http://localhost:8503/interceptor/conversations/{conv.get('id')}/messages")
         if msg_response.status_code == 200:
             messages_data = msg_response.json()

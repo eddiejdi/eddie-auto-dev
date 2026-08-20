@@ -10,10 +10,10 @@ import json
 import logging
 import threading
 import time
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from typing import Any
-from urllib.request import urlopen, Request
 from urllib.error import URLError
+from urllib.request import Request, urlopen
 
 logger = logging.getLogger("storj_exporter")
 
@@ -106,7 +106,7 @@ class StorjMetrics:
         self,
         lines: list[str],
         name: str,
-        value: float | int,
+        value: float,
         help_text: str = "",
         metric_type: str = "gauge",
         labels: str = "",

@@ -12,7 +12,7 @@ import signal
 import subprocess
 import sys
 import time
-from urllib.request import urlopen, Request
+from urllib.request import Request, urlopen
 
 LOG = "/tmp/streamlit_e2e.log"
 APP = "specialized_agents/conversation_monitor.py"

@@ -13,9 +13,7 @@ Roda uma vez após o boot (systemd `ha-tuya-boot-sync.service`):
 
 from __future__ import annotations
 
-import json
 import subprocess
-import sys
 import time
 import urllib.request
 

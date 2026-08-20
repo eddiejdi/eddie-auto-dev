@@ -3,15 +3,15 @@
 Test Agent Memory System
 Valida o sistema de memória persistente dos agentes
 """
+import asyncio
 import os
 import sys
-import asyncio
 from datetime import datetime
 
 # Adiciona o diretório raiz ao path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from specialized_agents.agent_memory import get_agent_memory, AgentMemory
+from specialized_agents.agent_memory import get_agent_memory
 
 
 async def test_basic_memory():
@@ -83,7 +83,7 @@ async def test_decision_learning():
     memory.update_decision_outcome(dec1, "failure", 
                                    {"error": "Service crashed in production"},
                                    feedback_score=-0.8)
-    print(f"  → Resultado: FALHA (crash em produção)")
+    print("  → Resultado: FALHA (crash em produção)")
     
     await asyncio.sleep(0.1)
     
@@ -104,7 +104,7 @@ async def test_decision_learning():
     memory.update_decision_outcome(dec2, "failure",
                                    {"error": "Still crashes after 2000 requests"},
                                    feedback_score=-0.6)
-    print(f"  → Resultado: FALHA (ainda crasha)")
+    print("  → Resultado: FALHA (ainda crasha)")
     
     await asyncio.sleep(0.1)
     
@@ -125,10 +125,10 @@ async def test_decision_learning():
     memory.update_decision_outcome(dec3, "success",
                                    {"finding": "Connection pool not releasing properly"},
                                    feedback_score=1.0)
-    print(f"  → Resultado: SUCESSO (encontrou causa raiz)")
+    print("  → Resultado: SUCESSO (encontrou causa raiz)")
     
     # Agora testa recall - deve encontrar as 3
-    print(f"\n→ Buscando decisões similares...")
+    print("\n→ Buscando decisões similares...")
     similar = memory.recall_similar_decisions(
         application="payment-service",
         component="processor",
@@ -138,7 +138,7 @@ async def test_decision_learning():
     )
     
     print(f"✓ Total de decisões encontradas: {len(similar)}")
-    print(f"\nHistórico de aprendizado:")
+    print("\nHistórico de aprendizado:")
     for i, s in enumerate(similar, 1):
         outcome = s.get('outcome', 'pending')
         feedback = s.get('feedback_score', 0)
@@ -213,7 +213,7 @@ async def test_statistics():
     
     stats = memory.get_decision_statistics(days_back=7)
     
-    print(f"✓ Estatísticas dos últimos 7 dias:")
+    print("✓ Estatísticas dos últimos 7 dias:")
     print(f"  Total de decisões: {stats.get('total_decisions', 0)}")
     print(f"  Aplicações únicas: {stats.get('applications_count', 0)}")
     print(f"  Componentes únicos: {stats.get('components_count', 0)}")
@@ -222,7 +222,7 @@ async def test_statistics():
     print(f"  Sucessos: {stats.get('successes', 0)}")
     print(f"  Falhas: {stats.get('failures', 0)}")
     
-    print(f"\n  Decisões por tipo:")
+    print("\n  Decisões por tipo:")
     for dtype, count in stats.get('decisions_by_type', {}).items():
         print(f"    - {dtype}: {count}")
 
@@ -239,8 +239,8 @@ async def main():
         print("   Configure com: export DATABASE_URL=postgresql://user:pass@host:5432/db")
         return
     
-    print(f"\n✓ DATABASE_URL configurado")
-    print(f"  Agent: test_agent")
+    print("\n✓ DATABASE_URL configurado")
+    print("  Agent: test_agent")
     print(f"  Data: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
     
     try:

@@ -5,11 +5,11 @@ This script publishes request messages asking for authorization and
 readiness checks for enabling autonomous actions and deploying Open WebUI.
 """
 
-import uuid
-import time
 import importlib.util
-import pathlib
 import os
+import pathlib
+import time
+import uuid
 
 # Import agent_communication_bus directly from file to avoid package-level imports
 bus_path = pathlib.Path(__file__).resolve().parents[1] / 'specialized_agents' / 'agent_communication_bus.py'

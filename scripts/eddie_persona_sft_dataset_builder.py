@@ -33,7 +33,7 @@ def _parse_modelfile_messages(path: Path) -> list[tuple[str, str]]:
     msgs = re.findall(
         r'MESSAGE\s+(user|assistant)\s+"""(.*?)"""',
         text,
-        flags=re.S | re.I,
+        flags=re.DOTALL | re.IGNORECASE,
     )
     i = 0
     while i + 1 < len(msgs):

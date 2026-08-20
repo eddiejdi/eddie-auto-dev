@@ -19,15 +19,14 @@ import json
 import os
 import subprocess
 import sys
-from typing import List
 
 
-def load_data(path: str) -> List[dict]:
+def load_data(path: str) -> list[dict]:
     with open(path, 'r', encoding='utf-8') as f:
         return [json.loads(l) for l in f if l.strip()]
 
 
-def select_examples(data: List[dict], max_examples: int = 30):
+def select_examples(data: list[dict], max_examples: int = 30):
     seen = set()
     selected = []
     for item in data:
@@ -41,7 +40,7 @@ def select_examples(data: List[dict], max_examples: int = 30):
     return selected
 
 
-def build_system_prompt(selected: List[dict]) -> str:
+def build_system_prompt(selected: list[dict]) -> str:
     examples = "\n\nExemplos de como Edenilson responde:\n"
     for item in selected:
         p = item['prompt'][:150]
@@ -80,7 +79,7 @@ def run_ollama_create(modelfile_path: str, model_name: str, ollama_cmd: str = 'o
     subprocess.check_call(cmd)
 
 
-def validate_model(model_name: str, tests: List[str], ollama_cmd: str = 'ollama'):
+def validate_model(model_name: str, tests: list[str], ollama_cmd: str = 'ollama'):
     results = []
     for t in tests:
         p = subprocess.Popen([ollama_cmd, 'run', model_name], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

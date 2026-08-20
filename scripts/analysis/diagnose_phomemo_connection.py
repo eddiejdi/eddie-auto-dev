@@ -3,10 +3,10 @@
 Diagnóstico de Conexão Phomemo Q30
 Detecta conexão via USB e Bluetooth
 """
+import os
 import subprocess
 import sys
-import os
-from pathlib import Path
+
 
 def run_cmd(cmd, description):
     """Executa comando e retorna output."""

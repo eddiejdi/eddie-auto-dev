@@ -142,7 +142,7 @@ class TuyaBridgeClient:
         if self._token_update_callback is not None:
             try:
                 self._token_update_callback(token_info)
-            except Exception:  # noqa: BLE001
+            except Exception:
                 logger.exception("falha no callback de update_token")
 
     def stop(self) -> None:
@@ -185,10 +185,10 @@ class TuyaBridgeClient:
             )
             self._enqueue(event)
 
-    def add_device(self, device: Any) -> None:  # noqa: D401 - SDK interface
+    def add_device(self, device: Any) -> None:
         """Interface do SDK; sem operação."""
 
-    def remove_device(self, device_id: str) -> None:  # noqa: D401
+    def remove_device(self, device_id: str) -> None:
         """Interface do SDK; sem operação."""
 
     # --- handler MQ bruto (paho.mqtt thread) ---
@@ -217,7 +217,7 @@ class TuyaBridgeClient:
                     raw={"source": "mq_raw", "data": data},
                 )
                 self._enqueue(event)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("erro processando msg MQ")
 
     def _enqueue(self, event: TuyaStatusEvent) -> None:

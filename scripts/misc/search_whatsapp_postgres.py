@@ -5,9 +5,10 @@ Procura por chat com "nil" e documentos/PDFs
 """
 import os
 import sys
+from datetime import datetime, timedelta
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from datetime import datetime, timedelta
 
 # DATABASE_URL
 DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgress:estou_aqui_dev_2026@localhost:5432/estou_aqui")

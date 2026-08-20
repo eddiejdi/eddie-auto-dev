@@ -7,9 +7,9 @@ listeners (or the Open WebUI 'Diretor Shared' model) can pick it up.
 Usage:
   ./tools/invoke_director.py "Please produce a safety checklist for enabling autonomous mode"
 """
-import sys
-import pathlib
 import importlib.util
+import pathlib
+import sys
 
 if len(sys.argv) < 2:
     print("Usage: invoke_director.py \"message\"")
@@ -32,8 +32,8 @@ print('Bus publish:', msg.id if msg else 'failed')
 # If Postgres IPC is available, also publish request there so cross-process listeners can pick it up
 try:
     # import agent_ipc by path to avoid relying on package import
-    from pathlib import Path
     import importlib.util
+    from pathlib import Path
     agent_ipc_path = Path(__file__).resolve().parents[1] / 'tools' / 'agent_ipc.py'
     spec = importlib.util.spec_from_file_location('agent_ipc', str(agent_ipc_path))
     agent_ipc = importlib.util.module_from_spec(spec)
@@ -45,7 +45,9 @@ except Exception as e:
     print('DB publish failed:', e)
     # Try to infer Postgres creds from a docker container named 'shared-postgres'
     try:
-        import os, json, subprocess
+        import json
+        import os
+        import subprocess
         out = subprocess.run(['docker', 'inspect', 'shared-postgres', '--format', '{{json .Config.Env}}'], capture_output=True, text=True, timeout=5)
         if out.returncode == 0 and out.stdout:
             env_list = json.loads(out.stdout)

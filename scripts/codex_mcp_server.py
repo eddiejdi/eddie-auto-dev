@@ -14,17 +14,16 @@ Architecture:
                                          homelab bus notification
 """
 
-import asyncio
 import json
 import logging
 import os
 import re
 import subprocess
 import sys
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
+
 
 def _find_codex_bin() -> Path:
     """Find the codex binary dynamically — survives VS Code extension updates."""

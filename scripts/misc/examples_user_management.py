@@ -8,13 +8,13 @@ Rodar:
 
 import asyncio
 import json
+
 from specialized_agents.user_management import (
     UserConfig,
     create_user,
     delete_user,
-    list_users,
     get_user,
-    pipeline,
+    list_users,
 )
 
 
@@ -42,7 +42,7 @@ async def example_create_developer():
 
     result = await create_user(config)
 
-    print(f"\n✅ Resultado:")
+    print("\n✅ Resultado:")
     print(json.dumps(result, indent=2, default=str))
 
 
@@ -69,7 +69,7 @@ async def example_create_admin():
 
     result = await create_user(config)
 
-    print(f"\n✅ Resultado:")
+    print("\n✅ Resultado:")
     print(json.dumps(result, indent=2, default=str))
 
 
@@ -92,12 +92,12 @@ async def example_create_email_only():
     )
 
     print(f"\n📧 Criando email user: {config.username}")
-    print(f"   Sem SSH, sem home directory")
+    print("   Sem SSH, sem home directory")
     print(f"   Quota: {config.quota_mb}MB")
 
     result = await create_user(config)
 
-    print(f"\n✅ Resultado:")
+    print("\n✅ Resultado:")
     print(json.dumps(result, indent=2, default=str))
 
 
@@ -142,7 +142,7 @@ def example_get_user():
             for key, value in user.items():
                 print(f"   {key}: {value}")
         else:
-            print(f"❌ Usuário não encontrado")
+            print("❌ Usuário não encontrado")
     else:
         print("❌ Nenhum usuário para buscar")
 
@@ -163,7 +163,7 @@ async def example_delete_user():
 
         result = await delete_user(username)
 
-        print(f"\n✅ Resultado:")
+        print("\n✅ Resultado:")
         print(json.dumps(result, indent=2, default=str))
     else:
         print("❌ Nenhum usuário para deletar")
@@ -215,7 +215,7 @@ async def example_bulk_create():
             print(f"  ❌ {config.username}: {result['error']}")
             results.append({"username": config.username, "success": False})
 
-    print(f"\n📊 Resumo:")
+    print("\n📊 Resumo:")
     success_count = len([r for r in results if r["success"]])
     print(f"   ✅ Sucesso: {success_count}/{len(users_to_create)}")
     print(f"   ❌ Falhas: {len(users_to_create) - success_count}/{len(users_to_create)}")

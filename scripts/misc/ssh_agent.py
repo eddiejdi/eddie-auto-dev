@@ -4,17 +4,14 @@ SSH Agent - Agente para conexões SSH integrado com modelos de IA
 Permite executar comandos remotos, transferir arquivos e gerenciar conexões SSH
 """
 
-import paramiko
 import json
-import os
-import sys
-import socket
-from pathlib import Path
-from typing import Optional, Dict, Any, List
-from dataclasses import dataclass, asdict
-from datetime import datetime
-import threading
 import logging
+import os
+from dataclasses import asdict, dataclass
+from datetime import datetime
+from pathlib import Path
+
+import paramiko
 
 # Configuração de logging
 logging.basicConfig(
@@ -34,8 +31,8 @@ class SSHHost:
     hostname: str
     username: str
     port: int = 22
-    key_file: Optional[str] = None
-    password: Optional[str] = None
+    key_file: str | None = None
+    password: str | None = None
     description: str = ""
     
     def to_dict(self) -> dict:
@@ -50,8 +47,8 @@ class SSHAgentManager:
     """Gerenciador de conexões SSH"""
     
     def __init__(self):
-        self.hosts: Dict[str, SSHHost] = {}
-        self.connections: Dict[str, paramiko.SSHClient] = {}
+        self.hosts: dict[str, SSHHost] = {}
+        self.connections: dict[str, paramiko.SSHClient] = {}
         self.load_hosts()
     
     def load_hosts(self):
@@ -154,11 +151,11 @@ class SSHAgentManager:
         except paramiko.AuthenticationException:
             return {"status": "error", "message": f"Falha de autenticação em '{name}'"}
         except paramiko.SSHException as e:
-            return {"status": "error", "message": f"Erro SSH: {str(e)}"}
-        except socket.timeout:
+            return {"status": "error", "message": f"Erro SSH: {e!s}"}
+        except TimeoutError:
             return {"status": "error", "message": f"Timeout ao conectar em '{name}'"}
         except Exception as e:
-            return {"status": "error", "message": f"Erro: {str(e)}"}
+            return {"status": "error", "message": f"Erro: {e!s}"}
     
     def disconnect(self, name: str) -> dict:
         """Desconecta de um host"""
@@ -169,7 +166,7 @@ class SSHAgentManager:
                 logger.info(f"Desconectado de '{name}'")
                 return {"status": "success", "message": f"Desconectado de '{name}'"}
             except Exception as e:
-                return {"status": "error", "message": f"Erro ao desconectar: {str(e)}"}
+                return {"status": "error", "message": f"Erro ao desconectar: {e!s}"}
         return {"status": "error", "message": f"Não conectado a '{name}'"}
     
     def execute(self, name: str, command: str, timeout: int = 30) -> dict:
@@ -197,15 +194,15 @@ class SSHAgentManager:
                 "stderr": error
             }
         
-        except socket.timeout:
+        except TimeoutError:
             return {"status": "error", "message": f"Comando expirou após {timeout}s"}
         except Exception as e:
             # Tentar reconectar
             if name in self.connections:
                 del self.connections[name]
-            return {"status": "error", "message": f"Erro ao executar comando: {str(e)}"}
+            return {"status": "error", "message": f"Erro ao executar comando: {e!s}"}
     
-    def execute_multi(self, hosts: List[str], command: str, timeout: int = 30) -> dict:
+    def execute_multi(self, hosts: list[str], command: str, timeout: int = 30) -> dict:
         """Executa um comando em múltiplos hosts"""
         results = {}
         for host in hosts:
@@ -228,7 +225,7 @@ class SSHAgentManager:
                 "message": f"Arquivo enviado para {name}:{remote_path}"
             }
         except Exception as e:
-            return {"status": "error", "message": f"Erro no upload: {str(e)}"}
+            return {"status": "error", "message": f"Erro no upload: {e!s}"}
     
     def download_file(self, name: str, remote_path: str, local_path: str) -> dict:
         """Faz download de um arquivo do host remoto"""
@@ -246,7 +243,7 @@ class SSHAgentManager:
                 "message": f"Arquivo baixado de {name}:{remote_path}"
             }
         except Exception as e:
-            return {"status": "error", "message": f"Erro no download: {str(e)}"}
+            return {"status": "error", "message": f"Erro no download: {e!s}"}
     
     def test_connection(self, name: str) -> dict:
         """Testa a conexão com um host"""
@@ -296,7 +293,7 @@ ssh_manager = SSHAgentManager()
 
 def create_api_server():
     """Cria servidor Flask para API REST"""
-    from flask import Flask, request, jsonify
+    from flask import Flask, jsonify, request
     from flask_cors import CORS
     
     app = Flask(__name__)
@@ -350,7 +347,6 @@ def create_api_server():
 
 def cli_interface():
     """Interface de linha de comando interativa"""
-    import readline
     
     print("=" * 50)
     print("🔐 SSH Agent - Interface de Comando")

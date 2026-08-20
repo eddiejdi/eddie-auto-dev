@@ -3,9 +3,10 @@
 Fix Missing Gauges - Popula métricas faltantes no Prometheus
 Método: Push Gateway ou HTTP Server local
 """
-import time
-from prometheus_client import start_http_server, Gauge, Counter
 import logging
+import time
+
+from prometheus_client import Gauge, start_http_server
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

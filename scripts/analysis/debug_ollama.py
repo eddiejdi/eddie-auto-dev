@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Debug do Ollama API"""
 
-import json
 import os
+
 import requests
 
 content = open("/home/homelab/myClaude/shared-assistant-v2.Modelfile").read()

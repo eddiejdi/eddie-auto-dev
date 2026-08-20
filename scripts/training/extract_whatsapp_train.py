@@ -3,10 +3,10 @@
 Script para extrair conversas do WhatsApp via WAHA e treinar modelo Ollama
 """
 
-import requests
 import json
 import os
-from datetime import datetime
+
+import requests
 
 # Configurações WAHA
 WAHA_BASE_URL = os.getenv("WAHA_BASE_URL", "http://localhost:3001")
@@ -154,8 +154,7 @@ def save_training_data(data, filename="whatsapp_training_data.jsonl"):
     filepath = f"/home/homelab/myClaude/{filename}"
     
     with open(filepath, 'w', encoding='utf-8') as f:
-        for item in data:
-            f.write(json.dumps(item, ensure_ascii=False) + '\n')
+        f.writelines(json.dumps(item, ensure_ascii=False) + '\n' for item in data)
     
     print(f"✅ Dados salvos em {filepath}")
     return filepath

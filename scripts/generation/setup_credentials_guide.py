@@ -4,8 +4,6 @@ Guia Interativo para Configurar Credenciais Google
 """
 
 import webbrowser
-import os
-import sys
 from pathlib import Path
 
 CREDENTIALS_PATH = Path("/home/homelab/myClaude/credentials.json")

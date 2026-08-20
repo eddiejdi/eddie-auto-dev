@@ -5,11 +5,10 @@ operations unless `AGENT_API_URL` is set and `ALLOW_AGENT_API=1` is present
 in the environment. Use this to integrate agents; real consumption should
 be enabled only after deploy to homelab.
 """
-from typing import List, Dict, Optional
-import os
 import json
-from urllib.request import urlopen, Request
-from urllib.error import URLError, HTTPError
+import os
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 AGENT_API_URL = os.environ.get('AGENT_API_URL')  # e.g. http://127.0.0.1:8888
 ALLOW = os.environ.get('ALLOW_AGENT_API', '0') == '1'
@@ -19,7 +18,7 @@ def _disabled_response():
     return []
 
 
-def fetch_pending(limit: int = 10) -> List[Dict]:
+def fetch_pending(limit: int = 10) -> list[dict]:
     """Return list of pending RCAs from the agent API.
 
     Returns empty list when client is disabled.
@@ -36,7 +35,7 @@ def fetch_pending(limit: int = 10) -> List[Dict]:
         return []
 
 
-def get_rca(issue: str) -> Optional[Dict]:
+def get_rca(issue: str) -> dict | None:
     if not AGENT_API_URL or not ALLOW:
         return None
     url = AGENT_API_URL.rstrip('/') + f'/rca/{issue}'

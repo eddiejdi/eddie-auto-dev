@@ -4,15 +4,14 @@ Script de validação Selenium para endpoints www.rpa4all.com
 Testa via navegador real (headless)
 """
 
-import time
 import sys
+import time
+
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, WebDriverException
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+
 
 def setup_driver():
     """Configurar Chrome headless"""
@@ -67,12 +66,12 @@ def test_endpoint(driver, url, name, expected_text=None, timeout=10, wait_time=5
         
         # Detectar erro 502
         if '502' in page_source or 'Bad Gateway' in page_source:
-            print(f"   ❌ ERRO: Página retornou 502 Bad Gateway")
+            print("   ❌ ERRO: Página retornou 502 Bad Gateway")
             return False
         
         # Detectar erro 404
         if '404' in page_source or 'Not Found' in page_source:
-            print(f"   ❌ ERRO: Página retornou 404 Not Found")
+            print("   ❌ ERRO: Página retornou 404 Not Found")
             return False
         
         # Verificar texto esperado

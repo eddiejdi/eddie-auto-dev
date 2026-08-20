@@ -5,8 +5,8 @@ version: 1.0.0
 description: Envia mensagens via WhatsApp usando WAHA API
 """
 
+
 import requests
-from typing import Optional
 from pydantic import BaseModel, Field
 
 
@@ -70,7 +70,7 @@ class Tools:
         except requests.exceptions.ConnectionError:
             return "❌ Erro: Não foi possível conectar ao serviço WhatsApp. Verifique se o WAHA está rodando."
         except Exception as e:
-            return f"❌ Erro ao enviar mensagem: {str(e)}"
+            return f"❌ Erro ao enviar mensagem: {e!s}"
 
     def check_whatsapp_status(self, __user__: dict = {}) -> str:
         """
@@ -100,4 +100,4 @@ class Tools:
                 return f"❌ Erro ao verificar status: {response.text}"
                 
         except Exception as e:
-            return f"❌ Erro ao verificar status: {str(e)}"
+            return f"❌ Erro ao verificar status: {e!s}"

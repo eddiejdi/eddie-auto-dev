@@ -8,19 +8,19 @@ Migrado de SQLite → PostgreSQL em 2026-03-03.
 Fonte primária: PostgreSQL (schema btc, porta 5433)
 """
 
-import os
-import sys
 import json
-import time
+import os
 import subprocess
+import sys
 import threading
+import time
 import urllib.request
-from pathlib import Path
 from datetime import datetime
-from typing import Dict, Optional
-from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
-from profile_rules import validate_profile_for_symbol
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
 from position_reconstruction import reconstruct_open_buys, summarize_open_buys
+from profile_rules import validate_profile_for_symbol
 
 try:
     import psycopg2
@@ -46,7 +46,7 @@ except Exception:
         sys.exit(1)
 
 
-def load_config() -> Dict:
+def load_config() -> dict:
     """Carrega config.json"""
     try:
         with open(CONFIG_PATH) as f:
@@ -88,7 +88,7 @@ class MetricsCollector:
         self.profile = profile
         # Cache for heavy equity-daily CTE (Prometheus scrape is ~15s; day PnL need not match that).
         # Override: EXPORTER_EQUITY_DAILY_TTL seconds (default 60).
-        self._equity_daily_cache: Optional[Dict] = None
+        self._equity_daily_cache: dict | None = None
         self._equity_daily_cache_ts: float = 0.0
         self._equity_daily_ttl: float = float(os.environ.get("EXPORTER_EQUITY_DAILY_TTL", "60"))
 
@@ -196,7 +196,7 @@ class MetricsCollector:
             return 0
 
 
-    def _fetch_exchange_balances(self) -> Dict[str, float]:
+    def _fetch_exchange_balances(self) -> dict[str, float]:
         """Busca saldos reais da exchange KuCoin via kucoin_api module.
 
         Returns:
@@ -261,7 +261,7 @@ class MetricsCollector:
             print(f"⚠️ Falha ao salvar snapshot: {e}")
 
 
-    def _get_equity_daily_changes(self) -> Dict:
+    def _get_equity_daily_changes(self) -> dict:
         """Variação de equity por dia calendário via snapshots completos.
 
         Equivalente ao PnL que a KuCoin exibe como "variação do dia" — inclui
@@ -347,7 +347,7 @@ class MetricsCollector:
         self._equity_daily_cache_ts = now_mono
         return result
 
-    def get_metrics(self) -> Dict:
+    def get_metrics(self) -> dict:
         """Coleta todas as métricas do PostgreSQL, separadas por modo (dry/live)"""
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -511,7 +511,10 @@ class MetricsCollector:
 
         # ── Track record confidence (lookback configurável) ──
         try:
-            from track_record_confidence import compute_snapshot_from_sells, merge_track_record_cfg
+            from track_record_confidence import (
+                compute_snapshot_from_sells,
+                merge_track_record_cfg,
+            )
 
             cfg = load_config()
             tr_cfg = merge_track_record_cfg(
@@ -694,7 +697,7 @@ class MetricsCollector:
         conn.close()
         return metrics
 
-    def _collect_rebuy_envelope(self, cursor) -> Dict:
+    def _collect_rebuy_envelope(self, cursor) -> dict:
         """Último bloqueio de rebuy anotado em decisions.features pelo agente.
 
         O envelope é mecânico (grace→decay→expired) e calculado pelo próprio
@@ -856,7 +859,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
         except Exception as e:
             self.send_response(500)
             self.end_headers()
-            self.wfile.write(f'{{"error": "{e}"}}'.encode('utf-8'))
+            self.wfile.write(f'{{"error": "{e}"}}'.encode())
 
     def handle_toggle_mode(self):
         """Alterna entre LIVE e DRY RUN no config.json — retorna HTML amigável"""
@@ -891,7 +894,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             self.send_response(500)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            self.wfile.write(f'{{"error": "{e}"}}'.encode('utf-8'))
+            self.wfile.write(f'{{"error": "{e}"}}'.encode())
 
     def _set_mode_direct(self, live: bool):
         """Define modo diretamente via GET /set-live ou /set-dry"""
@@ -923,7 +926,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
         except Exception as e:
             self.send_response(500)
             self.end_headers()
-            self.wfile.write(f'{{"error": "{e}"}}'.encode('utf-8'))
+            self.wfile.write(f'{{"error": "{e}"}}'.encode())
 
     def _send_mode_html(self, current_live: bool, previous_live: bool):
         """Retorna página HTML bonita com status e botões"""
@@ -1004,7 +1007,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             self.send_response(500)
             self.send_header('Content-Type', 'application/json')
             self.end_headers()
-            self.wfile.write(f'{{"error": "{e}"}}'.encode('utf-8'))
+            self.wfile.write(f'{{"error": "{e}"}}'.encode())
 
     def send_config(self):
         """Retorna config.json como JSON"""
@@ -1018,7 +1021,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
         except Exception as e:
             self.send_response(500)
             self.end_headers()
-            self.wfile.write(f"Error: {e}".encode('utf-8'))
+            self.wfile.write(f"Error: {e}".encode())
 
     def send_metrics(self):
         """Envia métricas em formato Prometheus — filtradas pelo modo ativo"""
@@ -1384,11 +1387,11 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
                             output.append("")
                         output.append("# HELP btc_trade_window_mode_info Fresh AI trade window mode label")
                         output.append("# TYPE btc_trade_window_mode_info gauge")
-                        output.append(f'btc_trade_window_mode_info{{mode="{str(tw.get("mode", "apply") or "apply")}",{_cl}}} 1')
+                        output.append(f'btc_trade_window_mode_info{{mode="{tw.get("mode", "apply") or "apply"!s}",{_cl}}} 1')
                         output.append("")
                         output.append("# HELP btc_trade_window_regime_info Fresh AI trade window regime label")
                         output.append("# TYPE btc_trade_window_regime_info gauge")
-                        output.append(f'btc_trade_window_regime_info{{regime="{str(tw.get("regime", "unknown") or "unknown")}",{_cl}}} 1')
+                        output.append(f'btc_trade_window_regime_info{{regime="{tw.get("regime", "unknown") or "unknown"!s}",{_cl}}} 1')
                         output.append("")
                 else:
                     # RAG file not yet created — export neutral defaults
@@ -1592,7 +1595,7 @@ body {{ font-family: -apple-system, sans-serif; background: #1a1a2e; color: #eee
             traceback.print_exc()
             self.send_response(500)
             self.end_headers()
-            self.wfile.write(f"Error: {e}".encode('utf-8'))
+            self.wfile.write(f"Error: {e}".encode())
 
     def send_health(self):
         """Health check endpoint"""

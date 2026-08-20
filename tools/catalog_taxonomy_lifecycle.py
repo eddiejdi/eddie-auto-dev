@@ -16,7 +16,6 @@ import logging
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Set, Tuple
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -42,8 +41,8 @@ def _save(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data, indent=2, default=str))
 
 
-def _flatten(catalog: dict) -> Dict[str, dict]:
-    out: Dict[str, dict] = {}
+def _flatten(catalog: dict) -> dict[str, dict]:
+    out: dict[str, dict] = {}
     for cat, entries in (catalog.get("categories") or {}).items():
         if not isinstance(entries, dict):
             continue
@@ -55,10 +54,10 @@ def _flatten(catalog: dict) -> Dict[str, dict]:
     return out
 
 
-def entities_with_strong_links(graph: dict) -> Tuple[Set[str], Set[str]]:
+def entities_with_strong_links(graph: dict) -> tuple[set[str], set[str]]:
     """Return (tables_with_strong, apis_with_strong) using type:id keys stripped."""
-    tables: Set[str] = set()
-    apis: Set[str] = set()
+    tables: set[str] = set()
+    apis: set[str] = set()
     for e in graph.get("edges") or []:
         if e.get("relation") not in STRONG_RELATIONS:
             continue
@@ -75,11 +74,11 @@ def entities_with_strong_links(graph: dict) -> Tuple[Set[str], Set[str]]:
 
 
 def apply_unused_to_tables(
-    tables_catalog: dict, linked_tables: Set[str]
-) -> Tuple[dict, List[str]]:
+    tables_catalog: dict, linked_tables: set[str]
+) -> tuple[dict, list[str]]:
     """Mutate catalog: mark unlinked tables as unused. Return (catalog, newly_unused)."""
-    newly: List[str] = []
-    status_counts: Dict[str, int] = defaultdict(int)
+    newly: list[str] = []
+    status_counts: dict[str, int] = defaultdict(int)
 
     for cat, entries in (tables_catalog.get("categories") or {}).items():
         if not isinstance(entries, dict):
@@ -116,13 +115,13 @@ def apply_unused_to_tables(
 
 
 def annotate_api_orphan_flags(
-    apis_catalog: dict, linked_apis: Set[str]
-) -> Tuple[dict, List[str]]:
+    apis_catalog: dict, linked_apis: set[str]
+) -> tuple[dict, list[str]]:
     """
     APIs are NOT auto-set to unused (too noisy).
     Flag orphan=true when no strong table link and no relatedTables.
     """
-    orphans: List[str] = []
+    orphans: list[str] = []
     for cat, entries in (apis_catalog.get("categories") or {}).items():
         if not isinstance(entries, dict):
             continue
@@ -147,7 +146,7 @@ def annotate_api_orphan_flags(
     return apis_catalog, orphans
 
 
-def ownership_gaps(tables: dict, apis: dict) -> Dict[str, List[str]]:
+def ownership_gaps(tables: dict, apis: dict) -> dict[str, list[str]]:
     gaps = {
         "tables_unknown_owner": [],
         "tables_unassigned_team": [],
@@ -169,10 +168,10 @@ def ownership_gaps(tables: dict, apis: dict) -> Dict[str, List[str]]:
 
 def write_orphan_report(
     out_dir: Path,
-    unused_tables: List[str],
-    orphan_apis: List[str],
-    tables_flat: Dict[str, dict],
-    apis_flat: Dict[str, dict],
+    unused_tables: list[str],
+    orphan_apis: list[str],
+    tables_flat: dict[str, dict],
+    apis_flat: dict[str, dict],
 ) -> Path:
     lines = [
         "# Taxonomy Orphans & Unused\n\n",
@@ -192,7 +191,7 @@ def write_orphan_report(
 
     lines.append(f"\n## Orphan APIs (no table link) ({len(orphan_apis)})\n\n")
     # group by category
-    by_cat: Dict[str, List[str]] = defaultdict(list)
+    by_cat: dict[str, list[str]] = defaultdict(list)
     for key in orphan_apis:
         by_cat[apis_flat.get(key, {}).get("_category", "general")].append(key)
     for cat in sorted(by_cat):
@@ -216,7 +215,7 @@ def write_orphan_report(
     return path
 
 
-def write_ownership_gaps_report(out_dir: Path, gaps: Dict[str, List[str]]) -> Path:
+def write_ownership_gaps_report(out_dir: Path, gaps: dict[str, list[str]]) -> Path:
     lines = [
         "# Taxonomy Ownership Gaps\n\n",
         f"**Generated:** {datetime.now().isoformat()}\n\n",

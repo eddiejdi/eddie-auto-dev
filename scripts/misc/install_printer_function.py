@@ -2,10 +2,10 @@
 """
 Script para instalar função de impressora no Open WebUI
 """
-import requests
-import json
-import sys
 import os
+import sys
+
+import requests
 
 WEBUI_URL = "http://192.168.15.2:8002"  # Open WebUI em Docker
 WEBUI_URL = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:8002"  # Open WebUI em Docker
@@ -25,7 +25,7 @@ def main():
     
     if not os.path.exists(func_file):
         print(f"❌ Arquivo não encontrado: {func_file}")
-        print(f"   Execute primeiro: scp openwebui_printer_function.py homelab@${{HOMELAB_HOST}}:...")
+        print("   Execute primeiro: scp openwebui_printer_function.py homelab@${HOMELAB_HOST}:...")
         return False
     
     with open(func_file, 'r') as f:
@@ -70,7 +70,7 @@ def main():
                 timeout=10
             )
             if r.status_code == 200:
-                print(f"✅ Função anterior removida")
+                print("✅ Função anterior removida")
             else:
                 print(f"⚠️ Não foi possível remover função anterior (código {r.status_code})")
     except Exception as e:
@@ -99,7 +99,7 @@ def main():
         )
         
         if r.status_code in [200, 201]:
-            print(f"✅ Função instalada com sucesso!")
+            print("✅ Função instalada com sucesso!")
             print(f"\n📋 ID: {FUNCTION_ID}")
             print(f"   Nome: {FUNCTION_NAME}")
         else:
@@ -122,9 +122,9 @@ def main():
         )
         
         if r.status_code == 200:
-            print(f"✅ Função ativa e pronta para usar!")
+            print("✅ Função ativa e pronta para usar!")
         else:
-            print(f"⚠️ Função criada, mas não foi possível confirmar status")
+            print("⚠️ Função criada, mas não foi possível confirmar status")
     except Exception as e:
         print(f"⚠️ Erro ao verificar status: {e}")
     

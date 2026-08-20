@@ -4,10 +4,9 @@ TF-IDF + Technical Synonyms Compatibility Scoring
 Gives more weight to rare technical terms, expands synonyms
 """
 import re
-from typing import Dict, Set, Tuple
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
-
 
 # Technical synonyms dictionary (DevOps/SRE/Platform Engineering)
 TECH_SYNONYMS = {
@@ -78,7 +77,7 @@ def expand_tech_terms(text: str) -> str:
 
 
 def compute_compatibility_tfidf(resume_text: str, job_text: str, 
-                                expand_synonyms: bool = True) -> Tuple[float, str, Dict]:
+                                expand_synonyms: bool = True) -> tuple[float, str, dict]:
     """
     Compute compatibility using TF-IDF weighting with optional synonym expansion.
     
@@ -160,7 +159,7 @@ def compute_compatibility_tfidf(resume_text: str, job_text: str,
         return fallback_score, f"TF-IDF failed ({e}), using Jaccard fallback", {"method": "fallback"}
 
 
-def compute_compatibility_tfidf_hybrid(resume_text: str, job_text: str) -> Tuple[float, str, Dict]:
+def compute_compatibility_tfidf_hybrid(resume_text: str, job_text: str) -> tuple[float, str, dict]:
     """
     Hybrid: 60% TF-IDF with synonyms + 40% simple TF-IDF.
     Balances synonym expansion with exact term matching.

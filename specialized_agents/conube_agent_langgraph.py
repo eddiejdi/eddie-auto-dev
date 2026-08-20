@@ -43,7 +43,7 @@ class ConubeTestLoginAgent(HomelabAgent):
         return f"Conube login test (headless={headless})"
 
     def _execute_work(self, state: AgentState) -> dict:
-        from specialized_agents.conube_agent import _build_agent, ConubeActionRequest
+        from specialized_agents.conube_agent import ConubeActionRequest, _build_agent
         extra    = state.get("extra", {})
         headless = extra.get("headless")
         req      = ConubeActionRequest(headless=headless) if headless is not None else None
@@ -74,7 +74,11 @@ class ConubeDailySummaryAgent(HomelabAgent):
         return f"Conube daily summary (refresh={refresh})"
 
     def _execute_work(self, state: AgentState) -> dict:
-        from specialized_agents.conube_agent import _build_agent, _build_degraded_report, CONUBE_LOGIN_URL
+        from specialized_agents.conube_agent import (
+            CONUBE_LOGIN_URL,
+            _build_agent,
+            _build_degraded_report,
+        )
         extra      = state.get("extra", {})
         headless   = extra.get("headless")
         refresh    = extra.get("refresh", False)
@@ -131,13 +135,6 @@ class ConubeRemediationAgent(HomelabAgent):
 
     def _execute_work(self, state: AgentState) -> dict:
         from specialized_agents.conube_agent import _build_agent
-        from specialized_agents.conube_remediation import (
-            close_open_financial_periods,
-            fetch_operational_summary,
-            needs_remediation,
-            remediate_client_pending_tasks,
-            run_remediation,
-        )
 
         extra = state.get("extra", {})
         headless = extra.get("headless")
@@ -236,7 +233,9 @@ class ConubeRemediationAgent(HomelabAgent):
             }
 
         if mode == "selenium_balances":
-            from specialized_agents.conube_selenium import close_overdue_balances_without_movement
+            from specialized_agents.conube_selenium import (
+                close_overdue_balances_without_movement,
+            )
 
             balances_result = close_overdue_balances_without_movement(
                 agent,
@@ -255,7 +254,9 @@ class ConubeRemediationAgent(HomelabAgent):
             }
 
         if mode == "selenium_tasks":
-            from specialized_agents.conube_selenium import remediate_pending_tasks_selenium
+            from specialized_agents.conube_selenium import (
+                remediate_pending_tasks_selenium,
+            )
 
             tasks_result = remediate_pending_tasks_selenium(
                 agent,

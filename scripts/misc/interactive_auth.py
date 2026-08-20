@@ -3,13 +3,14 @@
 Autenticação interativa - insira o código manualmente
 """
 import json
-from pathlib import Path
-from google_auth_oauthlib.flow import InstalledAppFlow
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
-from googleapiclient.discovery import build
-from datetime import datetime
 import sys
+from datetime import datetime
+from pathlib import Path
+
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
 
 CREDS_FILE = Path('/home/homelab/myClaude/credentials.json')
 DRIVE_DIR = Path('/home/homelab/myClaude/drive_data')
@@ -144,7 +145,7 @@ def search_resume(creds):
                 if files:
                     print(f"✓ '{term}': {len(files)} arquivo(s)")
                     all_files.extend(files)
-            except Exception as e:
+            except Exception:
                 print(f"⚠️  '{term}': erro")
         
         if not all_files:

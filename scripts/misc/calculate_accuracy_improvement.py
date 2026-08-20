@@ -4,9 +4,8 @@ Calculadora de Tempo de Melhoria de Acurácia - Eddie_whatsapp Model
 Estima quanto tempo levaria para melhorar de 88% para diferentes níveis
 """
 
-import math
 from dataclasses import dataclass
-from typing import List, Tuple
+
 
 @dataclass
 class TrainingEstimate:
@@ -46,8 +45,7 @@ class AccuracyCalculator:
         if target_acc <= self.current_validation_acc:
             return 0
         
-        if target_acc > self.MAX_THEORETICAL_VAL_ACC:
-            target_acc = self.MAX_THEORETICAL_VAL_ACC
+        target_acc = min(target_acc, self.MAX_THEORETICAL_VAL_ACC)
         
         # Curva de convergência sigmoide melhorada
         current_progress = (self.current_validation_acc - 0.5) / (self.MAX_THEORETICAL_VAL_ACC - 0.5)
@@ -73,7 +71,7 @@ class AccuracyCalculator:
         """Calcula tempo total em horas"""
         return (rounds * self.TIME_PER_ROUND_MIN) / 60.0
     
-    def estimate_achievement(self, target_acc: float) -> Tuple[float, float]:
+    def estimate_achievement(self, target_acc: float) -> tuple[float, float]:
         """
         Estima acurácia atingível após N rounds
         Retorna (acurácia_estimada, confiança_0_to_1)
@@ -98,7 +96,7 @@ class AccuracyCalculator:
         
         return round(acc_achievable, 4), confidence
     
-    def generate_scenarios(self) -> List[TrainingEstimate]:
+    def generate_scenarios(self) -> list[TrainingEstimate]:
         """Gera cenários de melhoria"""
         scenarios = []
         targets = [0.89, 0.90, 0.91, 0.92, 0.93, 0.94, 0.95]
@@ -142,7 +140,7 @@ class AccuracyCalculator:
         
         return scenarios
     
-    def format_table(self, scenarios: List[TrainingEstimate]) -> str:
+    def format_table(self, scenarios: list[TrainingEstimate]) -> str:
         """Formata tabela de cenários"""
         lines = [
             "",

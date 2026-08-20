@@ -5,12 +5,12 @@ send a Telegram notification with the portal link (if Telegram is configured).
 
 Usage: python3 tools/portal_flow.py
 """
-import subprocess
-import time
+import asyncio
 import json
 import os
-import asyncio
 import pathlib
+import subprocess
+import time
 
 BASE = pathlib.Path(__file__).resolve().parents[1]
 
@@ -41,12 +41,13 @@ async def try_send_telegram(title: str, message: str):
         from specialized_agents.telegram_client import TelegramNotifier
     except Exception:
         # Attempt to load by path if package import fails (when PYTHONPATH not set)
-        import importlib.util, pathlib
+        import importlib.util
+        import pathlib
         path = pathlib.Path(__file__).resolve().parents[1] / 'specialized_agents' / 'telegram_client.py'
         spec = importlib.util.spec_from_file_location('telegram_client_local', str(path))
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        TelegramNotifier = getattr(mod, 'TelegramNotifier')
+        TelegramNotifier = mod.TelegramNotifier
     notifier = TelegramNotifier()
     if not notifier.client.is_configured():
         print('Telegram not configured (set TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID).')

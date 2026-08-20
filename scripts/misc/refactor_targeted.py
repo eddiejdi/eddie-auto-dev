@@ -2,9 +2,9 @@
 """
 Aplicar refatoração direcionada nos arquivos com maior contagem de 'eddie'.
 """
-from pathlib import Path
-import re
 import logging
+import re
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)

@@ -30,13 +30,13 @@ import sys
 import time
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import psycopg2
 import psycopg2.extras
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "btc_trading_agent"))
-from secrets_helper import get_database_url  # noqa: E402
+from secrets_helper import get_database_url
 
 SCHEMA = "btc"
 OLLAMA_NAS_HOST = os.environ.get("OLLAMA_NAS_HOST", "http://192.168.15.4:11436")
@@ -83,7 +83,7 @@ def ensure_shadow_table(conn) -> None:
         )
 
 
-def fetch_pending(conn, limit: int) -> List[Dict[str, Any]]:
+def fetch_pending(conn, limit: int) -> list[dict[str, Any]]:
     """Chamadas de produção ainda não avaliadas para o candidato atual."""
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(f"""
@@ -98,10 +98,10 @@ def fetch_pending(conn, limit: int) -> List[Dict[str, Any]]:
         return [dict(r) for r in cur.fetchall()]
 
 
-def ask_candidate(prompt: str, call_type: str, timeout: float = 120.0) -> Dict[str, Any]:
+def ask_candidate(prompt: str, call_type: str, timeout: float = 120.0) -> dict[str, Any]:
     """Reenvia o prompt de produção ao candidato na NAS. Só leitura de modelo."""
     # controls/window pedem JSON; plan é texto livre.
-    body: Dict[str, Any] = {
+    body: dict[str, Any] = {
         "model": CANDIDATE_MODEL, "prompt": prompt, "stream": False,
         "options": {"temperature": 0.0, "num_ctx": 4096, "num_predict": 1024},
     }
@@ -117,7 +117,7 @@ def ask_candidate(prompt: str, call_type: str, timeout: float = 120.0) -> Dict[s
         data = json.loads(resp.read())
     latency_ms = (time.time() - started) * 1000.0
     text = (data.get("response") or "").strip()
-    parsed: Optional[dict] = None
+    parsed: dict | None = None
     if call_type in ("controls", "window") and text:
         try:
             parsed = json.loads(text)
@@ -126,8 +126,8 @@ def ask_candidate(prompt: str, call_type: str, timeout: float = 120.0) -> Dict[s
     return {"text": text, "json": parsed, "latency_ms": latency_ms}
 
 
-def record_result(conn, call: Dict[str, Any], result: Optional[Dict[str, Any]],
-                  error: Optional[str]) -> None:
+def record_result(conn, call: dict[str, Any], result: dict[str, Any] | None,
+                  error: str | None) -> None:
     with conn.cursor() as cur:
         cur.execute(f"""
             INSERT INTO {SCHEMA}.llm_shadow_results (
@@ -199,7 +199,7 @@ def run_report() -> int:
             log.info("Sem resultados de shadow ainda. Rode o modo padrão primeiro.")
             return 0
 
-        by_type: Dict[str, Dict[str, Any]] = {}
+        by_type: dict[str, dict[str, Any]] = {}
         for r in rows:
             ct = r["call_type"]
             b = by_type.setdefault(ct, {

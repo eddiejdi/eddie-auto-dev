@@ -4,11 +4,11 @@ Teste automatizado do Agent Chat usando Web Scraping
 Alternativa ao Selenium quando Chrome não está disponível
 """
 
+import json
+from datetime import datetime
+
 import requests
 from bs4 import BeautifulSoup
-import json
-import time
-from datetime import datetime
 
 # URLs dos serviços
 SERVICES = {
@@ -78,7 +78,7 @@ def test_api_endpoint(name, url, expected_fields=None):
         # Tenta parsear JSON
         try:
             data = response.json()
-            print(f"   ✅ Resposta JSON válida")
+            print("   ✅ Resposta JSON válida")
             
             # Mostra campos
             if isinstance(data, dict):
@@ -95,7 +95,7 @@ def test_api_endpoint(name, url, expected_fields=None):
         except json.JSONDecodeError:
             # Pode ser HTML (Swagger)
             if "swagger" in response.text.lower() or "openapi" in response.text.lower():
-                print(f"   ✅ Swagger UI detectado")
+                print("   ✅ Swagger UI detectado")
                 return True
             return False
         
@@ -105,7 +105,7 @@ def test_api_endpoint(name, url, expected_fields=None):
 
 def test_code_generation():
     """Testa a geração de código via API."""
-    print(f"\n🧪 Testando Geração de Código")
+    print("\n🧪 Testando Geração de Código")
     print("-" * 50)
     
     try:
@@ -144,7 +144,7 @@ def test_code_generation():
 
 def test_code_execution():
     """Testa a execução de código via API."""
-    print(f"\n🧪 Testando Execução de Código")
+    print("\n🧪 Testando Execução de Código")
     print("-" * 50)
     
     try:
@@ -164,7 +164,7 @@ def test_code_execution():
             print(f"   📋 Resposta: {json.dumps(data)[:200]}...")
             
             # Endpoint respondeu, mesmo que execução falhe (Docker)
-            print(f"   ✅ Endpoint de execução funcionando")
+            print("   ✅ Endpoint de execução funcionando")
             return True
         
         return False
@@ -175,7 +175,7 @@ def test_code_execution():
 
 def test_chat_interaction():
     """Simula interação com o chat via Streamlit API."""
-    print(f"\n🧪 Testando Interação com Chat (via Ollama)")
+    print("\n🧪 Testando Interação com Chat (via Ollama)")
     print("-" * 50)
     
     try:
@@ -277,7 +277,7 @@ def main():
             "total": passed + failed
         }, f, indent=2)
     
-    print(f"\n📄 Resultados salvos em /tmp/rpa_scraping_results.json")
+    print("\n📄 Resultados salvos em /tmp/rpa_scraping_results.json")
     
     return failed == 0
 

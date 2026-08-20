@@ -2,11 +2,13 @@
 """Validação da landing page RPA4ALL com Selenium"""
 
 import sys
+
 try:
+    import time
+
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.common.by import By
-    import time
 except ImportError:
     print("❌ Selenium não instalado. Execute: pip install selenium")
     sys.exit(1)
@@ -90,7 +92,7 @@ def validate_landing_page(url="http://localhost:8001"):
         
         # Resumo
         print(f"\n{'='*60}")
-        print(f"📊 RESUMO DA VALIDAÇÃO")
+        print("📊 RESUMO DA VALIDAÇÃO")
         print(f"{'='*60}")
         print(f"   Total de elementos testados: {len(elements)}")
         print(f"   ✅ Encontrados: {len(found)}")
@@ -98,7 +100,7 @@ def validate_landing_page(url="http://localhost:8001"):
         print(f"   Taxa de sucesso: {len(found)/len(elements)*100:.1f}%")
         
         if missing:
-            print(f"\n⚠️  Elementos faltando:")
+            print("\n⚠️  Elementos faltando:")
             for m in missing:
                 print(f"   • {m}")
         

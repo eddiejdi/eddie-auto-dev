@@ -8,9 +8,7 @@ It uses simple heuristics to produce deterministic, useful outputs when a
 real LLM or Ollama integration is not available. This allows advanced
 compatibility logic to work in a degraded but functional mode.
 """
-from typing import Optional
 import os
-import json
 
 
 def temperature_for_match(score: float) -> float:
@@ -74,7 +72,7 @@ def _simple_diagnostic(resume: str, job: str) -> str:
     return "\n".join(parts)
 
 
-def call_ollama(prompt: str, temperature: float = 0.1) -> Optional[str]:
+def call_ollama(prompt: str, temperature: float = 0.1) -> str | None:
     """Heuristic replacement for LLM calls.
 
     If a real Ollama host is configured via `OLLAMA_HOST` and an HTTP
@@ -105,12 +103,9 @@ def call_ollama(prompt: str, temperature: float = 0.1) -> Optional[str]:
 LLM-based compatibility scoring using shared-whatsapp model
 Provides semantic understanding beyond simple token matching
 """
-import os
-import json
-import requests
 import time
-from typing import Dict, Optional, Tuple
 
+import requests
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 MODEL_NAME = os.getenv("WHATSAPP_MODEL", "shared-whatsapp:latest")
@@ -120,7 +115,7 @@ TEMP_MIN = float(os.getenv("LLM_TEMP_MIN", "0.05"))
 TEMP_MAX = float(os.getenv("LLM_TEMP_MAX", "0.6"))
 
 
-def call_ollama(prompt: str, model: str = MODEL_NAME, temperature: float = 0.1) -> Optional[str]:
+def call_ollama(prompt: str, model: str = MODEL_NAME, temperature: float = 0.1) -> str | None:
     """Call Ollama API with retry logic."""
     url = f"{OLLAMA_HOST}/api/generate"
     
@@ -154,7 +149,7 @@ def call_ollama(prompt: str, model: str = MODEL_NAME, temperature: float = 0.1) 
     return None
 
 
-def extract_score_from_response(response: str) -> Optional[float]:
+def extract_score_from_response(response: str) -> float | None:
     """Extract numerical score from LLM response."""
     if not response:
         return None
@@ -202,7 +197,7 @@ def temperature_for_match(estimated_match: float) -> float:
     return float(clamp(temp, TEMP_MIN, TEMP_MAX))
 
 
-def compute_compatibility_llm(resume_text: str, job_text: str) -> Tuple[float, str]:
+def compute_compatibility_llm(resume_text: str, job_text: str) -> tuple[float, str]:
     """
     Compute compatibility using LLM with semantic understanding.
     
@@ -297,7 +292,7 @@ def compute_compatibility_fallback(resume_text: str, job_text: str) -> float:
     return round(score * 100.0, 1)
 
 
-def compute_compatibility_hybrid(resume_text: str, job_text: str) -> Tuple[float, str, Dict]:
+def compute_compatibility_hybrid(resume_text: str, job_text: str) -> tuple[float, str, dict]:
     """
     Hybrid approach: use both LLM and Jaccard, return detailed breakdown.
     

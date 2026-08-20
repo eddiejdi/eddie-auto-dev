@@ -15,11 +15,9 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Iterable
 from dataclasses import dataclass
-from fnmatch import fnmatch
 from pathlib import Path
-from typing import Iterable
-
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CONFIG_PATH = REPO_ROOT / "config" / "domain_boundaries.json"

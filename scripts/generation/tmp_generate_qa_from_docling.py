@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-import json, os, time, subprocess, re
+import json
+import os
+import re
+import subprocess
+import time
 from glob import glob
 
 DOC_OUT_DIR = '/home/homelab/gdrive_docling_out'
@@ -42,7 +46,7 @@ def extract_text_from_json(path):
     title = obj.get('title') or obj.get('file_name') or os.path.basename(path)
     text = None
     for k in ('text', 'content', 'body', 'plain_text'):
-        if k in obj and obj[k]:
+        if obj.get(k):
             text = obj[k]
             break
     if not text:
@@ -93,8 +97,8 @@ def parse_ollama_output(out_text):
     for b in blocks:
         q = None
         a = None
-        m = re.search(r'Q[:\-]\s*(.+)', b, re.I)
-        n = re.search(r'A[:\-]\s*(.+)', b, re.I)
+        m = re.search(r'Q[:\-]\s*(.+)', b, re.IGNORECASE)
+        n = re.search(r'A[:\-]\s*(.+)', b, re.IGNORECASE)
         if m and n:
             q = m.group(1).strip()
             a = n.group(1).strip()

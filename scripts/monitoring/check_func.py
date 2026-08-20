@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import requests
 import re
+
+import requests
 
 BASE = 'http://192.168.15.2:3000'
 session = requests.Session()

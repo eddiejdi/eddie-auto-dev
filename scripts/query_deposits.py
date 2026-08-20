@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-import os, json, sys
+import json
+import os
+import sys
 
 out = {"connected": False, "error": None, "fiat_deposits": [], "external_deposit_trades": []}
 # Prefer DATABASE_URL from Agent Secrets via helpers in the btc_trading_agent

@@ -3,11 +3,16 @@
 Ativar Data Center no projeto Tuya e listar dispositivos.
 Navega automaticamente para as páginas necessárias.
 """
-import time, json, os
+import os
+import time
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
+from selenium.common.exceptions import (
+    ElementClickInterceptedException,
+    NoSuchElementException,
+)
 from selenium.webdriver.chrome.options import Options
-from selenium.common.exceptions import NoSuchElementException, ElementClickInterceptedException
+from selenium.webdriver.common.by import By
 
 SCREENSHOT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "screenshots", "tuya_setup")
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
@@ -72,7 +77,7 @@ try:
             el = driver.find_element(By.XPATH, sel)
             print(f"  Botao encontrado: {sel} -> {el.text}")
             el.click()
-            print(f"  [OK] Clicou Enable!")
+            print("  [OK] Clicou Enable!")
             time.sleep(3)
             ss(driver, "s3_enabled")
             break
@@ -115,16 +120,16 @@ try:
 
     print("\n============================================")
     print(" ACOES NECESSARIAS no navegador aberto:")
-    print("")
+    print()
     print(" 1. Verifique se Data Center esta ATIVADO")
     print("    (Overview -> Data Center -> Enable)")
-    print("")
+    print()
     print(" 2. Verifique APIs autorizadas")
     print("    (API -> IoT Core, Device Mgmt)")
-    print("")
+    print()
     print(" 3. Vincule Smart Life se nao vinculou")
     print("    (Devices -> Link Tuya App Account)")
-    print("")
+    print()
     print(" Pressione ENTER quando tudo OK")
     print("============================================")
     input()

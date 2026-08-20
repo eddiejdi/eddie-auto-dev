@@ -130,7 +130,7 @@ def main():
     try:
         import shutil
         shutil.copy(filepath, backup_path)
-        print(f"    [✓] Backup salvo")
+        print("    [✓] Backup salvo")
     except Exception as e:
         print(f"    [!] Aviso: Backup falhou: {e}")
     

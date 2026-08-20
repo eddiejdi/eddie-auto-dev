@@ -16,7 +16,7 @@ import re
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 try:
     import yaml
@@ -66,7 +66,7 @@ SKIP_DIR_PARTS = {
 HTTP_METHODS = ("get", "post", "put", "patch", "delete", "head", "options")
 
 # Path-first patterns (order matters: more specific first).
-API_CATEGORIES: Dict[str, str] = {
+API_CATEGORIES: dict[str, str] = {
     "health": r"(^/health|/ready|/live|/metrics$|/status|/api/health|/[^/]+/health)",
     "auth": r"(/auth|/login|/logout|/signin|/token|/oauth|/session|/callback)",
     "secrets": r"(/secret|/vault|/bw/|/authentik|/audit/recent)",
@@ -88,7 +88,7 @@ API_CATEGORIES: Dict[str, str] = {
 }
 
 # When path patterns miss, classify by owning service/path prefix.
-SERVICE_CATEGORY_HINTS: List[Tuple[str, str]] = [
+SERVICE_CATEGORY_HINTS: list[tuple[str, str]] = [
     ("mt5_bridge", "trading"),
     ("btc_trading", "trading"),
     ("clear_trading", "trading"),
@@ -129,7 +129,7 @@ class ApisCatalog:
 
     def __init__(self, root_path: str = "/workspace/eddie-auto-dev"):
         self.root = Path(root_path)
-        self.catalog: Dict[str, Any] = {
+        self.catalog: dict[str, Any] = {
             "catalogVersion": "1.0.0",
             "domain": "apis",
             "generatedAt": datetime.now().isoformat(),
@@ -141,8 +141,8 @@ class ApisCatalog:
                 "serviceCount": 0,
             },
         }
-        self.endpoints: Dict[str, Dict[str, Any]] = {}
-        self.sources_scanned: List[str] = []
+        self.endpoints: dict[str, dict[str, Any]] = {}
+        self.sources_scanned: list[str] = []
 
     def _should_skip(self, path: Path) -> bool:
         try:
@@ -226,12 +226,12 @@ class ApisCatalog:
         filepath: Path,
         line_num: int,
         summary: str = "",
-        tags: Optional[List[str]] = None,
+        tags: list[str] | None = None,
         operation_id: str = "",
         status: str = "active",
-        related_tables: Optional[List[str]] = None,
-        owner: Optional[str] = None,
-        team: Optional[str] = None,
+        related_tables: list[str] | None = None,
+        owner: str | None = None,
+        team: str | None = None,
     ) -> None:
         method = method.lower().strip()
         if method not in HTTP_METHODS:
@@ -352,7 +352,7 @@ class ApisCatalog:
 
             rel = str(py_file.relative_to(self.root))
             # router prefixes
-            prefixes: Dict[str, str] = {}
+            prefixes: dict[str, str] = {}
             for m in self._ROUTER_PREFIX_RE.finditer(content):
                 prefixes[m.group("name")] = m.group("prefix")
 
@@ -411,7 +411,7 @@ class ApisCatalog:
     def scan_openapi_specs(self) -> None:
         logger.info("📜 Scanning OpenAPI specs...")
         patterns = ["**/openapi*.yaml", "**/openapi*.yml", "**/openapi*.json", "**/swagger*.yaml"]
-        seen: Set[Path] = set()
+        seen: set[Path] = set()
         for pattern in patterns:
             for spec in self.root.glob(pattern):
                 if self._should_skip(spec) or spec in seen:
@@ -463,9 +463,9 @@ class ApisCatalog:
                     continue
                 summary = ""
                 op_id = ""
-                tags: List[str] = []
+                tags: list[str] = []
                 status = "active"
-                related_tables: List[str] = []
+                related_tables: list[str] = []
                 if isinstance(op, dict):
                     summary = op.get("summary") or op.get("description") or ""
                     op_id = op.get("operationId") or ""
@@ -490,7 +490,7 @@ class ApisCatalog:
                     related_tables=related_tables,
                 )
 
-    def generate_catalog(self) -> Dict[str, Any]:
+    def generate_catalog(self) -> dict[str, Any]:
         logger.info("\n" + "=" * 70)
         logger.info("🔍 APIS CATALOG SCANNER")
         logger.info("=" * 70 + "\n")
@@ -498,8 +498,8 @@ class ApisCatalog:
         self.scan_python_routes()
         self.scan_openapi_specs()
 
-        status_counts: Dict[str, int] = {}
-        owner_counts: Dict[str, int] = {}
+        status_counts: dict[str, int] = {}
+        owner_counts: dict[str, int] = {}
         for key, data in sorted(self.endpoints.items()):
             category = data.get("category") or self._categorize(
                 data["path"], data.get("service", "")
@@ -533,7 +533,7 @@ class ApisCatalog:
         logger.info("=" * 70 + "\n")
         return self.catalog
 
-    def save_catalog(self, output_file: Optional[str] = None) -> Path:
+    def save_catalog(self, output_file: str | None = None) -> Path:
         if output_file is None:
             output_file = self.root / ".apis-catalog" / "catalog.json"
         else:
@@ -547,7 +547,7 @@ class ApisCatalog:
         logger.info(f"💾 APIs catalog saved to: {output_file}")
         return output_file
 
-    def generate_reports(self, output_dir: Optional[Path] = None) -> None:
+    def generate_reports(self, output_dir: Path | None = None) -> None:
         out = Path(output_dir) if output_dir else self.root / ".apis-catalog"
         out.mkdir(parents=True, exist_ok=True)
 
@@ -595,7 +595,7 @@ class ApisCatalog:
         (out / "CATALOG_REPORT.md").write_text("".join(lines))
 
         # By service
-        by_service: Dict[str, List[str]] = defaultdict(list)
+        by_service: dict[str, list[str]] = defaultdict(list)
         for key, data in self.endpoints.items():
             by_service[data.get("service") or "unknown"].append(key)
         svc_lines = ["# API Endpoints by Service\n\n"]

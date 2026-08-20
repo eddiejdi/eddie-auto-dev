@@ -4,14 +4,7 @@ Script para gerar aplicações de emprego com tom mais humano e natural.
 Busca vagas, calcula match com currículo, e envia draft para validação.
 """
 
-import json
-import subprocess
-import sys
-import smtplib
-import base64
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Vagas mockadas com tom mais natural (exemplo)
 SAMPLE_JOBS = [

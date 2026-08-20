@@ -18,7 +18,6 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, quote_plus, urlparse
 
-
 DEFAULT_TARGETS: dict[str, dict[str, float | int]] = {
     "aggressive": {"max_daily_trades": 9999, "max_daily_loss": 0.03},
     "conservative": {"max_daily_trades": 9999, "max_daily_loss": 0.085},
@@ -180,7 +179,7 @@ def load_open_positions(symbol: str = DEFAULT_SYMBOL, profile: str | None = None
     db = _load_training_db()
     open_buy_t = _open_buy_sql("t")
     open_buy = _open_buy_sql()
-    with db._get_conn() as conn:  # noqa: SLF001 - internal helper used by control plane
+    with db._get_conn() as conn:
         cur = conn.cursor()
         cur.execute(
             f"""
@@ -527,14 +526,14 @@ def build_handler(config_dir: Path, username: str, password: str | None) -> type
                 "h1{margin-top:0;} code{background:#0f172a;padding:2px 6px;border-radius:6px;}</style>"
                 "</head><body><div class='card'>"
                 f"<h1>{html.escape(title)}</h1>{body}</div></body></html>"
-            ).encode("utf-8")
+            ).encode()
             self.send_response(status)
             self.send_header("Content-Type", "text/html; charset=utf-8")
             self.send_header("Content-Length", str(len(payload)))
             self.end_headers()
             self.wfile.write(payload)
 
-        def do_GET(self) -> None:  # noqa: N802
+        def do_GET(self) -> None:
             parsed = self._parsed_path()
 
             if parsed.path == "/health":
@@ -617,7 +616,7 @@ def build_handler(config_dir: Path, username: str, password: str | None) -> type
             )
             self._send_html(HTTPStatus.OK, "Trading Guardrails Control", body)
 
-        def do_POST(self) -> None:  # noqa: N802
+        def do_POST(self) -> None:
             parsed = self._parsed_path()
             if parsed.path == "/manual-sell/execute":
                 if not self._require_auth():
@@ -691,7 +690,7 @@ def build_handler(config_dir: Path, username: str, password: str | None) -> type
             )
             self._send_html(HTTPStatus.OK, "Guardrails reativados", body)
 
-        def log_message(self, format: str, *args: Any) -> None:  # noqa: A003
+        def log_message(self, format: str, *args: Any) -> None:
             return
 
     return Handler

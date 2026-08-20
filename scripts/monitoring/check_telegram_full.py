@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Verificar webhook info e últimas atualizações"""
-import requests
-import json
 
-from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+import requests
+
+from tools.secrets_loader import get_telegram_token
 
 TELEGRAM_TOKEN = get_telegram_token()
 BASE_URL = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}"

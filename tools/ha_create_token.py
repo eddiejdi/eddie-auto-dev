@@ -45,9 +45,9 @@ async def create_long_lived_token():
 
         if msg.get("success"):
             token = msg["result"]
-            print(f"\n=== LONG-LIVED TOKEN ===")
+            print("\n=== LONG-LIVED TOKEN ===")
             print(token)
-            print(f"========================")
+            print("========================")
             return token
         else:
             print(f"Failed: {msg}")

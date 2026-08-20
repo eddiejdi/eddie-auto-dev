@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 import os
-from collections import defaultdict
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from typing import Any
@@ -124,7 +123,7 @@ class MercadoPagoConnector:
             provider=BankProvider.MERCADOPAGO,
             account_id="main",
             available=available,
-            blocked=Decimal("0"),
+            blocked=Decimal(0),
             total=available,
             source="payments_fallback",
         )
@@ -160,11 +159,11 @@ class MercadoPagoConnector:
     async def _calculate_balance_from_payments(self) -> Decimal:
         if self.known_balance is None:
             logger.warning("Mercado Pago: sem BANK_MERCADOPAGO_KNOWN_BALANCE para fallback")
-            return Decimal("0")
+            return Decimal(0)
 
         offset = 0
         limit = 100
-        delta = Decimal("0")
+        delta = Decimal(0)
         pages = 0
         while pages < 20:
             status, body = await self._request(
@@ -196,7 +195,7 @@ class MercadoPagoConnector:
         op = payment.get("operation_type", "")
         status = payment.get("status", "")
         if status != "approved":
-            return Decimal("0")
+            return Decimal(0)
         payer_id = str((payment.get("payer") or {}).get("id", ""))
         collector_id = str(payment.get("collector_id", ""))
         if op in {"money_transfer", "account_fund"}:
@@ -211,7 +210,7 @@ class MercadoPagoConnector:
             desc = (payment.get("description") or "").upper()
             if desc.startswith("EARN_"):
                 return amount
-        return Decimal("0")
+        return Decimal(0)
 
     async def _search_partition_transfers(
         self,
@@ -294,9 +293,9 @@ class MercadoPagoConnector:
         cutoff = today - timedelta(days=30)
         monthly_map: dict[tuple[str, str], CofrinhoSummary] = {}
 
-        current_month_yield = Decimal("0")
-        current_month_deposits = Decimal("0")
-        last_30_days_yield = Decimal("0")
+        current_month_yield = Decimal(0)
+        current_month_deposits = Decimal(0)
+        last_30_days_yield = Decimal(0)
         pots_ids = sorted({credit.pots_id for credit in credits})
 
         for credit in credits:
@@ -306,8 +305,8 @@ class MercadoPagoConnector:
                 monthly_map[key] = CofrinhoSummary(
                     pots_id=credit.pots_id,
                     month=month,
-                    yield_total=Decimal("0"),
-                    deposit_total=Decimal("0"),
+                    yield_total=Decimal(0),
+                    deposit_total=Decimal(0),
                     credit_count=0,
                 )
             summary = monthly_map[key]

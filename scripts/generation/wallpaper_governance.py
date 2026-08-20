@@ -19,10 +19,8 @@ from typing import Any
 from scripts.generation.wallpaper_calendar import (
     build_theme_suggestion,
     generate_calendar_data,
-    get_holidays,
     get_upcoming_holidays,
 )
-
 
 LOGGER = logging.getLogger("wallpaper-governance")
 ROOT_DIR = Path(__file__).resolve().parents[2]

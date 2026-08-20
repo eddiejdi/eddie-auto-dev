@@ -4,6 +4,7 @@ Demonstração de como funciona o cálculo de compatibilidade (%)
 """
 import re
 
+
 def compute_compatibility_demo(resume_text: str, job_text: str) -> tuple:
     """Compute compatibility and return detailed breakdown."""
     
@@ -76,7 +77,7 @@ print(f"   {resume1.strip()[:100]}...")
 print(f"\n💼 Vaga ({len(job1)} chars):")
 print(f"   {job1.strip()[:100]}...")
 
-print(f"\n📊 Análise:")
+print("\n📊 Análise:")
 print(f"   Palavras únicas no currículo: {len(common1) + len(only_r1)}")
 print(f"   Palavras únicas na vaga: {len(common1) + len(only_j1)}")
 print(f"   Palavras em comum: {len(common1)}")
@@ -87,7 +88,7 @@ print(f"   {', '.join(sorted(list(common1))[:15])}")
 if len(common1) > 15:
     print(f"   ... e mais {len(common1) - 15} palavras")
 
-print(f"\n🔢 Cálculo:")
+print("\n🔢 Cálculo:")
 print(f"   {len(common1)} (comum) / {len(union1)} (total) = {len(common1)/len(union1):.4f}")
 print(f"   {len(common1)/len(union1):.4f} × 100 = {compat1}%")
 
@@ -111,13 +112,13 @@ Necessário boa comunicação, organização e disponibilidade.
 
 compat2, common2, only_r2, only_j2, union2 = compute_compatibility_demo(resume2, job2)
 
-print(f"\n📄 Currículo:")
+print("\n📄 Currículo:")
 print(f"   {resume2.strip()[:100]}...")
 
-print(f"\n💼 Vaga:")
+print("\n💼 Vaga:")
 print(f"   {job2.strip()[:100]}...")
 
-print(f"\n📊 Análise:")
+print("\n📊 Análise:")
 print(f"   Palavras únicas no currículo: {len(common2) + len(only_r2)}")
 print(f"   Palavras únicas na vaga: {len(common2) + len(only_j2)}")
 print(f"   Palavras em comum: {len(common2)}")
@@ -127,9 +128,9 @@ if common2:
     print(f"\n✅ Palavras em comum ({len(common2)}):")
     print(f"   {', '.join(sorted(list(common2)))}")
 else:
-    print(f"\n⚠️  Nenhuma palavra em comum!")
+    print("\n⚠️  Nenhuma palavra em comum!")
 
-print(f"\n🔢 Cálculo:")
+print("\n🔢 Cálculo:")
 print(f"   {len(common2)} (comum) / {len(union2)} (total) = {len(common2)/len(union2):.4f}")
 print(f"   {len(common2)/len(union2):.4f} × 100 = {compat2}%")
 
@@ -157,13 +158,13 @@ Atuação remota
 
 compat3, common3, only_r3, only_j3, union3 = compute_compatibility_demo(resume3, job3)
 
-print(f"\n📄 Seu currículo (resumido):")
+print("\n📄 Seu currículo (resumido):")
 print(f"   {resume3.strip()[:100]}...")
 
-print(f"\n💼 Vaga real do WhatsApp:")
+print("\n💼 Vaga real do WhatsApp:")
 print(f"   {job3.strip()}")
 
-print(f"\n📊 Análise:")
+print("\n📊 Análise:")
 print(f"   Palavras únicas no currículo: {len(common3) + len(only_r3)}")
 print(f"   Palavras únicas na vaga: {len(common3) + len(only_j3)}")
 print(f"   Palavras em comum: {len(common3)}")
@@ -173,15 +174,15 @@ if common3:
     print(f"\n✅ Palavras em comum ({len(common3)}):")
     print(f"   {', '.join(sorted(list(common3)))}")
 else:
-    print(f"\n⚠️  Nenhuma palavra em comum!")
+    print("\n⚠️  Nenhuma palavra em comum!")
 
-print(f"\n❌ Apenas no currículo (amostra de 10):")
+print("\n❌ Apenas no currículo (amostra de 10):")
 print(f"   {', '.join(sorted(list(only_r3))[:10])}")
 
-print(f"\n❌ Apenas na vaga (amostra de 10):")
+print("\n❌ Apenas na vaga (amostra de 10):")
 print(f"   {', '.join(sorted(list(only_j3))[:10])}")
 
-print(f"\n🔢 Cálculo:")
+print("\n🔢 Cálculo:")
 print(f"   {len(common3)} (comum) / {len(union3)} (total) = {len(common3)/len(union3):.4f}")
 print(f"   {len(common3)/len(union3):.4f} × 100 = {compat3}%")
 
@@ -192,7 +193,7 @@ print(f"\n🎯 COMPATIBILIDADE: {compat3}%")
 print("\n\n" + "=" * 80)
 print("📝 RESUMO")
 print("=" * 80)
-print(f"""
+print("""
 ✅ VANTAGENS do método Jaccard:
    • Simples e rápido de calcular
    • Independente do tamanho dos textos

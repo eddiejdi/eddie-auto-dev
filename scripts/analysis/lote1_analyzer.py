@@ -5,13 +5,11 @@ GPU0 (RTX 2060) + GPU1 (GTX 1050) → Análise paralela sem overhead local
 """
 
 import asyncio
+import hashlib
 import json
 import logging
 import subprocess
-import hashlib
 from pathlib import Path
-from typing import Optional
-import time
 
 # Configurar logging
 logging.basicConfig(
@@ -36,7 +34,7 @@ def get_cache_key(file_path: Path) -> str:
     return hashlib.md5(key_str.encode()).hexdigest()
 
 
-def get_cached_result(file_path: Path) -> Optional[dict]:
+def get_cached_result(file_path: Path) -> dict | None:
     """Retorna resultado em cache se disponível."""
     cache_key = get_cache_key(file_path)
     cache_file = CACHE_DIR / f"{cache_key}.json"
@@ -235,7 +233,7 @@ async def main():
     
     # Resumo
     logger.info("\n" + "="*70)
-    logger.info(f"✅ ANÁLISE COMPLETA")
+    logger.info("✅ ANÁLISE COMPLETA")
     logger.info(f"  Resultados: {output_file}")
     logger.info(f"  Total processado: {len(all_results)} arquivos")
     

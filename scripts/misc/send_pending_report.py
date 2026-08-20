@@ -1,6 +1,8 @@
-import os
 import asyncio
+import os
+
 from telegram_bot import TelegramAPI
+
 
 async def main():
     chat_id = int(os.getenv("ADMIN_CHAT_ID", "948686300"))

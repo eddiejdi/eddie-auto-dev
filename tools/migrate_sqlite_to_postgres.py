@@ -7,14 +7,13 @@ Usage:
 If `--yes` is not provided the script will only print what it would do.
 """
 import argparse
+import json
 import os
 import sqlite3
-import json
-from urllib.parse import urlparse
 
 try:
     from sqlalchemy import create_engine, text
-except Exception as e:
+except Exception:
     raise SystemExit("SQLAlchemy required: pip install sqlalchemy psycopg2-binary")
 
 

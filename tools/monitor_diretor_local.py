@@ -3,11 +3,11 @@
 
 Uso: python3 tools/monitor_diretor_local.py [timeout_seconds]
 """
+import importlib.util
 import sys
 import time
-import importlib.util
-from pathlib import Path
 from datetime import datetime, timedelta
+from pathlib import Path
 
 
 def load_bus():

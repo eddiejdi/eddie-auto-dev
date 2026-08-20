@@ -2,13 +2,10 @@
 Dashboard Web em Tempo Real - Conversas de Agentes + Precisão
 Acesso: http://localhost:8504 (ou http://192.168.15.2:8504 em PROD)
 """
-from fastapi import FastAPI, WebSocket
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
-import asyncio
-import json
-from datetime import datetime
+
 import httpx
+from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
 
 app = FastAPI(title="Shared Auto-Dev Dashboard")
 

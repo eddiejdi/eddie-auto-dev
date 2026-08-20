@@ -6,7 +6,6 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-
 DEFAULT_ALLOWED_IPS: tuple[str, ...] = (
     "192.168.15.0/24",
     "10.66.66.0/24",

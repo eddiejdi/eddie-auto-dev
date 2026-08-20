@@ -5,16 +5,15 @@ from __future__ import annotations
 
 import argparse
 import re
+import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
-import tarfile
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Final
-
 
 TOKEN_REGEX: Final[re.Pattern[str]] = re.compile(r"\b\d{6,}:[A-Za-z0-9_-]{20,}\b")
 
@@ -279,12 +278,11 @@ def _build_driver(config: RotateConfig):
 
 def _send_message(driver, message: str, timeout_seconds: int) -> None:
     """Envia mensagem na conversa corrente com múltiplos seletores de fallback."""
+    from selenium.webdriver.common.action_chains import ActionChains
     from selenium.webdriver.common.by import By
     from selenium.webdriver.common.keys import Keys
     from selenium.webdriver.support import expected_conditions as ec
     from selenium.webdriver.support.ui import WebDriverWait
-
-    from selenium.webdriver.common.action_chains import ActionChains
 
     selectors = [
         (By.CSS_SELECTOR, ".input-message-input"),

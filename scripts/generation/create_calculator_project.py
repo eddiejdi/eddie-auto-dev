@@ -5,10 +5,12 @@ Analista de Requisitos -> Programador -> Revisão -> GitHub
 """
 import asyncio
 import sys
+
 sys.path.insert(0, '/home/homelab/myClaude')
 
-from specialized_agents import AgentManager, get_requirements_analyst
 from specialized_agents.github_client import GitHubAgentClient
+
+from specialized_agents import AgentManager
 
 
 async def create_calculator_project():
@@ -76,7 +78,7 @@ async def create_calculator_project():
     print("\n👨‍💻 FASE 4: Preparando tarefa para Programador...")
     
     task_package = await analyst.prepare_task_for_programmer(requirement.id, "python")
-    print(f"✅ Pacote de tarefa preparado")
+    print("✅ Pacote de tarefa preparado")
     
     # ==========================================
     # FASE 5: EXECUTAR COM AGENTE PYTHON
@@ -107,7 +109,7 @@ async def create_calculator_project():
     )
     
     review = validation["review"]
-    print(f"✅ Revisão concluída")
+    print("✅ Revisão concluída")
     print(f"   Status: {review['status']}")
     print(f"   Aprovado: {validation['approved']}")
     
@@ -153,9 +155,9 @@ async def create_calculator_project():
     
     if github_result.get("success"):
         repo_url = github_result.get("html_url", github_result.get("url", ""))
-        print(f"✅ Repositório criado com sucesso!")
+        print("✅ Repositório criado com sucesso!")
         print(f"\n{'=' * 60}")
-        print(f"🔗 LINK DO REPOSITÓRIO GITHUB:")
+        print("🔗 LINK DO REPOSITÓRIO GITHUB:")
         print(f"   {repo_url}")
         print(f"{'=' * 60}")
         return repo_url
@@ -181,9 +183,9 @@ async def create_calculator_project():
         
         if create_result.get("success"):
             repo_url = create_result.get("html_url", create_result.get("url", ""))
-            print(f"✅ Repositório criado!")
+            print("✅ Repositório criado!")
             print(f"\n{'=' * 60}")
-            print(f"🔗 LINK DO REPOSITÓRIO GITHUB:")
+            print("🔗 LINK DO REPOSITÓRIO GITHUB:")
             print(f"   {repo_url}")
             print(f"{'=' * 60}")
             return repo_url

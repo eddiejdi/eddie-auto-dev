@@ -2,9 +2,9 @@
 """
 Teste rápido da função de impressora no Open WebUI
 """
-import requests
-import json
 import os
+
+import requests
 
 WEBUI_URL = os.environ.get('WEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:8002"
 EMAIL = "edenilson.teixeira@rpa4all.com"

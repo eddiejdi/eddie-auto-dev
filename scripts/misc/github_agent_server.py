@@ -4,14 +4,23 @@ GitHub Agent Server - Servidor Web com Autenticação OAuth
 Um agente autônomo que conecta com GitHub via OAuth ou Token
 """
 
-import os
 import json
+import os
 import secrets
-import requests
+from datetime import datetime
 from pathlib import Path
-from datetime import datetime, timedelta
-from functools import wraps
-from flask import Flask, render_template, request, redirect, url_for, session, jsonify, flash
+
+import requests
+from flask import (
+    Flask,
+    flash,
+    jsonify,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_cors import CORS
 
 # =============================================================================
@@ -64,7 +73,9 @@ def get_github_token():
     # Next, try retrieving from a Vaultwarden / Bitwarden CLI if enabled.
     # Configure via env: VAULTWARDEN_ENABLED=1, VAULTWARDEN_URL or BW_SERVER, and BW_SESSION must be set.
     try:
-        import shutil, subprocess, json as _json
+        import json as _json
+        import shutil
+        import subprocess
         if os.getenv("VAULTWARDEN_ENABLED", "").lower() in ("1", "true", "yes"):
             bw = shutil.which("bw")
             bw_server = os.getenv("BW_SERVER") or os.getenv("VAULTWARDEN_URL")
@@ -359,7 +370,8 @@ def portal_notify():
     """Publish a request to the DIRETOR and return immediately."""
     try:
         # Use helper to publish to bus (tools/invoke_director.py logic)
-        import subprocess, shlex
+        import shlex
+        import subprocess
         message = f"Por favor, DIRETOR: autorize e avalie a exposição do Portal unificado em {request.host_url}portal"
         cmd = f"python3 tools/invoke_director.py {shlex.quote(message)}"
         subprocess.Popen(cmd, shell=True)

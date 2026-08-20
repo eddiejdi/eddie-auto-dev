@@ -31,14 +31,12 @@ import os
 import queue
 import re
 import signal
-import sys
 import threading
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from typing import Optional
 
 logging.basicConfig(
     level=logging.INFO,
@@ -212,7 +210,7 @@ _ring: collections.deque = collections.deque(maxlen=_RING_SIZE)
 
 # PostgreSQL async writer — lê DATABASE_URL de /etc/default/eddie-common via EnvironmentFile
 _PG_DSN = os.environ.get("GPU_COORD_PG_DSN") or os.environ.get("DATABASE_URL", "")
-_pg_queue: Optional[object] = None
+_pg_queue: object | None = None
 
 
 def _start_pg_writer() -> None:
@@ -311,7 +309,7 @@ class EndpointState:
     """Estado em tempo real de um endpoint Ollama (thread-safe)."""
 
     def __init__(self, name: str, host: str, vram_total_mb: int, priority: int,
-                 ram_exporter_host: Optional[str] = None):
+                 ram_exporter_host: str | None = None):
         self.name = name
         self.host = host
         self.vram_total_mb = vram_total_mb
@@ -334,7 +332,7 @@ class EndpointState:
         self._total_served: int = 0
         self._ram_total_mb: float = 0.0
         # None = desconhecido (exporter nunca respondeu) → fail-open, não bloqueia roteamento
-        self._ram_available_mb: Optional[float] = None
+        self._ram_available_mb: float | None = None
 
     # ── propriedades ──────────────────────────────────────────────────────────
 
@@ -620,7 +618,7 @@ class GPUCluster:
 
     def __init__(self, endpoints: list[EndpointState]):
         self._endpoints = endpoints
-        self._poller: Optional[threading.Thread] = None
+        self._poller: threading.Thread | None = None
         self._stop = threading.Event()
 
     def _poll_all(self) -> None:
@@ -806,10 +804,10 @@ class GPUCluster:
         model: str,
         *,
         exclude: set[str],
-        prefer: Optional[EndpointState] = None,
-    ) -> Optional[EndpointState]:
+        prefer: EndpointState | None = None,
+    ) -> EndpointState | None:
         """Least-load entre endpoints elegíveis (VRAM + catálogo + healthy)."""
-        best: Optional[EndpointState] = None
+        best: EndpointState | None = None
         best_score = float("inf")
 
         for ep in self._endpoints:
@@ -849,7 +847,7 @@ class GPUCluster:
                 return None
         return best
 
-    def pick(self, model: str, exclude: Optional[set[str]] = None) -> Optional[EndpointState]:
+    def pick(self, model: str, exclude: set[str] | None = None) -> EndpointState | None:
         """Retorna o melhor endpoint para o modelo. None se nenhum disponível.
 
         `exclude` permite failover: endpoints que acabaram de falhar no forward.
@@ -861,7 +859,7 @@ class GPUCluster:
           - GPU_COORD_SOFT_PIN=0 restaura pin rígido (sem spill).
         """
         exclude = exclude or set()
-        prefer: Optional[EndpointState] = None
+        prefer: EndpointState | None = None
 
         for suffix, ep_name in self._PIN_SUFFIX.items():
             if not model.endswith(suffix):
@@ -1023,7 +1021,7 @@ class GPUCluster:
 
 # ── HTTP handler ──────────────────────────────────────────────────────────────
 
-_cluster: Optional[GPUCluster] = None
+_cluster: GPUCluster | None = None
 
 
 class CoordinatorHandler(BaseHTTPRequestHandler):

@@ -14,19 +14,16 @@ Porta padrão: 8515
 
 Métricas Prometheus em /metrics (porta 8002).
 """
+import logging
 import os
 import re
-import time
-import asyncio
-import logging
-from pathlib import Path
-from typing import Optional, List
 from datetime import datetime, timezone
+from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query, Depends, Request
-from fastapi.responses import JSONResponse, PlainTextResponse, FileResponse
-from pydantic import BaseModel, Field
 import httpx
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import FileResponse, PlainTextResponse
+from pydantic import BaseModel, Field
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -45,7 +42,13 @@ X_API_BASE = "https://api.x.com/2"
 # Prometheus metrics
 # ---------------------------------------------------------------------------
 try:
-    from prometheus_client import Counter, Gauge, generate_latest, CONTENT_TYPE_LATEST, start_http_server
+    from prometheus_client import (
+        CONTENT_TYPE_LATEST,
+        Counter,
+        Gauge,
+        generate_latest,
+        start_http_server,
+    )
 
     TWEETS_POSTED = Counter("x_agent_tweets_posted_total", "Tweets posted")
     API_CALLS = Counter("x_agent_api_calls_total", "X API calls made", ["endpoint", "method"])
@@ -62,8 +65,8 @@ except ImportError:
 
 class TweetRequest(BaseModel):
     text: str = Field(..., max_length=280, description="Texto do tweet (max 280 chars)")
-    reply_to_id: Optional[str] = Field(None, description="ID do tweet para responder")
-    quote_tweet_id: Optional[str] = Field(None, description="ID do tweet para citar")
+    reply_to_id: str | None = Field(None, description="ID do tweet para responder")
+    quote_tweet_id: str | None = Field(None, description="ID do tweet para citar")
 
 
 class SearchRequest(BaseModel):
@@ -87,14 +90,14 @@ class XClient:
     """Client assíncrono para a API v2 do X.com."""
 
     def __init__(self):
-        self._bearer_token: Optional[str] = None
-        self._api_key: Optional[str] = None
-        self._api_secret: Optional[str] = None
-        self._access_token: Optional[str] = None
-        self._access_secret: Optional[str] = None
-        self._user_id: Optional[str] = None
-        self._http: Optional[httpx.AsyncClient] = None
-        self._oauth_http: Optional[httpx.AsyncClient] = None
+        self._bearer_token: str | None = None
+        self._api_key: str | None = None
+        self._api_secret: str | None = None
+        self._access_token: str | None = None
+        self._access_secret: str | None = None
+        self._user_id: str | None = None
+        self._http: httpx.AsyncClient | None = None
+        self._oauth_http: httpx.AsyncClient | None = None
         self._initialized = False
 
     async def _fetch_secret(self, name: str, field: str = "password") -> str:
@@ -168,8 +171,8 @@ class XClient:
 
     # ----- Tweet Operations -----
 
-    async def post_tweet(self, text: str, reply_to_id: Optional[str] = None,
-                         quote_tweet_id: Optional[str] = None) -> dict:
+    async def post_tweet(self, text: str, reply_to_id: str | None = None,
+                         quote_tweet_id: str | None = None) -> dict:
         """Posta um tweet."""
         await self.init()
         payload = {"text": text}
@@ -288,7 +291,7 @@ class XClient:
 
     # ----- User Profile -----
 
-    async def get_profile(self, username: Optional[str] = None) -> dict:
+    async def get_profile(self, username: str | None = None) -> dict:
         """Obtém perfil de um usuário (ou do autenticado)."""
         await self.init()
         if username:
@@ -401,7 +404,7 @@ class XClient:
             raise HTTPException(status_code=r.status_code, detail=r.text)
         return r.json()
 
-    async def get_followers(self, username: Optional[str] = None, max_results: int = 20) -> dict:
+    async def get_followers(self, username: str | None = None, max_results: int = 20) -> dict:
         """Lista seguidores de um usuário."""
         await self.init()
         if username:
@@ -424,7 +427,7 @@ class XClient:
             raise HTTPException(status_code=r.status_code, detail=r.text)
         return r.json()
 
-    async def get_following(self, username: Optional[str] = None, max_results: int = 20) -> dict:
+    async def get_following(self, username: str | None = None, max_results: int = 20) -> dict:
         """Lista quem um usuário segue."""
         await self.init()
         if username:

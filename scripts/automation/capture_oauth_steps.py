@@ -3,13 +3,11 @@
 Script simples para capturar screenshots do Google Cloud Console
 Usa Chrome headless no WSL
 """
-import time
 import os
+import time
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from datetime import datetime
 
 # Configurar diretorio
 SCREENSHOT_DIR = '/home/homelab/myClaude/screenshots/oauth_steps'

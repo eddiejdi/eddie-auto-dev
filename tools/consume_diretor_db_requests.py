@@ -3,8 +3,6 @@
 
 Usage: DATABASE_URL=... python3 tools/consume_diretor_db_requests.py
 """
-from time import sleep
-import os
 import importlib.util
 import pathlib
 

@@ -28,12 +28,11 @@ from __future__ import annotations
 import argparse
 import json
 import logging
-import os
 import re
 import subprocess
 import sys
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -413,7 +412,7 @@ def check_tgt_reachability(host: str) -> FCTestResult:
     )
 
 
-def check_transfer_latency(host: str, device: str) -> FCTestResult:  # noqa: N802
+def check_transfer_latency(host: str, device: str) -> FCTestResult:
     """T6: Mede latência de INQUIRY SCSI (não bloqueia drive)."""
     # Só mede se o device for visível via esta porta
     state = _read_port_state(host)

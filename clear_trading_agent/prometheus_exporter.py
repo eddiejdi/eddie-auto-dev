@@ -11,10 +11,8 @@ from __future__ import annotations
 import json
 import os
 import sys
-import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Dict, Optional
 
 try:
     import psycopg2
@@ -45,7 +43,7 @@ except Exception as e:
 METRICS_PORT = int(os.environ.get("CLEAR_METRICS_PORT", "9102"))
 
 
-def load_config() -> Dict:
+def load_config() -> dict:
     """Carrega config.json."""
     try:
         with open(CONFIG_PATH) as f:
@@ -61,9 +59,9 @@ class MetricsCollector:
         self.dsn = dsn
         self.symbol = symbol
         self.profile = profile
-        self._pool: Optional[psycopg2.pool.ThreadedConnectionPool] = None
+        self._pool: psycopg2.pool.ThreadedConnectionPool | None = None
 
-    def _get_conn(self) -> "psycopg2.extensions.connection":
+    def _get_conn(self) -> psycopg2.extensions.connection:
         """Obtém conexão PostgreSQL do pool com autocommit e search_path clear."""
         if self._pool is None:
             self._pool = psycopg2.pool.ThreadedConnectionPool(
@@ -76,7 +74,7 @@ class MetricsCollector:
         cur.close()
         return conn
 
-    def _put_conn(self, conn: "psycopg2.extensions.connection") -> None:
+    def _put_conn(self, conn: psycopg2.extensions.connection) -> None:
         """Devolve conexão ao pool."""
         if self._pool is not None:
             try:
@@ -84,9 +82,9 @@ class MetricsCollector:
             except Exception:
                 pass
 
-    def collect_trade_metrics(self) -> Dict:
+    def collect_trade_metrics(self) -> dict:
         """Coleta métricas de trades."""
-        metrics: Dict = {}
+        metrics: dict = {}
         try:
             conn = self._get_conn()
             cur = conn.cursor()
@@ -156,9 +154,9 @@ class MetricsCollector:
 
         return metrics
 
-    def collect_rag_metrics(self) -> Dict:
+    def collect_rag_metrics(self) -> dict:
         """Coleta métricas do Market RAG."""
-        metrics: Dict = {}
+        metrics: dict = {}
         try:
             adj_file = BASE_DIR / "data" / "market_rag" / "regime_adjustments.json"
             if adj_file.exists():
@@ -177,9 +175,9 @@ class MetricsCollector:
             logger.debug("RAG metrics load: %s", e)
         return metrics
 
-    def collect_tax_metrics(self) -> Dict:
+    def collect_tax_metrics(self) -> dict:
         """Coleta métricas fiscais do TaxTracker."""
-        metrics: Dict = {}
+        metrics: dict = {}
         try:
             tax_file = BASE_DIR / "data" / f"tax_state_{self.symbol}.json"
             if not tax_file.exists():
@@ -194,7 +192,7 @@ class MetricsCollector:
                 metrics["loss_futures_daytrade"] = float(losses.get("futures_daytrade", 0))
 
                 # Mês atual
-                from datetime import datetime, timezone, timedelta
+                from datetime import datetime, timedelta, timezone
                 brt = timezone(timedelta(hours=-3))
                 ym = datetime.now(brt).strftime("%Y-%m")
                 monthly = data.get("monthly", {}).get(ym, {})
@@ -222,92 +220,92 @@ def format_metrics(collector: MetricsCollector) -> str:
 
     # Trade metrics
     tm = collector.collect_trade_metrics()
-    lines.append(f'# HELP clear_trades_total Total de trades executados')
-    lines.append(f'# TYPE clear_trades_total counter')
+    lines.append('# HELP clear_trades_total Total de trades executados')
+    lines.append('# TYPE clear_trades_total counter')
     lines.append(f'clear_trades_total{{{labels}}} {tm.get("total_trades", 0)}')
 
-    lines.append(f'# HELP clear_trades_24h Trades nas últimas 24 horas')
-    lines.append(f'# TYPE clear_trades_24h gauge')
+    lines.append('# HELP clear_trades_24h Trades nas últimas 24 horas')
+    lines.append('# TYPE clear_trades_24h gauge')
     lines.append(f'clear_trades_24h{{{labels}}} {tm.get("trades_24h", 0)}')
 
-    lines.append(f'# HELP clear_pnl_total PnL total em BRL')
-    lines.append(f'# TYPE clear_pnl_total gauge')
+    lines.append('# HELP clear_pnl_total PnL total em BRL')
+    lines.append('# TYPE clear_pnl_total gauge')
     lines.append(f'clear_pnl_total{{{labels}}} {tm.get("total_pnl", 0):.2f}')
 
-    lines.append(f'# HELP clear_pnl_24h PnL nas últimas 24 horas em BRL')
-    lines.append(f'# TYPE clear_pnl_24h gauge')
+    lines.append('# HELP clear_pnl_24h PnL nas últimas 24 horas em BRL')
+    lines.append('# TYPE clear_pnl_24h gauge')
     lines.append(f'clear_pnl_24h{{{labels}}} {tm.get("pnl_24h", 0):.2f}')
 
-    lines.append(f'# HELP clear_win_rate Win rate (0.0–1.0)')
-    lines.append(f'# TYPE clear_win_rate gauge')
+    lines.append('# HELP clear_win_rate Win rate (0.0–1.0)')
+    lines.append('# TYPE clear_win_rate gauge')
     lines.append(f'clear_win_rate{{{labels}}} {tm.get("win_rate", 0):.4f}')
 
-    lines.append(f'# HELP clear_last_price Último preço em BRL')
-    lines.append(f'# TYPE clear_last_price gauge')
+    lines.append('# HELP clear_last_price Último preço em BRL')
+    lines.append('# TYPE clear_last_price gauge')
     lines.append(f'clear_last_price{{{labels}}} {tm.get("last_price", 0):.2f}')
 
     # RAG metrics
     rag = collector.collect_rag_metrics()
     regime_map = {"BULLISH": 1, "BEARISH": -1, "RANGING": 0, "UNKNOWN": 0}
-    lines.append(f'# HELP clear_rag_regime Regime de mercado (1=bull, 0=ranging, -1=bear)')
-    lines.append(f'# TYPE clear_rag_regime gauge')
+    lines.append('# HELP clear_rag_regime Regime de mercado (1=bull, 0=ranging, -1=bear)')
+    lines.append('# TYPE clear_rag_regime gauge')
     lines.append(f'clear_rag_regime{{{labels}}} {regime_map.get(rag.get("regime", "UNKNOWN"), 0)}')
 
-    lines.append(f'# HELP clear_rag_confidence Confiança do regime')
-    lines.append(f'# TYPE clear_rag_confidence gauge')
+    lines.append('# HELP clear_rag_confidence Confiança do regime')
+    lines.append('# TYPE clear_rag_confidence gauge')
     lines.append(f'clear_rag_confidence{{{labels}}} {rag.get("regime_confidence", 0):.4f}')
 
-    lines.append(f'# HELP clear_ai_take_profit_pct Take-profit dinâmico (%)')
-    lines.append(f'# TYPE clear_ai_take_profit_pct gauge')
+    lines.append('# HELP clear_ai_take_profit_pct Take-profit dinâmico (%)')
+    lines.append('# TYPE clear_ai_take_profit_pct gauge')
     lines.append(f'clear_ai_take_profit_pct{{{labels}}} {rag.get("ai_take_profit_pct", 0.025):.5f}')
 
     # Tax Guardrails metrics
     tax = collector.collect_tax_metrics()
-    lines.append(f'# HELP clear_tax_equity_swing_sales_brl Total de vendas de ações swing no mês (BRL)')
-    lines.append(f'# TYPE clear_tax_equity_swing_sales_brl gauge')
+    lines.append('# HELP clear_tax_equity_swing_sales_brl Total de vendas de ações swing no mês (BRL)')
+    lines.append('# TYPE clear_tax_equity_swing_sales_brl gauge')
     lines.append(f'clear_tax_equity_swing_sales_brl{{{labels}}} {tax.get("equity_swing_sales_total", 0):.2f}')
 
-    lines.append(f'# HELP clear_tax_equity_swing_remaining_brl Headroom restante para isenção R$20k (BRL)')
-    lines.append(f'# TYPE clear_tax_equity_swing_remaining_brl gauge')
+    lines.append('# HELP clear_tax_equity_swing_remaining_brl Headroom restante para isenção R$20k (BRL)')
+    lines.append('# TYPE clear_tax_equity_swing_remaining_brl gauge')
     lines.append(f'clear_tax_equity_swing_remaining_brl{{{labels}}} {tax.get("equity_swing_remaining", 20000):.2f}')
 
-    lines.append(f'# HELP clear_tax_equity_swing_exempt Dentro da isenção R$20k (1=sim, 0=não)')
-    lines.append(f'# TYPE clear_tax_equity_swing_exempt gauge')
+    lines.append('# HELP clear_tax_equity_swing_exempt Dentro da isenção R$20k (1=sim, 0=não)')
+    lines.append('# TYPE clear_tax_equity_swing_exempt gauge')
     lines.append(f'clear_tax_equity_swing_exempt{{{labels}}} {tax.get("equity_swing_exempt", 1)}')
 
-    lines.append(f'# HELP clear_tax_pnl_equity_swing_brl PnL ações swing no mês (BRL)')
-    lines.append(f'# TYPE clear_tax_pnl_equity_swing_brl gauge')
+    lines.append('# HELP clear_tax_pnl_equity_swing_brl PnL ações swing no mês (BRL)')
+    lines.append('# TYPE clear_tax_pnl_equity_swing_brl gauge')
     lines.append(f'clear_tax_pnl_equity_swing_brl{{{labels}}} {tax.get("equity_swing_pnl", 0):.2f}')
 
-    lines.append(f'# HELP clear_tax_pnl_equity_daytrade_brl PnL ações day trade no mês (BRL)')
-    lines.append(f'# TYPE clear_tax_pnl_equity_daytrade_brl gauge')
+    lines.append('# HELP clear_tax_pnl_equity_daytrade_brl PnL ações day trade no mês (BRL)')
+    lines.append('# TYPE clear_tax_pnl_equity_daytrade_brl gauge')
     lines.append(f'clear_tax_pnl_equity_daytrade_brl{{{labels}}} {tax.get("equity_daytrade_pnl", 0):.2f}')
 
-    lines.append(f'# HELP clear_tax_pnl_futures_swing_brl PnL futuros swing no mês (BRL)')
-    lines.append(f'# TYPE clear_tax_pnl_futures_swing_brl gauge')
+    lines.append('# HELP clear_tax_pnl_futures_swing_brl PnL futuros swing no mês (BRL)')
+    lines.append('# TYPE clear_tax_pnl_futures_swing_brl gauge')
     lines.append(f'clear_tax_pnl_futures_swing_brl{{{labels}}} {tax.get("futures_swing_pnl", 0):.2f}')
 
-    lines.append(f'# HELP clear_tax_pnl_futures_daytrade_brl PnL futuros day trade no mês (BRL)')
-    lines.append(f'# TYPE clear_tax_pnl_futures_daytrade_brl gauge')
+    lines.append('# HELP clear_tax_pnl_futures_daytrade_brl PnL futuros day trade no mês (BRL)')
+    lines.append('# TYPE clear_tax_pnl_futures_daytrade_brl gauge')
     lines.append(f'clear_tax_pnl_futures_daytrade_brl{{{labels}}} {tax.get("futures_daytrade_pnl", 0):.2f}')
 
-    lines.append(f'# HELP clear_tax_irrf_brl IRRF retido no mês (BRL)')
-    lines.append(f'# TYPE clear_tax_irrf_brl gauge')
+    lines.append('# HELP clear_tax_irrf_brl IRRF retido no mês (BRL)')
+    lines.append('# TYPE clear_tax_irrf_brl gauge')
     lines.append(f'clear_tax_irrf_brl{{{labels}}} {tax.get("irrf_total", 0):.4f}')
 
-    lines.append(f'# HELP clear_tax_due_brl IR total estimado a pagar no mês (BRL)')
-    lines.append(f'# TYPE clear_tax_due_brl gauge')
+    lines.append('# HELP clear_tax_due_brl IR total estimado a pagar no mês (BRL)')
+    lines.append('# TYPE clear_tax_due_brl gauge')
     lines.append(f'clear_tax_due_brl{{{labels}}} {tax.get("total_tax_due", 0):.2f}')
 
-    lines.append(f'# HELP clear_tax_loss_accumulated_brl Prejuízo acumulado por categoria (BRL)')
-    lines.append(f'# TYPE clear_tax_loss_accumulated_brl gauge')
+    lines.append('# HELP clear_tax_loss_accumulated_brl Prejuízo acumulado por categoria (BRL)')
+    lines.append('# TYPE clear_tax_loss_accumulated_brl gauge')
     lines.append(f'clear_tax_loss_accumulated_brl{{{labels},category="equity_swing"}} {tax.get("loss_equity_swing", 0):.2f}')
     lines.append(f'clear_tax_loss_accumulated_brl{{{labels},category="equity_daytrade"}} {tax.get("loss_equity_daytrade", 0):.2f}')
     lines.append(f'clear_tax_loss_accumulated_brl{{{labels},category="futures_swing"}} {tax.get("loss_futures_swing", 0):.2f}')
     lines.append(f'clear_tax_loss_accumulated_brl{{{labels},category="futures_daytrade"}} {tax.get("loss_futures_daytrade", 0):.2f}')
 
-    lines.append(f'# HELP clear_tax_events_count Eventos fiscais registrados no mês')
-    lines.append(f'# TYPE clear_tax_events_count gauge')
+    lines.append('# HELP clear_tax_events_count Eventos fiscais registrados no mês')
+    lines.append('# TYPE clear_tax_events_count gauge')
     lines.append(f'clear_tax_events_count{{{labels}}} {tax.get("events_count", 0)}')
 
     lines.append("")
@@ -338,7 +336,6 @@ class MetricsHandler(BaseHTTPRequestHandler):
 
     def log_message(self, fmt, *args) -> None:
         """Suprime logs de requisição padrão."""
-        pass
 
 
 def main() -> None:

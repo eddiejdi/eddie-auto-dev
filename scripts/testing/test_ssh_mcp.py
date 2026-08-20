@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Script de teste para ssh_execute_on"""
-import os
-from ssh_agent_mcp import MCPServer
 import json
+import os
+
+from ssh_agent_mcp import MCPServer
 
 server = MCPServer()
 

@@ -46,7 +46,7 @@ class BridgeConfig:
     request_ttl_seconds: int = 90
 
     @classmethod
-    def from_env(cls) -> "BridgeConfig":
+    def from_env(cls) -> BridgeConfig:
         """Carrega configuração de variáveis de ambiente.
 
         Returns:

@@ -21,7 +21,6 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from pathlib import Path
 
 # ── Config ─────────────────────────────────────────────────────────
 GPU0 = "http://192.168.15.2:11434"

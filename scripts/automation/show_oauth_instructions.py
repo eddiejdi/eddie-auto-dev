@@ -194,7 +194,6 @@ FLUXO DE DADOS:
 """)
 
 if __name__ == "__main__":
-    import sys
     
     print_instructions()
     print_troubleshooting()

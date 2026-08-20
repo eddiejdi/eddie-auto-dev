@@ -2,10 +2,9 @@
 
 Função principal `has_matching_runner(runners_json, required_labels)` pode ser testada isoladamente.
 """
-from typing import Dict, List
 
 
-def has_matching_runner(runners_json: Dict, required_labels: List[str]) -> bool:
+def has_matching_runner(runners_json: dict, required_labels: list[str]) -> bool:
     """Retorna True se algum runner na resposta tiver pelo menos uma das labels requisitadas.
 
     runners_json expected format: {"runners": [{"id":.., "name":..., "labels": [{"name": "self-hosted"}, ...]}, ...]}
@@ -21,7 +20,8 @@ def has_matching_runner(runners_json: Dict, required_labels: List[str]) -> bool:
 
 
 if __name__ == "__main__":
-    import json, sys
+    import json
+    import sys
 
     if len(sys.argv) < 2:
         print("Usage: check_selfhost.py <runners_json_file> [label1,label2]")

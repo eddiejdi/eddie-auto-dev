@@ -13,15 +13,16 @@ Pré-requisitos:
 """
 
 import json
-import webbrowser
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
-import requests
-import sys
-from pathlib import Path
 
 # Configurações OAuth: carregam de `credentials_google.json` ou variáveis de ambiente
 import os
+import sys
+import webbrowser
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+from urllib.parse import parse_qs, urlparse
+
+import requests
 
 REDIRECT_URI = "http://localhost:8080"
 
@@ -110,7 +111,7 @@ def get_authorization_code():
     print("PASSO 1: Autorização OAuth")
     print("="*60)
     print("\nAbrindo navegador para autorização...")
-    print(f"\nSe o navegador não abrir, acesse manualmente:")
+    print("\nSe o navegador não abrir, acesse manualmente:")
     print(f"{auth_url_full}\n")
     
     # Abrir navegador
@@ -262,7 +263,7 @@ def main():
         print(f"export GOOGLE_SDM_PROJECT_ID='{SDM_PROJECT_ID}'")
         print("\nOu adicione ao .env:")
         print("GOOGLE_HOME_TOKEN='{}'".format(credentials['access_token']))
-        print("GOOGLE_SDM_PROJECT_ID='{}'".format(SDM_PROJECT_ID))
+        print(f"GOOGLE_SDM_PROJECT_ID='{SDM_PROJECT_ID}'")
         
         return 0
         

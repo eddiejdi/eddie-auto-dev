@@ -9,21 +9,15 @@ Uso:
     python email_cleaner_runner.py --clean --confirm  # Confirmar limpeza
 """
 
-import asyncio
 import argparse
+import asyncio
 import sys
 from pathlib import Path
 
 # Adicionar diretório ao path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from gmail_integration import (
-    get_gmail_client,
-    get_email_cleaner,
-    process_gmail_command,
-    GmailClient,
-    EmailCleaner
-)
+from gmail_integration import get_email_cleaner, get_gmail_client, process_gmail_command
 
 
 async def interactive_menu():

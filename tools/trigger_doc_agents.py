@@ -6,11 +6,9 @@ Also attempts to export .drawio files to PNG using `drawio` CLI if present
 and stages any exports for commit.
 """
 import pathlib
-import uuid
-import time
 import subprocess
-import json
-
+import time
+import uuid
 from importlib import util
 
 # load bus module by path

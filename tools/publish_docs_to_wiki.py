@@ -6,10 +6,10 @@ Requer: WIKI_API_KEY e WIKI_URL em env vars ou config
 
 import os
 import sys
-import json
-import requests
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
+
+import requests
 
 # Configuração
 WIKI_URL = os.getenv("WIKI_URL", "http://127.0.0.1:3009")

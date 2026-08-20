@@ -17,17 +17,17 @@ import asyncio
 import json
 import os
 import sys
-from pathlib import Path
 from datetime import date, timedelta
+from pathlib import Path
 
 # Adicionar root do projeto ao path
 ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT))
 
-import httpx
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from urllib.parse import parse_qs, urlparse
-import threading
+
+import httpx
 
 # ──────────── Config ────────────
 
@@ -207,7 +207,7 @@ class BelvoHandler(SimpleHTTPRequestHandler):
             institution = params.get("institution", ["unknown"])[0]
             
             if link_id:
-                print(f"\n🎉 Link criado com sucesso!")
+                print("\n🎉 Link criado com sucesso!")
                 print(f"   Link ID: {link_id}")
                 print(f"   Instituição: {institution}")
                 
@@ -250,7 +250,7 @@ class BelvoHandler(SimpleHTTPRequestHandler):
             link_id = data.get("link", "")
             institution = data.get("institution", "unknown")
             
-            print(f"\n🎉 Link criado via POST callback!")
+            print("\n🎉 Link criado via POST callback!")
             print(f"   Link ID: {link_id}")
             print(f"   Institution: {institution}")
             print(f"   Data: {json.dumps(data, indent=2, default=str)[:300]}")
@@ -422,8 +422,8 @@ def main():
     # Iniciar servidor
     server = HTTPServer(("0.0.0.0", PORT), BelvoHandler)
     print(f"\n🌐 Servidor rodando em http://localhost:{PORT}")
-    print(f"   Abra no navegador para conectar seu banco via Belvo.")
-    print(f"   Pressione Ctrl+C para parar.\n")
+    print("   Abra no navegador para conectar seu banco via Belvo.")
+    print("   Pressione Ctrl+C para parar.\n")
     
     try:
         server.serve_forever()

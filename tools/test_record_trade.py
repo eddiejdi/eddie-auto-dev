@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import logging
-import json
+
 from btc_trading_agent.training_db import TrainingDatabase
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s | %(levelname)s | %(message)s')

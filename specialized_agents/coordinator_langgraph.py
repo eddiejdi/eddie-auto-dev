@@ -32,21 +32,18 @@ import logging
 import os
 import sys
 import time
-import traceback
 from typing import Literal, TypedDict
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 
-from langgraph.graph import StateGraph, START, END
+from langgraph.graph import END, START, StateGraph
 
 from specialized_agents.langgraph_base import (
-    AgentState,
-    _resolve_db_url,
-    _intent_declare,
     _intent_complete,
+    _intent_declare,
     _memory_store,
-    _route_after_declare,
+    _resolve_db_url,
 )
 
 logger = logging.getLogger("dev_agent.coordinator_langgraph")
@@ -91,8 +88,8 @@ class CoordinatorState(TypedDict, total=False):
 
 
 def _build_dev_agent():
-    from dev_agent.config import OLLAMA_HOST, OLLAMA_MODEL
     from dev_agent.agent import DevAgent
+    from dev_agent.config import OLLAMA_HOST, OLLAMA_MODEL
     return DevAgent(llm_url=OLLAMA_HOST, model=OLLAMA_MODEL)
 
 
@@ -283,7 +280,8 @@ class CoordinatorV2Service:
     def handle_message(self, msg) -> None:
         """Callback registrado no AgentCommunicationBus."""
         from specialized_agents.agent_communication_bus import (
-            AgentCommunicationBus, MessageType,
+            AgentCommunicationBus,
+            MessageType,
         )
         bus = AgentCommunicationBus()
 
@@ -292,7 +290,6 @@ class CoordinatorV2Service:
         if msg.target not in ("CoordinatorAgent", "agent_coordinator"):
             return
 
-        import uuid
         request_id = msg.metadata.get("request_id", msg.id)
         thread_id  = f"coord_{request_id}"
         logger.info("[coordinator_langgraph] request de %s (thread=%s)", msg.source, thread_id[:24])

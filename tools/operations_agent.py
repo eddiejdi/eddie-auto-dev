@@ -9,12 +9,14 @@ Behavior: dry-run by default; set `AUTONOMOUS_MODE=1` to allow real actions.
 """
 
 import os
-import time
-import threading
 import subprocess
+import threading
+import time
 
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
-
+from specialized_agents.agent_communication_bus import (
+    MessageType,
+    get_communication_bus,
+)
 
 AUTONOMOUS = os.environ.get('AUTONOMOUS_MODE', '0') == '1'
 POLL = int(os.environ.get('OPS_AGENT_POLL', '5'))

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+
 import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "authentik.root.settings")
@@ -107,9 +108,9 @@ for svc in SERVICES:
     print(f"  Client ID:     {svc['client_id']}")
     print(f"  Client Secret: {svc['client_secret']}")
     print(f"  Issuer:        https://auth.rpa4all.com/application/o/{slug}/")
-    print(f"  Authorize URL: https://auth.rpa4all.com/application/o/authorize/")
-    print(f"  Token URL:     https://auth.rpa4all.com/application/o/token/")
-    print(f"  UserInfo URL:  https://auth.rpa4all.com/application/o/userinfo/")
+    print("  Authorize URL: https://auth.rpa4all.com/application/o/authorize/")
+    print("  Token URL:     https://auth.rpa4all.com/application/o/token/")
+    print("  UserInfo URL:  https://auth.rpa4all.com/application/o/userinfo/")
     print(f"  JWKS URL:      https://auth.rpa4all.com/application/o/{slug}/jwks/")
 
 print("\n=== SETUP COMPLETO ===")

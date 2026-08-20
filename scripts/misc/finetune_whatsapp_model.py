@@ -3,14 +3,12 @@
 Fine-tune shared-whatsapp model with collected training data.
 Uses Ollama's fine-tuning capabilities to improve matching accuracy.
 """
-import os
 import json
-import subprocess
-import requests
+import os
 import time
 from datetime import datetime
-from typing import Dict, List
 
+import requests
 
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
 BASE_MODEL = os.getenv("BASE_MODEL", "dolphin-llama3:8b")
@@ -28,7 +26,7 @@ def check_ollama_available() -> bool:
         return False
 
 
-def load_training_data() -> List[Dict]:
+def load_training_data() -> list[dict]:
     """Load training dataset from JSONL file."""
     if not os.path.exists(TRAINING_DATA):
         print(f"❌ Training data not found at {TRAINING_DATA}")
@@ -45,7 +43,7 @@ def load_training_data() -> List[Dict]:
     return samples
 
 
-def create_modelfile(samples: List[Dict]) -> str:
+def create_modelfile(samples: list[dict]) -> str:
     """Create Modelfile with training examples."""
     
     # Build system prompt with examples
@@ -193,7 +191,6 @@ def finetune_model():
         print("   Minimum recommended: 10 samples for meaningful fine-tuning")
         print("   Continue anyway? (y/n): ", end='')
         
-        import sys
         if input().lower() != 'y':
             print("❌ Fine-tuning cancelled")
             return False
@@ -223,16 +220,16 @@ def finetune_model():
         print(f"   Base: {BASE_MODEL}")
         print(f"   Training samples: {len(samples)}")
         print(f"   Location: {OLLAMA_HOST}")
-        print(f"\n🎯 Model is now ready to use!")
+        print("\n🎯 Model is now ready to use!")
         print(f"   Set: export WHATSAPP_MODEL={MODEL_NAME}:latest")
-        print(f"   Run: python3 apply_real_job.py")
+        print("   Run: python3 apply_real_job.py")
         
         return True
     else:
         print("⚠️  FINE-TUNING COMPLETED BUT VALIDATION FAILED")
         print("=" * 80)
-        print(f"   Model created but may not work as expected")
-        print(f"   Check Ollama logs for details")
+        print("   Model created but may not work as expected")
+        print("   Check Ollama logs for details")
         
         return False
 

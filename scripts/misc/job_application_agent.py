@@ -25,14 +25,11 @@ import html
 import json
 import os
 import re
-import subprocess
-import sys
 import time
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
-from urllib.parse import urlparse, unquote
+from urllib.parse import urlparse
 
 import httpx
 
@@ -136,8 +133,8 @@ class JobInfo:
 
 def _clean_html(raw: str) -> str:
     """Remove tags HTML e decodifica entidades."""
-    text = re.sub(r"<br\s*/?>", "\n", raw, flags=re.I)
-    text = re.sub(r"<li>", "\n• ", text, flags=re.I)
+    text = re.sub(r"<br\s*/?>", "\n", raw, flags=re.IGNORECASE)
+    text = re.sub(r"<li>", "\n• ", text, flags=re.IGNORECASE)
     text = re.sub(r"<[^>]+>", " ", text)
     text = html.unescape(text)
     text = re.sub(r"[ \t]+", " ", text)
@@ -176,26 +173,26 @@ def scrape_job(url: str) -> JobInfo:
     if "randstad" in domain:
         job.plataforma = "Randstad"
         # Título
-        m = re.search(r"<title>\s*(.*?)\s*</title>", page, re.I | re.S)
+        m = re.search(r"<title>\s*(.*?)\s*</title>", page, re.IGNORECASE | re.DOTALL)
         if m:
             t = _clean_html(m.group(1))
             t = re.sub(r"^Convite\s*-\s*", "", t)
             job.titulo = t
 
         # og:description tem o início da descrição
-        m = re.search(r"og:description.*?content=['\"](.+?)['\"]", page, re.I | re.S)
+        m = re.search(r"og:description.*?content=['\"](.+?)['\"]", page, re.IGNORECASE | re.DOTALL)
 
         # Descrição completa (dentro do HTML)
         m = re.search(
             r"Detalhes:\s*</span>(.*?)(?=<span[^>]*>Declaro|<div[^>]*id=.*TermsLink)",
-            page, re.I | re.S,
+            page, re.IGNORECASE | re.DOTALL,
         )
         if m:
             raw_desc = m.group(1)
             job.descricao = _clean_html(raw_desc)
 
         # Requisitos (lista <li>)
-        reqs = re.findall(r"<li>(.*?)</li>", page, re.I | re.S)
+        reqs = re.findall(r"<li>(.*?)</li>", page, re.IGNORECASE | re.DOTALL)
         job.requisitos = [_clean_html(r) for r in reqs]
 
         # Empresa (dica no texto)
@@ -219,7 +216,7 @@ def scrape_job(url: str) -> JobInfo:
     # --- Gupy ---
     elif "gupy" in domain:
         job.plataforma = "Gupy"
-        m = re.search(r"<title>(.*?)</title>", page, re.I)
+        m = re.search(r"<title>(.*?)</title>", page, re.IGNORECASE)
         if m:
             job.titulo = _clean_html(m.group(1))
         m = re.search(r'"description"\s*:\s*"(.*?)"', page)
@@ -229,17 +226,17 @@ def scrape_job(url: str) -> JobInfo:
     # --- LinkedIn ---
     elif "linkedin" in domain:
         job.plataforma = "LinkedIn"
-        m = re.search(r"<title>(.*?)</title>", page, re.I)
+        m = re.search(r"<title>(.*?)</title>", page, re.IGNORECASE)
         if m:
             job.titulo = _clean_html(m.group(1))
-        m = re.search(r'class="description__text.*?">(.*?)</section>', page, re.I | re.S)
+        m = re.search(r'class="description__text.*?">(.*?)</section>', page, re.IGNORECASE | re.DOTALL)
         if m:
             job.descricao = _clean_html(m.group(1))
 
     # --- Genérico ---
     else:
         job.plataforma = "outro"
-        m = re.search(r"<title>(.*?)</title>", page, re.I)
+        m = re.search(r"<title>(.*?)</title>", page, re.IGNORECASE)
         if m:
             job.titulo = _clean_html(m.group(1))
         job.descricao = _clean_html(page[:5000])
@@ -658,7 +655,7 @@ def print_report(job: JobInfo, compat: dict, cover_letter: str) -> None:
     """Imprime relatório da candidatura."""
     sep = "=" * 60
     print(f"\n{sep}")
-    print(f"  RELATÓRIO DE CANDIDATURA")
+    print("  RELATÓRIO DE CANDIDATURA")
     print(f"{sep}\n")
 
     print(f"Vaga:       {job.titulo}")
@@ -674,7 +671,7 @@ def print_report(job: JobInfo, compat: dict, cover_letter: str) -> None:
     if compat["missing"]:
         print(f"✗ Faltam:  {', '.join(compat['missing'])}")
 
-    print(f"\n--- Carta de Apresentação ---")
+    print("\n--- Carta de Apresentação ---")
     print(cover_letter)
     print(f"\n{sep}\n")
 

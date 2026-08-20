@@ -3,11 +3,10 @@
 
 Writes concise JSON lines to /tmp/agent_bus_listener.log and prints brief events to stdout.
 """
-import time
 import json
 import logging
-from datetime import datetime
 import os
+import time
 
 LOG_PATH = os.environ.get('AGENT_BUS_LISTENER_LOG', '/tmp/agent_bus_listener.log')
 
@@ -106,7 +105,7 @@ def main(poll_seconds: int = 3):
         except KeyboardInterrupt:
             print('Interrupted, exiting')
             break
-        except Exception as e:
+        except Exception:
             logging.exception('Listener loop error:')
 
         time.sleep(poll_seconds)

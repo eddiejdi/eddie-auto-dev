@@ -5,6 +5,7 @@ Usage: set PUBLIC_URL env var (optional) and run.
 """
 import os
 from pathlib import Path
+
 try:
     import yaml
 except Exception:

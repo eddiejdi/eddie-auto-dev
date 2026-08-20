@@ -9,14 +9,12 @@ Cria um dashboard em Grafana com:
 """
 
 import json
-import subprocess
 import os
+import subprocess
 import sys
-from pathlib import Path
-from datetime import datetime
-from typing import Dict, List, Tuple
-import requests
 from base64 import b64encode
+from datetime import datetime
+from pathlib import Path
 
 # Configurações
 HOMELAB_HOST = "homelab@192.168.15.2"
@@ -41,7 +39,7 @@ def run_ssh_cmd(cmd: str) -> str:
         print(f"❌ Erro SSH: {e}")
         return ""
 
-def get_training_files_metrics() -> List[Tuple[str, datetime, int, int]]:
+def get_training_files_metrics() -> list[tuple[str, datetime, int, int]]:
     """Retorna (arquivo, data, tamanho_bytes, num_linhas)"""
     cmd = f"find {TRAINING_DIR} -name 'training_*.jsonl' -exec ls -l {{}} \\;"
     output = run_ssh_cmd(cmd)
@@ -101,7 +99,7 @@ def get_training_files_metrics() -> List[Tuple[str, datetime, int, int]]:
     
     return sorted(result, key=lambda x: x[1])
 
-def get_ollama_models_info() -> List[Tuple[str, datetime, int]]:
+def get_ollama_models_info() -> list[tuple[str, datetime, int]]:
     """Retorna (modelo, data_modificacao, tamanho_mb)"""
     cmd = f"curl -s {OLLAMA_URL}/api/tags"
     output = run_ssh_cmd(cmd)
@@ -126,7 +124,7 @@ def get_ollama_models_info() -> List[Tuple[str, datetime, int]]:
     
     return sorted(models, key=lambda x: x[1])
 
-def get_grafana_headers() -> Dict:
+def get_grafana_headers() -> dict:
     """Retorna headers para requisições Grafana"""
     headers = {"Content-Type": "application/json"}
     
@@ -139,21 +137,21 @@ def get_grafana_headers() -> Dict:
 def test_grafana_connection() -> bool:
     """Testa conexão com Grafana via SSH"""
     try:
-        cmd = f"curl -s http://127.0.0.1:3002/api/health 2>&1 | grep -q 'ok' && echo 'OK' || echo 'FAIL'"
+        cmd = "curl -s http://127.0.0.1:3002/api/health 2>&1 | grep -q 'ok' && echo 'OK' || echo 'FAIL'"
         output = run_ssh_cmd(cmd)
         
         if "OK" in output:
-            print(f"✅ Grafana acessível em homelab:3002")
+            print("✅ Grafana acessível em homelab:3002")
             return True
         else:
             # Tentar verificar se o container está rodando
             cmd2 = "docker ps | grep -q grafana && echo 'OK' || echo 'FAIL'"
             output2 = run_ssh_cmd(cmd2)
             if "OK" in output2:
-                print(f"⚠️ Grafana container está rodando mas não respondendo")
+                print("⚠️ Grafana container está rodando mas não respondendo")
                 return False
             else:
-                print(f"❌ Grafana container não encontrado")
+                print("❌ Grafana container não encontrado")
                 return False
     except Exception as e:
         print(f"❌ Erro ao testar Grafana: {e}")
@@ -195,7 +193,7 @@ def create_json_datasource() -> str:
         
         result = run_ssh_cmd(cmd)
         if '"id"' in result:
-            print(f"✅ Datasource JSON criado")
+            print("✅ Datasource JSON criado")
         else:
             print(f"⚠️ Datasource: {result[:100]}")
     except Exception as e:
@@ -208,7 +206,7 @@ def create_json_datasource() -> str:
     
     return "LearningMetrics"
 
-def create_learning_dashboard(training_metrics: List, models_info: List):
+def create_learning_dashboard(training_metrics: list, models_info: list):
     """Cria dashboard em Grafana via SSH"""
     
     # Dashboard JSON simplificado
@@ -241,7 +239,6 @@ def create_learning_dashboard(training_metrics: List, models_info: List):
     
     try:
         # Enviar arquivo para o homelab
-        import shutil
         cmd = f"scp -o IdentitiesOnly=yes -i ~/.ssh/shared_deploy_rsa {temp_file} homelab@192.168.15.2:/tmp/dashboard.json"
         subprocess.run(cmd, shell=True, timeout=5)
         
@@ -259,11 +256,11 @@ def create_learning_dashboard(training_metrics: List, models_info: List):
             result_json = json.loads(result)
             uid = result_json.get('uid') or result_json.get('dashboard', {}).get('uid')
             dashboard_url = f"http://192.168.15.2:3002/grafana/d/{uid}" if uid else "http://192.168.15.2:3002/grafana"
-            print(f"✅ Dashboard criado/atualizado em Grafana!")
+            print("✅ Dashboard criado/atualizado em Grafana!")
             print(f"   URL: {dashboard_url}")
             return uid
         else:
-            print(f"❌ Erro ao criar dashboard")
+            print("❌ Erro ao criar dashboard")
             print(f"   Resposta: {result[:300]}")
             return None
     except Exception as e:
@@ -316,13 +313,13 @@ def create_learning_metrics_api():
 def main():
     print("🔍 Preparando integração com Grafana...")
     print(f"   Grafana: {GRAFANA_URL}")
-    print(f"   Dashboard URL: http://192.168.15.2:3002/grafana/d/learning-evolution")
+    print("   Dashboard URL: http://192.168.15.2:3002/grafana/d/learning-evolution")
     
     # Testar conexão com Grafana
     if not test_grafana_connection():
         print("\n❌ Não foi possível conectar ao Grafana")
         print("   Verifique se Grafana está rodando:")
-        print(f"   ssh -i ~/.ssh/shared_deploy_rsa homelab@192.168.15.2 docker ps | grep grafana")
+        print("   ssh -i ~/.ssh/shared_deploy_rsa homelab@192.168.15.2 docker ps | grep grafana")
         sys.exit(1)
     
     print("\n⏳ Coletando métricas de aprendizado...")
@@ -333,14 +330,14 @@ def main():
         print("❌ Nenhum arquivo de treinamento encontrado")
         sys.exit(1)
     
-    print(f"\n✅ Dados coletados:")
+    print("\n✅ Dados coletados:")
     print(f"   - {len(training_metrics)} arquivos de treinamento")
     print(f"   - {len(models_info)} modelos no Ollama")
     
     # Resumo de estatísticas
     total_lines = sum(m[3] for m in training_metrics)
     total_size_mb = sum(m[2] for m in training_metrics) / (1024 * 1024)
-    print(f"\n📊 Métricas:")
+    print("\n📊 Métricas:")
     print(f"   Total de conversas: {total_lines}")
     print(f"   Tamanho total: {total_size_mb:.2f} MB")
     

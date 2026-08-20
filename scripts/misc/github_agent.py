@@ -5,12 +5,13 @@ Um agente que integra seu servidor Llama com a API do GitHub
 para executar comandos como: listar repos, criar issues, ver PRs, etc.
 """
 
-import os
 import json
-import requests
-from typing import Optional, Dict, Any, List
+import os
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
+
+import requests
 
 # =============================================================================
 # CONFIGURAÇÕES
@@ -46,7 +47,7 @@ class GitHubAction(Enum):
 @dataclass
 class ParsedIntent:
     action: GitHubAction
-    params: Dict[str, Any]
+    params: dict[str, Any]
     confidence: float
 
 
@@ -78,7 +79,7 @@ class GitHubClient:
         except requests.exceptions.RequestException as e:
             return {"error": str(e)}
     
-    def list_repos(self, username: str = None, org: str = None) -> List[dict]:
+    def list_repos(self, username: str = None, org: str = None) -> list[dict]:
         """Lista repositórios do usuário ou organização"""
         if org:
             return self._request("GET", f"/orgs/{org}/repos")
@@ -91,7 +92,7 @@ class GitHubClient:
         """Obtém detalhes de um repositório"""
         return self._request("GET", f"/repos/{owner}/{repo}")
     
-    def list_issues(self, owner: str, repo: str, state: str = "open") -> List[dict]:
+    def list_issues(self, owner: str, repo: str, state: str = "open") -> list[dict]:
         """Lista issues de um repositório"""
         return self._request("GET", f"/repos/{owner}/{repo}/issues?state={state}")
     
@@ -106,7 +107,7 @@ class GitHubClient:
         """Obtém detalhes de uma issue específica"""
         return self._request("GET", f"/repos/{owner}/{repo}/issues/{issue_number}")
     
-    def list_prs(self, owner: str, repo: str, state: str = "open") -> List[dict]:
+    def list_prs(self, owner: str, repo: str, state: str = "open") -> list[dict]:
         """Lista pull requests de um repositório"""
         return self._request("GET", f"/repos/{owner}/{repo}/pulls?state={state}")
     
@@ -114,7 +115,7 @@ class GitHubClient:
         """Obtém detalhes de um pull request"""
         return self._request("GET", f"/repos/{owner}/{repo}/pulls/{pr_number}")
     
-    def list_branches(self, owner: str, repo: str) -> List[dict]:
+    def list_branches(self, owner: str, repo: str) -> list[dict]:
         """Lista branches de um repositório"""
         return self._request("GET", f"/repos/{owner}/{repo}/branches")
     
@@ -129,7 +130,7 @@ class GitHubClient:
             return self._request("GET", f"/users/{username}")
         return self._request("GET", "/user")
     
-    def list_commits(self, owner: str, repo: str, branch: str = None) -> List[dict]:
+    def list_commits(self, owner: str, repo: str, branch: str = None) -> list[dict]:
         """Lista commits de um repositório"""
         endpoint = f"/repos/{owner}/{repo}/commits"
         if branch:
@@ -167,7 +168,7 @@ class OllamaClient:
         except Exception as e:
             return f"Erro ao conectar com Ollama: {e}"
     
-    def chat(self, messages: List[dict]) -> str:
+    def chat(self, messages: list[dict]) -> str:
         """Chat com o modelo usando formato de mensagens"""
         url = f"{self.base_url}/v1/chat/completions"
         data = {

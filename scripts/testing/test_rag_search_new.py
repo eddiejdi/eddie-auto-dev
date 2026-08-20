@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Teste de busca no RAG"""
-import requests
-import chromadb
 from pathlib import Path
+
+import chromadb
+import requests
 
 CHROMA_DIR = Path(__file__).parent / "chroma_db"
 OLLAMA_URL = "http://192.168.15.2:11434"

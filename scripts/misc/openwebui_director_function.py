@@ -5,11 +5,12 @@ version: 1.0.0
 description: Diretor principal do sistema Shared Auto-Dev - Coordena todos os agents, delega tarefas, aplica regras e gerencia o pipeline completo.
 """
 
-import httpx
 import json
-from typing import Optional, Callable, Awaitable, Dict, List
-from pydantic import BaseModel, Field
+from collections.abc import Awaitable, Callable
 from datetime import datetime
+
+import httpx
+from pydantic import BaseModel, Field
 
 
 class Pipe:
@@ -97,8 +98,8 @@ class Pipe:
     async def pipe(
         self,
         body: dict,
-        __user__: Optional[dict] = None,
-        __event_emitter__: Optional[Callable[[dict], Awaitable[None]]] = None,
+        __user__: dict | None = None,
+        __event_emitter__: Callable[[dict], Awaitable[None]] | None = None,
     ) -> str:
         """Processa mensagens do Diretor."""
         
@@ -131,7 +132,7 @@ class Pipe:
             return result
             
         except Exception as e:
-            error_msg = f"❌ Erro do Diretor: {str(e)}"
+            error_msg = f"❌ Erro do Diretor: {e!s}"
             if __event_emitter__:
                 await __event_emitter__({
                     "type": "status",
@@ -344,7 +345,7 @@ Sou o Diretor principal do sistema. Coordeno todos os agents e aplico as regras.
                 else:
                     report.append("❌ Erro ao obter dados da API")
             except Exception as e:
-                report.append(f"❌ Erro de conexão: {str(e)}")
+                report.append(f"❌ Erro de conexão: {e!s}")
         
         report.append("\n---")
         report.append("🔗 Dashboard: http://192.168.15.2:8520")

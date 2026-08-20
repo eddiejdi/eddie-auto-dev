@@ -11,9 +11,9 @@ Uso:
 """
 from __future__ import annotations
 
+import logging
 import sys
 import time
-import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -26,7 +26,7 @@ _AGENT_DIR = Path("/apps/crypto-trader/trading/btc_trading_agent")
 if str(_AGENT_DIR) not in sys.path:
     sys.path.insert(0, str(_AGENT_DIR))
 
-from kucoin_api import KUCOIN_BASE, _build_headers  # type: ignore
+from kucoin_api import KUCOIN_BASE  # type: ignore
 from secrets_helper import get_database_url  # type: ignore
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")

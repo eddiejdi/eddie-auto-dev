@@ -3,8 +3,8 @@
 Envia o email draft diretamente para a pasta de enviados via endpoint REST.
 """
 import base64
-import subprocess
 import json
+import subprocess
 from pathlib import Path
 
 SENDER_EMAIL = "edenilson.adm@gmail.com"
@@ -43,7 +43,7 @@ PY"""
 def send_via_curl(eml_file: str, access_token: str) -> bool:
     """Send email via curl and Gmail REST API."""
     try:
-        print(f"📧 Enviando via REST API...")
+        print("📧 Enviando via REST API...")
         
         eml_path = Path(eml_file)
         if not eml_path.exists():
@@ -71,7 +71,7 @@ def send_via_curl(eml_file: str, access_token: str) -> bool:
         if res.returncode == 0:
             result = json.loads(res.stdout)
             if 'id' in result:
-                print(f"✅ Email enviado com sucesso!")
+                print("✅ Email enviado com sucesso!")
                 print(f"   Message ID: {result.get('id')}")
                 return True
             else:
@@ -114,7 +114,7 @@ def main(eml_file: str):
             
     except Exception as e:
         print(f"❌ Erro: {e}")
-        print(f"\n💥 Fallback: arquivo EML criado e pronto para enviar manualmente")
+        print("\n💥 Fallback: arquivo EML criado e pronto para enviar manualmente")
         return False
 
 if __name__ == '__main__':

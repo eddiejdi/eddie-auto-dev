@@ -284,8 +284,7 @@ async def _ollama_plan(message: str) -> dict[str, Any]:
     cleaned = raw.strip()
     if cleaned.startswith("```"):
         cleaned = cleaned.split("```")[1]
-        if cleaned.startswith("json"):
-            cleaned = cleaned[4:]
+        cleaned = cleaned.removeprefix("json")
         cleaned = cleaned.strip()
     try:
         plan: dict[str, Any] = json.loads(cleaned)
@@ -1331,7 +1330,9 @@ def get_nextcloud_agent():
     """Retorna NextcloudAgent (v1 ou v2 conforme NEXTCLOUD_AGENT_VERSION)."""
     global _agent
     if os.getenv("NEXTCLOUD_AGENT_VERSION", "v1") == "v2":
-        from specialized_agents.nextcloud_agent_langgraph import get_nextcloud_agent_langgraph
+        from specialized_agents.nextcloud_agent_langgraph import (
+            get_nextcloud_agent_langgraph,
+        )
         return get_nextcloud_agent_langgraph()
     if _agent is None:
         _agent = NextcloudAgent()

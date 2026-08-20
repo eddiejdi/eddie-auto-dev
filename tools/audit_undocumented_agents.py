@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """Audita agentes não documentados, cria documentação e extrai secrets."""
 
-import os
-import re
+import ast
 import json
 import logging
-from pathlib import Path
+import os
+import re
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Dict, List, Set, Tuple, Optional
-from dataclasses import dataclass, asdict
-import ast
+from pathlib import Path
 
 logging.basicConfig(
     level=logging.INFO,
@@ -34,8 +33,8 @@ class Agent:
     agent_type: str  # 'specialized_agent', 'telegram_handler', etc
     description: str = ""
     documented: bool = False
-    doc_path: Optional[str] = None
-    secrets_found: List[Dict] = None
+    doc_path: str | None = None
+    secrets_found: list[dict] = None
     last_modified: str = ""
     
     def __post_init__(self):
@@ -49,10 +48,10 @@ class AgentAuditor:
         self.workspace = Path(workspace_root)
         self.docs_dir = self.workspace / "docs" / "agents"
         self.docs_dir.mkdir(parents=True, exist_ok=True)
-        self.agents: Dict[str, Agent] = {}
-        self.discovered_secrets: Dict[str, List[str]] = {}
+        self.agents: dict[str, Agent] = {}
+        self.discovered_secrets: dict[str, list[str]] = {}
         
-    def discover_agents(self) -> Dict[str, Agent]:
+    def discover_agents(self) -> dict[str, Agent]:
         """Descobre todos os agentes no workspace."""
         logger.info("🔍 Descobrindo agentes...")
         
@@ -92,7 +91,7 @@ class AgentAuditor:
             for p in parts
         )
     
-    def _parse_agent_file(self, file_path: Path, agent_type: str) -> Optional[Agent]:
+    def _parse_agent_file(self, file_path: Path, agent_type: str) -> Agent | None:
         """Extrai informações de um arquivo de agente."""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
@@ -145,7 +144,7 @@ class AgentAuditor:
         
         return docstring.strip()[:200]
     
-    def _extract_secrets(self, content: str) -> List[Dict]:
+    def _extract_secrets(self, content: str) -> list[dict]:
         """Extrai secrets do código."""
         secrets = []
         
@@ -173,11 +172,11 @@ class AgentAuditor:
         }
         return any(fp in value.lower() for fp in false_positives)
     
-    def check_documentation(self) -> Dict[str, List[str]]:
+    def check_documentation(self) -> dict[str, list[str]]:
         """Verifica quais agentes não têm documentação."""
         undocumented = {}
         
-        for agent_type in {'specialized_agent', 'telegram_handler', 'agent'}:
+        for agent_type in ('specialized_agent', 'telegram_handler', 'agent'):
             agents = [a for a in self.agents.values() if a.agent_type == agent_type]
             undoc = [a.name for a in agents if not a.documented]
             if undoc:
@@ -282,7 +281,7 @@ _(Soluções para problemas comuns)_
         documented = sum(1 for a in self.agents.values() if a.documented)
         undocumented = total - documented
         
-        logger.info(f"\n📈 RESUMO GERAL:")
+        logger.info("\n📈 RESUMO GERAL:")
         logger.info(f"  • Total de agentes: {total}")
         logger.info(f"  • Documentados: {documented} ({100*documented//total}%)")
         logger.info(f"  • Não documentados: {undocumented} ({100*undocumented//total}%)")
@@ -293,7 +292,7 @@ _(Soluções para problemas comuns)_
             by_type.setdefault(agent.agent_type, []).append(agent)
         
         if by_type:
-            logger.info(f"\n📂 POR TIPO:")
+            logger.info("\n📂 POR TIPO:")
             for agent_type, agents in sorted(by_type.items()):
                 doc_count = sum(1 for a in agents if a.documented)
                 logger.info(

@@ -12,10 +12,8 @@ Env vars:
 """
 from __future__ import annotations
 
-import json
 import os
 import sys
-import time
 
 # Adiciona raiz do repo ao path
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -75,8 +73,11 @@ def _action_to_fact(row: dict) -> str:
 
 
 def run() -> int:
-    from tools.memory_layer.agent_memory import store, count as mem_count
-    import psycopg2, psycopg2.extras
+    import psycopg2
+    import psycopg2.extras
+
+    from tools.memory_layer.agent_memory import count as mem_count
+    from tools.memory_layer.agent_memory import store
 
     db_url = _load_db_url()
     conn   = psycopg2.connect(db_url)
@@ -98,7 +99,7 @@ def run() -> int:
     conn.close()
 
     if not rows:
-        print(f"[journal-ingestor] Nenhuma ação nova para indexar.")
+        print("[journal-ingestor] Nenhuma ação nova para indexar.")
         return 0
 
     indexed = 0

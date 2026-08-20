@@ -3,7 +3,6 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-
 PATH_HINTS = {
     "KIOSK_": "homelab/kiosk/",
     "GRAFANA_": "homelab/monitoring/",

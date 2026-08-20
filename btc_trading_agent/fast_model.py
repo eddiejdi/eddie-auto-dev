@@ -4,15 +4,14 @@ Fast Trading Model - Modelo Ultra-Rápido para Decisões de Trading
 Utiliza indicadores técnicos leves + machine learning para decisões em milliseconds
 """
 
-import numpy as np
-import time
-import json
-import pickle
 import logging
-from pathlib import Path
-from dataclasses import dataclass, field
-from typing import List, Dict, Optional, Tuple
+import pickle
+import time
 from collections import deque
+from dataclasses import dataclass, field
+from pathlib import Path
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +57,7 @@ class Signal:
     confidence: float  # 0.0 a 1.0
     price: float
     reason: str
-    features: Dict = field(default_factory=dict)
+    features: dict = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
 
 # ====================== INDICADORES TÉCNICOS RÁPIDOS ======================
@@ -105,7 +104,7 @@ class FastIndicators:
             return ts / 1000.0
         return ts
 
-    def update(self, price: float, volume: float = 0, timestamp: Optional[float] = None):
+    def update(self, price: float, volume: float = 0, timestamp: float | None = None):
         """Atualiza o preço atual sem poluir a série de indicadores.
 
         Sem candles: append de tick (testes / bootstrap).
@@ -260,7 +259,7 @@ class FastIndicators:
             return self.prices[-1] if self.prices else 0.0
         return float(np.mean(list(self.prices)[-period:]))
 
-    def macd(self, fast: int = 12, slow: int = 26, signal: int = 9) -> Tuple[float, float, float]:
+    def macd(self, fast: int = 12, slow: int = 26, signal: int = 9) -> tuple[float, float, float]:
         """MACD clássico: retorna (macd_line, signal_line, histogram).
 
         Usa EMA(fast) - EMA(slow) como linha MACD e EMA(signal) da linha MACD
@@ -300,7 +299,7 @@ class FastIndicators:
         histogram = macd_line - sig_val
         return round(macd_line, 4), round(sig_val, 4), round(histogram, 4)
 
-    def support_resistance(self, window: int = 5, n_levels: int = 3) -> Tuple[list, list]:
+    def support_resistance(self, window: int = 5, n_levels: int = 3) -> tuple[list, list]:
         """Pivôs de preço: retorna (suportes, resistências) por mínimos/máximos locais.
 
         Um pivot high é o preço máximo dentro de ±window candles.
@@ -577,9 +576,9 @@ class FastTradingModel:
         self.max_volatility = 0.05
         
         # Estado anterior para rewards
-        self._last_state: Optional[MarketState] = None
-        self._last_action: Optional[int] = None
-        self._last_price: Optional[float] = None
+        self._last_state: MarketState | None = None
+        self._last_action: int | None = None
+        self._last_price: float | None = None
         
         # Histórico de sinais para evitar flip-flopping
         self._signal_history = deque(maxlen=10)
@@ -588,7 +587,7 @@ class FastTradingModel:
         self._current_regime = MarketRegime("RANGING", 0.0, 0)
         self._regime_cycle_count = 0  # Ciclos no regime atual
         # Hysteresis: exige N detecções consecutivas antes de confirmar mudança
-        self._pending_regime: Optional[MarketRegime] = None
+        self._pending_regime: MarketRegime | None = None
         self._pending_regime_count: int = 0
         self._REGIME_HYSTERESIS: int = 5
 
@@ -597,7 +596,7 @@ class FastTradingModel:
         self.use_ma_cross: bool = False  # Cruzamento MA50/MA200 como sinal
         
         # RAG override — ajustes externos de regime (via MarketRAG)
-        self._rag_adjustment: Optional[object] = None
+        self._rag_adjustment: object | None = None
         self._rag_enabled: bool = False
         
         # Carregar modelo se existir
@@ -630,7 +629,7 @@ class FastTradingModel:
             f"buy_th={adjustment.buy_threshold:.3f}, sell_th={adjustment.sell_threshold:.3f}"
         )
     
-    def _technical_signal(self, state: MarketState) -> Tuple[float, str]:
+    def _technical_signal(self, state: MarketState) -> tuple[float, str]:
         """Sinal baseado em indicadores técnicos - COM DETECÇÃO DE REGIME"""
         score = 0.0
         reasons = []
@@ -730,7 +729,7 @@ class FastTradingModel:
 
         return np.clip(score, -1, 1), ", ".join(reasons) if reasons else "neutral"
     
-    def _orderbook_signal(self, state: MarketState) -> Tuple[float, str]:
+    def _orderbook_signal(self, state: MarketState) -> tuple[float, str]:
         """Sinal baseado no order book - OTIMIZADO"""
         imb = state.orderbook_imbalance
         
@@ -741,7 +740,7 @@ class FastTradingModel:
             return imb * 1.2, "ask pressure"
         return imb, "balanced book"
     
-    def _flow_signal(self, state: MarketState) -> Tuple[float, str]:
+    def _flow_signal(self, state: MarketState) -> tuple[float, str]:
         """Sinal baseado no fluxo de trades - OTIMIZADO"""
         flow = state.trade_flow
         
@@ -970,7 +969,7 @@ class FastTradingModel:
         model_path = MODEL_DIR / f"qmodel_{self.model_scope}.pkl"
         self.q_model.save(model_path)
     
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """Estatísticas do modelo"""
         total = np.sum(self.q_model.action_counts)
         return {
@@ -1027,7 +1026,7 @@ if __name__ == "__main__":
     
     # Stats
     stats = model.get_stats()
-    print(f"📈 Model Stats:")
+    print("📈 Model Stats:")
     print(f"  Episodes: {stats['episodes']}")
     print(f"  Total Reward: {stats['total_reward']:.2f}")
     

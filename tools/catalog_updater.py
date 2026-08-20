@@ -4,14 +4,13 @@ Variables Catalog Updater Service
 Automatically updates the catalog and syncs changes to homelab
 """
 
-import os
-import sys
 import json
 import logging
-from pathlib import Path
-from datetime import datetime
-from subprocess import run, CalledProcessError
+import sys
 import time
+from datetime import datetime
+from pathlib import Path
+from subprocess import CalledProcessError, run
 
 logging.basicConfig(
     level=logging.INFO,

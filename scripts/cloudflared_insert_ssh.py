@@ -6,7 +6,6 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-
 REQUIRED_INGRESSES = (
     ("ssh.rpa4all.com", "ssh://localhost:22"),
     ("vpn.rpa4all.com", "tcp://localhost:51821"),

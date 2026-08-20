@@ -4,15 +4,10 @@
 Abre o navegador LOCAL e captura o código automaticamente
 """
 
-import json
 import time
-from pathlib import Path
-from urllib.parse import urlparse, parse_qs
-from google_auth_oauthlib.flow import InstalledAppFlow
+from urllib.parse import parse_qs, urlparse
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 
 SCOPES = [
     "https://www.googleapis.com/auth/drive.readonly",
@@ -96,14 +91,14 @@ ENDPYTHON
             print("❌ Erro ao gerar URL de autorização")
             return False
         
-        print(f"🔗 URL de autorização gerada\n")
+        print("🔗 URL de autorização gerada\n")
         
         # Setup driver local
         if not self.setup_driver():
             return False
         
         # Abrir navegador
-        print(f"🌐 Abrindo navegador com autorização...")
+        print("🌐 Abrindo navegador com autorização...")
         self.driver.get(auth_url)
         print("✅ Navegador aberto. Aguarde pela página de Google...\n")
         
@@ -120,8 +115,8 @@ ENDPYTHON
                 current_url = self.driver.current_url
                 
                 if "code=" in current_url:
-                    print(f"\n✅ REDIRECIONAMENTO DETECTADO!")
-                    print(f"   Capturando código...\n")
+                    print("\n✅ REDIRECIONAMENTO DETECTADO!")
+                    print("   Capturando código...\n")
                     
                     # Extrair código
                     parsed_url = urlparse(current_url)
@@ -129,7 +124,7 @@ ENDPYTHON
                     
                     if "code" in params:
                         self.auth_code = params["code"][0]
-                        print(f"✅ Código capturado com sucesso!")
+                        print("✅ Código capturado com sucesso!")
                         print(f"   {self.auth_code[:20]}...{self.auth_code[-10:]}\n")
                         
                         # Fechar navegador
@@ -140,7 +135,7 @@ ENDPYTHON
                         return self.complete_auth_and_search()
                 
                 if "error=" in current_url:
-                    print(f"\n❌ Erro no Google OAuth")
+                    print("\n❌ Erro no Google OAuth")
                     print(f"   {current_url}\n")
                     self.driver.quit()
                     return False
@@ -159,7 +154,6 @@ ENDPYTHON
         """Completa autenticação e busca currículos"""
         
         import subprocess
-        import json
         
         # Enviar código para servidor e processar
         # O código já foi armazenado em self.auth_code

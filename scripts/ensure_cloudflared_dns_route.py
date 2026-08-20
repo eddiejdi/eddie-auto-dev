@@ -9,7 +9,6 @@ import os
 import subprocess
 from pathlib import Path
 
-
 LOGGER = logging.getLogger(__name__)
 REQUIRED_HOSTNAMES = ("ssh.rpa4all.com", "vpn.rpa4all.com")
 ORIGIN_CERT_CANDIDATES = (

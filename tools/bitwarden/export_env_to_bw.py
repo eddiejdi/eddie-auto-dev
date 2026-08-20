@@ -4,9 +4,10 @@ Export secrets from .env files to Bitwarden-compatible JSON format.
 This can be imported manually into Bitwarden Web Vault or via CLI.
 """
 
-import sys
 import json
+import sys
 from pathlib import Path
+
 
 def env_to_bw_json(env_file):
     """Convert .env file to Bitwarden Secure Notes JSON format."""

@@ -3,9 +3,9 @@
 Ativação FINAL da função de impressora
 Inclui código-fonte completo + flags de ativação
 """
-import requests
-import json
 import sys
+
+import requests
 
 WEBUI_URL = "http://192.168.15.2:8002"
 EMAIL = "edenilson.teixeira@rpa4all.com"
@@ -319,7 +319,7 @@ def main():
             is_active = printer_func.get("is_active", False)
             is_global = printer_func.get("is_global", False)
             
-            print(f"\n📊 **Status da Função**")
+            print("\n📊 **Status da Função**")
             print(f"   ID: {printer_func['id']}")
             print(f"   Nome: {printer_func['name']}")
             print(f"   Tipo: {printer_func['type']}")

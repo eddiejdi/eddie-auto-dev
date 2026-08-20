@@ -14,7 +14,6 @@ Usa o modelo shared-whatsapp para NLP avançado quando o parser simples falha.
 import logging
 import os
 import re
-from typing import Optional
 
 logger = logging.getLogger("HomeAssistant")
 
@@ -126,7 +125,6 @@ def _get_ha():
     if _ha_instance is None:
         # Import direto para evitar cadeia de imports do pacote specialized_agents
         import importlib.util
-        import sys
         from pathlib import Path
 
         # Tentar import direto do módulo
@@ -145,7 +143,9 @@ def _get_ha():
 
         if ha_module is None:
             # Fallback: tentar import normal
-            from specialized_agents.home_automation.ha_adapter import HomeAssistantAdapter as _HA
+            from specialized_agents.home_automation.ha_adapter import (
+                HomeAssistantAdapter as _HA,
+            )
             _ha_instance = _HA(HA_URL, HA_TOKEN)
         else:
             _ha_instance = ha_module.HomeAssistantAdapter(HA_URL, HA_TOKEN)
@@ -182,7 +182,7 @@ def detect_home_intent(text: str) -> bool:
     return False
 
 
-async def process_home_command(text: str, chat_id: str = "") -> Optional[str]:
+async def process_home_command(text: str, chat_id: str = "") -> str | None:
     """
     Processa uma mensagem de automação residencial e retorna resposta formatada.
     Retorna None se não for um comando válido.

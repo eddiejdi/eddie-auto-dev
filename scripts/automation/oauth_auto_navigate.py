@@ -2,14 +2,14 @@
 """
 Navegador Visual OAuth - Conecta ao Chrome existente e navega automaticamente
 """
-import time
 import os
+import time
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
-from datetime import datetime
+from selenium.webdriver.support.ui import WebDriverWait
 
 SCREENSHOT_DIR = '/home/homelab/myClaude/screenshots/oauth_auto'
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
@@ -284,7 +284,7 @@ class OAuthNavigator:
         print('\n' + '='*60)
         print('NAVEGACAO COMPLETA!')
         print(f'Screenshots em: {SCREENSHOT_DIR}')
-        print(f'E em: C:\\temp\\oauth_auto')
+        print('E em: C:\\temp\\oauth_auto')
         print('='*60)
         
         # Listar screenshots

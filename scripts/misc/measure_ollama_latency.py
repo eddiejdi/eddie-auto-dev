@@ -3,11 +3,11 @@
 Mede o tempo de resposta do modelo shared-whatsapp:latest via Ollama no homelab.
 """
 
-import subprocess
 import json
-import time
 import statistics
+import subprocess
 import sys
+import time
 from datetime import datetime
 
 HOMELAB_HOST = "192.168.15.2"
@@ -35,7 +35,7 @@ def check_ollama_health():
     output, code, _ = run_ssh_command(cmd)
     
     if code == 0 and output and "{" in output:
-        print(f"✓ Ollama está respondendo")
+        print("✓ Ollama está respondendo")
         return True
     print("❌ Ollama não está respondendo")
     return False
@@ -133,7 +133,7 @@ except Exception as e:
 def print_latency_stats(latencies, tokens_list, label="Latência"):
     """Imprime estatísticas de latência."""
     if not latencies:
-        print(f"❌ Sem dados de latência")
+        print("❌ Sem dados de latência")
         return
     
     avg_latency = statistics.mean(latencies)
@@ -153,7 +153,7 @@ def print_latency_stats(latencies, tokens_list, label="Latência"):
         avg_tps = statistics.mean(tokens_list)
         min_tps = min(tokens_list)
         max_tps = max(tokens_list)
-        print(f"\n   Throughput:")
+        print("\n   Throughput:")
         print(f"     Média:   {avg_tps:.1f} tokens/s")
         print(f"     Mín:     {min_tps:.1f} tokens/s")
         print(f"     Máx:     {max_tps:.1f} tokens/s")

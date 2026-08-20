@@ -200,7 +200,10 @@ async def orchestrator_media_generate_image(payload: OrchestratorImageRequest) -
     """Gera imagem via orquestrador da GPU0 usando integração Hugging Face."""
     _publish_orchestrator_event(f"gerar imagem: {payload.prompt[:140]}", "start")
     try:
-        from .huggingface_inference_agent import HFImageGenerateRequest, get_huggingface_client
+        from .huggingface_inference_agent import (
+            HFImageGenerateRequest,
+            get_huggingface_client,
+        )
 
         request = HFImageGenerateRequest(
             prompt=payload.prompt,

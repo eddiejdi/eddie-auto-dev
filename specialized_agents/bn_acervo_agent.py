@@ -22,28 +22,29 @@ from __future__ import annotations
 import argparse
 import asyncio
 import base64
-from collections import deque
+import glob
 import hashlib
+import inspect
 import json
 import logging
 import os
-import glob
-import inspect
 import random
 import re
 import subprocess
 import sys
-import time
 import threading
+import time
 import unicodedata
 import urllib.parse
 import urllib.request
 import uuid
 import xml.etree.ElementTree as ET
+from collections import deque
+from collections.abc import Awaitable, Callable, Iterable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Awaitable, Callable, Iterable
+from typing import Any
 
 try:
     import fcntl
@@ -655,7 +656,7 @@ class EntitySubjectResolver:
         self,
         query: str,
         people: list[str],
-        records: list["AcervoRecord"] | None = None,
+        records: list[AcervoRecord] | None = None,
     ) -> str:
         for candidate in people:
             cleaned = str(candidate).strip()
@@ -1086,7 +1087,7 @@ def parse_record_metadata(body_text: str) -> dict[str, str]:
     return metadata
 
 
-def build_reference_entries(records: list["AcervoRecord"]) -> list[dict[str, Any]]:
+def build_reference_entries(records: list[AcervoRecord]) -> list[dict[str, Any]]:
     """Monta a lista final de referencias para historia e auditoria."""
     references: list[dict[str, Any]] = []
     for index, record in enumerate(records, start=1):
@@ -1107,7 +1108,7 @@ def build_reference_entries(records: list["AcervoRecord"]) -> list[dict[str, Any
 def build_story_prompt(
     query: str,
     plan: dict[str, Any],
-    records: list["AcervoRecord"],
+    records: list[AcervoRecord],
     references: list[dict[str, Any]],
 ) -> str:
     """Prompt final para narrativa com referencias explicitas."""
@@ -1153,7 +1154,7 @@ def build_story_prompt(
 def build_dossier_prompt(
     query: str,
     plan: dict[str, Any],
-    records: list["AcervoRecord"],
+    records: list[AcervoRecord],
     references: list[dict[str, Any]],
 ) -> str:
     """Prompt estruturado para extrair um dossie relacional de figura publica."""
@@ -1693,7 +1694,7 @@ class InvestigationBudgetPolicy:
     max_ocr_pages_cap: int = 500
 
     @classmethod
-    def from_env(cls) -> "InvestigationBudgetPolicy":
+    def from_env(cls) -> InvestigationBudgetPolicy:
         return cls(
             quick_search_results=_int_env("BN_ACERVO_QUICK_SEARCH_RESULTS", 8),
             quick_detail_records=_int_env("BN_ACERVO_QUICK_DETAIL_RECORDS", 4),
@@ -2000,7 +2001,7 @@ class BaseDocumentDigester:
 
     async def digest(
         self,
-        agent: "BnAcervoAgent",
+        agent: BnAcervoAgent,
         document: DownloadedDocument,
         *,
         max_ocr_pages_per_document: int,
@@ -2072,7 +2073,7 @@ class DoclingDocumentDigester(BaseDocumentDigester):
 
     async def digest(
         self,
-        agent: "BnAcervoAgent",
+        agent: BnAcervoAgent,
         document: DownloadedDocument,
         *,
         max_ocr_pages_per_document: int,
@@ -2116,7 +2117,10 @@ class DoclingDocumentDigester(BaseDocumentDigester):
             raise RuntimeError("docling_indisponivel")
         try:
             from docling.datamodel.base_models import InputFormat
-            from docling.datamodel.pipeline_options import PdfPipelineOptions, RapidOcrOptions
+            from docling.datamodel.pipeline_options import (
+                PdfPipelineOptions,
+                RapidOcrOptions,
+            )
             from docling.document_converter import PdfFormatOption
         except Exception:
             return self._converter_cls()
@@ -2143,7 +2147,7 @@ class LegacyDocumentDigester(BaseDocumentDigester):
 
     async def digest(
         self,
-        agent: "BnAcervoAgent",
+        agent: BnAcervoAgent,
         document: DownloadedDocument,
         *,
         max_ocr_pages_per_document: int,
@@ -2200,7 +2204,7 @@ class DocumentDigesterRegistry:
 
     async def digest(
         self,
-        agent: "BnAcervoAgent",
+        agent: BnAcervoAgent,
         document: DownloadedDocument,
         *,
         max_ocr_pages_per_document: int,
@@ -4566,7 +4570,9 @@ async def _cancel_job(store: InvestigationJobStore, job_id: str, *, reason: str)
 def _bn_acervo_langgraph():
     """Retorna BnAcervoAgentLangraph se BN_ACERVO_AGENT_VERSION=v2."""
     if os.getenv("BN_ACERVO_AGENT_VERSION", "v1") == "v2":
-        from specialized_agents.bn_acervo_agent_langgraph import get_bn_acervo_agent_langgraph
+        from specialized_agents.bn_acervo_agent_langgraph import (
+            get_bn_acervo_agent_langgraph,
+        )
         return get_bn_acervo_agent_langgraph()
     return None
 

@@ -3,10 +3,9 @@
 Arquivo de controle para rastreamento de emails de vaga enviados.
 Impede reenvios duplicados em 30 dias.
 """
-import json
 import sqlite3
+from datetime import datetime
 from pathlib import Path
-from datetime import datetime, timedelta
 
 DB_PATH = Path("/tmp/job_matching_tracker.db")
 

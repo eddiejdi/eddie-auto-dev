@@ -18,7 +18,6 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
-
 DEFAULT_APP_DIR = Path("/var/lib/eddie/secrets_agent")
 DEFAULT_WIKI_URL = "http://127.0.0.1:3009/graphql"
 DEFAULT_TOKEN_SECRET = "authentik/wikijs/api_key"

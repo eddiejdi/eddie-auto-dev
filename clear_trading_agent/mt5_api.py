@@ -16,7 +16,7 @@ import time
 import uuid
 from functools import wraps
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import requests
 
@@ -84,7 +84,7 @@ def _headers() -> dict[str, str]:
     }
 
 
-def _get(endpoint: str, params: Optional[dict[str, Any]] = None, timeout: float = 10) -> Any:
+def _get(endpoint: str, params: dict[str, Any] | None = None, timeout: float = 10) -> Any:
     """GET request ao bridge."""
     rate_limit()
     url = f"{BRIDGE_URL}{endpoint}"
@@ -147,7 +147,7 @@ def get_clear_connection_status(check_bridge_health: bool = False) -> dict[str, 
 
 # ====================== MARKET DATA (PUBLIC) ======================
 @retry_on_failure(max_retries=2)
-def get_price(symbol: str = "PETR4") -> Optional[float]:
+def get_price(symbol: str = "PETR4") -> float | None:
     """Obtém preço atual (mid-price bid/ask) de um ativo B3."""
     try:
         data = _get(f"/symbol/{symbol}/tick")
@@ -162,7 +162,7 @@ def get_price(symbol: str = "PETR4") -> Optional[float]:
     return None
 
 
-def get_price_fast(symbol: str = "PETR4", timeout: float = 2.0) -> Optional[float]:
+def get_price_fast(symbol: str = "PETR4", timeout: float = 2.0) -> float | None:
     """Versão rápida sem retry."""
     try:
         data = _get(f"/symbol/{symbol}/tick", timeout=timeout)
@@ -243,7 +243,7 @@ def get_equity() -> float:
 
 
 @retry_on_failure(max_retries=2)
-def get_positions(symbol: Optional[str] = None) -> list[dict[str, Any]]:
+def get_positions(symbol: str | None = None) -> list[dict[str, Any]]:
     """Obtém posições abertas."""
     params = {}
     if symbol:
@@ -252,7 +252,7 @@ def get_positions(symbol: Optional[str] = None) -> list[dict[str, Any]]:
 
 
 @retry_on_failure(max_retries=2)
-def get_active_orders(symbol: Optional[str] = None) -> list[dict[str, Any]]:
+def get_active_orders(symbol: str | None = None) -> list[dict[str, Any]]:
     """Obtém ordens pendentes."""
     params = {}
     if symbol:
@@ -277,7 +277,7 @@ def _tagged_comment(comment: str) -> str:
     return f"{comment[:20]}#{tag}"[:31]
 
 
-def _find_recent_deal_by_comment(symbol: str, tagged_comment: str) -> Optional[dict[str, Any]]:
+def _find_recent_deal_by_comment(symbol: str, tagged_comment: str) -> dict[str, Any] | None:
     """Procura um deal já executado com o comment tag exato (janela de 1 dia)."""
     try:
         deals = get_history_deals(days=1, symbol=symbol)
@@ -301,8 +301,8 @@ def _place_order_with_dedup(
     tentativas e checando o histórico de deals antes de reenviar — nunca
     use @retry_on_failure aqui, que re-executaria a função inteira sem
     checar se a ordem anterior já tinha sido aceita pela Clear."""
-    last_error: Optional[Exception] = None
-    result: Optional[dict[str, Any]] = None
+    last_error: Exception | None = None
+    result: dict[str, Any] | None = None
 
     for attempt in range(max_attempts):
         if attempt > 0:
@@ -452,7 +452,7 @@ def place_limit_order(
 
 # ====================== HISTORY ======================
 @retry_on_failure(max_retries=2)
-def get_history_deals(days: int = 7, symbol: Optional[str] = None) -> list[dict[str, Any]]:
+def get_history_deals(days: int = 7, symbol: str | None = None) -> list[dict[str, Any]]:
     """Obtém histórico de deals (trades executados).
 
     Args:

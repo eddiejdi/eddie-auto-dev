@@ -3,6 +3,7 @@
 import http.server
 import urllib.parse
 
+
 class Handler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         qs = urllib.parse.parse_qs(urllib.parse.urlparse(self.path).query)

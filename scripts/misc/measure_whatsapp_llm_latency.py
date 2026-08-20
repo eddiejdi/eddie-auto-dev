@@ -4,11 +4,9 @@ Mede o tempo de resposta do LLM do container shared-whatsapp:latest no homelab.
 Testa por SSH, descobrindo automaticamente a porta e tipo de API.
 """
 
-import subprocess
-import json
 import re
 import statistics
-import time
+import subprocess
 import sys
 from datetime import datetime
 
@@ -155,7 +153,7 @@ except Exception as e:
 def print_latency_stats(latencies, label="Latência", unit="s"):
     """Imprime estatísticas de latência."""
     if not latencies:
-        print(f"❌ Sem dados de latência")
+        print("❌ Sem dados de latência")
         return
     
     avg = statistics.mean(latencies)

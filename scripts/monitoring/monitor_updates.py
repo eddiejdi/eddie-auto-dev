@@ -43,9 +43,8 @@ def registrar_pendencia_operacao(ponto):
     CI checks. The original file contained unstructured code; for CI
     purposes we keep a lightweight, safe implementation.
     """
-    import os
-    import time
     import asyncio
+    import os
     from datetime import datetime
 
     RELATORIO = "relatorio_pendencias.txt"

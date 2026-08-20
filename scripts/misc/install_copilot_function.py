@@ -4,7 +4,9 @@ Instala a Function GitHub Copilot no Open WebUI via API Key
 """
 import os
 from pathlib import Path
+
 import requests
+
 from tools.secrets_loader import get_openwebui_api_key
 
 OPENWEBUI_URL = os.getenv("OPENWEBUI_URL", "http://localhost:3000")

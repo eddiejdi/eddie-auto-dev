@@ -3,8 +3,8 @@
 
 import json
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 from pathlib import Path
 
 WIKIJS_URL = "http://192.168.15.2:3009/graphql"

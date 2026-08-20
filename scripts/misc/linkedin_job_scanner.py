@@ -32,14 +32,12 @@ import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import httpx
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 from webdriver_manager.chrome import ChromeDriverManager
@@ -368,7 +366,7 @@ def filter_job_eligibility(job: LinkedInJob) -> tuple[bool, str]:
     return True, ""
 
 
-def calculate_salary_expectation(job: "LinkedInJob") -> str:
+def calculate_salary_expectation(job: LinkedInJob) -> str:
     """Calcula pretensão salarial baseada no cargo, nível e match de skills.
 
     Retorna valor numérico como string (ex: '18000') para campos de formulário
@@ -1063,7 +1061,7 @@ def search_linkedin_jobs(
     return all_jobs[:max_results]
 
 
-def _parse_job_card(card) -> Optional[LinkedInJob]:
+def _parse_job_card(card) -> LinkedInJob | None:
     """Extrai informações de um card de vaga do LinkedIn."""
     try:
         # Tentar diferentes seletores (LinkedIn muda frequentemente)
@@ -1385,7 +1383,7 @@ def _wait_and_find(
     driver: webdriver.Chrome,
     selectors: list[str],
     timeout: int = 10,
-) -> Optional[object]:
+) -> object | None:
     """Aguarda e retorna o primeiro elemento clicável entre os seletores.
 
     Combina todos os seletores em um único CSS (OR) para usar
@@ -1462,7 +1460,7 @@ def apply_easy_apply(
 
         if not apply_btn:
             # Fallback: buscar via JavaScript (funciona com <a>, <button>, <span>)
-            logger.info(f"   🔍 CSS falhou — buscando Easy Apply via JS...")
+            logger.info("   🔍 CSS falhou — buscando Easy Apply via JS...")
             apply_btn = driver.execute_script("""
                 var kws = ['candidatura simplificada', 'easy apply'];
                 // Rejeitar links para similar-jobs, collections, anúncios
@@ -1507,8 +1505,8 @@ def apply_easy_apply(
             _reject_keywords = ["similar-jobs", "collections", "/feed/", "premium"]
             if any(rk in btn_href.lower() for rk in _reject_keywords):
                 logger.warning(
-                    f"   ⚠️ Botão Easy Apply é link falso (href contém similar-jobs/collections) — "
-                    f"vaga provavelmente já candidatada"
+                    "   ⚠️ Botão Easy Apply é link falso (href contém similar-jobs/collections) — "
+                    "vaga provavelmente já candidatada"
                 )
                 _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_already_applied.png")
                 return False
@@ -1534,13 +1532,13 @@ def apply_easy_apply(
             if "/apply" in full_href or "openSDUIApplyFlow" in full_href:
                 sdui_mode = True
                 sdui_apply_url = full_href
-                logger.info(f"   🌐 SDUI Apply detectado — navegando para URL de candidatura")
+                logger.info("   🌐 SDUI Apply detectado — navegando para URL de candidatura")
                 logger.info(f"      URL: {sdui_apply_url[:100]}")
                 driver.get(sdui_apply_url)
                 time.sleep(4)
             else:
                 # <a> sem /apply/ — clicar normalmente (deixar navegar)
-                logger.info(f"   🔧 Easy Apply <a> sem SDUI — clicando normalmente")
+                logger.info("   🔧 Easy Apply <a> sem SDUI — clicando normalmente")
                 _safe_click(driver, apply_btn)
                 time.sleep(3)
         else:
@@ -1570,7 +1568,7 @@ def apply_easy_apply(
                 # Verificar se a página de apply carregou
                 cur_url = driver.current_url
                 if "/apply" in cur_url:
-                    logger.info(f"   ✅ Página SDUI Apply carregada (sem dialog — OK)")
+                    logger.info("   ✅ Página SDUI Apply carregada (sem dialog — OK)")
                     form_container = None  # usar full page
                 else:
                     logger.warning(f"   ⚠️ SDUI: URL não contém /apply/ — url={cur_url[:80]}")
@@ -1579,10 +1577,10 @@ def apply_easy_apply(
                         driver.get(sdui_apply_url)
                         time.sleep(4)
                         if "/apply" in driver.current_url:
-                            logger.info(f"   ✅ SDUI Apply carregada na 2ª tentativa")
+                            logger.info("   ✅ SDUI Apply carregada na 2ª tentativa")
                             form_container = None
                         else:
-                            logger.warning(f"   ⚠️ SDUI falhou ao carregar")
+                            logger.warning("   ⚠️ SDUI falhou ao carregar")
                             _take_screenshot(driver, ss_dir / f"easy_apply_{job.job_id}_sdui_fail.png")
                             driver.get(original_job_url)
                             time.sleep(2)
@@ -1602,7 +1600,7 @@ def apply_easy_apply(
                     if page_dialogs:
                         dialog = page_dialogs[-1]
                         form_container = dialog
-                        logger.info(f"   ✅ Modal aberto via ENTER key")
+                        logger.info("   ✅ Modal aberto via ENTER key")
                 except Exception:
                     pass
 
@@ -1615,7 +1613,7 @@ def apply_easy_apply(
                         time.sleep(4)
                         if "/apply" in driver.current_url:
                             sdui_mode = True
-                            logger.info(f"   ✅ Fallback SDUI carregado")
+                            logger.info("   ✅ Fallback SDUI carregado")
                             # Verificar se tem dialog na SDUI page
                             page_dialogs = driver.find_elements(By.CSS_SELECTOR, _DIALOG_CSS)
                             if page_dialogs:
@@ -2024,8 +2022,8 @@ _FIELD_MAP: list[tuple[str, str]] = [
     (r"desired.?(?:role|position)|cargo.?desejado|vaga", "SRE / DevOps / Software Engineer"),
     # Resumo / Sobre mim
     (r"summary|resumo|about|sobre.?voc[eê]|bio|brief", 
-     f"Profissional com 15+ anos em TI. SRE na B3, experiência em Mercado Livre, Itaú. "
-     f"Especialista em Python, Go, Docker, Kubernetes, AWS, GCP. PCD."),
+     "Profissional com 15+ anos em TI. SRE na B3, experiência em Mercado Livre, Itaú. "
+     "Especialista em Python, Go, Docker, Kubernetes, AWS, GCP. PCD."),
     # Nota de apresentação
     (r"cover|carta|mensagem|message|note|additional|adicional", "__COVER_LETTER__"),
     # Conforto / Comfortable with
@@ -2181,7 +2179,7 @@ def _get_field_label(driver: webdriver.Chrome, element) -> str:
 def _infer_value(
     label: str,
     cover_letter: str,
-    job: "LinkedInJob | None" = None,
+    job: LinkedInJob | None = None,
 ) -> str | None:
     """Infere o valor correto para um campo com base no seu label.
 
@@ -2206,7 +2204,7 @@ def _fill_visible_fields(
     driver: webdriver.Chrome,
     cover_letter: str,
     container: object | None = None,
-    job: "LinkedInJob | None" = None,
+    job: LinkedInJob | None = None,
 ) -> int:
     """Preenche todos os campos visíveis no formulário (Easy Apply ou externo).
 
@@ -2596,7 +2594,7 @@ def apply_external(
                 href = (external_btn.get_attribute('href') or '') if hasattr(external_btn, 'get_attribute') else ''
                 if tag_name == 'a' and href and 'linkedin.com' not in href.lower() and href.startswith('http'):
                     logger.info(f"   🔗 Href externo encontrado: {href[:80]}")
-                    driver.execute_script(f"window.open(arguments[0], '_blank');", href)
+                    driver.execute_script("window.open(arguments[0], '_blank');", href)
                     time.sleep(2)
                     if len(driver.window_handles) > 1:
                         driver.switch_to.window(driver.window_handles[-1])
@@ -2723,7 +2721,7 @@ def apply_external(
         if len(driver.window_handles) > 1:
             driver.close()
             driver.switch_to.window(original_window)
-            logger.info(f"   🔙 Aba extra fechada, voltando ao LinkedIn")
+            logger.info("   🔙 Aba extra fechada, voltando ao LinkedIn")
 
         return filled
 
@@ -3268,7 +3266,7 @@ def _navigate_ats_and_fill(
         logger.info("   ⚠️ Ainda no LinkedIn — não é página ATS externa")
 
         # Tentar extrair URL externa via JS (LinkedIn armazena em data)
-        ext_url_js = driver.execute_script("""
+        ext_url_js = driver.execute_script(r"""
             // Buscar href em links com 'candidat'/'apply' que NÃO são linkedin
             var links = document.querySelectorAll('a[href]');
             for (var i = 0; i < links.length; i++) {
@@ -3678,7 +3676,7 @@ def _handle_multi_page_form(driver: webdriver.Chrome, cover_letter: str, max_pag
 def _handle_validation_errors(
     driver: webdriver.Chrome,
     cover_letter: str,
-    job: "LinkedInJob | None" = None,
+    job: LinkedInJob | None = None,
 ) -> None:
     """Detecta e tenta corrigir erros de validação no formulário."""
     # Procurar mensagens de erro
@@ -4179,7 +4177,7 @@ async def run_scanner(
                 external_apply_url = None
                 if not all_apply_btns:
                     logger.info("   🔍 Extraindo URL de apply via JS...")
-                    external_apply_url = driver.execute_script("""
+                    external_apply_url = driver.execute_script(r"""
                         // Tentar extrair URL de apply de <a> com 'candidat' ou 'apply'
                         var links = document.querySelectorAll('a[href]');
                         for (var i = 0; i < links.length; i++) {
@@ -4294,7 +4292,7 @@ async def run_scanner(
                                 _external_url=retry_ext_url,
                             )
                         else:
-                            logger.info(f"   ⏭️ Nenhum botão de candidatura encontrado (retry esgotado)")
+                            logger.info("   ⏭️ Nenhum botão de candidatura encontrado (retry esgotado)")
                             _take_screenshot(driver, session_dir / f"no_btn_{job.job_id}.png")
                     else:
                         logger.info(f"   ✅ Retry encontrou {len(retry_btns)} botão(ões)!")
@@ -4391,7 +4389,7 @@ async def run_scanner(
                         f"Screenshot: {job.title} @ {job.company}",
                     )
             else:
-                logger.info(f"   ⏭️ Candidatura não enviada (formulário complexo)")
+                logger.info("   ⏭️ Candidatura não enviada (formulário complexo)")
 
             time.sleep(SEARCH_DELAY * 2)
 
@@ -4401,7 +4399,7 @@ async def run_scanner(
 
         # Relatório final
         logger.info(f"\n{'=' * 60}")
-        logger.info(f"  🏁 RESULTADO FINAL")
+        logger.info("  🏁 RESULTADO FINAL")
         logger.info(f"  📊 Vagas encontradas: {len(jobs)}")
         logger.info(f"  ✅ Vagas compatíveis: {len(compatible_jobs)}")
         logger.info(f"  📨 Candidaturas enviadas: {applied_count}")

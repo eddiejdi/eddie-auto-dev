@@ -7,12 +7,10 @@ Validates and enforces GPU-first rule across the project:
 - No cloud tokens in .env by default
 - Proper retry/fallback logic in code
 """
-import os
+import logging
 import re
 import sys
 from pathlib import Path
-from typing import List, Tuple
-import logging
 
 logging.basicConfig(
     level=logging.INFO,
@@ -132,8 +130,8 @@ class GPUFirstValidator:
     
     def check_ollama_connectivity(self) -> bool:
         """Test actual Ollama GPU connectivity."""
-        import urllib.request
         import json
+        import urllib.request
         
         gpu_hosts = [
             ('GPU0', 'http://192.168.15.2:11434'),

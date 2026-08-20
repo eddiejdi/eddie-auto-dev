@@ -98,7 +98,7 @@ def _http_get(url: str, timeout: int = 5) -> tuple[int, dict]:
                 return resp.status, {}
     except urllib.error.HTTPError as exc:
         return exc.code, {}
-    except Exception as exc:
+    except Exception:
         return 0, {}
 
 

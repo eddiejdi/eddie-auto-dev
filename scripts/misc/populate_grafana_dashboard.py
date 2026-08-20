@@ -4,11 +4,10 @@ Popula o dashboard do Grafana com dados reais via SSH
 Solução direta: usar curl via SSH para criar o painel com dados
 """
 
-import subprocess
-import os
 import json
+import os
+import subprocess
 import sys
-from datetime import datetime
 from pathlib import Path
 
 HOMELAB_HOST = os.getenv("HOMELAB_HOST", "192.168.15.2")
@@ -389,8 +388,8 @@ def validate_dashboard():
     """Valida o dashboard no servidor"""
     print("\n✅ Validando dashboard no servidor...")
     
-    cmd = """
-    curl -s -u {user}:{password} 'http://127.0.0.1:3002/api/dashboards/uid/learning-evolution' > /tmp/learning_dashboard.json
+    cmd = f"""
+    curl -s -u {GRAFANA_USER}:{GRAFANA_PASS} 'http://127.0.0.1:3002/api/dashboards/uid/learning-evolution' > /tmp/learning_dashboard.json
     python3 - << 'PY'
 import json
 with open('/tmp/learning_dashboard.json','r') as f:
@@ -400,7 +399,7 @@ print('Painéis: ' + str(len(panels)))
 for p in panels:
     print('  • ' + str(p.get('title')))
 PY
-    """.format(user=GRAFANA_USER, password=GRAFANA_PASS)
+    """
     
     output = run_ssh_cmd(cmd)
     if output:
@@ -436,7 +435,7 @@ def main():
     # Etapa 2: Criar JSON do dashboard
     print("\n🔄 ETAPA 2: PREPARAÇÃO DO DASHBOARD")
     dashboard_json = create_dashboard_json(metrics)
-    print(f"   ✅ Dashboard preparado com 3 painéis")
+    print("   ✅ Dashboard preparado com 3 painéis")
 
     # Etapa 2.1: Garantir datasources necessárias
     ensure_prometheus_datasource()

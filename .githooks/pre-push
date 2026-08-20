@@ -1,0 +1,107 @@
+#!/bin/bash
+# Pre-push hook — Regression gate antes de push para branches protegidas
+#
+# Roda ruff (lint) + pytest smoke (testes unitários rápidos) em arquivos staged.
+# Bloqueia push para main/master se testes falharem OU se ruff encontrar erros.
+#
+# Bypass:
+#   - ALLOW_PUSH=1 git push ...        (pula o gate)
+#   - git push --no-verify ...          (Git nativo)
+#
+# Racional: o pre-commit valida domínio (tokens, CMDB, taxonomias). O pre-push
+# é a última barreira local antes do GitHub — roda pytest smoke + ruff para
+# capturar regressões funcionais que o pre-commit não cobre.
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo .)"
+PY_BIN="$(command -v python3 || command -v python)"
+RUFF_BIN="$(command -v ruff 2>/dev/null || echo "")"
+PYTEST_BIN="$(command -v pytest 2>/dev/null || echo "${REPO_ROOT}/.venv/bin/pytest")"
+
+# ─── 0. Bypass ─────────────────────────────────────────────────────────────────
+if [ -n "${ALLOW_PUSH:-}" ]; then
+    echo "[pre-push] ALLOW_PUSH set — pulando gate de regressão."
+    exit 0
+fi
+
+# ─── 1. Ler refs do stdin (formato: <local ref> <local sha> <remote ref> <remote sha>) ──
+PROTECTED_BRANCHES="refs/heads/main refs/heads/master refs/heads/prod refs/heads/production"
+IS_PUSH_PROTECTED=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+    for pb in $PROTECTED_BRANCHES; do
+        if [ "$remote_ref" = "$pb" ]; then
+            IS_PUSH_PROTECTED=1
+            break
+        fi
+    done
+done
+
+# Push para branches não protegidas: libera sem gate
+if [ "$IS_PUSH_PROTECTED" -eq 0 ]; then
+    exit 0
+fi
+
+echo "🚪 [pre-push] Branch protegida detectada. Rodando gate de regressão..."
+
+# ─── 2. ruff check (se disponível) ───────────────────────────────────────────────
+if [ -n "$RUFF_BIN" ] && [ -x "$RUFF_BIN" ]; then
+    echo "  [1/2] ruff check..."
+    if ! "$RUFF_BIN" check --quiet "$REPO_ROOT/btc_trading_agent" "$REPO_ROOT/clear_trading_agent" "$REPO_ROOT/specialized_agents" "$REPO_ROOT/tools" 2>&1; then
+        echo "❌ [pre-push] ruff encontrou erros de lint."
+        echo "   Corrija com: ruff check --fix btc_trading_agent/ clear_trading_agent/ specialized_agents/ tools/"
+        echo "   Ou use: ALLOW_PUSH=1 git push ... para forçar (não recomendado)."
+        exit 1
+    fi
+    echo "  ✅ ruff OK"
+else
+    echo "  [1/2] ruff não instalado — pulando lint (instale com: pip install ruff)"
+fi
+
+# ─── 3. pytest smoke (suíte curada de testes críticos) ─────────────────────────
+# Usa a mesma lista curada do python-ci.yml — testes do trading agent (caminho
+# crítico) que são rápidos (<30s) e não chamam sys.exit() no nível do módulo.
+# A suíte completa roda no regression-gate.yml (CI) em ambiente com deps completas.
+echo "  [2/2] pytest smoke (testes críticos de trading)..."
+if [ -x "$PYTEST_BIN" ]; then
+    PYTEST_CMD="$PYTEST_BIN"
+elif [ -x "${REPO_ROOT}/.venv/bin/pytest" ]; then
+    PYTEST_CMD="${REPO_ROOT}/.venv/bin/pytest"
+else
+    PYTEST_CMD="pytest"
+fi
+
+# Lista curada — mesmos testes do python-ci.yml (caminho crítico do trading).
+# Adicione aqui testes novos que devem ser gate de regressão no pre-push.
+SMOKE_TESTS=(
+    "tests/test_ai_trade_window.py"
+    "tests/test_buy_target_tolerance.py"
+    "tests/test_profile_trade_guards.py"
+    "tests/test_reward_tuning.py"
+    "tests/test_position_sizing.py"
+    "tests/test_sell_block_fix.py"
+    "tests/test_multi_entry_sell_behavior.py"
+    "tests/test_rebuy_lock_enforcement.py"
+)
+
+# Filtra apenas os que existem no repo atual
+EXISTING_TESTS=""
+for t in "${SMOKE_TESTS[@]}"; do
+    [ -f "${REPO_ROOT}/${t}" ] && EXISTING_TESTS="${EXISTING_TESTS} ${t}"
+done
+
+if [ -z "$EXISTING_TESTS" ]; then
+    echo "  ⚠️ Nenhum teste crítico encontrado — pulando smoke (verifique tests/)"
+else
+    if ! timeout 60 "$PYTEST_CMD" -q -x --tb=line --maxfail=3 \
+            -m "not integration and not external" \
+            $EXISTING_TESTS 2>&1 | tail -15; then
+        echo "❌ [pre-push] pytest smoke falhou. Push para branch protegida bloqueado."
+        echo "   Corrija os testes ou use: ALLOW_PUSH=1 git push ... para forçar."
+        echo "   Em emergências (hotfix crítico): git push --no-verify ..."
+        exit 1
+    fi
+fi
+
+echo "✅ [pre-push] Gate de regressão OK. Prosseguindo com o push."
+exit 0

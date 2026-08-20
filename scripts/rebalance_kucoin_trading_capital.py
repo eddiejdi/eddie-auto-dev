@@ -28,7 +28,7 @@ for p in (ROOT, AGENT_DIR, Path("/apps/crypto-trader/trading/btc_trading_agent")
     if p.exists() and str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
-import kucoin_api as k  # noqa: E402
+import kucoin_api as k
 
 TARGET_SUB_USDT = 30.0
 MIN_SUB_USDT = 25.0

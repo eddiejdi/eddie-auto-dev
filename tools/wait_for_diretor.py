@@ -3,10 +3,9 @@
 
 Usage: python3 tools/wait_for_diretor.py
 """
+import importlib.util
 import json
 import pathlib
-import importlib.util
-import sys
 import time
 
 bus_path = pathlib.Path(__file__).resolve().parents[1] / 'specialized_agents' / 'agent_communication_bus.py'

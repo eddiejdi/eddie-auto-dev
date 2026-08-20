@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Script para indexar documentacao do homelab no RAG."""
 
+
 import requests
-import json
 
 RAG_API = "http://localhost:8001"
 

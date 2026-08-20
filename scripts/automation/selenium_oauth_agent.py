@@ -7,12 +7,10 @@ Automatiza: abertura navegador → login → captura código
 import json
 import time
 from pathlib import Path
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
+
 from google_auth_oauthlib.flow import InstalledAppFlow
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.firefox.options import Options as FirefoxOptions
 
@@ -75,7 +73,7 @@ class SeleniumOAuthAgent:
         flow = InstalledAppFlow.from_client_secrets_file(str(CREDS_FILE), SCOPES)
         auth_url, state = flow.authorization_url(prompt="consent", access_type="offline")
         
-        print(f"✅ URL gerada\n")
+        print("✅ URL gerada\n")
         return auth_url, flow
     
     def monitor_redirect(self, wait_time=300):
@@ -92,7 +90,7 @@ class SeleniumOAuthAgent:
                 
                 # Verificar se contém o código
                 if "code=" in current_url:
-                    print(f"\n✅ Redirecionamento detectado!")
+                    print("\n✅ Redirecionamento detectado!")
                     print(f"   URL: {current_url[:80]}...\n")
                     
                     # Extrair código
@@ -106,7 +104,7 @@ class SeleniumOAuthAgent:
                 
                 # Verificar se página de erro
                 if "error=" in current_url or "error" in current_url.lower():
-                    print(f"\n❌ Erro detectado na URL!")
+                    print("\n❌ Erro detectado na URL!")
                     print(f"   {current_url}\n")
                     return False
                 
@@ -132,7 +130,7 @@ class SeleniumOAuthAgent:
         auth_url, flow = self.generate_auth_url()
         
         # Abrir navegador
-        print(f"🌐 Abrindo navegador...")
+        print("🌐 Abrindo navegador...")
         self.driver.get(auth_url)
         print("✅ Navegador aberto. Aguardando autorização...\n")
         

@@ -8,12 +8,9 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import time
 from contextlib import contextmanager
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import numpy as _np
 import psycopg2
@@ -63,7 +60,7 @@ SCHEMA = "clear"
 class TrainingDatabase:
     """Gerenciador do banco de dados de treinamento (PostgreSQL, schema clear)."""
 
-    def __init__(self, dsn: Optional[str] = None) -> None:
+    def __init__(self, dsn: str | None = None) -> None:
         self.dsn = dsn or DATABASE_URL
         self._pool = psycopg2.pool.ThreadedConnectionPool(
             minconn=1, maxconn=5, dsn=self.dsn
@@ -344,7 +341,7 @@ class TrainingDatabase:
         dry_run: bool = False,
         commission: float = 0,
         asset_class: str = "equity",
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
         profile: str = "default",
     ) -> int:
         """Registra um trade executado."""
@@ -384,7 +381,7 @@ class TrainingDatabase:
         symbol: str,
         since: float,
         dry_run: bool = False,
-        profile: Optional[str] = None,
+        profile: str | None = None,
     ) -> int:
         """Conta trades desde um timestamp (para limite diário)."""
         with self._get_conn() as conn:
@@ -404,9 +401,9 @@ class TrainingDatabase:
         self,
         symbol: str,
         limit: int = 50,
-        dry_run: Optional[bool] = None,
-        profile: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        dry_run: bool | None = None,
+        profile: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Retorna trades recentes."""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -432,8 +429,8 @@ class TrainingDatabase:
         price: float,
         reason: str = "",
         executed: bool = False,
-        trade_id: Optional[int] = None,
-        features: Optional[Dict] = None,
+        trade_id: int | None = None,
+        features: dict | None = None,
         profile: str = "default",
     ) -> int:
         """Registra uma decisão de trading."""
@@ -504,7 +501,7 @@ class TrainingDatabase:
             return cur.fetchone()[0]
 
     # ====================== CANDLES ======================
-    def upsert_candles(self, symbol: str, ktype: str, candles: List[Dict]) -> int:
+    def upsert_candles(self, symbol: str, ktype: str, candles: list[dict]) -> int:
         """Insere ou atualiza candles (upsert por timestamp+symbol+ktype)."""
         if not candles:
             return 0
@@ -567,8 +564,8 @@ class TrainingDatabase:
         symbol: str,
         days: int = 30,
         dry_run: bool = False,
-        profile: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        profile: str | None = None,
+    ) -> dict[str, Any]:
         """Retorna resumo de performance."""
         since = time.time() - (days * 86400)
         with self._get_conn() as conn:
@@ -615,7 +612,7 @@ class TrainingDatabase:
     ) -> int:
         """Registra evento fiscal no banco de dados."""
         if not year_month:
-            from datetime import datetime, timezone, timedelta
+            from datetime import datetime, timedelta, timezone
             brt = timezone(timedelta(hours=-3))
             year_month = datetime.now(brt).strftime("%Y-%m")
 
@@ -693,7 +690,7 @@ class TrainingDatabase:
                 ),
             )
 
-    def get_tax_monthly_summary(self, year_month: str) -> Optional[Dict[str, Any]]:
+    def get_tax_monthly_summary(self, year_month: str) -> dict[str, Any] | None:
         """Retorna resumo fiscal de um mês."""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -719,7 +716,7 @@ class TrainingDatabase:
                 (category, _safe_float(amount)),
             )
 
-    def get_tax_accumulated_losses(self) -> Dict[str, float]:
+    def get_tax_accumulated_losses(self) -> dict[str, float]:
         """Retorna prejuízos acumulados por categoria."""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -731,8 +728,8 @@ class TrainingDatabase:
     def get_tax_events(
         self,
         year_month: str,
-        symbol: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        symbol: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Retorna eventos fiscais de um mês."""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)

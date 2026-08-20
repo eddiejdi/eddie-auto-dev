@@ -3,9 +3,10 @@
 Teste interativo da IA treinada com emails
 """
 
+import os
 import sys
 from pathlib import Path
-import os
+
 import requests
 
 BASE_DIR = Path(__file__).parent
@@ -24,7 +25,7 @@ def main():
     
     # Verificar conteúdo indexado
     stats = trainer.get_stats()
-    print(f"\n📊 Base de conhecimento:")
+    print("\n📊 Base de conhecimento:")
     print(f"   • ChromaDB: {'✅' if stats['chromadb_available'] else '❌'}")
     print(f"   • Emails indexados: {stats['emails_indexed']}")
     print(f"   • Arquivos locais: {stats['local_files']}")

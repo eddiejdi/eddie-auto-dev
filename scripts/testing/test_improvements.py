@@ -115,7 +115,6 @@ def test_all_methods():
         
         # Add semantic if available
         try:
-            import sentence_transformers
             methods_to_test.extend([
                 ('semantic', 'Semantic Embeddings'),
                 ('semantic_hybrid', 'Semantic + TF-IDF Hybrid'),
@@ -126,7 +125,7 @@ def test_all_methods():
         # Add ultra (combines all available)
         methods_to_test.append(('ultra', 'Ultra (all methods combined)'))
         
-        print("")
+        print()
         results = []
         
         from compatibility_allinone import compute_compatibility
@@ -158,7 +157,7 @@ def test_all_methods():
             results.sort(key=lambda x: x[1], reverse=True)
             best_method, best_score, best_desc = results[0]
             
-            print(f"\n📊 Analysis:")
+            print("\n📊 Analysis:")
             print(f"   Best method: {best_desc} ({best_score}%)")
             
             if len(results) > 1:
@@ -170,13 +169,13 @@ def test_all_methods():
             
             # Validate against expected
             if test_case['expected'] == 'high' and best_score >= 50:
-                print(f"   ✅ Result matches expectation (high match)")
+                print("   ✅ Result matches expectation (high match)")
             elif test_case['expected'] == 'medium' and 25 <= best_score < 50:
-                print(f"   ✅ Result matches expectation (medium match)")
+                print("   ✅ Result matches expectation (medium match)")
             elif test_case['expected'] == 'low' and best_score < 25:
-                print(f"   ✅ Result matches expectation (low match)")
+                print("   ✅ Result matches expectation (low match)")
             else:
-                print(f"   ⚠️  Result differs from expectation")
+                print("   ⚠️  Result differs from expectation")
     
     print("\n" + "=" * 80)
     print("✅ COMPREHENSIVE TEST COMPLETE")
@@ -205,14 +204,14 @@ def quick_demo():
     print("BEFORE (Jaccard - token matching only):")
     score1, exp1, _ = compute_compatibility(resume, job, method='jaccard')
     print(f"   Score: {score1}%")
-    print(f"   Issue: Doesn't recognize K8s = Kubernetes, IaC = Infrastructure as Code\n")
+    print("   Issue: Doesn't recognize K8s = Kubernetes, IaC = Infrastructure as Code\n")
     
     # After (TF-IDF + Synonyms)
     print("AFTER (TF-IDF + Synonyms):")
     score2, exp2, _ = compute_compatibility(resume, job, method='tfidf_synonyms')
     print(f"   Score: {score2}%")
     print(f"   Improvement: +{score2 - score1:.1f}%")
-    print(f"   Benefit: Recognizes technical synonyms\n")
+    print("   Benefit: Recognizes technical synonyms\n")
     
     # After (Semantic)
     try:
@@ -220,7 +219,7 @@ def quick_demo():
         score3, exp3, _ = compute_compatibility(resume, job, method='semantic')
         print(f"   Score: {score3}%")
         print(f"   Improvement: +{score3 - score1:.1f}%")
-        print(f"   Benefit: Deep semantic understanding\n")
+        print("   Benefit: Deep semantic understanding\n")
     except:
         print("AFTER (Semantic Embeddings): Not available (install sentence-transformers)\n")
     
@@ -290,7 +289,7 @@ if __name__ == "__main__":
         print("2. Full Test (all methods, all scenarios, 2-3 minutes)")
         print("3. Check Dependencies (see what's installed)")
         print("4. Exit")
-        print("")
+        print()
         
         choice = input("Choose option (1-4): ").strip()
         
@@ -310,4 +309,4 @@ if __name__ == "__main__":
     print("   - Run full benchmark: python3 compatibility_allinone.py")
     print("   - Test in production: export COMPATIBILITY_METHOD=tfidf_hybrid")
     print("   - Use best available: export COMPATIBILITY_METHOD=auto")
-    print("")
+    print()

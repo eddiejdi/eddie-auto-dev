@@ -5,22 +5,19 @@ Gera um dashboard HTML/Plotly com visualizações interativas
 """
 
 import json
-import subprocess
 import os
-from pathlib import Path
+import subprocess
 from datetime import datetime
-from typing import Dict, List, Tuple
-import base64
+from pathlib import Path
 
 try:
-    import plotly.graph_objects as go
     import plotly.express as px
+    import plotly.graph_objects as go
     from plotly.subplots import make_subplots
 except ImportError:
     print("Instalando plotly...")
     subprocess.run(["pip", "install", "plotly", "-q"])
     import plotly.graph_objects as go
-    import plotly.express as px
     from plotly.subplots import make_subplots
 
 # Configurações
@@ -43,7 +40,7 @@ def run_ssh_cmd(cmd: str) -> str:
         print(f"❌ Erro SSH: {e}")
         return ""
 
-def get_training_files_metrics() -> List[Tuple[str, datetime, int, int]]:
+def get_training_files_metrics() -> list[tuple[str, datetime, int, int]]:
     """Retorna (arquivo, data, tamanho_bytes, num_linhas)"""
     cmd = f"find {TRAINING_DIR} -name 'training_*.jsonl' -exec ls -l {{}} \\;"
     output = run_ssh_cmd(cmd)
@@ -103,7 +100,7 @@ def get_training_files_metrics() -> List[Tuple[str, datetime, int, int]]:
     
     return sorted(result, key=lambda x: x[1])
 
-def get_ollama_models_info() -> List[Tuple[str, datetime, int]]:
+def get_ollama_models_info() -> list[tuple[str, datetime, int]]:
     """Retorna (modelo, data_modificacao, tamanho_mb)"""
     cmd = f"curl -s {OLLAMA_URL}/api/tags"
     output = run_ssh_cmd(cmd)
@@ -128,7 +125,7 @@ def get_ollama_models_info() -> List[Tuple[str, datetime, int]]:
     
     return sorted(models, key=lambda x: x[1])
 
-def create_interactive_dashboard(training_metrics: List, models_info: List):
+def create_interactive_dashboard(training_metrics: list, models_info: list):
     """Cria dashboard interativo com Plotly"""
     
     if not training_metrics:
@@ -239,12 +236,12 @@ def main():
         print("❌ Nenhum arquivo de treinamento encontrado")
         return
     
-    print(f"\n✅ Dados coletados:")
+    print("\n✅ Dados coletados:")
     print(f"   - {len(training_metrics)} arquivos de treinamento")
     print(f"   - {len(models_info)} modelos no Ollama")
     
     # Exibir resumo
-    print(f"\n📊 Resumo de Dados:")
+    print("\n📊 Resumo de Dados:")
     total_lines = sum(m[3] for m in training_metrics)
     total_size_mb = sum(m[2] for m in training_metrics) / (1024 * 1024)
     print(f"   Total de conversas indexadas: {total_lines}")
@@ -258,10 +255,10 @@ def main():
     # Gerar dashboard
     html_path = create_interactive_dashboard(training_metrics, models_info)
     
-    print(f"\n" + "="*60)
+    print("\n" + "="*60)
     print("✅ DASHBOARD GERADO COM SUCESSO!")
     print(f"   Arquivo: {html_path}")
-    print(f"   Abra em um navegador para visualizar interativamente")
+    print("   Abra em um navegador para visualizar interativamente")
     print("="*60)
 
 if __name__ == "__main__":

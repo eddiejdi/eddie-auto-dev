@@ -24,7 +24,6 @@ import shlex
 import shutil
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 JOURNAL_DIR = Path(os.environ.get("LTFS_JOURNAL_DIR", "/var/lib/ltfs-journal"))

@@ -11,7 +11,7 @@ Estratégia de Correção:
 
 import subprocess
 import sys
-from pathlib import Path
+
 
 def print_section(title):
     print(f"\n{'═' * 80}")

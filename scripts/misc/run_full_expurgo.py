@@ -5,14 +5,15 @@ Processa TODOS os emails em todas as categorias
 """
 
 import asyncio
-import sys
 import os
+import sys
 
 # Configurar path correto do Gmail
 os.environ['GMAIL_DATA_DIR'] = '/home/shared/myClaude/gmail_data'
 
 sys.path.insert(0, '/home/shared/myClaude')
-from gmail_expurgo_inteligente import ExpurgoInteligente, NotificationType
+from gmail_expurgo_inteligente import ExpurgoInteligente
+
 
 async def run_full_expurgo():
     expurgo = ExpurgoInteligente()

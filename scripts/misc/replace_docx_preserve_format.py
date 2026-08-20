@@ -7,15 +7,14 @@ Usa o token armazenado no Secrets Agent (homelab).
 import io
 import json
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
 
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaIoBaseDownload, MediaFileUpload
-from google.oauth2.credentials import Credentials
-from google.auth.transport.requests import Request
 from docx import Document
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload, MediaIoBaseDownload
 
 DOC_FILE_ID = "1y2eeV4No2zQD_ezeZCaBZiuswvANF8V3"
 SECRETS_AGENT_HOST = "192.168.15.2"

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-import requests, json, time
-from typing import Dict
+import json
+import time
+
+import requests
 
 ENV_TARGETS = {
     "dev": os.environ.get('HOMELAB_URL', 'http://localhost:3000'),
@@ -20,7 +22,7 @@ CHECKS = [
 ADMIN_CRED = {"email": "admin@localhost", "password": "admin"}
 
 
-def check_root(base: str, s: requests.Session, out: Dict):
+def check_root(base: str, s: requests.Session, out: dict):
     try:
         r = s.get(base, timeout=10)
         out["root"] = {"status_code": r.status_code, "ok": r.ok}
@@ -28,7 +30,7 @@ def check_root(base: str, s: requests.Session, out: Dict):
         out["root"] = {"error": str(e)}
 
 
-def check_api_config(base: str, s: requests.Session, out: Dict):
+def check_api_config(base: str, s: requests.Session, out: dict):
     for p in ("/api/config", "/api/v1/config", "/api/config/"):
         try:
             r = s.get(base.rstrip("/") + p, timeout=10)
@@ -40,7 +42,7 @@ def check_api_config(base: str, s: requests.Session, out: Dict):
     out.setdefault("api_config_errors", []).append("no-200-response")
 
 
-def check_static_loader(base: str, s: requests.Session, out: Dict):
+def check_static_loader(base: str, s: requests.Session, out: dict):
     try:
         r = s.get(base.rstrip("/") + "/static/loader.js", timeout=10)
         out["static_loader"] = {"status_code": r.status_code, "length": len(r.content)}
@@ -48,7 +50,7 @@ def check_static_loader(base: str, s: requests.Session, out: Dict):
         out["static_loader"] = {"error": str(e)}
 
 
-def attempt_signin(base: str, s: requests.Session, out: Dict):
+def attempt_signin(base: str, s: requests.Session, out: dict):
     try:
         r = s.post(base.rstrip("/") + "/api/v1/auths/signin", json=ADMIN_CRED, timeout=10)
         out["signin_raw_status"] = r.status_code
@@ -65,7 +67,7 @@ def attempt_signin(base: str, s: requests.Session, out: Dict):
     return None
 
 
-def create_chat(base: str, session_token: str, out: Dict):
+def create_chat(base: str, session_token: str, out: dict):
     try:
         s = requests.Session()
         headers = {"Authorization": f"Bearer {session_token}", "Content-Type": "application/json"}
@@ -80,7 +82,7 @@ def create_chat(base: str, session_token: str, out: Dict):
         out["create_chat_error"] = str(e)
 
 
-def list_chats(base: str, session_token: str, out: Dict):
+def list_chats(base: str, session_token: str, out: dict):
     try:
         s = requests.Session()
         headers = {"Authorization": f"Bearer {session_token}"}
@@ -94,7 +96,7 @@ def list_chats(base: str, session_token: str, out: Dict):
         out["list_chats_error"] = str(e)
 
 
-def run_checks_for_env(name: str, base: str) -> Dict:
+def run_checks_for_env(name: str, base: str) -> dict:
     out = {"env": name, "base": base, "timestamp": int(time.time()), "checks": {}}
     s = requests.Session()
     # root

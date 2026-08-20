@@ -23,7 +23,6 @@ import os
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
-
 # Coordinator e a unica porta de gerenciamento de modelos em producao.
 DEFAULT_COORD_HOST = os.getenv(
     "AGENDA_LLM_COORD_HOST",

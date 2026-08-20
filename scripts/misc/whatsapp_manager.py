@@ -7,19 +7,17 @@ Acesse: http://localhost:5002
 """
 
 import os
-import asyncio
-from pathlib import Path
 from datetime import datetime
-from typing import Optional
 
 # Instalar: pip install streamlit httpx qrcode pillow
 
 try:
-    import streamlit as st
+    import base64
+    from io import BytesIO
+
     import httpx
     import qrcode
-    from io import BytesIO
-    import base64
+    import streamlit as st
 except ImportError:
     print("Instale as dependências:")
     print("pip install streamlit httpx qrcode pillow")
@@ -115,7 +113,7 @@ class WAHAManager:
         """Desconecta WhatsApp"""
         return self._request("post", f"/api/sessions/{self.session}/logout")
     
-    def get_qr(self) -> Optional[str]:
+    def get_qr(self) -> str | None:
         """Obtém QR Code"""
         try:
             with httpx.Client(timeout=30.0) as client:
@@ -134,7 +132,7 @@ class WAHAManager:
             pass
         return None
     
-    def get_qr_image(self) -> Optional[bytes]:
+    def get_qr_image(self) -> bytes | None:
         """Obtém QR Code como imagem"""
         try:
             with httpx.Client(timeout=30.0) as client:
@@ -245,7 +243,7 @@ def main():
             </div>
             """, unsafe_allow_html=True)
             
-            st.code(f"docker logs waha", language="bash")
+            st.code("docker logs waha", language="bash")
             
         else:
             session_status = status.get("status", status.get("state", "UNKNOWN"))

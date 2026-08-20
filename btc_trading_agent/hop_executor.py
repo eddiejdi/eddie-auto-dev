@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
 
 from route_graph import RoutePlan
 
@@ -23,9 +24,9 @@ class LegResult:
     order_id: str
     status: str  # ok | failed | simulated
     error: str = ""
-    raw: Dict[str, Any] = field(default_factory=dict)
+    raw: dict[str, Any] = field(default_factory=dict)
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return asdict(self)
 
 
@@ -34,11 +35,11 @@ class ExecutionResult:
     success: bool
     status: str  # done | partial | failed | simulated
     plan: RoutePlan
-    legs: List[LegResult] = field(default_factory=list)
+    legs: list[LegResult] = field(default_factory=list)
     amount_out: float = 0.0
     error: str = ""
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "success": self.success,
             "status": self.status,
@@ -77,8 +78,8 @@ def execute(
     plan: RoutePlan,
     *,
     dry_run: bool = True,
-    place_order_fn: Optional[Callable[..., Dict[str, Any]]] = None,
-    get_fills_fn: Optional[Callable[..., Dict[str, Any]]] = None,
+    place_order_fn: Callable[..., dict[str, Any]] | None = None,
+    get_fills_fn: Callable[..., dict[str, Any]] | None = None,
     sleep_fn: Callable[[float], None] = time.sleep,
     fill_wait_sec: float = 1.0,
 ) -> ExecutionResult:
@@ -91,7 +92,7 @@ def execute(
     if get_fills_fn is None:
         from kucoin_api import get_fills_for_order as get_fills_fn  # type: ignore
 
-    results: List[LegResult] = []
+    results: list[LegResult] = []
     current_amount = float(plan.amount_in)
 
     for i, leg in enumerate(plan.legs):

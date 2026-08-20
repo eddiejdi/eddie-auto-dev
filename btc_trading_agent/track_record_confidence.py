@@ -5,11 +5,11 @@ from __future__ import annotations
 
 import math
 import time
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, Dict, List, Mapping, Optional, Protocol
+from typing import Any, Protocol
 
-
-DEFAULT_TRACK_RECORD_CFG: Dict[str, Any] = {
+DEFAULT_TRACK_RECORD_CFG: dict[str, Any] = {
     "enabled": False,
     "mode": "apply",
     "lookback_hours": 72.0,
@@ -38,7 +38,7 @@ class TrackRecordSnapshot:
     trs: float
     boost: float
 
-    def as_features(self) -> Dict[str, float]:
+    def as_features(self) -> dict[str, float]:
         return {
             "track_record_sell_count": float(self.sell_count),
             "track_record_wr": round(self.win_rate, 4),
@@ -59,15 +59,15 @@ class TrackRecordDb(Protocol):
         *,
         dry_run: bool = False,
         limit: int = 50,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         ...
 
 
 def merge_track_record_cfg(
-    raw: Optional[Mapping[str, Any]] = None,
+    raw: Mapping[str, Any] | None = None,
     *,
     profile: str = "default",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     cfg = dict(DEFAULT_TRACK_RECORD_CFG)
     if raw:
         cfg.update(raw)
@@ -82,7 +82,7 @@ def merge_track_record_cfg(
     return cfg
 
 
-def compute_streaks(sells: List[Dict[str, Any]]) -> tuple[int, int]:
+def compute_streaks(sells: list[dict[str, Any]]) -> tuple[int, int]:
     """Calcula streaks a partir de SELLs ordenados do mais recente ao mais antigo."""
     winning_streak = 0
     losing_streak = 0
@@ -102,7 +102,7 @@ def compute_streaks(sells: List[Dict[str, Any]]) -> tuple[int, int]:
 
 
 def compute_snapshot_from_sells(
-    sells: List[Dict[str, Any]],
+    sells: list[dict[str, Any]],
     cfg: Mapping[str, Any],
 ) -> TrackRecordSnapshot:
     lookback_hours = max(1.0, float(cfg.get("lookback_hours", 72.0) or 72.0))
@@ -194,7 +194,7 @@ class TrackRecordConfidence:
 
     def __init__(self, db: TrackRecordDb):
         self.db = db
-        self._cache: Dict[tuple, Dict[str, Any]] = {}
+        self._cache: dict[tuple, dict[str, Any]] = {}
 
     def get_snapshot(
         self,

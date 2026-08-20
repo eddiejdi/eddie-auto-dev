@@ -13,9 +13,8 @@ Sem --execute é DRY-RUN: só gera relatório JSON em data/linkedin_purge/.
 from __future__ import annotations
 
 import sys
-sys.path.insert(0, "/home/edenilson/web-agent")
-from agent.browser import Browser  # noqa: E402
 
+sys.path.insert(0, "/home/edenilson/web-agent")
 import argparse
 import json
 import logging
@@ -25,10 +24,9 @@ import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Optional
 
+from agent.browser import Browser
 from playwright.sync_api import Page
-
 
 # ---------------------------- Config ---------------------------- #
 

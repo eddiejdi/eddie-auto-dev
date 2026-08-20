@@ -9,12 +9,12 @@ from __future__ import annotations
 import json
 import logging
 import traceback
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 from specialized_agents.langgraph_base import (
     AgentState,
     HomelabAgent,
-    _intent_check,
     _intent_complete,
     _memory_store,
 )
@@ -58,19 +58,18 @@ def _fetch_intent(intent_id: str) -> dict[str, Any] | None:
 def _mark_in_progress(intent_id: str) -> bool:
     conn = _db_connect()
     try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
+        with conn, conn.cursor() as cur:
+            cur.execute(
+                """
                     UPDATE agent_actions
                        SET status = 'in_progress',
                            executed_at = COALESCE(executed_at, NOW())
                      WHERE intent_id = %s
                        AND status = 'approved'
                     """,
-                    (intent_id,),
-                )
-                return cur.rowcount == 1
+                (intent_id,),
+            )
+            return cur.rowcount == 1
     finally:
         conn.close()
 

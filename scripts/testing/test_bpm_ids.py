@@ -2,6 +2,7 @@
 """Teste de validação do BPM Agent - IDs únicos"""
 import re
 import sys
+
 import pytest
 
 sys.path.insert(0, '/home/shared/myClaude')

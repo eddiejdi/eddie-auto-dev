@@ -2,7 +2,6 @@
 """
 Processa PDF usando Docling (IBM) para extrair texto e conteúdo
 """
-import sys
 from pathlib import Path
 
 print("📄 Processando PDF com Docling...")
@@ -93,8 +92,8 @@ except ImportError as e:
         print("Tentando OCR com Pillow...")
         
         try:
-            from PIL import Image
             import pytesseract
+            from PIL import Image
             
             # Processar imagem extraída
             img_path = "/tmp/whatsapp_pdf_img-000.jpg"

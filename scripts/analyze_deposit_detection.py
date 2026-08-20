@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Analisador de detecção de depósitos: identifica Fiat Deposits sem trades external_deposit."""
-import json
 import sys
 from pathlib import Path
-from datetime import datetime, timezone
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(_REPO_ROOT) not in sys.path:

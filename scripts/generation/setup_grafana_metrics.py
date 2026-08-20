@@ -10,11 +10,12 @@ Registra:
 
 import asyncio
 import json
-import requests
+import logging
 import sys
 from pathlib import Path
-from typing import Optional, Dict, Any
-import logging
+from typing import Any
+
+import requests
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -23,7 +24,7 @@ logger = logging.getLogger(__name__)
 class GrafanaClient:
     """Cliente HTTP para Grafana API."""
     
-    def __init__(self, base_url: str = "http://localhost:3000", api_key: Optional[str] = None):
+    def __init__(self, base_url: str = "http://localhost:3000", api_key: str | None = None):
         """
         Inicializa cliente Grafana.
         
@@ -62,7 +63,7 @@ class GrafanaClient:
         name: str = "Prometheus",
         url: str = "http://localhost:9090",
         is_default: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Registra Prometheus como data source."""
         payload = {
             "name": name,
@@ -89,7 +90,7 @@ class GrafanaClient:
             logger.error(f"Failed to create datasource: {e}")
             return {}
     
-    def create_dashboard(self, dashboard_json: Dict[str, Any], overwrite: bool = True) -> Dict[str, Any]:
+    def create_dashboard(self, dashboard_json: dict[str, Any], overwrite: bool = True) -> dict[str, Any]:
         """Cria ou atualiza dashboard."""
         payload = {
             "dashboard": dashboard_json,
@@ -113,7 +114,7 @@ class GrafanaClient:
         threshold: float,
         duration: str = "5m",
         severity: str = "critical"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Cria regra de alerta (Grafana Alerting)."""
         payload = {
             "title": title,
@@ -162,8 +163,8 @@ class GrafanaClient:
 async def setup_grafana_integration(
     grafana_url: str = "http://localhost:3000",
     prometheus_url: str = "http://localhost:9090",
-    api_key: Optional[str] = None,
-    dashboard_path: Optional[str] = None
+    api_key: str | None = None,
+    dashboard_path: str | None = None
 ):
     """
     Configura integração completa com Grafana.

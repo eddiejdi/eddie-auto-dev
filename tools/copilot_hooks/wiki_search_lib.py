@@ -21,7 +21,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 WIKI_URL_DEFAULT = "http://192.168.15.2:3009/graphql"
 WIKI_LOCALE_DEFAULT = "en"  # páginas remotas da Wiki.js estão em locale "en"
@@ -31,8 +31,7 @@ CACHE_FILE = Path("/tmp/rpa4all_wiki_cache.json")
 
 STOPWORDS = {
     "com", "para", "que", "uma", "um", "dos", "das", "não", "nao", "esta", "está",
-    "mas", "por", "como", "mais", "also", "with", "from", "into", "para", "das",
-    "when", "does", "what", "your", "this", "that", "have", "been", "from", "the",
+    "mas", "por", "como", "mais", "also", "with", "from", "into", "when", "does", "what", "your", "this", "that", "have", "been", "the",
     "and", "are", "was", "for", "not", "but", "you", "all", "can", "has", "its",
     "project", "2026", "2025", "rpa4all",
 }

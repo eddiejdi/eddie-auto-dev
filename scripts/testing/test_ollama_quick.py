@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Teste rápido do Ollama"""
-import httpx
-import json
-
 import os
+
+import httpx
 
 OLLAMA_HOST = os.environ.get('OLLAMA_HOST', f"http://{os.environ.get('HOMELAB_HOST','192.168.15.2')}:11434")
 MODEL = "shared-coder"
@@ -19,4 +18,5 @@ async def test():
         print(f"Response: {r.text[:500]}")
 
 import asyncio
+
 asyncio.run(test())

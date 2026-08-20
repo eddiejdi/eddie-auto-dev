@@ -7,9 +7,8 @@ draw.io diagram is present in `diagrams/` (already added).
 
 Usage: python3 tools/simple_vault/publish_migration_doc.py
 """
-import os
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 title = "Migração: Vaultwarden → Simple GPG Vault"
 

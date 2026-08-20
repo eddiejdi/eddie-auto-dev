@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
 """Extrai secrets do código e os persiste no Secrets Agent."""
 
-import os
-import re
 import json
 import logging
-import subprocess
+import re
 import sys
-from pathlib import Path
-from typing import Dict, List, Set, Optional, Tuple
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
+from pathlib import Path
 
 logging.basicConfig(
     level=logging.INFO,
@@ -68,14 +65,14 @@ class SecretExtractor:
     
     def __init__(self, workspace_root: str):
         self.workspace = Path(workspace_root)
-        self.secrets_found: List[Secret] = []
+        self.secrets_found: list[Secret] = []
         self.false_positives = {
             'placeholder', 'example', 'test', 'demo', 'fake',
             'your_', 'replace_', 'insert_', 'temporary', 'changeme',
             'password123', 'test_', 'mock_', 'stub_', 'temp_'
         }
         
-    def scan_workspace(self) -> List[Secret]:
+    def scan_workspace(self) -> list[Secret]:
         """Escaneia todo o workspace procurando secrets (otimizado)."""
         logger.info("🔍 Escaneando workspace por secrets...")
         
@@ -225,7 +222,7 @@ class SecretExtractor:
         
         return value[:5] + '*' * (len(value) - 10) + value[-5:]
     
-    def generate_report(self) -> Dict:
+    def generate_report(self) -> dict:
         """Gera relatório de secrets encontrados."""
         report = {
             "timestamp": datetime.now().isoformat(),
@@ -292,7 +289,7 @@ class SecretExtractor:
             by_sensitivity.setdefault(secret.sensitivity, 0)
             by_sensitivity[secret.sensitivity] += 1
         
-        logger.info(f"\n📊 POR SENSIBILIDADE:")
+        logger.info("\n📊 POR SENSIBILIDADE:")
         for severity in ['critical', 'high', 'medium', 'low']:
             count = by_sensitivity.get(severity, 0)
             if count > 0:

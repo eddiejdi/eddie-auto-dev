@@ -1,4 +1,6 @@
-import subprocess, json
+import json
+import subprocess
+
 prompts = [
   "Explique brevemente o propósito do arquivo topic.json.",
   "Como posso customizar o label em tocInactive.json?",

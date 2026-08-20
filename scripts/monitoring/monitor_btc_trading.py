@@ -4,11 +4,11 @@ Monitor e Alertas - BTC Trading Agent
 Análise contínua de métricas críticas com alertas automáticos
 """
 
-import sqlite3
 import json
+import sqlite3
 import time
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import datetime
+
 
 class BTCTradingMonitor:
     def __init__(self, db_path="/apps/crypto-trader/trading/btc_trading_agent/data/trading_agent.db",
@@ -132,7 +132,7 @@ class BTCTradingMonitor:
         print(f"  PnL Avg: ${metrics['avg_pnl']}")
         print(f"  Range: ${metrics['worst_pnl']} → ${metrics['best_pnl']}")
         
-        print(f"\n📋 BY SYMBOL:")
+        print("\n📋 BY SYMBOL:")
         for symbol, data in sorted(metrics['by_symbol'].items(), key=lambda x: x[1]['pnl']):
             status = '✓' if data['pnl'] > 0 else '❌'
             print(f"  {symbol:10s} | Count: {data['count']:2d} | PnL: ${data['pnl']:8.2f} {status} | Win%: {data['win_rate']:5.1f}%")
@@ -142,7 +142,7 @@ class BTCTradingMonitor:
             for alert in alerts:
                 print(f"  [{alert['level']}] {alert['message']}")
         else:
-            print(f"\n✅ No alerts")
+            print("\n✅ No alerts")
         
         print("\n" + "=" * 100)
 

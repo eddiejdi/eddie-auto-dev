@@ -5,11 +5,12 @@ version: 1.1.0
 description: Função simples para Open WebUI que encaminha mensagens do chat para o Agent Communication Bus (/communication/send) e retorna respostas agregadas. A API filtra e retorna apenas respostas explicitamente direcionadas ao WebUI, ignorando broadcasts.
 """
 
-import os
-import httpx
 import json
 import logging
-from typing import Optional, Callable, Awaitable, Dict, List
+import os
+from collections.abc import Awaitable, Callable
+
+import httpx
 from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
@@ -29,8 +30,8 @@ class Pipe:
     async def pipe(
         self,
         body: dict,
-        __user__: Optional[dict] = None,
-        __event_emitter__: Optional[Callable[[dict], Awaitable[None]]] = None,
+        __user__: dict | None = None,
+        __event_emitter__: Callable[[dict], Awaitable[None]] | None = None,
     ) -> str:
         messages = body.get("messages", [])
         if not messages:

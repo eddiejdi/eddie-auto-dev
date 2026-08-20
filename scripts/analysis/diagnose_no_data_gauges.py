@@ -3,8 +3,8 @@
 Diagnóstico e correção de gauges sem dados no Shared Central Dashboard
 """
 
+
 import requests
-import json
 
 PROMETHEUS_URL = "http://192.168.15.2:9090"
 

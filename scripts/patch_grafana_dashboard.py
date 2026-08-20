@@ -5,7 +5,6 @@ Modifica o JSON do dashboard para:
 2. Adicionar label profile=~"$profile" em todas as queries que usam coin="$coin"
 """
 import json
-import re
 from pathlib import Path
 
 DASHBOARD_PATH = Path("/home/edenilson/eddie-auto-dev/grafana/btc_trading_dashboard_prometheus.json")

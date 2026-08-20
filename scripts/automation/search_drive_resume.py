@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Script simplificado para buscar currículo no Google Drive"""
-import sys
-import os
 import json
-import pickle
+import sys
 from pathlib import Path
 
 # Adicionar diretório ao path
@@ -38,7 +36,7 @@ def buscar_curriculo_drive():
             scopes=token_data.get('scopes', [])
         )
         
-        print(f"✓ Token carregado")
+        print("✓ Token carregado")
         print(f"  Escopos: {', '.join(creds.scopes[:2])}...")
         
         # Verificar se tem escopo do Drive
@@ -133,7 +131,7 @@ def buscar_curriculo_drive():
             print(f"    Link: {file.get('webViewLink', 'N/A')}")
             
             if i == 1:
-                print(f"\n    ⭐ MAIS RECENTE")
+                print("\n    ⭐ MAIS RECENTE")
         
         # Mostrar o mais recente
         most_recent = all_files[0]

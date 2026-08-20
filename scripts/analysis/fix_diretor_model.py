@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Corrigir o modelo customizado diretor-shared no Open WebUI"""
 import os
+
 import requests
-import json
 
 BASE = os.environ.get('OPENWEBUI_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:3000"
 
@@ -41,7 +41,7 @@ if diretor:
     print(f"    base_model_id atual: {diretor.get('info', {}).get('base_model_id')}")
     
     # 2. Atualizar para usar mistral:7b
-    print(f"\n[2] Atualizando base_model_id para mistral:7b...")
+    print("\n[2] Atualizando base_model_id para mistral:7b...")
     
     # Pegar info atual
     info = diretor.get('info', {})
@@ -80,7 +80,7 @@ if diretor:
         print(f"    Resposta: {r.text[:200]}")
 
 # 3. Verificar resultado
-print(f"\n[3] Verificando resultado...")
+print("\n[3] Verificando resultado...")
 r = session.get(f'{BASE}/api/v1/models', headers=headers)
 data = r.json()
 models = data.get('data', [])
@@ -90,9 +90,9 @@ for m in models:
         new_base = m.get('info', {}).get('base_model_id')
         print(f"    base_model_id agora: {new_base}")
         if new_base == 'mistral:7b':
-            print(f"    ✅ CORRIGIDO!")
+            print("    ✅ CORRIGIDO!")
         else:
-            print(f"    ❌ Ainda errado, tentando deletar e recriar...")
+            print("    ❌ Ainda errado, tentando deletar e recriar...")
             
             # Deletar modelo
             r = session.delete(f'{BASE}/api/v1/models/{model_id}', headers=headers)
@@ -114,6 +114,6 @@ for m in models:
             r = session.post(f'{BASE}/api/v1/models/create', headers=headers, json=new_model)
             print(f"    CREATE: {r.status_code}")
             if r.status_code == 200:
-                print(f"    ✅ Modelo recriado com sucesso!")
+                print("    ✅ Modelo recriado com sucesso!")
             else:
                 print(f"    {r.text[:200]}")

@@ -4,13 +4,13 @@ Authentik Mailu Application Registration
 Registra Mailu como aplicação na biblioteca de usuários do Authentik
 """
 
+import json
 import os
 import sys
-import urllib.request
 import urllib.error
-import json
-import time
-from typing import Optional, Dict, Any
+import urllib.request
+from typing import Any
+
 
 # Colors for output
 class Colors:
@@ -38,7 +38,7 @@ def print_header(msg: str):
 def make_request(
     method: str,
     endpoint: str,
-    data: Optional[Dict[str, Any]] = None,
+    data: dict[str, Any] | None = None,
     token: str = None,
 ) -> tuple[int, str]:
     """Make HTTP request to Authentik API"""
@@ -77,7 +77,7 @@ def make_request(
     except Exception as e:
         return 500, str(e)
 
-def get_token() -> Optional[str]:
+def get_token() -> str | None:
     """Get Authentik API token from environment or secrets"""
     
     print_header("Obtendo Token de Autenticação")
@@ -99,10 +99,10 @@ def get_token() -> Optional[str]:
     
     # Try known token
     token = "ak-homelab-authentik-api-2026"  # Known token from previous setup
-    print_info(f"Usando token padrão conhecido")
+    print_info("Usando token padrão conhecido")
     return token
 
-def get_groups(token: str) -> Dict[str, str]:
+def get_groups(token: str) -> dict[str, str]:
     """Get group UUIDs for Email groups"""
     
     print_header("Buscando Grupos Criados")
@@ -130,7 +130,7 @@ def get_groups(token: str) -> Dict[str, str]:
     
     return groups
 
-def get_or_create_application(email_domain: str, token: str) -> Optional[str]:
+def get_or_create_application(email_domain: str, token: str) -> str | None:
     """Get or create Mailu application in Authentik"""
     
     print_header("Registrando Mailu como Aplicação")
@@ -175,7 +175,7 @@ def get_or_create_application(email_domain: str, token: str) -> Optional[str]:
         print(response)
         return None
 
-def create_oauth2_provider(token: str) -> Optional[str]:
+def create_oauth2_provider(token: str) -> str | None:
     """Create OAuth2 provider for Mailu"""
     
     print_header("Configurando OAuth2 Provider")
@@ -222,7 +222,7 @@ def create_oauth2_provider(token: str) -> Optional[str]:
         print(response)
         return None
 
-def add_groups_to_app(app_uuid: str, groups: Dict[str, str], token: str):
+def add_groups_to_app(app_uuid: str, groups: dict[str, str], token: str):
     """Add Email groups to application"""
     
     print_header("Atribuindo Grupos à Aplicação")

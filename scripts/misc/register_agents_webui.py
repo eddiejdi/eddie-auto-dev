@@ -9,15 +9,14 @@ Exemplo:
     python3 register_agents_webui.py --webui-url http://192.168.15.2:3000 --api-url http://localhost:8503
 """
 
+import argparse
+import json
+import logging
 import os
 import sys
-import json
+from typing import Any
+
 import httpx
-import argparse
-import logging
-from typing import Optional, List, Dict, Any
-from datetime import datetime
-from pathlib import Path
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,7 +28,7 @@ logger = logging.getLogger(__name__)
 class AgentsWebUIRegistrar:
     """Registra agentes como modelos no Open WebUI"""
     
-    def __init__(self, webui_url: str, api_url: str, api_key: Optional[str] = None):
+    def __init__(self, webui_url: str, api_url: str, api_key: str | None = None):
         self.webui_url = webui_url.rstrip('/')
         self.api_url = api_url.rstrip('/')
         self.api_key = api_key or os.getenv("OPENWEBUI_API_KEY", "")
@@ -39,14 +38,14 @@ class AgentsWebUIRegistrar:
         """Fecha o cliente HTTP"""
         self.client.close()
     
-    def _get_webui_headers(self) -> Dict[str, str]:
+    def _get_webui_headers(self) -> dict[str, str]:
         """Retorna headers padrão para WebUI"""
         headers = {"accept": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
         return headers
     
-    def get_available_agents(self) -> List[Dict[str, Any]]:
+    def get_available_agents(self) -> list[dict[str, Any]]:
         """Busca agentes disponíveis na API"""
         try:
             response = self.client.get(f"{self.api_url}/agents/models")
@@ -60,7 +59,7 @@ class AgentsWebUIRegistrar:
             logger.error(f"Erro ao conectar API: {e}")
             return []
     
-    def register_agent_as_model(self, agent: Dict[str, Any]) -> bool:
+    def register_agent_as_model(self, agent: dict[str, Any]) -> bool:
         """
         Registra um agente como modelo no Open WebUI.
         
@@ -119,7 +118,7 @@ class AgentsWebUIRegistrar:
             logger.error(f"Erro ao registrar agente {agent.get('name')}: {e}")
             return False
     
-    def _register_via_docker(self, model_id: str, model_data: Dict[str, Any]) -> bool:
+    def _register_via_docker(self, model_id: str, model_data: dict[str, Any]) -> bool:
         """
         Registra modelo via docker exec (direto no banco WebUI).
         
@@ -185,7 +184,7 @@ print("OK")
         except Exception:
             return False
     
-    def list_webui_models(self) -> List[str]:
+    def list_webui_models(self) -> list[str]:
         """Lista modelos registrados no WebUI"""
         try:
             headers = self._get_webui_headers()

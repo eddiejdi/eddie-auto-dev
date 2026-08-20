@@ -35,8 +35,8 @@ sys.path.insert(0, os.path.dirname(_HERE))
 from specialized_agents.langgraph_base import AgentState, HomelabAgent
 from specialized_agents.wiki_agent import (
     WikiAgent,
-    WikiPublishRequest,
     WikiEvolveRequest,
+    WikiPublishRequest,
     WikiRefactorRequest,
     WikiRefactorResponse,
     WikiResponse,

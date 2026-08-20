@@ -8,11 +8,10 @@ autonomous_remediator.service and local logs: /tmp/coordinator.log, /tmp/diretor
 /tmp/agent_logs_watcher.log (rotates by append). Writes combined output to stdout
 and to /tmp/agent_logs_watcher.log.
 """
+import os
 import subprocess
 import threading
 import time
-import sys
-import os
 
 SERVICES = [
     'coordinator.service',

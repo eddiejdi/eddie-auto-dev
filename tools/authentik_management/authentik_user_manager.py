@@ -4,10 +4,10 @@ Script para gerenciar usuários e permissões no Authentik via API.
 Uso: python3 authentik_user_manager.py [create|update|list|assign-group]
 """
 
-import requests
-import json
 import sys
-from typing import Dict, List, Optional
+
+import requests
+
 
 class AuthentikManager:
     def __init__(self, url: str, token: str):
@@ -18,7 +18,7 @@ class AuthentikManager:
             "Content-Type": "application/json"
         }
     
-    def api_call(self, method: str, endpoint: str, data: Dict = None) -> Dict:
+    def api_call(self, method: str, endpoint: str, data: dict = None) -> dict:
         """Fazer requisição à API."""
         api_url = f"{self.url}/api/v3{endpoint}"
         try:
@@ -37,17 +37,17 @@ class AuthentikManager:
             print(f"❌ Erro na API: {e}")
             return {"error": str(e)}
     
-    def list_users(self) -> List[Dict]:
+    def list_users(self) -> list[dict]:
         """Listar todos os usuários."""
         result = self.api_call("GET", "/core/users/?format=json")
         return result.get("results", [])
     
-    def get_user_by_username(self, username: str) -> Optional[Dict]:
+    def get_user_by_username(self, username: str) -> dict | None:
         """Buscar usuário por username."""
         users = self.list_users()
         return next((u for u in users if u["username"] == username), None)
     
-    def create_user(self, username: str, email: str, name: str, password: str = None) -> Dict:
+    def create_user(self, username: str, email: str, name: str, password: str = None) -> dict:
         """Criar novo usuário."""
         data = {
             "username": username,
@@ -60,21 +60,21 @@ class AuthentikManager:
         
         return self.api_call("POST", "/core/users/", data)
     
-    def update_user(self, user_id: int, **kwargs) -> Dict:
+    def update_user(self, user_id: int, **kwargs) -> dict:
         """Atualizar usuário."""
         return self.api_call("PATCH", f"/core/users/{user_id}/", kwargs)
     
-    def list_groups(self) -> List[Dict]:
+    def list_groups(self) -> list[dict]:
         """Listar todos os grupos."""
         result = self.api_call("GET", "/core/groups/?format=json")
         return result.get("results", [])
     
-    def get_group_by_name(self, name: str) -> Optional[Dict]:
+    def get_group_by_name(self, name: str) -> dict | None:
         """Buscar grupo por nome."""
         groups = self.list_groups()
         return next((g for g in groups if g["name"] == name), None)
     
-    def create_group(self, name: str, description: str = "") -> Dict:
+    def create_group(self, name: str, description: str = "") -> dict:
         """Criar novo grupo."""
         data = {
             "name": name,

@@ -14,17 +14,17 @@ Uso simples no trading agent:
     result = router.chat("gemma3:1b", messages, timeout=30)
 """
 
-import os
-import re
-import time
-import random
-import logging
-import fcntl
-import tempfile
 import contextlib
+import fcntl
+import logging
+import os
+import random
+import re
+import tempfile
 import threading
+import time
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import httpx
 
@@ -101,9 +101,9 @@ class OllamaEndpoint:
     name: str
     host: str
     # Models this endpoint is the *primary* home for (exact match or prefix)
-    primary_models: List[str] = field(default_factory=list)
+    primary_models: list[str] = field(default_factory=list)
     # Health state (updated lazily)
-    _healthy: Optional[bool] = field(default=None, init=False, repr=False)
+    _healthy: bool | None = field(default=None, init=False, repr=False)
     _last_health_check: float = field(default=0.0, init=False, repr=False)
     _health_ttl: float = field(default=30.0, init=False, repr=False)
 
@@ -127,7 +127,7 @@ class OllamaEndpoint:
 # Default endpoints — apontam para os proxies ollama-metrics (coletam métricas
 # transparentemente e encaminham para o Ollama real).
 # Portas diretas como fallback via LLM_GPU0_HOST_DIRECT etc.
-def _default_endpoints() -> List[OllamaEndpoint]:
+def _default_endpoints() -> list[OllamaEndpoint]:
     gpu0_host = os.getenv("LLM_GPU0_HOST", "http://192.168.15.2:11544")   # proxy → 11434
     gpu1_host = os.getenv("LLM_GPU1_HOST", "http://192.168.15.2:11545")   # proxy → 11435
     nas_host  = os.getenv("LLM_NAS_HOST",  "http://192.168.15.4:11546")   # proxy → 11436
@@ -216,7 +216,7 @@ class LLMRouter:
     GATE_TIMEOUT_MIN_SEC: float = 200.0
     GATE_TIMEOUT_MULTIPLIER: float = 2.5
 
-    def __init__(self, endpoints: Optional[List[OllamaEndpoint]] = None):
+    def __init__(self, endpoints: list[OllamaEndpoint] | None = None):
         self._endpoints = endpoints or _default_endpoints()
         self._lock = threading.Lock()
 
@@ -224,7 +224,7 @@ class LLMRouter:
     # Routing
     # ------------------------------------------------------------------
 
-    def _resolve_order(self, model: str) -> List[OllamaEndpoint]:
+    def _resolve_order(self, model: str) -> list[OllamaEndpoint]:
         """Retorna lista de endpoints na ordem de tentativa para `model`."""
         primary = []
         secondary = []
@@ -236,7 +236,7 @@ class LLMRouter:
             (primary if is_primary else secondary).append(ep)
         return primary + secondary
 
-    def _pick_endpoint(self, model: str, probe_timeout: float = 3.0) -> Optional[OllamaEndpoint]:
+    def _pick_endpoint(self, model: str, probe_timeout: float = 3.0) -> OllamaEndpoint | None:
         """Retorna primeiro endpoint saudável para o modelo, ou None."""
         for ep in self._resolve_order(model):
             if ep.is_healthy(probe_timeout):
@@ -252,10 +252,10 @@ class LLMRouter:
         host: str,
         model: str,
         prompt: str,
-        options: Dict[str, Any],
+        options: dict[str, Any],
         timeout: float,
         use_chat: bool,
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
     ) -> str:
         """Faz a chamada HTTP e retorna o texto bruto da resposta."""
         gate_timeout = max(
@@ -323,8 +323,8 @@ class LLMRouter:
         self,
         host: str,
         model: str,
-        messages: List[Dict[str, str]],
-        options: Dict[str, Any],
+        messages: list[dict[str, str]],
+        options: dict[str, Any],
         timeout: float,
     ) -> str:
         gate_timeout = max(
@@ -379,11 +379,11 @@ class LLMRouter:
         *,
         timeout: float = 60.0,
         fallback_timeout: float | None = None,
-        options: Dict[str, Any] | None = None,
+        options: dict[str, Any] | None = None,
         system_prompt: str | None = None,
         use_chat: bool | None = None,
         probe_timeout: float = 3.0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Envia `prompt` para o melhor endpoint disponível para `model`.
 
@@ -438,13 +438,13 @@ class LLMRouter:
     def chat(
         self,
         model: str,
-        messages: List[Dict[str, str]],
+        messages: list[dict[str, str]],
         *,
         timeout: float = 60.0,
         fallback_timeout: float | None = None,
-        options: Dict[str, Any] | None = None,
+        options: dict[str, Any] | None = None,
         probe_timeout: float = 3.0,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Envia `messages` (formato OpenAI) para o melhor endpoint.
         Retorna mesmo dict que generate().
@@ -495,7 +495,7 @@ class LLMRouter:
         *,
         timeout: float = 60.0,
         fallback_timeout: float | None = None,
-        options: Dict[str, Any] | None = None,
+        options: dict[str, Any] | None = None,
         system_prompt: str | None = None,
     ) -> str:
         """Atalho: retorna só o texto (para migração rápida de chamadas legadas)."""
@@ -507,11 +507,11 @@ class LLMRouter:
             system_prompt=system_prompt,
         )["text"]
 
-    def health_summary(self, probe_timeout: float = 3.0) -> Dict[str, bool]:
+    def health_summary(self, probe_timeout: float = 3.0) -> dict[str, bool]:
         """Retorna dict {endpoint_name: is_healthy} para monitoramento."""
         return {ep.name: ep.is_healthy(probe_timeout) for ep in self._endpoints}
 
-    def endpoint_for(self, host: str) -> Optional[OllamaEndpoint]:
+    def endpoint_for(self, host: str) -> OllamaEndpoint | None:
         """Retorna o endpoint que corresponde ao host (para compatibilidade com código legado)."""
         for ep in self._endpoints:
             if ep.host == host or ep.host.rstrip("/") == host.rstrip("/"):
@@ -533,10 +533,10 @@ class LLMRouter:
         fallback_model: str,
         primary_timeout_sec: float,
         fallback_timeout_sec: float,
-        options: Dict[str, Any],
+        options: dict[str, Any],
         parser,
         retries_per_target: int = 1,
-    ) -> tuple[Any, str, Dict[str, Any]]:
+    ) -> tuple[Any, str, dict[str, Any]]:
         """
         Drop-in replacement para trading_agent._request_ollama_structured.
 
@@ -622,7 +622,7 @@ class LLMRouter:
 # Module-level singleton (lazy)
 # ---------------------------------------------------------------------------
 
-_router: Optional[LLMRouter] = None
+_router: LLMRouter | None = None
 _router_lock = threading.Lock()
 
 
@@ -640,7 +640,6 @@ def get_router() -> LLMRouter:
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import json
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
     router = LLMRouter()

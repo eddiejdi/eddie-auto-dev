@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Desk tests para validar os 13 bugs corrigidos"""
-import sys, os, time
+import os
+import sys
+import time
+
 sys.path.insert(0, '/apps/crypto-trader/trading/btc_trading_agent')
 os.environ['DATABASE_URL'] = 'postgresql://postgres:shared_memory_2026@localhost:5433/btc_trading'
 
-from trading_agent import BitcoinTradingAgent, AgentState, Signal
-from fast_model import FastIndicators, MarketRegime
 from datetime import date
+
+from fast_model import FastIndicators
+from trading_agent import BitcoinTradingAgent, Signal
 
 print("=" * 60)
 print("DESK TEST - Simulando cenarios")
@@ -22,8 +26,7 @@ print("\n--- Cenario 1: Trailing Stop ---")
 print(f"Entry: $69,000 | Activation: 1.5% = ${69000*1.015:,.2f} | Trail: 0.8%")
 
 for p in [69200, 69500, 69800, 70035, 70200, 70500]:
-    if p > agent.state.trailing_high:
-        agent.state.trailing_high = p
+    agent.state.trailing_high = max(agent.state.trailing_high, p)
     pnl = (agent.state.trailing_high / 69000) - 1
     activated = pnl >= 0.015
     drop = (agent.state.trailing_high - p) / agent.state.trailing_high
@@ -107,7 +110,7 @@ assert abs(ut - 1.0) < 0.1, f"FAIL: expected ~1.0, got {ut}"
 print("\n--- Cenario 6: Regime Detection (candle data) ---")
 indicators = FastIndicators()
 assert hasattr(indicators, '_candle_prices'), "FAIL: _candle_prices attribute missing"
-print(f"  _candle_prices attr exists: True")
+print("  _candle_prices attr exists: True")
 
 # Populate with fake candles
 fake_candles = []
@@ -130,7 +133,7 @@ regime2 = indicators.detect_regime()
 print(f"  After 200 noisy ticks: regime={regime2.regime} (candle_prices untouched)")
 # candle_prices should still show bearish since ticks don't update it
 print(f"  candle_prices len={len(indicators._candle_prices)} (should still be 100)")
-assert len(indicators._candle_prices) == 100, f"FAIL: candle_prices was polluted"
+assert len(indicators._candle_prices) == 100, "FAIL: candle_prices was polluted"
 
 # === Cenario 7: _last_trade_id exists ===
 print("\n--- Cenario 7: _last_trade_id ---")
@@ -140,9 +143,10 @@ print(f"  _last_trade_id attr exists: True (value={agent._last_trade_id})")
 # === Cenario 8: DATABASE_URL default fix ===
 print("\n--- Cenario 8: DATABASE_URL default ---")
 import training_db
+
 print(f"  Default DSN: {training_db.DATABASE_URL}")
-assert 'localhost:5433/btc_trading' in training_db.DATABASE_URL, f"FAIL: wrong default DSN"
-print(f"  Contains localhost:5433/btc_trading: True")
+assert 'localhost:5433/btc_trading' in training_db.DATABASE_URL, "FAIL: wrong default DSN"
+print("  Contains localhost:5433/btc_trading: True")
 
 print("\n" + "=" * 60)
 print("ALL DESK TESTS PASSED")

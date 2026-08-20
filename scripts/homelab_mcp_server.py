@@ -17,7 +17,6 @@ Configuração via variáveis de ambiente:
     CODE_SANDBOX_DIR      - Sandbox de code_write_file/code_read_file/code_list_files
                             (default: <repo>/generated/integrations)
 """
-import importlib.util
 import json
 import logging
 import os
@@ -25,7 +24,7 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 # Adiciona raiz do projeto ao path para imports de tools/
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -76,7 +75,7 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "")
 TRADING_DATABASE_URL = os.environ.get("TRADING_DATABASE_URL", "")
 
 # Token JWT em memória para API calls autenticadas
-_jwt_token: Optional[str] = None
+_jwt_token: str | None = None
 
 # ── Helpers HTTP ──────────────────────────────────────────────────────────
 
@@ -1009,7 +1008,7 @@ def memory_store(fact: str, source: str = "agent", tags: str = "", ttl_days: int
 # Ferramentas do BTC Trading Agent — leitura somente do schema btc.*
 # DB connection: env TRADING_DATABASE_URL ou secrets agent eddie/database_url
 
-_db_url_cache: Optional[str] = None
+_db_url_cache: str | None = None
 
 
 def _get_db_url() -> str:
@@ -1056,10 +1055,10 @@ def _rehost_if_remote(dsn: str) -> str:
     return _re.sub(r"@(localhost|127\.0\.0\.1)([:/])", rf"@{host}\2", dsn, count=1)
 
 
-_trading_db_url_cache: Optional[str] = None
+_trading_db_url_cache: str | None = None
 
 
-def _get_trading_db_url() -> Optional[str]:
+def _get_trading_db_url() -> str | None:
     """Resolve a connection string do trading DB sem hardcodar credenciais."""
     global _trading_db_url_cache
     if _trading_db_url_cache:

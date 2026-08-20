@@ -1,5 +1,9 @@
+import os
+import sys
+import time
+
 from playwright.sync_api import sync_playwright
-import os, time, json, sys
+
 
 def load_env(p):
     d={}
@@ -23,7 +27,7 @@ if host_base:
     base = host_base
 else:
     # container PORT may be internal (8080); host maps 3000 -> 8080, so default to host port 3000
-    base = os.environ.get('WEBUI_HOST') or f'http://localhost:3000'
+    base = os.environ.get('WEBUI_HOST') or 'http://localhost:3000'
 
 def log(msg):
     print(msg, flush=True)

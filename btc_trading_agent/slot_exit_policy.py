@@ -19,7 +19,7 @@ class SlotSnapshot:
     ts: float
 
     @classmethod
-    def from_entry(cls, index: int, entry: dict[str, Any]) -> "SlotSnapshot":
+    def from_entry(cls, index: int, entry: dict[str, Any]) -> SlotSnapshot:
         entry_price = float(entry.get("price", 0) or 0)
         return cls(
             index=index,

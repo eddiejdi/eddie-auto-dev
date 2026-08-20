@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Generate a static services index page under `docs/` using dashboard config."""
-from pathlib import Path
-from datetime import datetime
-import html
 import ast
-import os
+import html
 import json
+import os
 import re
+from datetime import datetime
+from pathlib import Path
 
 # Try to extract URLS, PORTS and server ip by parsing the config file to avoid
 # importing repo modules (which may require external deps).
@@ -112,7 +112,7 @@ lines.append('<!doctype html>')
 lines.append('<html><head><meta charset="utf-8"><title>Services Index</title>')
 lines.append('<style>body{font-family:Arial,Helvetica,sans-serif;padding:20px}h1{color:#0b5;}a{color:#0366d6}</style>')
 lines.append('</head><body>')
-lines.append(f'<h1>Services Index</h1>')
+lines.append('<h1>Services Index</h1>')
 lines.append(f'<p>Generated: {html.escape(now)}</p>')
 lines.append('<ul>')
 

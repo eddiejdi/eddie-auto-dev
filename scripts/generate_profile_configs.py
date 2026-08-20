@@ -9,9 +9,9 @@ Uso:
   python3 scripts/generate_profile_configs.py [--base-dir /path/to/btc_trading_agent]
 """
 
-import json
-import copy
 import argparse
+import copy
+import json
 from pathlib import Path
 
 # Mapeamento moeda → config base

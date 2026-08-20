@@ -5,14 +5,14 @@ Gerencia histórico de trades, recompensas e estatísticas de aprendizado
 Migrado de SQLite para PostgreSQL (schema btc.*)
 """
 
-import os
 import json
-import time
 import logging
-from pathlib import Path
-from typing import List, Dict, Any, Optional, Tuple
-from datetime import datetime, timedelta
+import os
+import time
 from contextlib import contextmanager
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 import numpy as _np
 import psycopg2
@@ -541,7 +541,7 @@ class TrainingDatabase:
     def record_trade(self, symbol: str, side: str, price: float,
                      size: float = None, funds: float = None,
                      order_id: str = None, dry_run: bool = False,
-                     metadata: Dict = None, profile: str = 'default',
+                     metadata: dict = None, profile: str = 'default',
                      servidor: str = None) -> int:
         """Registra um trade executado"""
         import socket as _socket
@@ -576,7 +576,7 @@ class TrainingDatabase:
         size: float,
         price: float,
         *,
-        funds: Optional[float] = None,
+        funds: float | None = None,
     ) -> bool:
         """Corrige size/price de um trade com o fill real da exchange.
 
@@ -596,7 +596,7 @@ class TrainingDatabase:
             return False
 
         sets = ["size = %s", "price = %s"]
-        params: List[Any] = [size, price]
+        params: list[Any] = [size, price]
         if funds is not None and funds > 0:
             sets.append("funds = %s")
             params.append(funds)
@@ -616,7 +616,7 @@ class TrainingDatabase:
             )
             return cur.rowcount == 1
 
-    def merge_trade_metadata(self, trade_id: int, metadata: Dict[str, Any]) -> None:
+    def merge_trade_metadata(self, trade_id: int, metadata: dict[str, Any]) -> None:
         """Mescla chaves de metadata em um trade existente."""
         if not metadata:
             return
@@ -654,7 +654,7 @@ class TrainingDatabase:
         subaccount: str,
         *,
         limit: int = 50,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Retorna BUYs live abertos que podem ser readotados pelo runtime.
 
         A subconta é obrigatória para a chamada. Registros legados sem essa
@@ -791,7 +791,7 @@ class TrainingDatabase:
         *,
         dry_run: bool = False,
         limit: int = 50,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Retorna SELLs realizados com PnL para cálculo de track record."""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -813,7 +813,7 @@ class TrainingDatabase:
             return [dict(row) for row in cur.fetchall()]
 
     def get_recent_trades(self, symbol: str = None, limit: int = 100,
-                          include_dry: bool = False, profile: str = None) -> List[Dict]:
+                          include_dry: bool = False, profile: str = None) -> list[dict]:
         """Obtém trades recentes"""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -840,7 +840,7 @@ class TrainingDatabase:
     # ====================== DECISIONS ======================
     def record_decision(self, symbol: str, action: str, confidence: float,
                         price: float, reason: str = None, profile: str = "default",
-                        features: Dict = None, servidor: str = None) -> int:
+                        features: dict = None, servidor: str = None) -> int:
         """Registra uma decisão do modelo."""
         import socket as _socket
         _servidor = servidor or _socket.gethostname()
@@ -868,7 +868,7 @@ class TrainingDatabase:
                 SET executed = TRUE, trade_id = %s WHERE id = %s
             """, (trade_id, decision_id))
 
-    def merge_decision_features(self, decision_id: int, features: Dict[str, Any]) -> None:
+    def merge_decision_features(self, decision_id: int, features: dict[str, Any]) -> None:
         """Mescla chaves em decisions.features sem apagar as features do modelo."""
         if not features:
             return
@@ -884,7 +884,7 @@ class TrainingDatabase:
                 decision_id,
             ))
 
-    def get_recent_decisions(self, symbol: str = None, limit: int = 20) -> List[Dict]:
+    def get_recent_decisions(self, symbol: str = None, limit: int = 20) -> list[dict]:
         """Obtém decisões recentes"""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -906,10 +906,10 @@ class TrainingDatabase:
         trigger: str,
         mode: str,
         model: str,
-        suggested: Dict[str, Any],
-        applied: Dict[str, Any],
+        suggested: dict[str, Any],
+        applied: dict[str, Any],
         rationale: str = "",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> int:
         """Registra uma sugestão estruturada de parâmetros do Ollama."""
         with self._get_conn() as conn:
@@ -972,7 +972,7 @@ class TrainingDatabase:
         ttl_seconds: int,
         valid_until: float,
         rationale: str = "",
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ) -> int:
         """Registra a janela operacional fresca calculada pela IA."""
         with self._get_conn() as conn:
@@ -1024,14 +1024,14 @@ class TrainingDatabase:
         symbol: str,
         profile: str,
         prompt: str,
-        response_text: Optional[str] = None,
-        response_json: Optional[Dict[str, Any]] = None,
-        model: Optional[str] = None,
-        host: Optional[str] = None,
-        latency_ms: Optional[float] = None,
-        trigger: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-        servidor: Optional[str] = None,
+        response_text: str | None = None,
+        response_json: dict[str, Any] | None = None,
+        model: str | None = None,
+        host: str | None = None,
+        latency_ms: float | None = None,
+        trigger: str | None = None,
+        metadata: dict[str, Any] | None = None,
+        servidor: str | None = None,
     ) -> int:
         """Registra o prompt+resposta bruta de uma chamada ao LLM.
 
@@ -1067,12 +1067,12 @@ class TrainingDatabase:
         profile: str = None,
         since: float = None,
         limit: int = 1000,
-    ) -> List[Dict]:
+    ) -> list[dict]:
         """Lê chamadas de LLM logadas (para o dataset builder e shadow eval)."""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             query = f"SELECT * FROM {SCHEMA}.llm_calls WHERE 1=1"
-            params: List[Any] = []
+            params: list[Any] = []
             if call_type:
                 query += " AND call_type = %s"
                 params.append(call_type)
@@ -1101,7 +1101,7 @@ class TrainingDatabase:
             )
             return cur.rowcount
 
-    def get_llm_call_stats(self) -> Dict[str, Any]:
+    def get_llm_call_stats(self) -> dict[str, Any]:
         """Contagens de btc.llm_calls por call_type (total e últimas 24h) para o painel."""
         since_24h = time.time() - 86400
         with self._get_conn() as conn:
@@ -1124,7 +1124,7 @@ class TrainingDatabase:
         }
 
     # Defaults usados quando a linha de config não existe ou a leitura falha.
-    LLM_LOG_CONFIG_DEFAULTS: Dict[str, Any] = {
+    LLM_LOG_CONFIG_DEFAULTS: dict[str, Any] = {
         "enabled": True,
         "log_controls": True,
         "log_window": True,
@@ -1138,7 +1138,7 @@ class TrainingDatabase:
         "sample_rate", "max_prompt_chars", "prune_days",
     )
 
-    def get_llm_log_config(self) -> Dict[str, Any]:
+    def get_llm_log_config(self) -> dict[str, Any]:
         """Lê a config de runtime do log de LLM (linha única id=1)."""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -1156,13 +1156,13 @@ class TrainingDatabase:
             cfg["updated_by"] = row.get("updated_by")
             return cfg
 
-    def set_llm_log_config(self, updated_by: str = None, **fields: Any) -> Dict[str, Any]:
+    def set_llm_log_config(self, updated_by: str = None, **fields: Any) -> dict[str, Any]:
         """Atualiza campos da config (parcial) e retorna o estado resultante.
 
         Valida tipos/ranges: booleans; sample_rate em [0,1]; inteiros >= 0.
         Só aceita as chaves conhecidas — o resto é ignorado.
         """
-        updates: Dict[str, Any] = {}
+        updates: dict[str, Any] = {}
         for k in ("enabled", "log_controls", "log_window", "log_plan"):
             if k in fields and fields[k] is not None:
                 updates[k] = bool(fields[k])
@@ -1220,7 +1220,7 @@ class TrainingDatabase:
             return cur.fetchone()[0]
 
     def get_market_history(self, symbol: str, hours: int = 24,
-                           limit: int = 1000) -> List[Dict]:
+                           limit: int = 1000) -> list[dict]:
         """Obtém histórico de estados do mercado"""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -1248,7 +1248,7 @@ class TrainingDatabase:
             """, (time.time(), symbol, state_hash, action, reward,
                   next_state_hash, episode))
 
-    def get_learning_stats(self, symbol: str) -> Dict:
+    def get_learning_stats(self, symbol: str) -> dict:
         """Estatísticas de aprendizado"""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -1269,7 +1269,7 @@ class TrainingDatabase:
             return dict(row) if row else {}
 
     # ====================== CANDLES ======================
-    def store_candles(self, symbol: str, ktype: str, candles: List[Dict]):
+    def store_candles(self, symbol: str, ktype: str, candles: list[dict]):
         """Armazena candles para backtesting"""
         with self._get_conn() as conn:
             cur = conn.cursor()
@@ -1290,7 +1290,7 @@ class TrainingDatabase:
 
     def get_candles(self, symbol: str, ktype: str = "1min",
                     start_ts: int = None, end_ts: int = None,
-                    limit: int = 1000) -> List[Dict]:
+                    limit: int = 1000) -> list[dict]:
         """Obtém candles armazenados"""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -1311,7 +1311,7 @@ class TrainingDatabase:
             return [dict(row) for row in cur.fetchall()]
 
     # ====================== PERFORMANCE ======================
-    def calculate_performance(self, symbol: str, days: int = 7) -> Dict:
+    def calculate_performance(self, symbol: str, days: int = 7) -> dict:
         """Calcula métricas de performance"""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -1415,7 +1415,7 @@ class TrainingDatabase:
             )
             return cur.fetchone() is not None
 
-    def list_pending_conversions(self, limit: int = 10) -> List[Dict]:
+    def list_pending_conversions(self, limit: int = 10) -> list[dict]:
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
             cur.execute(
@@ -1434,8 +1434,8 @@ class TrainingDatabase:
         request_id: int,
         *,
         status: str,
-        plan_json: Dict = None,
-        result_json: Dict = None,
+        plan_json: dict = None,
+        result_json: dict = None,
     ) -> None:
         with self._get_conn() as conn:
             cur = conn.cursor()
@@ -1524,7 +1524,7 @@ class TrainingDatabase:
                 (owner,),
             )
 
-    def conversion_metrics_snapshot(self, profile: str = None) -> Dict[str, Any]:
+    def conversion_metrics_snapshot(self, profile: str = None) -> dict[str, Any]:
         """Agrega contadores para o prometheus exporter."""
         with self._get_conn() as conn:
             cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
@@ -1591,7 +1591,7 @@ class TrainingManager:
         self.db = db or TrainingDatabase()
 
     @staticmethod
-    def _retro_score_sample(state: Dict[str, Any], next_state: Dict[str, Any]) -> Tuple[int, float, Dict[str, Any]]:
+    def _retro_score_sample(state: dict[str, Any], next_state: dict[str, Any]) -> tuple[int, float, dict[str, Any]]:
         """Aplica penalidades/bonificações retroativas a uma transição de mercado."""
         price = float(state.get("price") or 0.0)
         next_price = float(next_state.get("price") or 0.0)
@@ -1716,7 +1716,7 @@ class TrainingManager:
         return best_action, reward, context
 
     def generate_training_batch(self, symbol: str,
-                                 batch_size: int = 100) -> List[Dict]:
+                                 batch_size: int = 100) -> list[dict]:
         """Gera batch de dados para treinamento"""
         states = self.db.get_market_history(symbol, hours=72, limit=batch_size * 2)
 

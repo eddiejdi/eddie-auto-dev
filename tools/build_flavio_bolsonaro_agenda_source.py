@@ -18,7 +18,6 @@ from __future__ import annotations
 
 import argparse
 import html as html_lib
-import json
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
@@ -1478,9 +1477,7 @@ def merge_agenda_entries(entries: list[AgendaEntry]) -> tuple[AgendaEntry, ...]:
             continue
         if current.source_kind == "official" and entry.source_kind != "official":
             continue
-        if len(entry.materials) > len(current.materials):
-            merged[key] = entry
-        elif len(entry.summary) > len(current.summary):
+        if len(entry.materials) > len(current.materials) or len(entry.summary) > len(current.summary):
             merged[key] = entry
     return tuple(sorted(merged.values(), key=lambda item: time_sort_key(item.time_label)))
 

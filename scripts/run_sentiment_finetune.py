@@ -28,9 +28,8 @@ import sys
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 # Adicionar o diretório raiz ao path para importar o trainer
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -72,7 +71,7 @@ def get_db_connection() -> psycopg2.extensions.connection:
 
 def ollama_classify(
     host: str, model: str, title: str, description: str, coin: str, timeout: int = 30
-) -> Tuple[float, float, str, str]:
+) -> tuple[float, float, str, str]:
     """Classifica sentimento de um artigo via Ollama API.
 
     Returns:
@@ -109,7 +108,7 @@ Summary: {description[:300]}"""
         return 0.0, 0.5, "NEUTRAL", "general"
 
 
-def _parse_response(response: str) -> Tuple[float, float, str, str]:
+def _parse_response(response: str) -> tuple[float, float, str, str]:
     """Parseia resposta do Ollama."""
     sentiment = 0.0
     confidence = 0.5
@@ -159,7 +158,7 @@ def get_price_at_ts(
     symbol: str,
     ts: float,
     window_min: int = 60,
-) -> Optional[float]:
+) -> float | None:
     """Busca preço de fechamento mais próximo de um timestamp."""
     ts_sec = int(ts)
     window_sec = window_min * 60
@@ -175,7 +174,7 @@ def get_price_at_ts(
         return float(row[0]) if row else None
 
 
-COIN_SYMBOL_MAP: Dict[str, str] = {
+COIN_SYMBOL_MAP: dict[str, str] = {
     "BTC": "BTC-USDT", "ETH": "ETH-USDT", "SOL": "SOL-USDT",
     "XRP": "XRP-USDT", "DOGE": "DOGE-USDT", "ADA": "ADA-USDT",
 }

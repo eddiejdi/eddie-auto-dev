@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Investigar e corrigir modelo diretor-shared usando a API correta"""
+
 import requests
-import json
 
 BASE = 'http://192.168.15.2:3000'
 
@@ -25,9 +25,9 @@ endpoints = [
     ("GET", f"/api/models/{model_id}", None),
     ("POST", f"/api/v1/models/{model_id}", {"base_model_id": "qwen2.5-coder:7b"}),
     ("PUT", f"/api/v1/models/{model_id}", {"base_model_id": "qwen2.5-coder:7b"}),
-    ("DELETE", f"/api/v1/models/delete", {"id": model_id}),
+    ("DELETE", "/api/v1/models/delete", {"id": model_id}),
     ("DELETE", f"/api/v1/models/{model_id}/delete", None),
-    ("POST", f"/api/v1/models/model/update", {"id": model_id, "base_model_id": "qwen2.5-coder:7b"}),
+    ("POST", "/api/v1/models/model/update", {"id": model_id, "base_model_id": "qwen2.5-coder:7b"}),
 ]
 
 for method, endpoint, payload in endpoints:
@@ -65,7 +65,7 @@ try:
         spec = r.json()
         paths = spec.get('paths', {})
         model_paths = [p for p in paths.keys() if 'model' in p.lower()]
-        print(f"\nEndpoints de model encontrados:")
+        print("\nEndpoints de model encontrados:")
         for p in model_paths[:15]:
             methods = list(paths[p].keys())
             print(f"  {p}: {methods}")

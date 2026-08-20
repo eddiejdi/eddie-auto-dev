@@ -4,8 +4,6 @@ All-in-one compatibility scoring system
 Integrates: Jaccard, TF-IDF, Synonyms, LLM, and Semantic Embeddings
 """
 import os
-from typing import Tuple, Dict, Optional
-
 
 # Available methods
 AVAILABLE_METHODS = {
@@ -22,7 +20,7 @@ AVAILABLE_METHODS = {
 
 
 def compute_compatibility(resume_text: str, job_text: str, 
-                         method: str = 'auto') -> Tuple[float, str, Dict]:
+                         method: str = 'auto') -> tuple[float, str, dict]:
     """
     Compute compatibility using specified method.
     
@@ -93,7 +91,7 @@ def compute_compatibility(resume_text: str, job_text: str,
     
     except Exception as e:
         print(f"⚠️  Method '{method}' failed: {e}")
-        print(f"   Falling back to Jaccard")
+        print("   Falling back to Jaccard")
         from llm_compatibility import compute_compatibility_fallback
         score = compute_compatibility_fallback(resume_text, job_text)
         return score, f"Fallback Jaccard: {score}%", {"method": "fallback", "error": str(e)}
@@ -130,7 +128,7 @@ def detect_best_method() -> str:
     return 'jaccard'
 
 
-def compute_compatibility_ultra(resume_text: str, job_text: str) -> Tuple[float, str, Dict]:
+def compute_compatibility_ultra(resume_text: str, job_text: str) -> tuple[float, str, dict]:
     """
     Ultra method: combines all available methods with weighted average.
     
@@ -180,11 +178,11 @@ def compute_compatibility_ultra(resume_text: str, job_text: str) -> Tuple[float,
     normalized_weights = {k: v/total_weight for k, v in weights.items()}
     
     # Compute weighted average
-    final_score = sum(scores[k] * normalized_weights[k] for k in scores.keys())
+    final_score = sum(scores[k] * normalized_weights[k] for k in scores)
     final_score = round(final_score, 1)
     
     # Build explanation
-    method_scores = ", ".join([f"{k}={scores[k]:.1f}%" for k in scores.keys()])
+    method_scores = ", ".join([f"{k}={scores[k]:.1f}%" for k in scores])
     explanation = f"Ultra method: {final_score}% (weighted: {method_scores})"
     
     details = {
@@ -298,7 +296,7 @@ if __name__ == "__main__":
         
         score, explanation, details = compute_compatibility(resume, job, method=method)
         
-        print(f"\n📊 Result:")
+        print("\n📊 Result:")
         print(f"   Score: {score}%")
         print(f"   {explanation}")
         print(f"\n   Details: {details}")

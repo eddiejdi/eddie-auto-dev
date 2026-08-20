@@ -4,15 +4,12 @@ Script para atualizar RAG e treinamento com histórico de chats
 Processa conversas do VS Code Copilot, Telegram e outras fontes
 """
 
-import os
-import json
-import re
 import hashlib
+import json
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any
+
 import chromadb
-from chromadb.config import Settings
 
 # Configurações
 BASE_DIR = Path(__file__).parent
@@ -132,7 +129,7 @@ CURRENT_SESSION_KNOWLEDGE = [
     }
 ]
 
-def generate_training_data() -> List[Dict]:
+def generate_training_data() -> list[dict]:
     """Gera dados de treinamento no formato JSONL"""
     training_pairs = []
     
@@ -228,8 +225,7 @@ def save_training_file():
     filename = TRAINING_DIR / f"training_{timestamp}_session.jsonl"
     
     with open(filename, "w", encoding="utf-8") as f:
-        for item in training_data:
-            f.write(json.dumps(item, ensure_ascii=False) + "\n")
+        f.writelines(json.dumps(item, ensure_ascii=False) + "\n" for item in training_data)
     
     print(f"✅ Arquivo de treino salvo: {filename}")
     print(f"   Total de pares: {len(training_data)}")

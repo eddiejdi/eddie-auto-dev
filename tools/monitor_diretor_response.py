@@ -3,10 +3,13 @@ import time
 
 # Import robusto do bus: tenta import normal e faz fallback por caminho absoluto se necessário
 try:
-    from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+    from specialized_agents.agent_communication_bus import (
+        MessageType,
+        get_communication_bus,
+    )
 except Exception:
-    import pathlib
     import importlib.util
+    import pathlib
     bus_path = pathlib.Path(__file__).resolve().parents[1] / 'specialized_agents' / 'agent_communication_bus.py'
     spec = importlib.util.spec_from_file_location('agent_bus_local', str(bus_path))
     agent_bus = importlib.util.module_from_spec(spec)

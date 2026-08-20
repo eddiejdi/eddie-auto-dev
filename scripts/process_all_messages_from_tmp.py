@@ -1,9 +1,9 @@
+import base64
 import json
 import os
 import sqlite3
-import base64
-import urllib.request
 import urllib.error
+import urllib.request
 from datetime import datetime
 
 WAHA_API = os.getenv("WAHA_URL", "http://127.0.0.1:3001")

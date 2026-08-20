@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Watcher: aguarda sessão WAHA ficar WORKING e executa `test_whatsapp.py` automaticamente."""
-import time
 import os
 import subprocess
 import sys
+import time
+
 import httpx
 
 WAHA_URL = os.environ.get("WAHA_URL", "http://localhost:3000")

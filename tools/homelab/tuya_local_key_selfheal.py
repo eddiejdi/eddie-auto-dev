@@ -25,8 +25,8 @@ import logging
 import os
 import sys
 import time
-import uuid
 import urllib.request
+import uuid
 from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
@@ -170,13 +170,19 @@ def discover_tuya_local_targets(config_entries_path: Path = CONFIG_ENTRIES) -> d
 
 def _import_tuya_sharing() -> tuple[object, object]:
     try:
-        from tuya_sharing.customerapi import CustomerApi, CustomerTokenInfo  # type: ignore
+        from tuya_sharing.customerapi import (  # type: ignore
+            CustomerApi,
+            CustomerTokenInfo,
+        )
         return CustomerApi, CustomerTokenInfo
     except ImportError:
         site = str(TUYA_SHARING_SITE)
         if site not in sys.path and TUYA_SHARING_SITE.is_dir():
             sys.path.insert(0, site)
-        from tuya_sharing.customerapi import CustomerApi, CustomerTokenInfo  # type: ignore
+        from tuya_sharing.customerapi import (  # type: ignore
+            CustomerApi,
+            CustomerTokenInfo,
+        )
         return CustomerApi, CustomerTokenInfo
 
 
@@ -201,7 +207,7 @@ def force_refresh_token(
         def __init__(self) -> None:
             self.updated: dict | None = None
 
-        def update_token(self, new_token: dict) -> None:  # noqa: ANN001
+        def update_token(self, new_token: dict) -> None:
             self.updated = new_token
 
     listener = _Listener()
@@ -309,7 +315,7 @@ def fetch_cloud_keys(
     from tuya_sharing.manager import Manager
 
     class NoopListener(SharingTokenListener):
-        def update_token(self, token_info):  # noqa: ANN001
+        def update_token(self, token_info):
             pass
 
     if not user_code:

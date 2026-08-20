@@ -48,12 +48,13 @@ import json
 import logging
 import sys
 import time
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any
 
 # Reusa o resolvedor de DSN e o pool do próprio agente.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "btc_trading_agent"))
-from training_db import TrainingDatabase  # noqa: E402
+from training_db import TrainingDatabase
 
 logging.basicConfig(
     level=logging.INFO,
@@ -94,7 +95,7 @@ DEFAULT_OUTPUT_DIR = Path("/tmp/eddie-finetune")
 POSITIVE_LABELS = ("win", "flat_pos")
 
 
-def is_positive_example(label: str, detail: Dict[str, Any], min_flat_pnl: float) -> bool:
+def is_positive_example(label: str, detail: dict[str, Any], min_flat_pnl: float) -> bool:
     """Decide se um resultado vira exemplo de treino positivo.
 
     `win` (atingiu target antes do stop) sempre entra. `flat_pos` (timeout positivo)
@@ -111,12 +112,12 @@ def is_positive_example(label: str, detail: Dict[str, Any], min_flat_pnl: float)
 # ── Scorer contrafactual (função pura, testável) ─────────────────────────────
 
 def score_price_path(
-    bars: Sequence[Tuple[float, float, float]],
+    bars: Sequence[tuple[float, float, float]],
     entry_low: float,
     entry_high: float,
     target_sell: float,
     stop_pct: float,
-) -> Tuple[str, Dict[str, Any]]:
+) -> tuple[str, dict[str, Any]]:
     """Avalia contrafactualmente uma sugestão de janela contra o caminho de preço.
 
     Modelo conservador: assume uma ordem de compra no TOPO da banda (`entry_high`,
@@ -176,7 +177,7 @@ def score_price_path(
 
 # ── Acesso a dados (só-leitura) ──────────────────────────────────────────────
 
-def _fetchall(conn, sql: str, params: tuple) -> List[tuple]:
+def _fetchall(conn, sql: str, params: tuple) -> list[tuple]:
     cur = conn.cursor()
     try:
         cur.execute(sql, params)
@@ -185,7 +186,7 @@ def _fetchall(conn, sql: str, params: tuple) -> List[tuple]:
         cur.close()
 
 
-def fetch_windows(conn, symbol: str, profiles: Sequence[str], since_ts: float) -> List[Dict[str, Any]]:
+def fetch_windows(conn, symbol: str, profiles: Sequence[str], since_ts: float) -> list[dict[str, Any]]:
     """Carrega sugestões de janela válidas (model=trading-analyst) do histórico."""
     rows = _fetchall(
         conn,
@@ -209,7 +210,7 @@ def fetch_windows(conn, symbol: str, profiles: Sequence[str], since_ts: float) -
     return [dict(zip(cols, r)) for r in rows]
 
 
-def fetch_bars(conn, symbol: str, start_ts: float, end_ts: float) -> List[Tuple[float, float, float]]:
+def fetch_bars(conn, symbol: str, start_ts: float, end_ts: float) -> list[tuple[float, float, float]]:
     """Candles 1min (high, low, close) no intervalo, cronológicos."""
     rows = _fetchall(
         conn,
@@ -224,7 +225,7 @@ def fetch_bars(conn, symbol: str, start_ts: float, end_ts: float) -> List[Tuple[
     return [(float(h), float(l), float(c)) for h, l, c in rows]
 
 
-def nearest_market_state(conn, symbol: str, ts: float) -> Optional[Dict[str, float]]:
+def nearest_market_state(conn, symbol: str, ts: float) -> dict[str, float] | None:
     """Estado de mercado mais recente <= ts (indicadores para o CONTEXT)."""
     rows = _fetchall(
         conn,
@@ -242,7 +243,7 @@ def nearest_market_state(conn, symbol: str, ts: float) -> Optional[Dict[str, flo
     return {k: (float(v) if v is not None else 0.0) for k, v in zip(keys, rows[0])}
 
 
-def perf_context_at(conn, symbol: str, profile: str, ts: float) -> Dict[str, Any]:
+def perf_context_at(conn, symbol: str, profile: str, ts: float) -> dict[str, Any]:
     """Reconstrói o bloco de performance 7d point-in-time (sem leakage: só trades < ts)."""
     row = _fetchall(
         conn,
@@ -265,7 +266,7 @@ def perf_context_at(conn, symbol: str, profile: str, ts: float) -> Dict[str, Any
     }
 
 
-def controls_at(conn, symbol: str, profile: str, ts: float) -> Optional[Dict[str, float]]:
+def controls_at(conn, symbol: str, profile: str, ts: float) -> dict[str, float] | None:
     """Últimos controls aplicados <= ts (min_confidence/min_trade_interval)."""
     rows = _fetchall(
         conn,
@@ -284,12 +285,12 @@ def controls_at(conn, symbol: str, profile: str, ts: float) -> Optional[Dict[str
 
 # ── Reconstrução do prompt (aproximada, formato de produção) ─────────────────
 
-def _compact(payload: Dict[str, Any]) -> str:
+def _compact(payload: dict[str, Any]) -> str:
     """Serialização compacta idêntica a trading_agent._compact_prompt_json."""
     return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str)
 
 
-def reconstruct_prompt(conn, w: Dict[str, Any], symbol: str) -> Optional[str]:
+def reconstruct_prompt(conn, w: dict[str, Any], symbol: str) -> str | None:
     """Reconstrói o prompt da window no formato de produção (aproximado)."""
     ms = nearest_market_state(conn, symbol, w["timestamp"])
     if not ms:
@@ -335,7 +336,7 @@ def reconstruct_prompt(conn, w: Dict[str, Any], symbol: str) -> Optional[str]:
     return f"{WINDOW_PROMPT_PREAMBLE}LIMITS={_compact(window_limits)}\nCONTEXT={_compact(window_context)}"
 
 
-def build_target(w: Dict[str, Any]) -> str:
+def build_target(w: dict[str, Any]) -> str:
     """Alvo canônico: JSON determinístico dos parâmetros da janela (chaves ordenadas)."""
     payload = {
         "entry_low": round(float(w["entry_low"]), 2),
@@ -353,14 +354,14 @@ def build_target(w: Dict[str, Any]) -> str:
 def build_dataset(
     db: TrainingDatabase, *, symbol: str, profiles: Sequence[str], since_ts: float,
     horizon_sec: int, stop_pct: float, min_flat_pnl: float,
-) -> Tuple[List[Dict[str, str]], Dict[str, int]]:
+) -> tuple[list[dict[str, str]], dict[str, int]]:
     """Gera exemplos SFT positivos + estatísticas de rótulo."""
     # db._get_conn() é um context manager (@contextmanager), não uma conexão crua.
     with db._get_conn() as conn:
         windows = fetch_windows(conn, symbol, profiles, since_ts)
-        stats: Dict[str, int] = {"windows": len(windows), "kept": 0, "no_prompt": 0,
+        stats: dict[str, int] = {"windows": len(windows), "kept": 0, "no_prompt": 0,
                                  "flat_weak": 0}
-        examples: List[Dict[str, str]] = []
+        examples: list[dict[str, str]] = []
         for w in windows:
             bars = fetch_bars(conn, symbol, w["timestamp"], w["timestamp"] + horizon_sec)
             label, detail = score_price_path(

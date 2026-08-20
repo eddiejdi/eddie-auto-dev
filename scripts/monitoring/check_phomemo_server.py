@@ -5,8 +5,8 @@ Execute no servidor: python3 this_script.py
 """
 import subprocess
 import sys
-import os
 from pathlib import Path
+
 
 def run_cmd(cmd, shell=True):
     """Executa comando."""

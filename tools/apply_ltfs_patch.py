@@ -6,6 +6,7 @@ and label.c:label_compare to handle synthetic labels.
 """
 import sys
 
+
 def patch_ltfs_internal(path):
     """Patch ltfs_read_one_label in ltfs_internal.c."""
     with open(path, 'r') as f:
@@ -15,7 +16,7 @@ def patch_ltfs_internal(path):
     old = '\tbool too_long = false, ansi_valid = false;'
     new = '\tbool too_long = false, ansi_valid = false;\n\tbool ansi_label_missing = false;'
     if old not in code:
-        print(f"ERROR: could not find declaration line")
+        print("ERROR: could not find declaration line")
         return False
     code = code.replace(old, new, 1)
 

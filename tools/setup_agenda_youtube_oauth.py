@@ -19,10 +19,9 @@ from urllib.parse import parse_qs, urlparse
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT / "tools"))
 
-from daily_agenda_config import load_config, resolve_repo_path  # noqa: E402
-from youtube_agenda_publisher import (  # noqa: E402
+from daily_agenda_config import load_config, resolve_repo_path
+from youtube_agenda_publisher import (
     YOUTUBE_SCOPES,
-    get_authenticated_channel_info,
     verify_upload_channel,
 )
 

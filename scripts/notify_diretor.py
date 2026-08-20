@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import pathlib, importlib.util, json
+import importlib.util
+import pathlib
 from datetime import datetime
 
 bus_path = pathlib.Path(__file__).resolve().parents[1] / 'specialized_agents' / 'agent_communication_bus.py'

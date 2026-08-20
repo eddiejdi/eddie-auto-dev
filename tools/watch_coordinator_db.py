@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 import os
 import time
+from datetime import datetime, timezone
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from datetime import datetime, timezone
 
 DATABASE_URL = os.environ.get('DATABASE_URL', 'postgresql://postgress:shared_memory_2026@localhost:55432/autocoinbot')
 POLL_INTERVAL = int(os.environ.get('COORD_POLL_INTERVAL', '5'))

@@ -4,12 +4,10 @@ Deploy do seletor de servidores no dashboard Grafana
 Adiciona um dropdown para alternar entre servidores (localhost, 192.168.15.2, etc)
 """
 
-import os
-import sys
 import json
+import os
 import subprocess
-from urllib.request import Request, urlopen
-from urllib.error import HTTPError
+import sys
 
 HOMELAB_HOST = os.getenv("HOMELAB_HOST", "192.168.15.2")
 HOMELAB_USER = os.getenv("HOMELAB_USER", "homelab")

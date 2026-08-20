@@ -4,15 +4,14 @@ OpenWebUI + Ollama + Telegram Integration Module
 Integra todos os modelos disponíveis com Open WebUI e bot Telegram
 """
 
-import os
-import httpx
-import json
 import asyncio
-from typing import Optional, Dict, Any, List
+import json
+import os
 from dataclasses import dataclass
-from enum import Enum
 from datetime import datetime
+from typing import Any
 
+import httpx
 
 # ============== Configurações ==============
 OLLAMA_HOST = os.getenv("OLLAMA_HOST", "http://192.168.15.2:11434")
@@ -139,7 +138,7 @@ class ChatResponse:
     tokens_used: int
     duration_ms: float
     success: bool
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class IntegrationClient:
@@ -160,8 +159,8 @@ class IntegrationClient:
             # Leave empty and functions that require it will return explicit errors
             self.webui_api_key = ""
         self.client = httpx.AsyncClient(timeout=300.0)  # 5 min timeout
-        self._models_cache: List[ModelInfo] = []
-        self._cache_time: Optional[datetime] = None
+        self._models_cache: list[ModelInfo] = []
+        self._cache_time: datetime | None = None
         self._current_profile = "general"
 
     async def close(self):
@@ -170,7 +169,7 @@ class IntegrationClient:
 
     # ============== Gestão de Modelos ==============
 
-    async def list_ollama_models(self, force_refresh: bool = False) -> List[ModelInfo]:
+    async def list_ollama_models(self, force_refresh: bool = False) -> list[ModelInfo]:
         """Lista modelos disponíveis no Ollama"""
         # Cache por 5 minutos
         if not force_refresh and self._cache_time:
@@ -202,7 +201,7 @@ class IntegrationClient:
 
         return self._models_cache if self._models_cache else []
 
-    async def get_model_names(self) -> List[str]:
+    async def get_model_names(self) -> list[str]:
         """Retorna lista de nomes de modelos"""
         models = await self.list_ollama_models()
         return [m.name for m in models]
@@ -216,11 +215,11 @@ class IntegrationClient:
 
     # ============== Perfis de Modelo ==============
 
-    def get_profile(self, profile_name: str) -> Dict[str, Any]:
+    def get_profile(self, profile_name: str) -> dict[str, Any]:
         """Obtém configuração de um perfil"""
         return MODEL_PROFILES.get(profile_name, MODEL_PROFILES["general"])
 
-    def list_profiles(self) -> Dict[str, str]:
+    def list_profiles(self) -> dict[str, str]:
         """Lista perfis disponíveis com descrições"""
         return {name: p["description"] for name, p in MODEL_PROFILES.items()}
 
@@ -345,7 +344,7 @@ class IntegrationClient:
         profile: str = None,
         model: str = None,
         system: str = None,
-        context: List[Dict] = None,
+        context: list[dict] = None,
         temperature: float = None,
         max_tokens: int = None,
         stream: bool = False,
@@ -498,7 +497,7 @@ class IntegrationClient:
 
     # ============== Open WebUI ==============
 
-    async def check_webui_status(self) -> Dict[str, Any]:
+    async def check_webui_status(self) -> dict[str, Any]:
         """Verifica status do Open WebUI"""
         try:
             response = await self.client.get(
@@ -593,7 +592,7 @@ class IntegrationClient:
         prompt: str,
         use_webui: bool = False,
         profile: str = None,
-        context: List[Dict] = None,
+        context: list[dict] = None,
     ) -> str:
         """
         Método simples para fazer perguntas
@@ -680,7 +679,7 @@ Retorne o código corrigido e uma breve explicação do que foi corrigido."""
 
     # ============== Embedding ==============
 
-    async def get_embedding(self, text: str) -> List[float]:
+    async def get_embedding(self, text: str) -> list[float]:
         """Obtém embedding de texto usando nomic-embed-text"""
         try:
             response = await self.client.post(
@@ -698,7 +697,7 @@ Retorne o código corrigido e uma breve explicação do que foi corrigido."""
 
     # ============== Status ==============
 
-    async def get_full_status(self) -> Dict[str, Any]:
+    async def get_full_status(self) -> dict[str, Any]:
         """Retorna status completo da integração"""
         ollama_online = False
         webui_status = await self.check_webui_status()
@@ -747,7 +746,7 @@ Retorne o código corrigido e uma breve explicação do que foi corrigido."""
 
 
 # ============== Instância Global ==============
-_integration_client: Optional[IntegrationClient] = None
+_integration_client: IntegrationClient | None = None
 
 
 def get_integration_client() -> IntegrationClient:

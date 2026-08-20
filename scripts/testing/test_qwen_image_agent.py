@@ -4,9 +4,9 @@ Valida todos os componentes e executa testes de geração.
 """
 
 import asyncio
+import logging
 import sys
 from pathlib import Path
-import logging
 
 # Setup logging
 logging.basicConfig(
@@ -76,7 +76,7 @@ class QwenImageAgentTest:
                 
                 if resp.status_code == 200:
                     models = resp.json().get("models", [])
-                    logger.info(f"  ✓ Ollama respondendo")
+                    logger.info("  ✓ Ollama respondendo")
                     
                     model_names = [m["name"] for m in models]
                     logger.info(f"  Modelos disponíveis: {model_names}")
@@ -190,7 +190,10 @@ class QwenImageAgentTest:
         
         try:
             logger.info("  Importando AgentCommunicationBus...")
-            from specialized_agents.agent_communication_bus import AgentCommunicationBus, MessageType
+            from specialized_agents.agent_communication_bus import (
+                AgentCommunicationBus,
+                MessageType,
+            )
             
             logger.info("  Criando instância do bus...")
             bus = AgentCommunicationBus()
@@ -232,9 +235,10 @@ class QwenImageAgentTest:
         logger.info("     Pode levar 2-5 minutos na primeira vez\n")
         
         try:
+            from pathlib import Path
+
             import torch
             from diffusers import StableDiffusionPipeline
-            from pathlib import Path
             
             logger.info("  Carregando StableDiffusionPipeline...")
             logger.info("  (Primeira execução fará download de ~4GB)")
@@ -287,9 +291,13 @@ class QwenImageAgentTest:
         
         try:
             logger.info("  Importando QwenImageAgent...")
-            from specialized_agents.qwen_image_agent import QwenImageAgent, ImageGenerationRequest
-            import torch
             import uuid
+
+            import torch
+            from specialized_agents.qwen_image_agent import (
+                ImageGenerationRequest,
+                QwenImageAgent,
+            )
             
             logger.info("  Criando agent...")
             agent = QwenImageAgent(

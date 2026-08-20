@@ -6,9 +6,9 @@ and run: python3 tools/run_pipeline_all_envs.py
 """
 import os
 import time
-import requests
-import subprocess
 from urllib.parse import urljoin
+
+import requests
 
 # Fly.io environments removed — system no longer uses Fly.io tunnels.
 # Keep ENVS empty to avoid attempts to operate on non-existent Fly apps.

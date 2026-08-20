@@ -17,11 +17,12 @@ Métricas a adicionar:
 11. Feedback Médio → agent_feedback_score
 """
 
-import requests
-import json
-import sys
 import os
-from typing import Dict, List, Any
+import sys
+from typing import Any
+
+import requests
+
 
 class GrafanaUpdater:
     def __init__(self, url: str, api_key: str):
@@ -32,7 +33,7 @@ class GrafanaUpdater:
             'Content-Type': 'application/json'
         }
     
-    def get_dashboard(self, uid: str) -> Dict[str, Any]:
+    def get_dashboard(self, uid: str) -> dict[str, Any]:
         """Obter dashboard por UID"""
         response = requests.get(
             f'{self.url}/api/dashboards/uid/{uid}',
@@ -41,7 +42,7 @@ class GrafanaUpdater:
         response.raise_for_status()
         return response.json()
     
-    def update_dashboard(self, dashboard_data: Dict[str, Any]) -> Dict[str, Any]:
+    def update_dashboard(self, dashboard_data: dict[str, Any]) -> dict[str, Any]:
         """Atualizar dashboard"""
         db = dashboard_data['dashboard']
         response = requests.post(
@@ -56,14 +57,14 @@ class GrafanaUpdater:
         response.raise_for_status()
         return response.json()
     
-    def find_panel_by_title(self, panels: List[Dict], title: str) -> Dict[str, Any]:
+    def find_panel_by_title(self, panels: list[dict], title: str) -> dict[str, Any]:
         """Encontrar painel por título"""
         for panel in panels:
             if panel.get('title', '').strip() == title:
                 return panel
         return None
     
-    def add_query_to_panel(self, panel: Dict[str, Any], promql: str, legend: str = ''):
+    def add_query_to_panel(self, panel: dict[str, Any], promql: str, legend: str = ''):
         """Adicionar PromQL query ao painel"""
         if 'targets' not in panel:
             panel['targets'] = []
@@ -207,7 +208,7 @@ def main():
         result = updater.update_dashboard(dashboard_data)
         
         if result.get('status') == 'success':
-            print(f"✅ Dashboard atualizado com sucesso!")
+            print("✅ Dashboard atualizado com sucesso!")
             print(f"   ID: {result.get('id')}")
             print(f"   Versão: {result.get('version')}")
         else:

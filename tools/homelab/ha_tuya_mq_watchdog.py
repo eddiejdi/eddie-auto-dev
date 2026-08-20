@@ -13,7 +13,6 @@ import sys
 import tempfile
 import time
 import urllib.request
-from typing import Optional
 
 LOG_WINDOW_MIN = 10
 # Padrões que indicam integração cloud degradada (MQ + auth + unreachable).
@@ -57,7 +56,7 @@ def recent_log_has_error() -> int:
     return sum(blob.count(n) for n in ERROR_NEEDLES)
 
 
-def get_tuya_entry_id() -> Optional[str]:
+def get_tuya_entry_id() -> str | None:
     out = docker_exec([
         "python3", "-c",
         "import json;d=json.load(open('/config/.storage/core.config_entries'));"
@@ -68,7 +67,7 @@ def get_tuya_entry_id() -> Optional[str]:
     return eid or None
 
 
-def get_jwt() -> Optional[str]:
+def get_jwt() -> str | None:
     out = docker_exec([
         "python3", "-c",
         "import json,jwt,time;"

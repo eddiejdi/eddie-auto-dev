@@ -2,9 +2,10 @@
 """Print HTML preview of conversations fetched from INTERCEPTOR_API.
 Useful to validate what the Streamlit component should render (server-side).
 """
-import os
-import requests
 import html as _html
+import os
+
+import requests
 
 API = os.environ.get('INTERCEPTOR_API', 'http://192.168.15.2:8503')
 colors = ['#a8dadc','#ffd6a5','#caffbf','#bdb2ff','#ffc6ff','#ffdbe7','#ffe8d6','#f8d49f']

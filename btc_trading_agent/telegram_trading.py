@@ -9,7 +9,7 @@ import re
 import unicodedata
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from zoneinfo import ZoneInfo
 
 TRADING_COMMANDS = [
@@ -58,7 +58,7 @@ def _escape_markdown(text: Any) -> str:
     return raw
 
 
-def _format_timestamp_ms(timestamp_ms: int | float | None) -> str:
+def _format_timestamp_ms(timestamp_ms: float | None) -> str:
     try:
         ts_int = int(timestamp_ms or 0)
     except (TypeError, ValueError):
@@ -68,7 +68,7 @@ def _format_timestamp_ms(timestamp_ms: int | float | None) -> str:
     return datetime.fromtimestamp(ts_int / 1000, tz=LOCAL_TZ).strftime("%d/%m/%Y %H:%M:%S %Z")
 
 
-def _format_timestamp_seconds(timestamp_seconds: int | float | None) -> str:
+def _format_timestamp_seconds(timestamp_seconds: float | None) -> str:
     try:
         ts_value = float(timestamp_seconds or 0.0)
     except (TypeError, ValueError):
@@ -141,13 +141,13 @@ def _load_training_db_module():
 class TelegramTradingClient:
     """Cliente enxuto para consultas do agent trading via Telegram."""
 
-    def __init__(self, base_dir: Optional[Path] = None) -> None:
+    def __init__(self, base_dir: Path | None = None) -> None:
         self.base_dir = base_dir or Path(__file__).parent
         self.default_status_symbol = DEFAULT_STATUS_SYMBOL
         self.default_quote = DEFAULT_QUOTE
         self.default_performance_days = DEFAULT_PERFORMANCE_DAYS
         self._db = None
-        self._db_error: Optional[str] = None
+        self._db_error: str | None = None
 
     def _get_db(self):
         if self._db is not None:
@@ -422,7 +422,7 @@ class TelegramTradingClient:
 
         DATABASE_URL = _get_report_db_url()
 
-        price: Optional[float] = None
+        price: float | None = None
         try:
             kucoin_api = _load_kucoin_api_module()
             price = kucoin_api.get_price("BTC-USDT")

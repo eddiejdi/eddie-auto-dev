@@ -6,7 +6,6 @@ Encontra elementos com altura reduzida ou problemas de espaçamento
 
 import sys
 import time
-from pathlib import Path
 
 try:
     from selenium import webdriver
@@ -96,7 +95,7 @@ def analyze_element_dimensions(driver, selector, name):
         print(f"      overflow: {overflow} | children: {children_count}")
         
         if is_thin:
-            print(f"      🚨 ELEMENTO FINO DETECTADO!")
+            print("      🚨 ELEMENTO FINO DETECTADO!")
         
         return info
     except Exception as e:
@@ -159,14 +158,14 @@ def main():
                      if results[selector] and results[selector]['is_concerning']]
         
         if thin_elements:
-            print(f"\n🚨 Elementos FINOS detectados:")
+            print("\n🚨 Elementos FINOS detectados:")
             for elem in thin_elements:
                 print(f"  - {elem}")
         else:
             print("\n✅ Nenhum elemento fino detectado")
         
         if concerning:
-            print(f"\n⚠️  Elementos COM POSSÍVEL PROBLEMA:")
+            print("\n⚠️  Elementos COM POSSÍVEL PROBLEMA:")
             for elem in concerning:
                 print(f"  - {elem}")
         

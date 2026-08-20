@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Testa as restrições dos modelos shared-coder e shared-assistant"""
 
+
 import requests
-import json
 
 OLLAMA_URL = "http://192.168.15.2:11434"
 

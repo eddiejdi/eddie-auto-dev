@@ -3,11 +3,11 @@
 Benchmark LLM latency com GPU activado - teste direto via HTTP
 """
 import json
-import time
-import urllib.request
-import urllib.error
-from datetime import datetime
 import statistics
+import time
+import urllib.error
+import urllib.request
+from datetime import datetime
 
 OLLAMA_URL = "http://192.168.15.2:11434/api/generate"
 MODEL = "shared-whatsapp:latest"
@@ -57,7 +57,7 @@ def main():
     print("=" * 70)
     print("🚀 BENCHMARK GPU - shared-whatsapp:latest via Ollama")
     print(f"   Timestamp: {datetime.now().isoformat()}")
-    print(f"   Servidor: 192.168.15.2:11434")
+    print("   Servidor: 192.168.15.2:11434")
     print("=" * 70)
     
     # Check health
@@ -112,7 +112,7 @@ def main():
         print(f"  Throughput: {metrics['avg_tps']:.1f} tokens/s")
     
     print("\n✅ Benchmark concluído!")
-    print(f"   Status: GPU ATIVA (modelo em VRAM)")
+    print("   Status: GPU ATIVA (modelo em VRAM)")
     print("=" * 70)
 
 if __name__ == "__main__":

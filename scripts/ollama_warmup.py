@@ -18,10 +18,10 @@ import logging
 import os
 import sys
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from dataclasses import dataclass, field
-from typing import Optional
+
 
 # ── Configuração ─────────────────────────────────────────────────
 def _csv_env(name: str, default: str) -> list[str]:
@@ -72,7 +72,7 @@ class WarmupResult:
 # ── Funções auxiliares ────────────────────────────────────────────
 def _http_request(
     url: str,
-    data: Optional[dict] = None,
+    data: dict | None = None,
     timeout: int = TIMEOUT_SECONDS,
 ) -> dict:
     """Faz requisição HTTP para a API Ollama."""

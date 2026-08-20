@@ -13,21 +13,20 @@ a cada N minutos baseado no conhecimento acumulado.
 """
 
 import json
-import os
-import tempfile
-import time
 import logging
-import threading
-import hashlib
+import os
 import pickle
 import shutil
-import numpy as np
-from pathlib import Path
-from datetime import datetime, timezone
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+import tempfile
+import threading
+import time
 from collections import deque
-from contextlib import contextmanager
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Optional
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -99,10 +98,10 @@ class MarketSnapshot:
     ema_20: float = 0.0
 
     # Resultado futuro (preenchido retrospectivamente)
-    price_change_5m: Optional[float] = None   # Variação % em 5 min
-    price_change_15m: Optional[float] = None  # Variação % em 15 min
-    price_change_60m: Optional[float] = None  # Variação % em 60 min
-    outcome: Optional[str] = None             # "BULL", "BEAR", "FLAT"
+    price_change_5m: float | None = None   # Variação % em 5 min
+    price_change_15m: float | None = None  # Variação % em 15 min
+    price_change_60m: float | None = None  # Variação % em 60 min
+    outcome: str | None = None             # "BULL", "BEAR", "FLAT"
 
     def to_embedding(self) -> np.ndarray:
         """Converte snapshot para vetor numérico normalizado."""
@@ -189,7 +188,7 @@ class MarketSnapshot:
             return 1.0
         return 0.0
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Serializa para dicionário."""
         return {
             "timestamp": self.timestamp,
@@ -288,7 +287,7 @@ class RegimeAdjustment:
     ollama_suggested_max_positions: int = 0
     ollama_suggested_min_sell_pnl_pct: float = 0.0
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """Serializa para dicionário."""
         return {
             "timestamp": self.timestamp,
@@ -361,7 +360,7 @@ class VectorStore:
         self.dim = dim
         self.max_size = max_size
         self._embeddings: np.ndarray = np.empty((0, dim), dtype=np.float32)
-        self._metadata: List[Dict] = []
+        self._metadata: list[dict] = []
         self._dirty = False
 
     @property
@@ -369,7 +368,7 @@ class VectorStore:
         """Número de vetores armazenados."""
         return len(self._metadata)
 
-    def add(self, embedding: np.ndarray, metadata: Dict) -> None:
+    def add(self, embedding: np.ndarray, metadata: dict) -> None:
         """Adiciona um vetor ao store.
 
         Args:
@@ -389,7 +388,7 @@ class VectorStore:
             self._embeddings = self._embeddings[-self.max_size:]
             self._metadata = self._metadata[-self.max_size:]
 
-    def search(self, query: np.ndarray, top_k: int = TOP_K) -> List[Tuple[float, Dict]]:
+    def search(self, query: np.ndarray, top_k: int = TOP_K) -> list[tuple[float, dict]]:
         """Busca os top_k vetores mais similares por similaridade de cosseno.
 
         Args:
@@ -465,7 +464,7 @@ class VectorStore:
                 except OSError:
                     pass
 
-    def load(self, path: Path = INDEX_FILE, symbol: Optional[str] = None) -> bool:
+    def load(self, path: Path = INDEX_FILE, symbol: str | None = None) -> bool:
         """Carrega índice do disco com validação de integridade.
 
         Se o arquivo estiver corrompido (0 bytes, pickle inválido),
@@ -571,16 +570,16 @@ class MarketDataCollector:
         """
         self.symbol = symbol
         self._price_history: deque = deque(maxlen=500)
-        self._last_candles: List[Dict] = []
+        self._last_candles: list[dict] = []
         self._last_candle_fetch: float = 0.0
 
     def collect_snapshot(
         self,
-        price: Optional[float] = None,
-        indicators: Optional[object] = None,
-        ob_analysis: Optional[Dict] = None,
-        flow_analysis: Optional[Dict] = None,
-    ) -> Optional[MarketSnapshot]:
+        price: float | None = None,
+        indicators: object | None = None,
+        ob_analysis: dict | None = None,
+        flow_analysis: dict | None = None,
+    ) -> MarketSnapshot | None:
         """Coleta um snapshot completo do mercado.
 
         Pode receber dados já coletados pelo trading loop (evita chamadas
@@ -729,13 +728,13 @@ class RegimeAdjuster:
             symbol: Par de trading.
         """
         self.symbol = symbol
-        self._last_adjustment: Optional[RegimeAdjustment] = None
+        self._last_adjustment: RegimeAdjustment | None = None
         self._adjustment_history: deque = deque(maxlen=100)
 
     def calculate_adjustment(
         self,
         current_snapshot: MarketSnapshot,
-        similar_results: List[Tuple[float, Dict]],
+        similar_results: list[tuple[float, dict]],
     ) -> RegimeAdjustment:
         """Calcula ajuste de regime baseado em padrões similares.
 
@@ -957,9 +956,9 @@ class RegimeAdjuster:
                 return
 
             # --- 1. Coletar preços e indicadores dos snapshots recentes ---
-            recent_prices: List[float] = []
-            recent_volatilities: List[float] = []
-            recent_momentums: List[float] = []
+            recent_prices: list[float] = []
+            recent_volatilities: list[float] = []
+            recent_momentums: list[float] = []
 
             n = min(200, store.size)
             for i in range(store.size - n, store.size):
@@ -1383,7 +1382,7 @@ class MarketRAG:
         )
         self._lock = threading.Lock()
         self._stop_event = threading.Event()
-        self._thread: Optional[threading.Thread] = None
+        self._thread: threading.Thread | None = None
         self._last_snapshot_time: float = 0.0
         self._last_recalibrate_time: float = 0.0
         self._stats = {
@@ -1393,7 +1392,7 @@ class MarketRAG:
         }
 
         # Contexto de trading (atualizado pelo trading agent)
-        self._trading_context: Dict = {
+        self._trading_context: dict = {
             "avg_entry_price": 0.0,
             "position_count": 0,
             "usdt_balance": 0.0,
@@ -1401,7 +1400,7 @@ class MarketRAG:
             "max_positions": 3,
             "profile": "default",
         }
-        self._ollama_trade_controls: Dict = {}
+        self._ollama_trade_controls: dict = {}
 
         # Carregar dados persistidos (migra do index.pkl legado compartilhado
         # na primeira execução, mantendo só os vetores deste símbolo)
@@ -1486,11 +1485,11 @@ class MarketRAG:
 
     def feed_snapshot(
         self,
-        price: Optional[float] = None,
-        indicators: Optional[object] = None,
-        ob_analysis: Optional[Dict] = None,
-        flow_analysis: Optional[Dict] = None,
-    ) -> Optional[MarketSnapshot]:
+        price: float | None = None,
+        indicators: object | None = None,
+        ob_analysis: dict | None = None,
+        flow_analysis: dict | None = None,
+    ) -> MarketSnapshot | None:
         """Alimenta o RAG com dados do loop de trading (evita chamadas duplicadas).
 
         Pode ser chamado diretamente do trading loop para reutilizar dados coletados.
@@ -1528,7 +1527,7 @@ class MarketRAG:
         """
         return self._recalibrate()
 
-    def get_stats(self) -> Dict:
+    def get_stats(self) -> dict:
         """Retorna estatísticas do RAG.
 
         Returns:
@@ -1550,7 +1549,7 @@ class MarketRAG:
 
     def set_ollama_trade_controls(
         self,
-        suggestion: Dict,
+        suggestion: dict,
         *,
         mode: str = "shadow",
         trigger: str = "periodic",
@@ -1592,7 +1591,7 @@ class MarketRAG:
     def _apply_ollama_trade_controls(
         self,
         adjustment: RegimeAdjustment,
-        suggestion: Optional[Dict],
+        suggestion: dict | None,
     ) -> None:
         """Aplica sugestão do Ollama sobre o baseline do RAG, respeitando clamps."""
         if not suggestion:
@@ -1751,7 +1750,7 @@ class MarketRAG:
             self._stats["outcomes_updated"] += updated
             logger.debug(f"📊 Outcomes atualizados: {updated} snapshots")
 
-    def _find_price_at(self, target_time: float) -> Optional[float]:
+    def _find_price_at(self, target_time: float) -> float | None:
         """Encontra o preço mais próximo de um timestamp alvo.
 
         Args:

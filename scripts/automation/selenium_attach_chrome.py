@@ -4,10 +4,10 @@ Selenium - Attach to existing Chrome window
 Conecta a uma janela do Chrome já aberta via remote debugging
 """
 
-import time
 import subprocess
 import sys
-import os
+import time
+
 
 def check_selenium():
     """Verifica se Selenium está instalado"""
@@ -15,8 +15,8 @@ def check_selenium():
         from selenium import webdriver
         from selenium.webdriver.chrome.options import Options
         from selenium.webdriver.common.by import By
-        from selenium.webdriver.support.ui import WebDriverWait
         from selenium.webdriver.support import expected_conditions as EC
+        from selenium.webdriver.support.ui import WebDriverWait
         return True
     except ImportError:
         print("❌ Selenium não instalado. Instalando...")
@@ -48,10 +48,6 @@ def attach_to_chrome():
     """Conecta ao Chrome em modo debug"""
     from selenium import webdriver
     from selenium.webdriver.chrome.options import Options
-    from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.common.exceptions import TimeoutException, NoSuchElementException
     
     print("\n🔌 Conectando ao Chrome (porta 9222)...")
     
@@ -72,9 +68,6 @@ def attach_to_chrome():
 def find_test_users_section(driver):
     """Localiza a seção de Test Users no OAuth consent screen"""
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.common.exceptions import TimeoutException, NoSuchElementException
     
     print("\n🔍 Procurando seção de Test Users...")
     
@@ -134,7 +127,7 @@ def find_test_users_section(driver):
                         found_elements.append((description, elem))
                     except:
                         pass
-        except Exception as e:
+        except Exception:
             pass
     
     return found_elements
@@ -189,9 +182,6 @@ def analyze_page(driver):
 def click_add_users(driver):
     """Tenta clicar no botão de adicionar usuários"""
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
-    from selenium.webdriver.support import expected_conditions as EC
-    from selenium.webdriver.common.action_chains import ActionChains
     
     print("\n🖱️ Tentando clicar em 'Add users'...")
     
@@ -221,7 +211,7 @@ def click_add_users(driver):
                     print("  ✅ Clicado!")
                     time.sleep(1)
                     return True
-        except Exception as e:
+        except Exception:
             continue
     
     print("  ❌ Não foi possível encontrar botão de adicionar")
@@ -249,7 +239,7 @@ def add_test_user(driver, email="edenilson.teixeira@rpa4all.com"):
             inputs = driver.find_elements(By.XPATH, selector)
             for inp in inputs:
                 if inp.is_displayed():
-                    print(f"  ✅ Campo de email encontrado!")
+                    print("  ✅ Campo de email encontrado!")
                     inp.clear()
                     inp.send_keys(email)
                     print(f"  ✅ Email digitado: {email}")
@@ -258,7 +248,7 @@ def add_test_user(driver, email="edenilson.teixeira@rpa4all.com"):
                     # Tentar confirmar
                     inp.send_keys(Keys.ENTER)
                     return True
-        except Exception as e:
+        except Exception:
             continue
     
     print("  ❌ Campo de email não encontrado")

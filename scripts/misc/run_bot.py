@@ -3,7 +3,9 @@
 import asyncio
 import sys
 from datetime import datetime
+
 from telegram_bot import TelegramBot
+
 
 async def run_bot_with_logging():
     print(f"[{datetime.now()}] Iniciando bot com logging...")

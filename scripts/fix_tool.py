@@ -13,10 +13,9 @@ from __future__ import annotations
 import argparse
 import sqlite3
 import textwrap
-import uuid
 import time
+import uuid
 from pathlib import Path
-from typing import Optional
 
 
 def build_tool_content() -> str:

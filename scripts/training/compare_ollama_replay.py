@@ -10,7 +10,6 @@ import re
 import sys
 from collections import Counter
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import httpx

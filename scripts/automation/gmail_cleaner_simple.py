@@ -3,16 +3,16 @@
 Gmail Email Cleaner (Versão Simplificada)
 Limpa spam/promoções e salva emails importantes em arquivo JSON para treinamento
 """
-import os
+import base64
 import json
 import logging
+import os
+from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Dict, Tuple
-from dataclasses import dataclass, asdict
-from google.oauth2.credentials import Credentials
+
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
-import base64
 
 # Configuração
 TOKEN_FILE = "/home/homelab/myClaude/gmail_data/token.json"
@@ -111,7 +111,7 @@ class GmailCleaner:
         
         return creds
     
-    def _load_knowledge(self) -> Dict:
+    def _load_knowledge(self) -> dict:
         if os.path.exists(EMAILS_DB):
             with open(EMAILS_DB) as f:
                 return json.load(f)
@@ -121,7 +121,7 @@ class GmailCleaner:
         with open(EMAILS_DB, 'w') as f:
             json.dump(self.knowledge_db, f, indent=2, ensure_ascii=False)
     
-    def list_emails(self, max_results: int = 50) -> List[Email]:
+    def list_emails(self, max_results: int = 50) -> list[Email]:
         logger.info(f"📥 Buscando até {max_results} emails...")
         
         results = self.service.users().messages().list(
@@ -187,7 +187,7 @@ class GmailCleaner:
         self.knowledge_db['processed_ids'].append(email.id)
         return True
     
-    def process_emails(self) -> Dict:
+    def process_emails(self) -> dict:
         logger.info("=" * 60)
         logger.info("🔄 PROCESSAMENTO DE EMAILS")
         logger.info(f"📅 {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

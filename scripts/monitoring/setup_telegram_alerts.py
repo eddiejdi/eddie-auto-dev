@@ -7,7 +7,6 @@ Salva credenciais Telegram de forma segura
 import json
 import sys
 from pathlib import Path
-import getpass
 
 
 def setup_telegram():

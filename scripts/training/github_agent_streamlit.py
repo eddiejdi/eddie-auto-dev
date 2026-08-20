@@ -10,20 +10,18 @@ Recursos:
 - Ollama/OpenWebUI integration
 """
 
-import os
 import json
-import time
+import os
 import secrets
-import requests
-import urllib.parse
-import streamlit as st
-from pathlib import Path
-from datetime import datetime
-from typing import Optional, List, Dict, Any
-import threading
-import webbrowser
-import base64
 import subprocess
+import time
+import urllib.parse
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+import requests
+import streamlit as st
 
 # =============================================================================
 # CONFIGURAÇÕES
@@ -211,7 +209,7 @@ def get_github_token() -> str:
 # FUNÇÕES DE OAUTH - Device Flow (Login Automático!)
 # =============================================================================
 
-def start_device_flow() -> Optional[Dict]:
+def start_device_flow() -> dict | None:
     """
     Inicia o GitHub Device Flow - método mais simples de autenticação!
     Não precisa de OAuth App configurado, usa o Client ID público do GitHub CLI.
@@ -242,7 +240,7 @@ def start_device_flow() -> Optional[Dict]:
         return None
 
 
-def poll_device_flow(device_code: str, interval: int = 5, max_attempts: int = 60) -> Optional[str]:
+def poll_device_flow(device_code: str, interval: int = 5, max_attempts: int = 60) -> str | None:
     """
     Faz polling para obter o token após usuário autorizar.
     Retorna o token quando autorizado ou None se expirar/falhar.
@@ -275,14 +273,12 @@ def poll_device_flow(device_code: str, interval: int = 5, max_attempts: int = 60
                 interval += 5
                 time.sleep(interval)
                 continue
-            elif error == "expired_token":
-                return None
-            elif error == "access_denied":
+            elif error == "expired_token" or error == "access_denied":
                 return None
             else:
                 time.sleep(interval)
                 
-        except Exception as e:
+        except Exception:
             time.sleep(interval)
     
     return None
@@ -305,7 +301,7 @@ def get_github_oauth_url() -> str:
     
     return f"https://github.com/login/oauth/authorize?{urllib.parse.urlencode(params)}"
 
-def exchange_code_for_token(code: str) -> Optional[str]:
+def exchange_code_for_token(code: str) -> str | None:
     """Troca o código de autorização por um token de acesso"""
     try:
         response = requests.post(
@@ -607,7 +603,6 @@ Responda APENAS com JSON, sem texto adicional."""
                 json_str = json_str.split("```")[1].replace("json", "").strip()
             
             # Tenta encontrar JSON completo (com objetos aninhados)
-            import re
             # Procura por { ... } incluindo objetos aninhados
             depth = 0
             start = -1
@@ -723,7 +718,7 @@ Responda APENAS com JSON, sem texto adicional."""
             except KeyError as e:
                 return {"error": f"Parâmetro faltando: {e}. Tente ser mais específico, ex: 'issues do microsoft/vscode'"}
             except Exception as e:
-                return {"error": f"Erro ao executar: {str(e)}"}
+                return {"error": f"Erro ao executar: {e!s}"}
         return {"error": "Ação não reconhecida"}
     
     def format_response(self, action: str, data: Any) -> str:
@@ -910,10 +905,10 @@ def main():
         ollama = OllamaClient()
         ollama_ok = ollama.is_available()
         if ollama_ok:
-            st.success(f"✅ Ollama Online")
+            st.success("✅ Ollama Online")
             st.caption(f"Modelo: {OLLAMA_MODEL}")
         else:
-            st.error(f"❌ Ollama Offline")
+            st.error("❌ Ollama Offline")
             st.caption(f"Host: {OLLAMA_HOST}:{OLLAMA_PORT}")
         
         st.divider()
@@ -927,7 +922,7 @@ def main():
             user = github.get_user()
             
             if "error" not in user:
-                st.success(f"✅ Conectado")
+                st.success("✅ Conectado")
                 
                 col1, col2 = st.columns([1, 3])
                 with col1:
@@ -1091,18 +1086,17 @@ def show_chat_page():
         with st.chat_message("user"):
             st.markdown(quick_prompt)
         
-        with st.chat_message("assistant"):
-            with st.spinner("🤔 Processando..."):
-                agent = GitHubAgent(token)
-                result = agent.process(quick_prompt)
-                
-                if result["success"]:
-                    response = result["formatted"]
-                else:
-                    response = f"❌ {result['message']}"
-                
-                st.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
+        with st.chat_message("assistant"), st.spinner("🤔 Processando..."):
+            agent = GitHubAgent(token)
+            result = agent.process(quick_prompt)
+            
+            if result["success"]:
+                response = result["formatted"]
+            else:
+                response = f"❌ {result['message']}"
+            
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
     
     # Histórico de mensagens
     for msg in st.session_state.messages:
@@ -1116,18 +1110,17 @@ def show_chat_page():
         with st.chat_message("user"):
             st.markdown(prompt)
         
-        with st.chat_message("assistant"):
-            with st.spinner("🤔 Processando..."):
-                agent = GitHubAgent(token)
-                result = agent.process(prompt)
-                
-                if result["success"]:
-                    response = result["formatted"]
-                else:
-                    response = f"❌ {result['message']}"
-                
-                st.markdown(response)
-                st.session_state.messages.append({"role": "assistant", "content": response})
+        with st.chat_message("assistant"), st.spinner("🤔 Processando..."):
+            agent = GitHubAgent(token)
+            result = agent.process(prompt)
+            
+            if result["success"]:
+                response = result["formatted"]
+            else:
+                response = f"❌ {result['message']}"
+            
+            st.markdown(response)
+            st.session_state.messages.append({"role": "assistant", "content": response})
 
 
 def show_repos_page():
@@ -1282,7 +1275,6 @@ def send_whatsapp_message(number: str, text: str):
 
 def get_telegram_status():
     """Verifica status do bot Telegram"""
-    import subprocess
     try:
         result = subprocess.run(
             ["pgrep", "-af", "telegram_bot"],

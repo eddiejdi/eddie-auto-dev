@@ -11,12 +11,12 @@ Opções:
 
 AVISO: o modo --apply irá enviar valores ao Secrets Agent usando SECRETS_AGENT_URL e SECRETS_AGENT_API_KEY do ambiente.
 """
+import argparse
+import json
 import os
 import re
-import sys
-import json
 from pathlib import Path
-import argparse
+
 import requests
 
 ROOT = Path(__file__).resolve().parents[1]

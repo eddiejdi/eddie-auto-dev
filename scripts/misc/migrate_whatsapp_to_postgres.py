@@ -3,10 +3,11 @@
 Script para migrar dados do SQLite para PostgreSQL e inicializar schema
 """
 import os
-import sys
 import sqlite3
-import psycopg2
+import sys
 from pathlib import Path
+
+import psycopg2
 
 # Configurações
 SQLITE_PATH = Path.home() / "shared-auto-dev" / "whatsapp_data" / "conversations.db"
@@ -81,7 +82,7 @@ def migrate_from_sqlite():
         print("   (Não há dados para migrar)")
         return True
     
-    print(f"📦 Migrando dados do SQLite para PostgreSQL...")
+    print("📦 Migrando dados do SQLite para PostgreSQL...")
     print(f"   Fonte: {SQLITE_PATH}")
     
     try:

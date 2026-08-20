@@ -4,13 +4,11 @@ Processador LOTE 2 - Homelab Copilot Agent + Specialized Agents
 """
 
 import asyncio
+import hashlib
 import json
 import logging
-import subprocess
-import hashlib
-from pathlib import Path
-from typing import Optional
 import sys
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -26,7 +24,7 @@ def get_cache_key(file_path: Path) -> str:
     key_str = f"{file_path}:{stat.st_size}:{stat.st_mtime}"
     return hashlib.md5(key_str.encode()).hexdigest()
 
-def load_cached(file_path: Path) -> Optional[dict]:
+def load_cached(file_path: Path) -> dict | None:
     cache_file = CACHE_DIR / f"{get_cache_key(file_path)}.json"
     if cache_file.exists():
         try:

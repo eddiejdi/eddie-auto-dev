@@ -17,7 +17,7 @@ from email.mime.image import MIMEImage
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import requests
 
@@ -184,9 +184,9 @@ def _normalize_team_group(manager_username: str) -> str:
 
 
 def build_nextcloud_groups(
-    extra_groups: Optional[list[str]] = None,
+    extra_groups: list[str] | None = None,
     *,
-    manager_username: Optional[str] = None,
+    manager_username: str | None = None,
 ) -> list[str]:
     """Calcula os grupos necessarios para um usuario usar o Nextcloud."""
     groups = list(NEXTCLOUD_DEFAULT_GROUPS)
@@ -205,8 +205,8 @@ def build_nextcloud_user_config(
     email: str,
     full_name: str,
     password: str,
-    extra_groups: Optional[list[str]] = None,
-    manager_username: Optional[str] = None,
+    extra_groups: list[str] | None = None,
+    manager_username: str | None = None,
     storage_quota_mb: int = 100000,
     send_welcome_email: bool = True,
 ) -> UserConfig:
@@ -512,7 +512,7 @@ _ensure_table()
 def _authentik_api(
     method: str,
     endpoint: str,
-    data: Optional[dict[str, Any]] = None,
+    data: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Faz requisição à API do Authentik."""
     url = f"{AUTHENTIK_URL}/api/v3{endpoint}"
@@ -624,7 +624,7 @@ def _step_setup_env(config: UserConfig) -> dict[str, Any]:
 async def pipeline(config: UserConfig) -> dict[str, Any]:
     """Executa o pipeline completo de criação de usuário."""
     steps: dict[str, str] = {}
-    authentik_id: Optional[int] = None
+    authentik_id: int | None = None
 
     try:
         # 1. Authentik
@@ -683,8 +683,8 @@ async def create_nextcloud_user(
     email: str,
     full_name: str,
     password: str,
-    extra_groups: Optional[list[str]] = None,
-    manager_username: Optional[str] = None,
+    extra_groups: list[str] | None = None,
+    manager_username: str | None = None,
     storage_quota_mb: int = 100000,
     send_welcome_email: bool = True,
 ) -> dict[str, Any]:
@@ -796,7 +796,7 @@ def list_users() -> list[dict[str, Any]]:
     return users
 
 
-def get_user(username: str) -> Optional[dict[str, Any]]:
+def get_user(username: str) -> dict[str, Any] | None:
     """Busca usuário pelo username."""
     # Tentar DB
     try:
@@ -854,8 +854,8 @@ def _save_user(
     status: UserStatus,
     steps: dict[str, str],
     *,
-    authentik_id: Optional[int] = None,
-    error: Optional[str] = None,
+    authentik_id: int | None = None,
+    error: str | None = None,
 ) -> None:
     """Salva ou atualiza usuário no tracking DB."""
     import json

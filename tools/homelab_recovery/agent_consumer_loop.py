@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-import time
 import json
+import time
 from pathlib import Path
 
 QUEUE = Path('/tmp/agent_queue')

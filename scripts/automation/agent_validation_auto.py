@@ -5,8 +5,8 @@ Executa no servidor e valida/processa código via stdin
 """
 
 import json
-import subprocess
 from pathlib import Path
+
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 

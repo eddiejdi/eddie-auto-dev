@@ -4,10 +4,10 @@ Scheduler de Validação Selenium com Alertas Telegram
 Executa testes periódicos e notifica sobre problemas
 """
 
-import sys
 import json
-import time
 import subprocess
+import sys
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -191,7 +191,7 @@ class ValidationScheduler:
         with open(self.history_file, "w") as f:
             json.dump(history, f, indent=2)
         
-        print(f"✅ Resultado salvo no histórico")
+        print("✅ Resultado salvo no histórico")
     
     def get_summary(self):
         """Retorna resumo do histórico"""
@@ -225,7 +225,7 @@ def main():
     if len(sys.argv) > 1 and sys.argv[1] == "summary":
         # Mostrar resumo
         summary = scheduler.get_summary()
-        print(f"\n📊 Resumo de Validações")
+        print("\n📊 Resumo de Validações")
         print(f"   Total de testes: {summary['total_tests']}")
         print(f"   Sucesso: {summary.get('successful', 0)}")
         print(f"   Falhas: {summary.get('failed', 0)}")

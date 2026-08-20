@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
 """Forçar interações entre agentes"""
 import sys
+
 sys.path.insert(0, '/home/shared/myClaude')
 
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+from specialized_agents.agent_communication_bus import (
+    MessageType,
+    get_communication_bus,
+)
 
 bus = get_communication_bus()
 

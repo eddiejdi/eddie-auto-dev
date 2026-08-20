@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Script de testes de validação da aplicação"""
 import sys
+
 sys.path.insert(0, '/home/shared/myClaude')
 
 from specialized_agents.agent_interceptor import get_agent_interceptor
-from specialized_agents.simple_conversation_viewer import render_conversations_html, get_stats
+from specialized_agents.simple_conversation_viewer import (
+    get_stats,
+    render_conversations_html,
+)
 
 print("=" * 50)
 print("EXECUTANDO TESTES DE VALIDACAO")

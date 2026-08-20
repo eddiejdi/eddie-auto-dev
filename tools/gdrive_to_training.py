@@ -11,13 +11,13 @@ Se `--download` for passado, o script invoca `tools/gdrive_fetch_direct.py` para
 os arquivos para `--download-dir` (requer tokens em `--tokens-dir`).
 """
 from __future__ import annotations
+
 import argparse
-import os
-import sys
 import json
-from pathlib import Path
+import os
 import subprocess
-from datetime import datetime
+import sys
+from pathlib import Path
 
 
 def extract_text_from_pdf(pdf_path: Path) -> str | None:

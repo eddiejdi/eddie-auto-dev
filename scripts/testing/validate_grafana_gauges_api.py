@@ -4,11 +4,12 @@ Validação de gauges do dashboard Grafana via API REST
 Sem necessidade de Selenium - acessa diretamente a API
 """
 
-import requests
 import json
-import time
 import sys
+import time
 from datetime import datetime
+
+import requests
 
 GRAFANA_URL = "http://192.168.15.2:3002/grafana"
 DASHBOARD_UID = "shared-whatsapp-training"
@@ -41,7 +42,7 @@ class GrafanaGaugeAPIValidator:
             print(f"✅ Dashboard obtido: {dashboard['dashboard']['title']}")
             return dashboard["dashboard"]
         except Exception as e:
-            msg = f"Failed to get dashboard: {str(e)}"
+            msg = f"Failed to get dashboard: {e!s}"
             print(f"❌ {msg}")
             self.results["errors"].append(msg)
             return None
@@ -69,7 +70,7 @@ class GrafanaGaugeAPIValidator:
     def query_prometheus(self, expr):
         """Fazer query ao Prometheus"""
         try:
-            url = f"http://192.168.15.2:9090/api/v1/query"
+            url = "http://192.168.15.2:9090/api/v1/query"
             response = requests.get(url, params={"query": expr}, timeout=10)
             response.raise_for_status()
             

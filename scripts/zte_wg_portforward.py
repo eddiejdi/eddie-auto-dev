@@ -4,12 +4,11 @@
 Destino: 192.168.14.2 (TP-Link WAN) — topologia double-NAT.
 Credenciais: via env vars ZTE_USER e ZTE_PASS.
 """
-import sys
+import http.cookiejar
 import os
 import re
-import json
+import sys
 import urllib.parse
-import http.cookiejar
 import urllib.request
 
 ZTE_USER = os.environ.get("ZTE_USER", "")

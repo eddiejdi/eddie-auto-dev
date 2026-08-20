@@ -5,10 +5,9 @@ Salva o novo token no Secrets Agent.
 """
 import json
 import subprocess
-import webbrowser
 from pathlib import Path
+
 from google_auth_oauthlib.flow import InstalledAppFlow
-from google.oauth2.credentials import Credentials
 
 # Project ID
 PROJECT_ID = "home-lab-483803"
@@ -65,7 +64,7 @@ def regenerate_token():
     
     # Get existing credentials.json
     creds_json = get_credentials_json()
-    print(f"✅ Credenciais obtidas do Secrets Agent")
+    print("✅ Credenciais obtidas do Secrets Agent")
     print(f"   Project ID: {creds_json.get('installed', {}).get('client_id', 'N/A')[:20]}...")
     
     # Create temp file with credentials

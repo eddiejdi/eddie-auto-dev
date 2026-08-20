@@ -4,8 +4,6 @@ Semantic Similarity using Sentence Embeddings
 Uses sentence-transformers for deep semantic understanding
 """
 import os
-from typing import Tuple, Dict, Optional
-import numpy as np
 
 
 def check_sentence_transformers() -> bool:
@@ -76,7 +74,7 @@ def get_embedding_model():
         return None
 
 
-def compute_compatibility_semantic(resume_text: str, job_text: str) -> Tuple[float, str, Dict]:
+def compute_compatibility_semantic(resume_text: str, job_text: str) -> tuple[float, str, dict]:
     """
     Compute semantic compatibility using sentence embeddings.
     
@@ -132,7 +130,7 @@ def compute_compatibility_semantic(resume_text: str, job_text: str) -> Tuple[flo
         return fallback_score, f"Embeddings failed ({e}), using Jaccard fallback", {"method": "fallback"}
 
 
-def compute_compatibility_semantic_hybrid(resume_text: str, job_text: str) -> Tuple[float, str, Dict]:
+def compute_compatibility_semantic_hybrid(resume_text: str, job_text: str) -> tuple[float, str, dict]:
     """
     Hybrid: 70% Semantic Embeddings + 30% TF-IDF.
     Combines deep semantic understanding with keyword matching.

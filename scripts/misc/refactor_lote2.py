@@ -3,10 +3,9 @@
 Refatoração Automática LOTE 2 - Homelab + Specialized Agents
 """
 
+import logging
 import re
 from pathlib import Path
-from typing import Tuple
-import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -26,7 +25,7 @@ REPLACEMENTS = [
 ]
 
 
-def refactor_file(file_path: Path) -> Tuple[bool, str]:
+def refactor_file(file_path: Path) -> tuple[bool, str]:
     try:
         content = file_path.read_text(encoding='utf-8')
         original = content

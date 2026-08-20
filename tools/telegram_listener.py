@@ -3,19 +3,21 @@
 Listener Telegram: lê mensagens recebidas, responde perguntas e aciona agentes via bus.
 """
 
+import asyncio
 import os
 import sys
-import asyncio
-import time
-import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
 from specialized_agents.telegram_client import TelegramClient, TelegramNotifier
+
+from specialized_agents.agent_communication_bus import (
+    MessageType,
+    get_communication_bus,
+)
 
 LAST_UPDATE_FILE = '/tmp/telegram_last_update_id.txt'
 LAST_RESPONSE_ID_FILE = '/tmp/telegram_last_response_id.txt'

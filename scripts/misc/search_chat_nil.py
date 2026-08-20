@@ -3,9 +3,7 @@
 Script para buscar mensagens do chat com "nil"
 """
 import sqlite3
-import json
 from pathlib import Path
-from datetime import datetime
 
 # Diretório de dados do WhatsApp
 DATA_DIR = Path(__file__).parent / "whatsapp_data"

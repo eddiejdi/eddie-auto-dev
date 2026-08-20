@@ -34,10 +34,8 @@ from specialized_agents.nextcloud_agent import (
     NextcloudAgent,
     NextcloudChatRequest,
     NextcloudChatResponse,
-    NextcloudOccRequest,
-    NextcloudFilesListRequest,
-    NextcloudFilesListResponse,
     NextcloudFileUploadRequest,
+    NextcloudOccRequest,
     NextcloudShareCreateRequest,
 )
 
@@ -175,8 +173,10 @@ class NextcloudVpnAgent(HomelabAgent):
         return f"Provisionar VPN Nextcloud para usuário {user}"
 
     def _execute_work(self, state: AgentState) -> dict:
-        from specialized_agents.nextcloud_agent import nextcloud_vpn_provision
-        from specialized_agents.nextcloud_agent import NextcloudVpnProvisionRequest
+        from specialized_agents.nextcloud_agent import (
+            NextcloudVpnProvisionRequest,
+            nextcloud_vpn_provision,
+        )
         req_data = state.get("extra", {})
         req    = NextcloudVpnProvisionRequest(**req_data)
         result = _run_async(nextcloud_vpn_provision(req))

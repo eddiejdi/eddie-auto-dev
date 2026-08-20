@@ -366,6 +366,6 @@ if __name__ == "__main__":
     if result.returncode == 0:
         print(result.stdout.strip())
     else:
-        print(f"  ❌ fast_model.py: SYNTAX ERROR")
+        print("  ❌ fast_model.py: SYNTAX ERROR")
         print(result.stderr)
         sys.exit(1)

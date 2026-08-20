@@ -43,8 +43,6 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
-
 
 # ── Configuração ───────────────────────────────────────────────────────────────
 
@@ -256,11 +254,11 @@ def run_qlora_training(data_path: Path) -> bool:
     log.info("=" * 60)
 
     try:
-        from unsloth import FastLanguageModel  # type: ignore[import-untyped]
-        from datasets import load_dataset  # type: ignore[import-untyped]
-        from trl import SFTTrainer  # type: ignore[import-untyped]
-        from transformers import TrainingArguments  # type: ignore[import-untyped]
         import torch
+        from datasets import load_dataset  # type: ignore[import-untyped]
+        from transformers import TrainingArguments  # type: ignore[import-untyped]
+        from trl import SFTTrainer  # type: ignore[import-untyped]
+        from unsloth import FastLanguageModel  # type: ignore[import-untyped]
 
         if not torch.cuda.is_available():
             log.error("CUDA não disponível!")
@@ -521,7 +519,7 @@ def validate_model() -> tuple[bool, int, int]:
     return stable, passed, total
 
 
-def backup_current_model() -> Optional[Path]:
+def backup_current_model() -> Path | None:
     """Faz backup do Modelfile atual antes do fine-tuning.
 
     Retorna caminho do backup criado ou None.

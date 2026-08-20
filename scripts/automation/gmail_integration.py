@@ -7,18 +7,14 @@ Autor: Shared Assistant
 Data: 2026
 """
 
-import os
-import json
-import pickle
 import base64
-import re
-from datetime import datetime, timedelta
-from typing import Optional, List, Dict, Any, Tuple
-from pathlib import Path
-from dataclasses import dataclass, field
 import logging
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+import pickle
+import re
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Any
 
 # Configurar logging
 logging.basicConfig(
@@ -113,7 +109,7 @@ class Email:
     date: datetime
     snippet: str
     body: str = ""
-    labels: List[str] = field(default_factory=list)
+    labels: list[str] = field(default_factory=list)
     is_read: bool = True
     is_important: bool = False
     has_attachments: bool = False
@@ -126,7 +122,7 @@ class Email:
     is_personal: bool = False
     classification_reason: str = ""
     
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return {
             'id': self.id,
             'thread_id': self.thread_id,
@@ -324,11 +320,11 @@ class GmailClient:
             return not self.credentials.expired
         return True
     
-    async def authenticate(self, auth_code: str = None) -> Tuple[bool, str]:
+    async def authenticate(self, auth_code: str = None) -> tuple[bool, str]:
         """Autentica com Gmail"""
         try:
-            from google_auth_oauthlib.flow import InstalledAppFlow
             from google.auth.transport.requests import Request
+            from google_auth_oauthlib.flow import InstalledAppFlow
             from googleapiclient.discovery import build
             
             # Verificar credenciais existentes
@@ -381,7 +377,7 @@ class GmailClient:
             return False, "Bibliotecas Google não instaladas. Execute: pip install google-auth-oauthlib google-api-python-client"
         except Exception as e:
             logger.error(f"Erro na autenticação: {e}")
-            return False, f"Erro: {str(e)}"
+            return False, f"Erro: {e!s}"
     
     async def ensure_service(self) -> bool:
         """Garante que o serviço está inicializado"""
@@ -397,7 +393,7 @@ class GmailClient:
             logger.error(f"Erro ao inicializar serviço: {e}")
             return False
     
-    def _parse_email(self, msg_data: Dict) -> Email:
+    def _parse_email(self, msg_data: dict) -> Email:
         """Parse dados da API para objeto Email"""
         headers = {h['name']: h['value'] for h in msg_data.get('payload', {}).get('headers', [])}
         
@@ -467,8 +463,8 @@ class GmailClient:
     async def list_emails(self, 
                           max_results: int = 50,
                           query: str = None,
-                          label_ids: List[str] = None,
-                          include_spam: bool = False) -> Tuple[bool, str, List[Email]]:
+                          label_ids: list[str] = None,
+                          include_spam: bool = False) -> tuple[bool, str, list[Email]]:
         """Lista emails"""
         if not await self.ensure_service():
             return False, "Não autenticado. Use /gmail auth", []
@@ -517,9 +513,9 @@ class GmailClient:
         
         except Exception as e:
             logger.error(f"Erro ao listar emails: {e}")
-            return False, f"Erro: {str(e)}", []
+            return False, f"Erro: {e!s}", []
     
-    async def get_email(self, email_id: str) -> Tuple[bool, str, Optional[Email]]:
+    async def get_email(self, email_id: str) -> tuple[bool, str, Email | None]:
         """Obtém um email específico"""
         if not await self.ensure_service():
             return False, "Não autenticado", None
@@ -538,9 +534,9 @@ class GmailClient:
         
         except Exception as e:
             logger.error(f"Erro ao obter email: {e}")
-            return False, f"Erro: {str(e)}", None
+            return False, f"Erro: {e!s}", None
     
-    async def move_to_trash(self, email_ids: List[str]) -> Tuple[bool, str]:
+    async def move_to_trash(self, email_ids: list[str]) -> tuple[bool, str]:
         """Move emails para a lixeira"""
         if not await self.ensure_service():
             return False, "Não autenticado"
@@ -561,9 +557,9 @@ class GmailClient:
         
         except Exception as e:
             logger.error(f"Erro ao mover para lixeira: {e}")
-            return False, f"Erro: {str(e)}"
+            return False, f"Erro: {e!s}"
     
-    async def delete_permanently(self, email_ids: List[str]) -> Tuple[bool, str]:
+    async def delete_permanently(self, email_ids: list[str]) -> tuple[bool, str]:
         """Deleta emails permanentemente (CUIDADO!)"""
         if not await self.ensure_service():
             return False, "Não autenticado"
@@ -584,9 +580,9 @@ class GmailClient:
         
         except Exception as e:
             logger.error(f"Erro ao deletar: {e}")
-            return False, f"Erro: {str(e)}"
+            return False, f"Erro: {e!s}"
     
-    async def mark_as_spam(self, email_ids: List[str]) -> Tuple[bool, str]:
+    async def mark_as_spam(self, email_ids: list[str]) -> tuple[bool, str]:
         """Marca emails como spam"""
         if not await self.ensure_service():
             return False, "Não autenticado"
@@ -608,9 +604,9 @@ class GmailClient:
         
         except Exception as e:
             logger.error(f"Erro ao marcar como spam: {e}")
-            return False, f"Erro: {str(e)}"
+            return False, f"Erro: {e!s}"
     
-    async def mark_as_read(self, email_ids: List[str]) -> Tuple[bool, str]:
+    async def mark_as_read(self, email_ids: list[str]) -> tuple[bool, str]:
         """Marca emails como lidos"""
         if not await self.ensure_service():
             return False, "Não autenticado"
@@ -632,9 +628,9 @@ class GmailClient:
         
         except Exception as e:
             logger.error(f"Erro ao marcar como lido: {e}")
-            return False, f"Erro: {str(e)}"
+            return False, f"Erro: {e!s}"
     
-    async def get_labels(self) -> Tuple[bool, str, List[Dict]]:
+    async def get_labels(self) -> tuple[bool, str, list[dict]]:
         """Lista labels/pastas"""
         if not await self.ensure_service():
             return False, "Não autenticado", []
@@ -651,9 +647,9 @@ class GmailClient:
         
         except Exception as e:
             logger.error(f"Erro ao listar labels: {e}")
-            return False, f"Erro: {str(e)}", []
+            return False, f"Erro: {e!s}", []
     
-    async def get_unread_count(self) -> Tuple[bool, int]:
+    async def get_unread_count(self) -> tuple[bool, int]:
         """Conta emails não lidos"""
         if not await self.ensure_service():
             return False, 0
@@ -679,7 +675,7 @@ class EmailCleaner:
         self.gmail = gmail_client
         self.classifier = EmailClassifier()
     
-    async def analyze_inbox(self, max_emails: int = 100) -> Dict[str, Any]:
+    async def analyze_inbox(self, max_emails: int = 100) -> dict[str, Any]:
         """Analisa a caixa de entrada"""
         success, _, emails = await self.gmail.list_emails(max_results=max_emails)
         
@@ -718,7 +714,7 @@ class EmailCleaner:
     
     async def clean_spam_and_promotions(self, 
                                         dry_run: bool = True,
-                                        max_emails: int = 100) -> Dict[str, Any]:
+                                        max_emails: int = 100) -> dict[str, Any]:
         """Limpa emails de spam e promoções"""
         stats = await self.analyze_inbox(max_emails)
         
@@ -807,8 +803,8 @@ Use `/gmail limpar confirmar` para confirmar a exclusão."""
 
 
 # Instância global
-_gmail_client: Optional[GmailClient] = None
-_email_cleaner: Optional[EmailCleaner] = None
+_gmail_client: GmailClient | None = None
+_email_cleaner: EmailCleaner | None = None
 
 
 def get_gmail_client() -> GmailClient:
@@ -1087,7 +1083,7 @@ async def read_email_for_ai(index_or_id: str) -> tuple[bool, dict[str, str]]:
     gmail = get_gmail_client()
 
     # Resolver email
-    email: Optional['Email'] = None
+    email: Email | None = None
     try:
         idx = int(index_or_id)
         success, _, emails = await gmail.list_emails(max_results=max(idx, 20))

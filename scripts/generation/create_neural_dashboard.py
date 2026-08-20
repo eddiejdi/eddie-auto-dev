@@ -4,11 +4,11 @@ Cria um Dashboard Neural no Grafana representando os componentes do servidor.
 Este dashboard mostra uma representação visual tipo rede neural dos componentes.
 """
 
-import json
 import os
-import requests
 import sys
-from typing import Dict, List, Any
+from typing import Any
+
+import requests
 
 # Configuração
 HOMELAB_HOST = os.environ.get("HOMELAB_HOST", "localhost")
@@ -119,7 +119,7 @@ class GrafanaDashboardCreator:
             print(f"❌ Erro ao criar dashboard: {resp.status_code} - {resp.text}")
             return False
     
-    def _create_panels(self, datasource_id: int) -> List[Dict[str, Any]]:
+    def _create_panels(self, datasource_id: int) -> list[dict[str, Any]]:
         """Cria os painéis do dashboard"""
         panels = []
         panel_id = 1
@@ -156,7 +156,7 @@ class GrafanaDashboardCreator:
         
         return panels
     
-    def _create_system_overview_panel(self, panel_id: int, datasource_id: int) -> Dict[str, Any]:
+    def _create_system_overview_panel(self, panel_id: int, datasource_id: int) -> dict[str, Any]:
         """Cria painel central de visão geral"""
         return {
             "id": panel_id,
@@ -200,7 +200,7 @@ class GrafanaDashboardCreator:
         }
     
     def _create_metric_panel(self, panel_id: int, title: str, category: str, 
-                            metric: str, datasource_id: int, x: int, y: int, color: str) -> Dict[str, Any]:
+                            metric: str, datasource_id: int, x: int, y: int, color: str) -> dict[str, Any]:
         """Cria painel para uma métrica específica"""
         return {
             "id": panel_id,

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Script para configurar DEPLOY_SSH_KEY no GitHub"""
 
-import json
 import base64
 import os
+
 import requests
 from nacl import encoding, public
 

@@ -2,14 +2,13 @@
 """
 Script para buscar e processar PDFs recentes do WhatsApp
 """
-import os
-import sys
-import json
 import sqlite3
-import requests
-from pathlib import Path
-from datetime import datetime, timedelta
 import subprocess
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import requests
 
 # Diretório de dados do WhatsApp
 DATA_DIR = Path(__file__).parent / "whatsapp_data"

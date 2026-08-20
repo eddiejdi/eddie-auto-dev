@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Corrige o modelo Diretor Shared no Open WebUI"""
 import os
+
 import requests
 
 email = 'edenilson.teixeira@rpa4all.com'

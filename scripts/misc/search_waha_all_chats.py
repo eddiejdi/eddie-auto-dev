@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-import requests, json
 from datetime import datetime
+
+import requests
 
 WAHA = "http://192.168.15.2:3001"
 KEY = "757fae2686eb44479b9a34f1b62dbaf3"

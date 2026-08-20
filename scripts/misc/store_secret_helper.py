@@ -8,7 +8,10 @@ Lê credenciais exclusivamente de variáveis de ambiente:
   SA_KEY       — X-API-KEY do Secrets Agent
   SA_URL       — URL do Secrets Agent (default: http://192.168.15.2:8088)
 """
-import os, json, sys, urllib.request
+import json
+import os
+import sys
+import urllib.request
 
 url  = os.environ.get("SA_URL", "http://192.168.15.2:8088") + "/secrets"
 body = json.dumps({

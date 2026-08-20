@@ -3,11 +3,12 @@
 Envia o email draft para Gmail usando a Gmail API (OAuth).
 """
 import base64
-import subprocess
 import json
+import subprocess
 from pathlib import Path
-from google.oauth2.credentials import Credentials
+
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 
 SENDER_EMAIL = "edenilson.adm@gmail.com"
@@ -55,9 +56,9 @@ def save_draft_to_gmail(eml_bytes: bytes, creds) -> bool:
             body={'message': {'raw': raw_message}}
         ).execute()
         
-        print(f"✅ Email salvo como draft no Gmail!")
+        print("✅ Email salvo como draft no Gmail!")
         print(f"   Draft ID: {result.get('id')}")
-        print(f"   Verifique sua caixa de Rascunhos para revisar e enviar")
+        print("   Verifique sua caixa de Rascunhos para revisar e enviar")
         return True
     except Exception as e:
         print(f"⚠️  Erro ao salvar draft: {e}")
@@ -114,12 +115,12 @@ def send_email(eml_file: str):
         raw_message = base64.urlsafe_b64encode(eml_bytes).decode()
         result = gmail_service.users().messages().send(userId='me', body={'raw': raw_message}).execute()
         
-        print(f"✅ Email enviado com sucesso!")
+        print("✅ Email enviado com sucesso!")
         print(f"   Message ID: {result.get('id')}")
         return True
     except Exception as e:
         print(f"⚠️  Erro ao enviar via Gmail API: {e}")
-        print(f"   Tentando salvar como draft...")
+        print("   Tentando salvar como draft...")
         return save_draft_to_gmail(eml_bytes, creds)
 
 if __name__ == '__main__':

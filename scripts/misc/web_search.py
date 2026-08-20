@@ -3,16 +3,15 @@ Módulo de Busca Web para Claude Chat
 Integra busca na internet com DuckDuckGo e salva conhecimento no RAG
 """
 
-import requests
-from bs4 import BeautifulSoup
-from typing import List, Dict, Optional
+import hashlib
+import re
+import time
 from dataclasses import dataclass
 from datetime import datetime
-import re
-import json
-import time
-from urllib.parse import quote_plus, urlparse, parse_qs, unquote
-import hashlib
+from urllib.parse import parse_qs, quote_plus, unquote, urlparse
+
+import requests
+from bs4 import BeautifulSoup
 
 
 @dataclass
@@ -21,7 +20,7 @@ class SearchResult:
     title: str
     url: str
     snippet: str
-    content: Optional[str] = None
+    content: str | None = None
     source: str = "web"
     timestamp: str = None
     
@@ -55,22 +54,22 @@ class WebSearchEngine:
         try:
             parsed = urlparse(url)
             qs = parse_qs(parsed.query)
-            if "uddg" in qs and qs["uddg"]:
+            if qs.get("uddg"):
                 return unquote(qs["uddg"][0])
         except Exception:
             pass
         return url
 
-    def search_duckduckgo(self, query: str, num_results: int = 5) -> List[SearchResult]:
+    def search_duckduckgo(self, query: str, num_results: int = 5) -> list[SearchResult]:
         """Busca DuckDuckGo: tenta LITE primeiro (menos 403), depois HTML."""
         results = self._search_duckduckgo_lite(query, num_results)
         if results:
             return results
         return self._search_duckduckgo_html(query, num_results)
 
-    def _search_duckduckgo_lite(self, query: str, num_results: int = 5) -> List[SearchResult]:
+    def _search_duckduckgo_lite(self, query: str, num_results: int = 5) -> list[SearchResult]:
         """DuckDuckGo Lite — mais estável que html.duckduckgo.com (menos 403)."""
-        results: List[SearchResult] = []
+        results: list[SearchResult] = []
         try:
             search_url = f"https://lite.duckduckgo.com/lite/?q={quote_plus(query)}"
             response = self.session.get(search_url, timeout=15)
@@ -104,9 +103,9 @@ class WebSearchEngine:
             print(f"Erro na busca DuckDuckGo Lite: {e}")
         return results
 
-    def _search_duckduckgo_html(self, query: str, num_results: int = 5) -> List[SearchResult]:
+    def _search_duckduckgo_html(self, query: str, num_results: int = 5) -> list[SearchResult]:
         """DuckDuckGo HTML clássico (fallback)."""
-        results: List[SearchResult] = []
+        results: list[SearchResult] = []
         try:
             search_url = f"https://html.duckduckgo.com/html/?q={quote_plus(query)}"
             response = self.session.get(search_url, timeout=15)
@@ -145,7 +144,7 @@ class WebSearchEngine:
             print(f"Erro na busca DuckDuckGo HTML: {e}")
         return results
     
-    def search_with_api(self, query: str, num_results: int = 5) -> List[SearchResult]:
+    def search_with_api(self, query: str, num_results: int = 5) -> list[SearchResult]:
         """
         Método alternativo usando a API lite do DuckDuckGo.
         """
@@ -184,7 +183,7 @@ class WebSearchEngine:
         
         return results
     
-    def extract_page_content(self, url: str, max_chars: int = 5000) -> Optional[str]:
+    def extract_page_content(self, url: str, max_chars: int = 5000) -> str | None:
         """
         Extrai conteúdo principal de uma página web.
         """
@@ -242,7 +241,7 @@ class WebSearchEngine:
         query: str, 
         num_results: int = 3,
         extract_content: bool = True
-    ) -> List[SearchResult]:
+    ) -> list[SearchResult]:
         """
         Busca e opcionalmente extrai conteúdo das páginas.
         """
@@ -270,7 +269,7 @@ class WebSearchEngine:
         
         return results
     
-    def save_to_rag(self, results: List[SearchResult], query: str) -> Dict:
+    def save_to_rag(self, results: list[SearchResult], query: str) -> dict:
         """
         Salva os resultados da busca na base RAG para incrementar o conhecimento.
         """
@@ -358,7 +357,7 @@ class WebSearchEngine:
             "errors": errors
         }
     
-    def _save_local_knowledge(self, content: str, metadata: Dict):
+    def _save_local_knowledge(self, content: str, metadata: dict):
         """
         Salva conhecimento localmente quando RAG API não está disponível.
         """
@@ -372,18 +371,18 @@ class WebSearchEngine:
         filename = f"{knowledge_dir}/web_{doc_id}_{int(time.time())}.md"
         
         with open(filename, "w", encoding="utf-8") as f:
-            f.write(f"---\n")
+            f.write("---\n")
             f.write(f"source: {metadata.get('url', 'web')}\n")
             f.write(f"title: {metadata.get('title', 'Sem título')}\n")
             f.write(f"query: {metadata.get('search_query', '')}\n")
             f.write(f"timestamp: {metadata.get('timestamp', '')}\n")
-            f.write(f"type: web_knowledge\n")
-            f.write(f"---\n\n")
+            f.write("type: web_knowledge\n")
+            f.write("---\n\n")
             f.write(content)
         
         return filename
     
-    def format_results_for_llm(self, results: List[SearchResult], query: str) -> str:
+    def format_results_for_llm(self, results: list[SearchResult], query: str) -> str:
         """
         Formata resultados para uso pelo LLM.
         """

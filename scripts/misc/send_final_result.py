@@ -2,7 +2,7 @@
 """Enviar resultado final dos testes"""
 import requests
 
-from tools.secrets_loader import get_telegram_token, get_telegram_chat_id
+from tools.secrets_loader import get_telegram_chat_id, get_telegram_token
 
 TELEGRAM_TOKEN = get_telegram_token()
 CHAT_ID = get_telegram_chat_id() or ""

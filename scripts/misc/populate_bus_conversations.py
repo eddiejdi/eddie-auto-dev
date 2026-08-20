@@ -2,10 +2,10 @@
 """
 Populate bus_conversations table with sample data for Grafana dashboards
 """
-import subprocess
-import json
-from datetime import datetime, timedelta
 import random
+import subprocess
+from datetime import datetime, timedelta
+
 
 def ssh_exec(cmd):
     """Execute command via SSH to homelab"""
@@ -62,7 +62,7 @@ def populate_conversations():
         print(f"Output: {stdout}")
         return True
     else:
-        print(f"❌ Failed to insert conversations")
+        print("❌ Failed to insert conversations")
         print(f"Error: {stderr}")
         return False
 
@@ -72,7 +72,7 @@ def verify_data():
     stdout, stderr, code = ssh_exec(cmd)
     
     if code == 0:
-        print(f"✅ Data verification:")
+        print("✅ Data verification:")
         print(stdout)
     else:
         print(f"❌ Verification failed: {stderr}")

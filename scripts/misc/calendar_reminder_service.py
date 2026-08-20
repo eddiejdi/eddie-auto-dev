@@ -15,22 +15,22 @@ Autor: Shared Assistant
 Data: 2026
 """
 
-import os
 import asyncio
 import json
 import logging
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import List, Dict, Set
+import os
 import signal
 import sys
+from datetime import datetime, timedelta
+from pathlib import Path
 
 # Adicionar diretório ao path
 sys.path.insert(0, str(Path(__file__).parent))
 
 from google_calendar_integration import (
-    GoogleCalendarClient, NotificationManager, CalendarEvent,
-    get_calendar_assistant
+    CalendarEvent,
+    GoogleCalendarClient,
+    NotificationManager,
 )
 
 # Configurar logging
@@ -62,7 +62,7 @@ class ReminderState:
     """Gerencia estado dos lembretes enviados"""
     
     def __init__(self):
-        self.sent_reminders: Dict[str, Set[int]] = {}  # event_id -> set of minutes
+        self.sent_reminders: dict[str, set[int]] = {}  # event_id -> set of minutes
         self.last_daily_digest: str = ""
         self.last_weekly_digest: str = ""
         self._load()
@@ -200,7 +200,7 @@ Prepare-se! 🚀"""
         try:
             success = await self.notifications.send_telegram(TELEGRAM_CHAT_ID, message)
             if success:
-                logger.info(f"Lembrete enviado via Telegram")
+                logger.info("Lembrete enviado via Telegram")
             else:
                 logger.warning("Falha ao enviar lembrete via Telegram")
         except Exception as e:
@@ -210,7 +210,7 @@ Prepare-se! 🚀"""
         try:
             success = await self.notifications.send_whatsapp(WHATSAPP_NUMBER, message)
             if success:
-                logger.info(f"Lembrete enviado via WhatsApp")
+                logger.info("Lembrete enviado via WhatsApp")
             else:
                 logger.warning("Falha ao enviar lembrete via WhatsApp")
         except Exception as e:
@@ -267,7 +267,7 @@ Prepare-se! 🚀"""
                 return
             
             # Agrupar por dia
-            events_by_day: Dict[str, List[CalendarEvent]] = {}
+            events_by_day: dict[str, list[CalendarEvent]] = {}
             for event in events:
                 day = event.start.strftime('%A, %d/%m')
                 if day not in events_by_day:
@@ -275,7 +275,7 @@ Prepare-se! 🚀"""
                 events_by_day[day].append(event)
             
             # Formatar mensagem
-            message = f"📅 **RESUMO DA SEMANA**\n"
+            message = "📅 **RESUMO DA SEMANA**\n"
             message += f"📆 {week_start.strftime('%d/%m')} a {week_end.strftime('%d/%m/%Y')}\n\n"
             
             if events_by_day:

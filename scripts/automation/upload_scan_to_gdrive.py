@@ -6,12 +6,12 @@ Faz upload de scan_epson_l380_*.jpg para uma pasta no Drive
 import json
 import sys
 from pathlib import Path
-from google.oauth2.credentials import Credentials
+
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
-from google_auth_oauthlib.flow import InstalledAppFlow
-import os
 
 # Configuração
 CREDS_FILE = Path('/home/homelab/myClaude/credentials.json')
@@ -141,7 +141,7 @@ def upload_file(service, file_path, folder_id):
             fields='id, webViewLink, name, size'
         ).execute()
         
-        print(f"✅ Upload realizado com sucesso!")
+        print("✅ Upload realizado com sucesso!")
         print(f"   Nome: {file.get('name')}")
         print(f"   Tamanho: {file.get('size', 0) / 1024:.1f} KB")
         print(f"   Link: {file.get('webViewLink')}")
@@ -175,7 +175,7 @@ def main():
         sys.exit(1)
     
     # Fazer upload
-    print(f"\n📤 Upload para Google Drive")
+    print("\n📤 Upload para Google Drive")
     if upload_file(service, scan_file, folder_id):
         print("\n✅ SUCESSO! Imagem do scanner salva no Google Drive")
         print(f"   Pasta: {FOLDER_NAME}")

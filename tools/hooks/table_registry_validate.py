@@ -292,7 +292,7 @@ def run_as_cli(argv: list[str]) -> int:
         reader = _staged_added_lines
     else:
         files = [a for a in argv if not a.startswith("--")]
-        reader = lambda f: Path(f).read_text(errors="ignore")  # noqa: E731
+        reader = lambda f: Path(f).read_text(errors="ignore")
 
     skip_ext = (".lock", ".png", ".jpg", ".jpeg", ".pdf")
     duplicate_found = False
@@ -304,7 +304,7 @@ def run_as_cli(argv: list[str]) -> int:
         if _should_skip_path(f):
             continue
         # only SQL/Python-ish production paths
-        if not re.search(r"\.(sql|py)$", f, re.I):
+        if not re.search(r"\.(sql|py)$", f, re.IGNORECASE):
             continue
         try:
             blob = reader(f)

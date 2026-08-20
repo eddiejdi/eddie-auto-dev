@@ -2,10 +2,10 @@
 """Troca um código OAuth por access/refresh token SDM e salva localmente e no Secrets Agent."""
 import json
 import os
+import subprocess
 import sys
 import urllib.parse
 import urllib.request
-import subprocess
 
 CREDS_FILE = "credentials_google.json"
 TOKEN_URL = "https://oauth2.googleapis.com/token"
@@ -35,7 +35,7 @@ def save_env(tokens, project_id):
     lines = []
     if os.path.exists(env_path):
         with open(env_path) as f:
-            lines = [l for l in f.readlines() if not l.startswith("GOOGLE_HOME_TOKEN=") and not l.startswith("GOOGLE_HOME_REFRESH_TOKEN=") and not l.startswith("GOOGLE_SDM_PROJECT_ID=")]
+            lines = [l for l in f if not l.startswith("GOOGLE_HOME_TOKEN=") and not l.startswith("GOOGLE_HOME_REFRESH_TOKEN=") and not l.startswith("GOOGLE_SDM_PROJECT_ID=")]
     lines.append(f"GOOGLE_HOME_TOKEN={tokens.get('access_token')}\n")
     if tokens.get('refresh_token'):
         lines.append(f"GOOGLE_HOME_REFRESH_TOKEN={tokens.get('refresh_token')}\n")

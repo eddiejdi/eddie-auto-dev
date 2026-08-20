@@ -4,8 +4,8 @@ Cria um Dashboard Neural no Grafana via servidor remoto.
 """
 
 import json
-import sys
 import subprocess
+import sys
 
 # Configuração
 GRAFANA_URL = "http://localhost:3002"

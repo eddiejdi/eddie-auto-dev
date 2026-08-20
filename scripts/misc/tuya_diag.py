@@ -3,11 +3,12 @@
 Diagnostico completo da plataforma Tuya - encontrar onde renovar IoT Core.
 Usa sessao salva do perfil persistente.
 """
-import time
 import os
+import time
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 
 PROFILE_DIR = os.path.expanduser("~/.tuya_chrome_profile")
 PROJECT_ID = "p1768171340520uw8ar4"
@@ -77,7 +78,7 @@ try:
         # Procurar IoT Core
         page = driver.find_element(By.TAG_NAME, "body").text
         if "iot core" in page.lower():
-            print(f"  >>> IoT Core ENCONTRADO! <<<")
+            print("  >>> IoT Core ENCONTRADO! <<<")
             dump_page(label)
             
             # Procurar botoes

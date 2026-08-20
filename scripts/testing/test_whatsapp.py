@@ -3,10 +3,11 @@
 Script de teste para enviar mensagem via WhatsApp
 """
 
-import httpx
-import time
-import sys
 import os
+import sys
+import time
+
+import httpx
 
 WAHA_URL = os.environ.get("WAHA_URL", "http://localhost:3000")
 # Prefer explicit env var for API key (useful in CI/dev), fallback to vault

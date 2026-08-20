@@ -12,18 +12,18 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
-import sys
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, Optional
 
 
-def _default_mcp_call(tool: str, params: Dict) -> Dict:
+def _default_mcp_call(tool: str, params: dict) -> dict:
     """Chamada padrão ao MCP: invoca `tools.telegram_mcp_server.call_tool`.
 
     Retorna o JSON já desserializado (dict). Se ocorrer erro, retorna {}
     """
     try:
         import asyncio
+
         from tools import telegram_mcp_server as tg
 
         # call_tool é async e retorna lista de TextContent; extraímos o texto JSON
@@ -40,8 +40,8 @@ def _default_mcp_call(tool: str, params: Dict) -> Dict:
 def fetch_latest_photo_path(
     n: int = 20,
     analyze_media: bool = True,
-    mcp_call: Optional[Callable[[str, Dict], Dict]] = None,
-) -> Optional[Path]:
+    mcp_call: Callable[[str, dict], dict] | None = None,
+) -> Path | None:
     """Busca a última foto nas últimas `n` mensagens via MCP e retorna o path local.
 
     Args:

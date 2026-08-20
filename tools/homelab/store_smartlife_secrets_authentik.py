@@ -16,7 +16,6 @@ import json
 import subprocess
 from pathlib import Path
 
-
 DEFAULT_APP_DIR = Path("/var/lib/eddie/secrets_agent")
 
 SECRET_MAPPINGS = [

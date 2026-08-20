@@ -4,9 +4,8 @@ Script para criar um webhook temporário e testar o bot.
 Isso simula uma mensagem vinda do usuário.
 """
 import asyncio
+
 import httpx
-import json
-import time
 
 from tools.secrets_loader import get_telegram_token
 
@@ -71,7 +70,7 @@ async def simulate_user_message():
                     from_user = msg.get('from', {}).get('first_name', 'Unknown')
                     print(f"    - De {from_user}: {text[:50]}...")
             else:
-                print(f"    (Nenhum update pendente - bot está processando)")
+                print("    (Nenhum update pendente - bot está processando)")
         
         print("\n" + "=" * 60)
         print("✅ TESTE CONCLUÍDO")

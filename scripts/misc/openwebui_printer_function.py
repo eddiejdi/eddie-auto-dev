@@ -4,9 +4,9 @@ Permite ao usuário descrever o que quer imprimir e valida o tamanho
 """
 
 import json
-import subprocess
-from typing import Optional
 import os
+import subprocess
+
 
 class Pipe:
     """Pipe para impressão em etiqueta via Phomemo Q30"""
@@ -127,7 +127,7 @@ class Pipe:
             if __event_emitter__:
                 await __event_emitter__({
                     "type": "status",
-                    "data": {"description": f"🔍 Processando requisição de impressão..."}
+                    "data": {"description": "🔍 Processando requisição de impressão..."}
                 })
             
             # Validar tamanho
@@ -192,7 +192,7 @@ class Pipe:
         except json.JSONDecodeError:
             return f"❌ JSON inválido: {content[:100]}"
         except Exception as e:
-            return f"❌ Erro ao processar: {str(e)}"
+            return f"❌ Erro ao processar: {e!s}"
     
     async def _print_text(self, text: str) -> str:
         """Envia texto para impressora"""
@@ -222,7 +222,7 @@ class Pipe:
         except subprocess.TimeoutExpired:
             return "❌ Timeout ao imprimir (30s)"
         except Exception as e:
-            return f"❌ Erro ao executar impressora: {str(e)}"
+            return f"❌ Erro ao executar impressora: {e!s}"
     
     async def _print_image(self, image_path: str) -> str:
         """Envia imagem para impressora"""
@@ -252,7 +252,7 @@ class Pipe:
         except subprocess.TimeoutExpired:
             return "❌ Timeout ao imprimir (30s)"
         except Exception as e:
-            return f"❌ Erro ao executar impressora: {str(e)}"
+            return f"❌ Erro ao executar impressora: {e!s}"
 
     async def _get_status(self) -> str:
         """Consulta o status da impressora executando o script driver com --status.
@@ -287,4 +287,4 @@ class Pipe:
         except FileNotFoundError:
             return f"🔴 Script de impressora não encontrado: {self.valves.PRINTER_SCRIPT}"
         except Exception as e:
-            return f"🔴 Erro inesperado ao consultar status: {str(e)}"
+            return f"🔴 Erro inesperado ao consultar status: {e!s}"

@@ -375,7 +375,7 @@ def main() -> int:
 
     if issues:
         print(_deny(
-            f"Componente(s) de infra não cadastrado(s) no CMDB NetBox",
+            "Componente(s) de infra não cadastrado(s) no CMDB NetBox",
             "Os seguintes componentes foram referenciados mas não existem no NetBox CMDB:\n\n"
             + "\n\n".join(issues)
             + "\n\nCadastre o componente no CMDB antes de prosseguir, ou corrija o IP/hostname."

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Script para testar updates do Telegram"""
 import asyncio
-import httpx
 import json
+
+import httpx
 
 from tools.secrets_loader import get_telegram_token
 

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Check /tmp/diretor_response.json and notify via Telegram if configured."""
+import asyncio
+import json
 import os
 import sys
-import json
-import asyncio
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -25,12 +25,13 @@ async def send_telegram(text: str):
         try:
             from specialized_agents.telegram_client import TelegramNotifier
         except Exception:
-            import importlib.util, pathlib
+            import importlib.util
+            import pathlib
             path = pathlib.Path(__file__).resolve().parents[1] / 'specialized_agents' / 'telegram_client.py'
             spec = importlib.util.spec_from_file_location('telegram_client_local', str(path))
             mod = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(mod)
-            TelegramNotifier = getattr(mod, 'TelegramNotifier')
+            TelegramNotifier = mod.TelegramNotifier
     except Exception as e:
         print('IMPORT_ERROR', e)
         return {'ok': False, 'reason': 'import_error', 'detail': str(e)}

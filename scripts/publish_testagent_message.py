@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Publish a uniquely identifiable TestAgent message via the communication bus."""
-import time
 import os
 import sys
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+import time
+
+from specialized_agents.agent_communication_bus import (
+    MessageType,
+    get_communication_bus,
+)
+
 
 def publish_unique():
     bus = get_communication_bus()

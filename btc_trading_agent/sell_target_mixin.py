@@ -8,7 +8,7 @@ Responsabilidades:
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any
 
 logger = logging.getLogger("btc_trading_agent")
 
@@ -20,8 +20,8 @@ class SellTargetMixin:
         self,
         rag_adj=None,
         *,
-        live_cfg: Optional[Dict[str, Any]] = None,
-        base_cfg: Optional[Dict[str, Any]] = None,
+        live_cfg: dict[str, Any] | None = None,
+        base_cfg: dict[str, Any] | None = None,
     ) -> float:
         """Resolve o TP percentual efetivo vigente para a posição atual."""
         rag_adj = rag_adj or self.market_rag.get_current_adjustment()
@@ -39,8 +39,7 @@ class SellTargetMixin:
                 live_cfg.get("min_tp_pct", base_cfg.get("min_tp_pct", 0.001)),
             )
         )
-        if ai_tp < min_tp:
-            ai_tp = min_tp
+        ai_tp = max(ai_tp, min_tp)
 
         regime = getattr(rag_adj, "suggested_regime", "RANGING")
         if regime == "RANGING":
@@ -141,7 +140,7 @@ class SellTargetMixin:
         except Exception as e:
             logger.debug("Target SELL sync error: %s", e)
 
-    def _serialize_target_sell_metadata(self) -> Dict[str, Any]:
+    def _serialize_target_sell_metadata(self) -> dict[str, Any]:
         """Serializa o target SELL atual para persistência em metadata."""
         if self.state.target_sell_price <= 0:
             return {}
@@ -150,7 +149,7 @@ class SellTargetMixin:
         # ADA...) em degraus de 1 centavo — para um ativo de $0.07, isso é ~14%
         # do preço e faz o target arredondar para BAIXO da entrada mesmo quando
         # o valor calculado (entry × (1+ai_tp)) está corretamente acima dela.
-        metadata: Dict[str, Any] = {
+        metadata: dict[str, Any] = {
             "target_sell_price": round(float(self.state.target_sell_price), 8),
             "target_sell_trigger_price": round(float(self.state.target_sell_price), 8),
         }
@@ -160,13 +159,13 @@ class SellTargetMixin:
 
     def _build_trade_metadata(
         self,
-        base_metadata: Optional[Dict[str, Any]] = None,
+        base_metadata: dict[str, Any] | None = None,
         *,
         signal=None,
         include_exit_reason: bool = False,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Monta metadata persistida por trade com target e motivo de saída."""
-        metadata: Dict[str, Any] = dict(base_metadata or {})
+        metadata: dict[str, Any] = dict(base_metadata or {})
         metadata.update(self._serialize_target_sell_metadata())
 
         if include_exit_reason:

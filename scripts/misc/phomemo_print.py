@@ -3,16 +3,13 @@ import argparse
 import json
 import logging
 from pathlib import Path
-from typing import Iterable, Optional, Union
+from typing import Union
 
 import serial
 from serial.tools import list_ports
 
 try:
-    from PIL import Image
-    from PIL import ImageDraw
-    from PIL import ImageFont
-    from PIL import ImageOps
+    from PIL import Image, ImageDraw, ImageFont, ImageOps
 except ImportError:  # pragma: no cover
     Image = None  # type: ignore
 
@@ -31,7 +28,7 @@ class PrinterError(Exception):
     pass
 
 
-def discover_ports(hint: Optional[str] = None):
+def discover_ports(hint: str | None = None):
     """List available serial ports and optionally filter by the provided hint.
     
     Supports both Bluetooth and USB connections:
@@ -47,7 +44,7 @@ def discover_ports(hint: Optional[str] = None):
     return ports
 
 
-def choose_port(port_name: Optional[str], hint: str) -> str:
+def choose_port(port_name: str | None, hint: str) -> str:
     """Return a concrete serial port to use, preferring the hint if the user omitted --port."""
     if port_name:
         return port_name
@@ -146,7 +143,7 @@ def _wrap_text(text: str, draw: "ImageDraw.ImageDraw", font: "ImageFont.ImageFon
     return lines or [""]
 
 
-def _in_to_px(value_in: Optional[float], dpi: int) -> Optional[int]:
+def _in_to_px(value_in: float | None, dpi: int) -> int | None:
     if value_in is None:
         return None
     return max(1, int(round(value_in * dpi)))
@@ -155,7 +152,7 @@ def _in_to_px(value_in: Optional[float], dpi: int) -> Optional[int]:
 def render_text_image(
     text: str,
     max_width: int = DEFAULT_MAX_WIDTH,
-    label_height: Optional[int] = None,
+    label_height: int | None = None,
     padding: int = 10,
     line_spacing: int = 6,
     font_size: int = DEFAULT_FONT_SIZE,
@@ -223,7 +220,7 @@ def print_text(
     text: str,
     use_image: bool = True,
     max_width: int = DEFAULT_MAX_WIDTH,
-    label_height: Optional[int] = None,
+    label_height: int | None = None,
     font_size: int = DEFAULT_FONT_SIZE,
 ) -> None:
     """Imprime texto via imagem (padrao) ou ESC/POS bruto."""

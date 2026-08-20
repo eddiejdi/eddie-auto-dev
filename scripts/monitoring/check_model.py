@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 import os
+
 import httpx
-import json
 
 OLLAMA_URL = os.environ.get('OLLAMA_URL') or f"http://{os.environ.get('HOMELAB_HOST','localhost')}:11434"
 

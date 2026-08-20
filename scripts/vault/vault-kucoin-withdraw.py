@@ -14,13 +14,11 @@ import base64
 import hashlib
 import hmac
 import json
-import os
 import sys
 import time
-from pathlib import Path
-
-import urllib.request
 import urllib.error
+import urllib.request
+from pathlib import Path
 
 VAULT_ENV = Path("/mnt/vault/keepass/kucoin.env")
 KUCOIN_BASE = "https://api.kucoin.com"
@@ -151,7 +149,7 @@ def withdraw(creds: dict, coin: str, amount: float, address: str, network: str,
     if memo:
         payload["memo"] = memo
 
-    print(f"\nSaque:")
+    print("\nSaque:")
     print(f"  Moeda   : {coin}")
     print(f"  Valor   : {amount:.8f}")
     print(f"  Rede    : {network}")

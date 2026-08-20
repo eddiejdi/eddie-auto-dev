@@ -15,7 +15,12 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
-from route_graph import RouteOptions, compare_routes, find_best_route, savings_vs_usdt_bps
+from route_graph import (
+    RouteOptions,
+    compare_routes,
+    find_best_route,
+    savings_vs_usdt_bps,
+)
 
 
 def main(argv=None) -> int:

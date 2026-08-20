@@ -4,12 +4,10 @@ Insere a seção de experiência aprovada no Google Doc existente.
 """
 import json
 import subprocess
-import sys
-from pathlib import Path
 
-from googleapiclient.discovery import build
-from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from googleapiclient.discovery import build
 
 DOC_ID = "1y2eeV4No2zQD_ezeZCaBZiuswvANF8V3"  # documento original
 

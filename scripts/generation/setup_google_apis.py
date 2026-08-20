@@ -4,12 +4,10 @@ Setup Google APIs (Calendar + Gmail + Drive)
 Configura autenticação OAuth2 para todas as APIs
 """
 
-import os
-import sys
 import pickle
 import shutil
+import sys
 from pathlib import Path
-from typing import List
 
 # Diretórios
 BASE_DIR = Path(__file__).parent
@@ -59,11 +57,11 @@ def setup_directories():
     print("✅ Diretórios criados")
 
 
-def authenticate(scopes: List[str], credentials_path: Path):
+def authenticate(scopes: list[str], credentials_path: Path):
     """Realiza autenticação OAuth2"""
     try:
-        from google_auth_oauthlib.flow import InstalledAppFlow
         from google.auth.transport.requests import Request
+        from google_auth_oauthlib.flow import InstalledAppFlow
         from googleapiclient.discovery import build
     except ImportError:
         print("\n❌ Bibliotecas Google não instaladas!")

@@ -4,20 +4,21 @@
 Automatiza: abrir URL → login → autorização → captura de código → busca de currículos
 """
 
-import time
 import json
 import re
 import subprocess
+import time
 from pathlib import Path
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
-from webdriver_manager.chrome import ChromeDriverManager
+
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
 
 # Configurações
 GOOGLE_EMAIL = None  # Será detectado ou solicitado
@@ -94,7 +95,7 @@ def automate_oauth_flow(driver, url):
     print("=" * 70)
     
     # Abrir URL
-    print(f"\n📍 Abrindo URL de autorização...")
+    print("\n📍 Abrindo URL de autorização...")
     driver.get(url)
     time.sleep(3)
     
@@ -106,7 +107,7 @@ def automate_oauth_flow(driver, url):
             email_field = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.ID, "identifierId"))
             )
-            print(f"  ✓ Campo de email encontrado")
+            print("  ✓ Campo de email encontrado")
             
             # Inserir email
             email_field.send_keys(GOOGLE_EMAIL)
@@ -115,7 +116,7 @@ def automate_oauth_flow(driver, url):
             # Clicar em Next
             next_button = driver.find_element(By.ID, "identifierNext")
             next_button.click()
-            print(f"  ✓ Email enviado")
+            print("  ✓ Email enviado")
             
             time.sleep(2)
             
@@ -124,20 +125,20 @@ def automate_oauth_flow(driver, url):
                 EC.presence_of_element_located((By.NAME, "password"))
             )
             password_field.send_keys(GOOGLE_PASSWORD)
-            print(f"  ✓ Campo de senha encontrado")
+            print("  ✓ Campo de senha encontrado")
             
             time.sleep(1)
             
             # Clicar em Next (senha)
             next_button = driver.find_element(By.ID, "passwordNext")
             next_button.click()
-            print(f"  ✓ Senha enviada")
+            print("  ✓ Senha enviada")
             
             time.sleep(4)
             
         except Exception as e:
             print(f"  ⚠️  Login automático failed: {e}")
-            print(f"  💡 Faça login manualmente no navegador...")
+            print("  💡 Faça login manualmente no navegador...")
     else:
         print("📧 Etapa 1: Aguardando login manual no navegador...")
         print("   💡 Faça login com sua conta Google...")
@@ -167,17 +168,17 @@ def automate_oauth_flow(driver, url):
                 button = WebDriverWait(driver, 5).until(
                     EC.element_to_be_clickable(locator)
                 )
-                print(f"  ✓ Botão de autorização encontrado")
+                print("  ✓ Botão de autorização encontrado")
                 button.click()
                 button_found = True
-                print(f"  ✓ Clicado em 'Permitir'")
+                print("  ✓ Clicado em 'Permitir'")
                 time.sleep(3)
                 break
             except:
                 continue
         
         if not button_found:
-            print(f"  ℹ️  Botão não encontrado - procurando alternativas...")
+            print("  ℹ️  Botão não encontrado - procurando alternativas...")
             try:
                 # Tentar encontrar qualquer botão que faça sentido
                 buttons = driver.find_elements(By.TAG_NAME, "button")
@@ -187,19 +188,19 @@ def automate_oauth_flow(driver, url):
                         print(f"  ✓ Botão encontrado: {btn.text}")
                         btn.click()
                         button_found = True
-                        print(f"  ✓ Clicado!")
+                        print("  ✓ Clicado!")
                         time.sleep(3)
                         break
             except:
                 pass
             
             if not button_found:
-                print(f"  💡 Clique em 'Permitir' no navegador manualmente...")
+                print("  💡 Clique em 'Permitir' no navegador manualmente...")
                 input("  Pressione ENTER após clicar: ")
     
     except Exception as e:
         print(f"  ⚠️  Erro ao clicar: {e}")
-        print(f"  💡 Clique manualmente no botão 'Permitir'...")
+        print("  💡 Clique manualmente no botão 'Permitir'...")
         input("  Pressione ENTER após clicar: ")
     
     # Etapa 3: Capturar código da URL de redirecionamento
@@ -215,7 +216,7 @@ def automate_oauth_flow(driver, url):
                 match = re.search(r'code=([^&]+)', current_url)
                 if match:
                     code = match.group(1)
-                    print(f"  ✓ Código capturado!")
+                    print("  ✓ Código capturado!")
                     print(f"  📝 Código: {code[:20]}...{code[-10:]}")
                     break
             
@@ -271,7 +272,7 @@ def exchange_code_for_token(code):
                 "scopes": creds.scopes
             }, f, indent=2)
         
-        print(f"  ✅ Token salvo com sucesso!")
+        print("  ✅ Token salvo com sucesso!")
         return creds
         
     except Exception as e:
@@ -306,7 +307,7 @@ def search_resumes(creds):
                 pass
         
         if not all_files:
-            print(f"  ⚠️  Nenhum currículo encontrado")
+            print("  ⚠️  Nenhum currículo encontrado")
             return False
         
         # Remover duplicatas

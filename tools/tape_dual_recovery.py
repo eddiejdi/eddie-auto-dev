@@ -17,7 +17,6 @@ import sys
 import threading
 import time
 from dataclasses import dataclass, field
-from typing import Optional
 
 HOST = "192.168.15.4"
 SCRIPT = "/usr/local/tools/ltfs_recovery.py"
@@ -105,7 +104,7 @@ class DriveState:
     pct: int = 0
     status: str = "..."
     done: bool = False
-    success: Optional[bool] = None
+    success: bool | None = None
     log_lines: list[str] = field(default_factory=list)
     lock: threading.Lock = field(default_factory=threading.Lock)
 
@@ -113,13 +112,17 @@ class DriveState:
 # ─── rich ──────────────────────────────────────────────────────────────────────
 try:
     from rich.console import Console
-    from rich.live import Live
-    from rich.table import Table
-    from rich.progress import (
-        Progress, BarColumn, TextColumn, TimeElapsedColumn, SpinnerColumn
-    )
-    from rich.panel import Panel
     from rich.layout import Layout
+    from rich.live import Live
+    from rich.panel import Panel
+    from rich.progress import (
+        BarColumn,
+        Progress,
+        SpinnerColumn,
+        TextColumn,
+        TimeElapsedColumn,
+    )
+    from rich.table import Table
     RICH = True
 except ImportError:
     RICH = False

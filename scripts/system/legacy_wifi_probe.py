@@ -9,7 +9,7 @@ import re
 import socket
 import urllib.parse
 import urllib.request
-from typing import Iterable
+from collections.abc import Iterable
 
 DEFAULT_ROUTER = "192.168.15.1"
 DEFAULT_AP = "192.168.15.103"
@@ -49,7 +49,7 @@ def is_port_open(host: str, port: int, timeout: int = DEFAULT_TIMEOUT) -> bool:
     try:
         with socket.create_connection((host, port), timeout=timeout):
             return True
-    except (socket.timeout, ConnectionRefusedError, OSError):
+    except (TimeoutError, ConnectionRefusedError, OSError):
         return False
 
 

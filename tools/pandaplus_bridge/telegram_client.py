@@ -7,9 +7,7 @@ opcional (ver README).
 """
 from __future__ import annotations
 
-import asyncio
 import logging
-from typing import Any
 
 import httpx
 
@@ -32,11 +30,11 @@ class TelegramSender:
         self._timeout = timeout
         self._client: httpx.AsyncClient | None = None
 
-    async def __aenter__(self) -> "TelegramSender":
+    async def __aenter__(self) -> TelegramSender:
         self._client = httpx.AsyncClient(timeout=self._timeout)
         return self
 
-    async def __aexit__(self, *_: Any) -> None:
+    async def __aexit__(self, *_: object) -> None:
         if self._client is not None:
             await self._client.aclose()
             self._client = None

@@ -29,7 +29,6 @@ import argparse
 import json
 import os
 import shutil
-import signal
 import subprocess
 import sys
 import time
@@ -702,7 +701,7 @@ def op_recover(deep: bool = False) -> bool:
 
         # ltfsck normal falhou → escalada para deep-recovery
         if not deep:
-            log("WARN", f"recover: ltfsck falhou — escalando para deep-recovery")
+            log("WARN", "recover: ltfsck falhou — escalando para deep-recovery")
             notify("🔧 <b>Tape Manager recover</b> — ltfsck falhou, tentando deep-recovery…")
             res2 = _run_ltfsck(deep=True)
             if not res2["success"]:

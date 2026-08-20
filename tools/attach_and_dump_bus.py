@@ -2,11 +2,11 @@
 """Attach to the Agent Communication Bus, print recent messages and listen for new ones.
 Usage: python3 tools/attach_and_dump_bus.py [seconds]
 """
-import sys
-import time
+import importlib.util
 import json
 import pathlib
-import importlib.util
+import sys
+import time
 
 secs = int(sys.argv[1]) if len(sys.argv) > 1 else 20
 

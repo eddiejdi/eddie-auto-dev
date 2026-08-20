@@ -5,13 +5,11 @@ Processa estou-aqui, smartlife_integration, etc.
 """
 
 import asyncio
+import hashlib
 import json
 import logging
-import subprocess
-import hashlib
-from pathlib import Path
-from typing import Optional
 import sys
+from pathlib import Path
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -39,7 +37,7 @@ def get_cache_key(file_path: Path) -> str:
     key_str = f"{file_path}:{stat.st_size}:{stat.st_mtime}"
     return hashlib.md5(key_str.encode()).hexdigest()
 
-def load_cached(file_path: Path) -> Optional[dict]:
+def load_cached(file_path: Path) -> dict | None:
     cache_file = CACHE_DIR / f"{get_cache_key(file_path)}.json"
     if cache_file.exists():
         try:
@@ -119,7 +117,7 @@ async def process_lote(lote_num, files: list[Path]) -> dict:
             results.append(r)
     
     # Salvar com nome que suporte formato de string
-    lote_file = RESULTS_DIR / f"lote_{str(lote_num)}.json"
+    lote_file = RESULTS_DIR / f"lote_{lote_num!s}.json"
     with open(lote_file, "w") as f:
         json.dump(results, f, indent=2)
     
@@ -177,7 +175,7 @@ async def main():
         json.dump(all_summaries, f, indent=2)
     
     logger.info(f"\n{'='*70}")
-    logger.info(f"✅ LOTES 3-10 COMPLETOS")
+    logger.info("✅ LOTES 3-10 COMPLETOS")
     logger.info(f"{'='*70}")
     return summary_file
 

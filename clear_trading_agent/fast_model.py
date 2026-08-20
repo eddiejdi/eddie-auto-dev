@@ -11,14 +11,12 @@ Diferenças do modelo crypto:
 """
 from __future__ import annotations
 
-import json
 import logging
 import pickle
 import time
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -76,7 +74,7 @@ class Signal:
     confidence: float  # 0.0 a 1.0
     price: float
     reason: str
-    features: Dict = field(default_factory=dict)
+    features: dict = field(default_factory=dict)
     timestamp: float = field(default_factory=time.time)
 
 
@@ -102,7 +100,7 @@ class MarketRegime:
 # ====================== HORÁRIO DE MERCADO ======================
 def is_market_open() -> bool:
     """Verifica se o mercado B3 está aberto (10:00–17:55 BRT, dias úteis)."""
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
 
     brt = timezone(timedelta(hours=-3))
     now = datetime.now(brt)
@@ -122,7 +120,7 @@ def minutes_to_market_open() -> int:
     if is_market_open():
         return 0
 
-    from datetime import datetime, timezone, timedelta
+    from datetime import datetime, timedelta, timezone
 
     brt = timezone(timedelta(hours=-3))
     now = datetime.now(brt)
@@ -373,8 +371,8 @@ class FastTradingModel:
         self.symbol = symbol
         self.indicators = FastIndicators()
         self.qlearning = FastQLearning()
-        self._last_state: Optional[int] = None
-        self._last_action: Optional[int] = None
+        self._last_state: int | None = None
+        self._last_action: int | None = None
         self._signal_count = 0
 
         # Tentar carregar Q-table existente
@@ -406,9 +404,7 @@ class FastTradingModel:
 
         # Boost de confiança baseado em indicadores
         rsi = market_state.rsi
-        if action_name == "BUY" and rsi < 30:
-            confidence = min(confidence + 0.2, 1.0)
-        elif action_name == "SELL" and rsi > 70:
+        if action_name == "BUY" and rsi < 30 or action_name == "SELL" and rsi > 70:
             confidence = min(confidence + 0.2, 1.0)
 
         # Verificar horário de mercado

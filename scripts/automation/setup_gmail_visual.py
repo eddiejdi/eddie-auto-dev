@@ -4,9 +4,6 @@ Setup Visual do Gmail OAuth
 Guia passo-a-passo para configurar autenticação
 """
 
-import os
-import sys
-import json
 import webbrowser
 from pathlib import Path
 
@@ -191,7 +188,6 @@ client_secret_*.json
     CALENDAR_DIR.mkdir(exist_ok=True)
     
     # Copiar para os locais corretos
-    import shutil
     
     if creds != CREDS_FILE:
         shutil.copy(creds, CREDS_FILE)
@@ -210,10 +206,11 @@ def authenticate():
     print("\n🔐 Iniciando autenticação...")
     
     try:
-        from google_auth_oauthlib.flow import InstalledAppFlow
-        from google.auth.transport.requests import Request
-        from googleapiclient.discovery import build
         import pickle
+
+        from google.auth.transport.requests import Request
+        from google_auth_oauthlib.flow import InstalledAppFlow
+        from googleapiclient.discovery import build
         
         SCOPES = [
             'https://www.googleapis.com/auth/calendar',
@@ -252,7 +249,7 @@ def authenticate():
         print("\n📅 Testando Calendar...")
         calendar = build('calendar', 'v3', credentials=creds)
         events = calendar.events().list(calendarId='primary', maxResults=1).execute()
-        print(f"   ✅ Calendar OK")
+        print("   ✅ Calendar OK")
         
         return True
         

@@ -3,9 +3,9 @@
 Recriação COMPLETA da função de impressora com persistência no banco
 """
 import os
-import requests
-import json
 import sys
+
+import requests
 
 HOMELAB_HOST = os.environ.get("HOMELAB_HOST", "localhost")
 WEBUI_URL = os.environ.get("WEBUI_URL", f"http://{HOMELAB_HOST}:8002")

@@ -1,4 +1,5 @@
 import sqlite3
+
 import bcrypt
 
 # Nova senha para o admin

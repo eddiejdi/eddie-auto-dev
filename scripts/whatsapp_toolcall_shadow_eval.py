@@ -28,12 +28,12 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import requests
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "misc"))
-import mcp_tool_bridge  # noqa: E402
+import mcp_tool_bridge
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s",
                     datefmt="%H:%M:%S")
@@ -57,7 +57,7 @@ _JSON_TYPE_MAP = {
 }
 
 
-def load_examples(path: Path) -> List[Dict[str, Any]]:
+def load_examples(path: Path) -> list[dict[str, Any]]:
     examples = []
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.strip()
@@ -91,7 +91,7 @@ def call_candidate(host: str, model: str, instruction: str, tools: list, timeout
         return "", []
 
 
-def _validate_args(args: Dict[str, Any], parameters: Dict[str, Any]) -> bool:
+def _validate_args(args: dict[str, Any], parameters: dict[str, Any]) -> bool:
     """Validação leve de schema sem depender do pacote `jsonschema` (pode não
     estar disponível no venv de treino do host)."""
     props = parameters.get("properties", {}) or {}
@@ -108,13 +108,13 @@ def _validate_args(args: Dict[str, Any], parameters: Dict[str, Any]) -> bool:
     return True
 
 
-def evaluate(examples: List[Dict[str, Any]], host: str, model: str, timeout: float) -> Dict[str, Any]:
+def evaluate(examples: list[dict[str, Any]], host: str, model: str, timeout: float) -> dict[str, Any]:
     tools = mcp_tool_bridge.build_ollama_tool_schemas()
     schemas_by_name = {s["function"]["name"]: s["function"] for s in tools}
 
     buckets = {"safe": {"total": 0, "correct": 0, "fp": 0, "fn": 0, "schema_ok": 0, "schema_checked": 0},
                "gated": {"total": 0, "correct": 0, "fp": 0, "fn": 0, "schema_ok": 0, "schema_checked": 0}}
-    details: List[Dict[str, Any]] = []
+    details: list[dict[str, Any]] = []
 
     for ex in examples:
         gold_calls = ex.get("tool_calls") or []
@@ -125,7 +125,7 @@ def evaluate(examples: List[Dict[str, Any]], host: str, model: str, timeout: flo
 
         _content, pred_calls = call_candidate(host, model, ex["instruction"], tools, timeout)
         pred_name = None
-        pred_args: Dict[str, Any] = {}
+        pred_args: dict[str, Any] = {}
         if pred_calls:
             fn = pred_calls[0].get("function", {})
             pred_name = fn.get("name")
@@ -159,7 +159,7 @@ def evaluate(examples: List[Dict[str, Any]], host: str, model: str, timeout: flo
             "outcome": outcome,
         })
 
-    report: Dict[str, Any] = {"buckets": {}, "details": details}
+    report: dict[str, Any] = {"buckets": {}, "details": details}
     for key, b in buckets.items():
         total = max(1, b["total"])
         report["buckets"][key] = {

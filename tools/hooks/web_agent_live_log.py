@@ -51,7 +51,7 @@ INTERESTING = re.compile(
     r"(Passo\s+\d+|ERROR|WARNING|INFO|Telegram|web_ask|fill_field|click|"
     r"navigate|STATUS:|API_KEY|BILLING|FAILED|OK|login|signup|Sign Up|"
     r"console\.runpod|billing|OTP|humano|ask_human|screenshot|PAGE)",
-    re.I,
+    re.IGNORECASE,
 )
 REDACT_PATTERNS = [
     (re.compile(r"(?i)(api[_-]?key|token|bearer|authorization|password|secret)\s*[:=]\s*\S+"), r"\1=<redacted>"),

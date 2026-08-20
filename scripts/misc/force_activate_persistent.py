@@ -5,6 +5,7 @@ Força ativação persistente da função - testa múltiplas abordagens
 import os
 import subprocess
 import time
+
 import requests
 
 SERVER = os.environ.get('HOMELAB_SSH', 'homelab@192.168.15.2')

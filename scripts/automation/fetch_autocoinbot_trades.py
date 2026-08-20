@@ -3,11 +3,12 @@
 Script para trazer as negociações do agent autocoinbot do servidor
 """
 
+import json
 import os
+from datetime import datetime
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from datetime import datetime
-import json
 
 # Connexão com o banco Postgres
 DATABASE_URL = os.environ.get(
@@ -74,7 +75,7 @@ def fetch_trades(limit=50, offset=0):
                 WHERE table_schema='public'
             """)
             tables = cur.fetchall()
-            print(f"\n📋 Tabelas disponíveis no banco:")
+            print("\n📋 Tabelas disponíveis no banco:")
             for table in tables:
                 print(f"  - {table[0]}")
             cur.close()
@@ -197,7 +198,7 @@ def print_summary(trades):
     total_pnl = sum(float(t.get('pnl') or 0) for t in trades if t.get('pnl') is not None)
     
     print(f"\n{'='*100}")
-    print(f"📈 RESUMO DAS NEGOCIAÇÕES")
+    print("📈 RESUMO DAS NEGOCIAÇÕES")
     print(f"{'='*100}")
     print(f"Total de operações: {len(trades)}")
     print(f"  - Compras (🟢): {len(buy_trades)} operações | ${total_bought:,.2f} USDT")

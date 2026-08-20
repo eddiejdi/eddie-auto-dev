@@ -14,9 +14,9 @@ import os
 import subprocess
 import threading
 import time
-from typing import Any, Dict
+from typing import Any
 
-from kucoin_api import place_market_order, _send_telegram_alert
+from kucoin_api import _send_telegram_alert, place_market_order
 from position_reconstruction import infer_logical_slots
 from slot_exit_policy import (
     PerSlotExitPlanner,
@@ -366,7 +366,7 @@ class PositionManagerMixin:
                 self.state.last_trade_time = time.time()
 
                 try:
-                    meta: Dict[str, Any] = {
+                    meta: dict[str, Any] = {
                         "slot_exit_reason": reason,
                         "slot_entry_price": entry_price,
                         "slots_remaining": len(entries),
@@ -533,10 +533,10 @@ class PositionManagerMixin:
         try:
             import requests as _req
             from kucoin_api import (
+                _get_extra_telegram_chat_ids,
                 _resolve_telegram_bot_token,
                 _resolve_telegram_chat_id,
                 _resolve_telegram_thread_id,
-                _get_extra_telegram_chat_ids,
             )
             bot_token = _resolve_telegram_bot_token()
             chat_id = _resolve_telegram_chat_id()

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+from specialized_agents.agent_communication_bus import (
+    MessageType,
+    get_communication_bus,
+)
+
 
 def main():
     bus = get_communication_bus()

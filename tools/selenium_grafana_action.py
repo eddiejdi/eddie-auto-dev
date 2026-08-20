@@ -21,10 +21,11 @@ Retorna 0 em sucesso, imprime log simples.
 import os
 import sys
 import time
+
 from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options
 from selenium.common.exceptions import NoSuchElementException, WebDriverException
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
 
 GRAFANA_URL = os.environ.get('GRAFANA_URL')
 ACTION_SELECTOR = os.environ.get('ACTION_SELECTOR')

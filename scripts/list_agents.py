@@ -4,10 +4,10 @@
 Usage:
   python scripts/list_agents.py [--write]
 """
+import argparse
+import json
 import os
 import sys
-import json
-import argparse
 from urllib.parse import urljoin
 
 import requests

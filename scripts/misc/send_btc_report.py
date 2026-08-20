@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Testar relatório via WhatsApp"""
 
-import requests
-import time
-
 # Gerar relatório BTC
 import sys
+
+import requests
+
 sys.path.insert(0, '/home/homelab/myClaude')
 from reports_integration import generate_report
 

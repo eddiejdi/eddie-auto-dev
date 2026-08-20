@@ -4,13 +4,12 @@ Setup PostgreSQL tables for Grafana Home Automation dashboard
 and sync current device state.
 """
 import json
-import sys
 import os
+import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import psycopg2
-from psycopg2.extras import execute_values
 import requests
 
 DB_URL = os.environ.get("DATABASE_URL", "postgresql://postgress:shared_memory_2026@localhost:55432/postgres")

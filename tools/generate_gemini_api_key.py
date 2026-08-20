@@ -12,16 +12,14 @@ Uso:
   python3 tools/generate_gemini_api_key.py
 """
 
+import http.server
 import json
 import os
 import sys
-import time
-import base64
-import sqlite3
-import urllib.request
-import urllib.parse
-import http.server
 import threading
+import time
+import urllib.parse
+import urllib.request
 import webbrowser
 from pathlib import Path
 
@@ -122,7 +120,7 @@ def do_oauth_flow(client_id, client_secret):
     })
     auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{auth_params}"
     
-    print(f"  Abrindo navegador para autorização...")
+    print("  Abrindo navegador para autorização...")
     print(f"  URL: {auth_url[:100]}...\n")
     webbrowser.open(auth_url)
     
@@ -254,7 +252,7 @@ def create_api_key(access_token):
                 key_data = json.loads(resp4.read())
                 api_key = key_data.get("keyString")
                 
-                print(f"  ✅ API key criada!")
+                print("  ✅ API key criada!")
                 print(f"  Key: {api_key[:10]}...")
                 return api_key
         except Exception:
@@ -284,7 +282,7 @@ def store_in_secrets_agent(api_key):
         capture_output=True, text=True, timeout=15
     )
     if result.returncode == 0:
-        print(f"  ✅ Armazenado no Secrets Agent: google/gemini_api_key")
+        print("  ✅ Armazenado no Secrets Agent: google/gemini_api_key")
     else:
         print(f"  ⚠️ Erro SSH: {result.stderr}")
     
@@ -294,9 +292,9 @@ def store_in_secrets_agent(api_key):
     if "GOOGLE_AI_API_KEY" not in env_content:
         with open(env_file, "a") as f:
             f.write(f"\nGOOGLE_AI_API_KEY={api_key}\nGEMINI_ENABLED=true\n")
-        print(f"  ✅ Adicionado ao .env")
+        print("  ✅ Adicionado ao .env")
     else:
-        print(f"  ℹ️ GOOGLE_AI_API_KEY já existe no .env")
+        print("  ℹ️ GOOGLE_AI_API_KEY já existe no .env")
     
     return {"status": "stored"}
 

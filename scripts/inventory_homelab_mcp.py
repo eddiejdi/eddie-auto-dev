@@ -4,11 +4,11 @@ Inventário de MCP Servers disponíveis no Homelab
 Identifica todos os servidores MCP, suas ferramentas e configurações
 """
 
-import subprocess
 import json
+import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
 HOMELAB_HOST = "homelab@192.168.15.2"
 HOMELAB_BASE = "/home/homelab/shared-auto-dev"
@@ -58,7 +58,7 @@ def run_ssh_command(command: str) -> tuple[int, str, str]:
         return 1, "", str(e)
 
 
-def check_mcp_server(name: str, info: Dict[str, str]) -> Dict[str, Any]:
+def check_mcp_server(name: str, info: dict[str, str]) -> dict[str, Any]:
     """Verifica status e informações de um MCP server"""
     path = info["path"]
 
@@ -100,7 +100,7 @@ def check_mcp_server(name: str, info: Dict[str, str]) -> Dict[str, Any]:
     return result
 
 
-def check_python_deps() -> Dict[str, bool]:
+def check_python_deps() -> dict[str, bool]:
     """Verifica dependências Python necessárias no homelab"""
     deps = ["mcp", "httpx", "paramiko", "chromadb"]
     results = {}
@@ -114,7 +114,7 @@ def check_python_deps() -> Dict[str, bool]:
     return results
 
 
-def generate_pycharm_config(servers: List[Dict[str, Any]]) -> Dict[str, Any]:
+def generate_pycharm_config(servers: list[dict[str, Any]]) -> dict[str, Any]:
     """Gera configuração para PyCharm baseada nos servidores disponíveis"""
     config = {
         "version": "1.0",
@@ -211,7 +211,7 @@ def main():
         json.dump(config, f, indent=2)
 
     print(f"\n✅ Configuração salva em: {config_file}")
-    print(f"\n📋 Conteúdo:\n")
+    print("\n📋 Conteúdo:\n")
     print(json.dumps(config, indent=2))
 
     # Criar também versão para home do usuário

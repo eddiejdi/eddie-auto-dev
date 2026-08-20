@@ -2,22 +2,21 @@
 """
 Analyze compatibility scores of WhatsApp messages to help determine optimal threshold
 """
-import sys
-import os
 import json
 import subprocess
-from pathlib import Path
+import sys
 from datetime import datetime, timedelta
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 
 from apply_real_job import (
-    get_waha_api_key, 
-    WAHA_API, 
-    compute_compatibility, 
     CURRICULUM_TEXT,
-    logger
+    WAHA_API,
+    compute_compatibility,
+    get_waha_api_key,
 )
+
 
 def main():
     print("📊 Analyzing compatibility scores of WhatsApp messages\n")
@@ -154,7 +153,7 @@ def main():
     p75 = sorted_scores[int(len(sorted_scores) * 0.25)] if len(sorted_scores) > 4 else max_score
     p50 = sorted_scores[int(len(sorted_scores) * 0.5)] if len(sorted_scores) > 2 else max_score
     
-    print(f"\n📊 Statistics:")
+    print("\n📊 Statistics:")
     print(f"   Maximum: {max_score:.1f}%")
     print(f"   Top 10% (P90): {p90:.1f}%")
     print(f"   Top 25% (P75): {p75:.1f}%")
@@ -162,7 +161,7 @@ def main():
     print(f"   Average: {avg_score:.1f}%")
     print(f"   Minimum: {min_score:.1f}%")
     
-    print(f"\n🏆 TOP 10 MATCHES:\n")
+    print("\n🏆 TOP 10 MATCHES:\n")
     for i, score in enumerate(scores[:10], 1):
         print(f"{i}. {score['score']:5.1f}% | {score['group'][:30]}")
         print(f"   {score['preview']}")
@@ -182,7 +181,7 @@ def main():
     count_10 = len([s for s in all_scores if s >= 10])
     count_5 = len([s for s in all_scores if s >= 5])
     
-    print(f"\n📈 MATCH COUNTS BY THRESHOLD:")
+    print("\n📈 MATCH COUNTS BY THRESHOLD:")
     print(f"   ≥ 75%: {count_75} messages")
     print(f"   ≥ 50%: {count_50} messages")
     print(f"   ≥ 25%: {count_25} messages")

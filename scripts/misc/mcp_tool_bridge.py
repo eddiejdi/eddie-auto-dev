@@ -28,7 +28,8 @@ import json
 import logging
 import os
 import time
-from typing import Any, Awaitable, Callable, Optional
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 logger = logging.getLogger("mcp_tool_bridge")
 
@@ -267,7 +268,7 @@ async def await_and_execute(
     tool_name: str,
     kwargs: dict,
     on_resolved: Callable[[str, Any], Awaitable[None]],
-    max_wait_seconds: Optional[float] = None,
+    max_wait_seconds: float | None = None,
 ) -> None:
     """Faz polling de `intent_check_status` até approved/rejected/expired.
 
@@ -304,7 +305,7 @@ async def await_and_execute(
                     outcome = json.dumps(result, ensure_ascii=False, default=str)[:2000]
                     mod.intent_complete(intent_id=intent_id, outcome=outcome, success=True)
                     await on_resolved("approved", result)
-                except Exception as exc:  # noqa: BLE001 - queremos capturar qualquer falha da ferramenta
+                except Exception as exc:
                     logger.exception("Erro executando '%s' após aprovação (intent_id=%s)", tool_name, intent_id)
                     mod.intent_complete(
                         intent_id=intent_id,
@@ -322,7 +323,7 @@ async def await_and_execute(
             delay = _BACKOFF_SCHEDULE[min(step, len(_BACKOFF_SCHEDULE) - 1)]
             step += 1
             await asyncio.sleep(delay)
-    except Exception as exc:  # noqa: BLE001 - tarefa fire-and-forget nunca pode morrer silenciosa
+    except Exception as exc:
         logger.exception("Erro inesperado no polling de aprovação intent_id=%s", intent_id)
         try:
             await on_resolved("error", str(exc))

@@ -7,7 +7,7 @@ import asyncio
 import os
 import sys
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 
 def resolve_project_root() -> Path:
@@ -22,7 +22,7 @@ def resolve_project_root() -> Path:
     return Path(__file__).resolve().parent.parent.parent
 
 
-def prepare_runtime_paths(project_root: Optional[Path] = None) -> Path:
+def prepare_runtime_paths(project_root: Path | None = None) -> Path:
     """Prepara cwd e sys.path para importar modulos locais."""
     root = project_root or resolve_project_root()
     os.chdir(root)

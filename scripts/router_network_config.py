@@ -28,7 +28,6 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import Optional
 
 from selenium import webdriver
 from selenium.common.exceptions import (
@@ -242,7 +241,7 @@ def _log_form_fields(driver: webdriver.Chrome) -> None:
                  id_ or "-", name or "-", selected)
 
 
-def _find_field(driver: webdriver.Chrome, candidates: list[str]) -> Optional[webdriver.Chrome]:
+def _find_field(driver: webdriver.Chrome, candidates: list[str]) -> webdriver.Chrome | None:
     """Tenta encontrar um elemento por lista de IDs/names."""
     for id_ in candidates:
         try:

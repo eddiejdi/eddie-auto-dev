@@ -12,11 +12,11 @@ Roteamento por complexidade (economiza tokens Claude/Copilot):
   COMPLEX   → Cloud / Claude / Copilot  (implement, architect, debug, security)
 """
 
-import os
-import logging
 import asyncio
 import json
-from typing import Optional, Dict, Any
+import logging
+from typing import Any
+
 import aiohttp
 
 from specialized_agents.config import (
@@ -105,19 +105,18 @@ class CopilotModelRouter:
     async def _test_endpoint(self, url: str, timeout: int = 3) -> bool:
         """Testar se endpoint está disponível"""
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.get(
-                    f"{url}/api/tags",
-                    timeout=aiohttp.ClientTimeout(total=timeout)
-                ) as resp:
-                    return resp.status == 200
+            async with aiohttp.ClientSession() as session, session.get(
+                f"{url}/api/tags",
+                timeout=aiohttp.ClientTimeout(total=timeout)
+            ) as resp:
+                return resp.status == 200
         except Exception:
             return False
     
     async def get_available_model(
         self,
         complexity: str = "MODERATE",
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Retorna o modelo disponível respeitando a complexidade da tarefa.
 
@@ -195,7 +194,7 @@ class CopilotModelRouter:
         temperature: float = 0.3,
         max_tokens: int = 8192,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Proxy para chat completion com classificação automática de complexidade.
 
@@ -241,7 +240,7 @@ class CopilotModelRouter:
         temperature: float,
         max_tokens: int,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Chamar Ollama"""
         url = f"{base_url}/v1/chat/completions"
         payload = {
@@ -253,16 +252,15 @@ class CopilotModelRouter:
         }
         
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    url,
-                    json=payload,
-                    timeout=aiohttp.ClientTimeout(total=120)
-                ) as resp:
-                    if resp.status == 200:
-                        return await resp.json()
-                    else:
-                        raise Exception(f"Ollama error: {resp.status}")
+            async with aiohttp.ClientSession() as session, session.post(
+                url,
+                json=payload,
+                timeout=aiohttp.ClientTimeout(total=120)
+            ) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                else:
+                    raise Exception(f"Ollama error: {resp.status}")
         except Exception as e:
             logger.error(f"Ollama call failed: {e}")
             raise
@@ -271,12 +269,12 @@ class CopilotModelRouter:
         self,
         base_url: str,
         model: str,
-        api_key: Optional[str],
+        api_key: str | None,
         messages: list,
         temperature: float,
         max_tokens: int,
         **kwargs
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Chamar provedor OpenAI-compatible"""
         url = f"{base_url}/chat/completions"
         payload = {
@@ -294,26 +292,25 @@ class CopilotModelRouter:
             headers["Authorization"] = f"Bearer {api_key}"
         
         try:
-            async with aiohttp.ClientSession() as session:
-                async with session.post(
-                    url,
-                    json=payload,
-                    headers=headers,
-                    timeout=aiohttp.ClientTimeout(total=60)
-                ) as resp:
-                    if resp.status == 200:
-                        return await resp.json()
-                    else:
-                        raise Exception(
-                            f"OpenAI-compatible error: {resp.status} - {await resp.text()}"
-                        )
+            async with aiohttp.ClientSession() as session, session.post(
+                url,
+                json=payload,
+                headers=headers,
+                timeout=aiohttp.ClientTimeout(total=60)
+            ) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                else:
+                    raise Exception(
+                        f"OpenAI-compatible error: {resp.status} - {await resp.text()}"
+                    )
         except Exception as e:
             logger.error(f"OpenAI-compatible call failed: {e}")
             raise
 
 
 # Singleton instance
-_router_instance: Optional[CopilotModelRouter] = None
+_router_instance: CopilotModelRouter | None = None
 
 
 def get_copilot_router() -> CopilotModelRouter:
@@ -324,7 +321,7 @@ def get_copilot_router() -> CopilotModelRouter:
     return _router_instance
 
 
-async def get_active_model_info() -> Dict[str, Any]:
+async def get_active_model_info() -> dict[str, Any]:
     """Info do modelo ativo (para display)"""
     router = get_copilot_router()
     model_info = await router.get_available_model()

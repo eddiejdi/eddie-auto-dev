@@ -30,18 +30,18 @@ from typing import Any
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_HERE))
 
-from specialized_agents.langgraph_base import AgentState, HomelabAgent
 from specialized_agents.cmdb_agent import (
-    CmdbAgentRunRequest,
-    CmdbNetboxApplyRequest,
-    CmdbGlpiApplyRequest,
-    CmdbLoadAgent,
-    NetBoxPackageApplier,
-    GLPIPackageApplier,
-    REPO_ROOT,
     DEFAULT_INVENTORY,
     DEFAULT_OUTPUT_DIR,
+    REPO_ROOT,
+    CmdbAgentRunRequest,
+    CmdbGlpiApplyRequest,
+    CmdbLoadAgent,
+    CmdbNetboxApplyRequest,
+    GLPIPackageApplier,
+    NetBoxPackageApplier,
 )
+from specialized_agents.langgraph_base import AgentState, HomelabAgent
 
 logger = logging.getLogger(__name__)
 

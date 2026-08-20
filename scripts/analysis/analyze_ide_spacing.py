@@ -98,7 +98,7 @@ def main():
             styles = get_detailed_styles(driver, selector)
             
             if not styles:
-                print(f"  ❌ Não encontrado")
+                print("  ❌ Não encontrado")
                 continue
             
             # Mostrar informações relevantes
@@ -151,9 +151,9 @@ def main():
             gap = ai_rect['top'] - toolbar_rect['bottom']
             print(f"\n  Espaço entre Toolbar e AI Bar: {gap}px")
             if gap < 0:
-                print(f"    🚨 PROBLEMA: Elementos se sobrepõem!")
+                print("    🚨 PROBLEMA: Elementos se sobrepõem!")
             elif gap == 0:
-                print(f"    ⚠️  AVISO: Sem gap entre elementos")
+                print("    ⚠️  AVISO: Sem gap entre elementos")
         
         if ai_bar and main_area:
             ai_bar_elem = ai_bar[0]
@@ -169,9 +169,9 @@ def main():
             gap = main_rect['top'] - ai_rect['bottom']
             print(f"  Espaço entre AI Bar e Main: {gap}px")
             if gap < 0:
-                print(f"    🚨 PROBLEMA: AI Bar e Main se sobrepõem!")
+                print("    🚨 PROBLEMA: AI Bar e Main se sobrepõem!")
             elif gap == 0:
-                print(f"    ⚠️  AVISO: Sem gap entre elementos")
+                print("    ⚠️  AVISO: Sem gap entre elementos")
         
         # Capturar screenshot
         print("\n✓ Capturando screenshot...")

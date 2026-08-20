@@ -2,6 +2,7 @@
 """Teste Rápido: Qwen Image Agent"""
 
 import sys
+
 sys.path.insert(0, '/home/edenilson/shared-auto-dev')
 
 print("\n" + "="*70)
@@ -11,8 +12,8 @@ print("="*70)
 # Test 1
 print("\n[1/5] Verificando imports base...")
 try:
-    import torch
     import httpx
+    import torch
     print("  ✓ torch, httpx")
 except ImportError as e:
     print(f"  ✗ Erro: {e}")
@@ -30,9 +31,11 @@ except ImportError as e:
 # Test 3
 print("\n[3/5] Agent Communication Bus...")
 try:
-    from specialized_agents.agent_communication_bus import AgentCommunicationBus, MessageType
+    from specialized_agents.agent_communication_bus import (
+        AgentCommunicationBus,
+    )
     bus = AgentCommunicationBus()
-    print(f"  ✓ Bus inicializado")
+    print("  ✓ Bus inicializado")
     print(f"    - Status: {'recording' if bus.recording else 'paused'}")
 except Exception as e:
     print(f"  ✗ Erro: {e}")

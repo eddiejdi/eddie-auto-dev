@@ -6,10 +6,9 @@ Executa via .vscode/tasks.json na ativação do workspace
 """
 
 import json
-import os
 import sys
 from pathlib import Path
-from typing import Any
+
 
 def register_sk_or_model(vscode_user_path: Path) -> bool:
     """Registra sk-or modelo no settings.json global de VS Code"""

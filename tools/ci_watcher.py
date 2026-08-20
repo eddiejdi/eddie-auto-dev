@@ -4,11 +4,10 @@
 Uso: roda em background (nohup) e registra alterações em /tmp/ci_watcher_state.json
 e logs em /tmp/ci_watcher.log. Reusa `tools/invoke_director.py` para publicar no bus.
 """
-import time
 import json
-import subprocess
 import os
-import sys
+import subprocess
+import time
 
 OWNER = 'eddiejdi'
 REPO = 'shared-auto-dev'

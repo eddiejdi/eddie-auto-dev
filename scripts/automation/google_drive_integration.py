@@ -7,15 +7,12 @@ Autor: Shared Assistant
 Data: 2026
 """
 
-import os
-import json
-import pickle
-from datetime import datetime
-from typing import Optional, List, Dict, Any, Tuple
-from pathlib import Path
-from dataclasses import dataclass
-import logging
 import io
+import logging
+import pickle
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 
 # Configurar logging
 logging.basicConfig(
@@ -49,10 +46,10 @@ class DriveFile:
     modified_time: datetime = None
     web_view_link: str = ""
     download_url: str = ""
-    parents: List[str] = None
+    parents: list[str] = None
     
     @classmethod
-    def from_api(cls, data: Dict) -> 'DriveFile':
+    def from_api(cls, data: dict) -> 'DriveFile':
         """Cria DriveFile a partir dos dados da API"""
         return cls(
             id=data['id'],
@@ -104,11 +101,11 @@ class GoogleDriveClient:
         """Verifica se está autenticado"""
         return self.credentials is not None and self.credentials.valid
     
-    async def authenticate(self, auth_code: str = None) -> Tuple[bool, str]:
+    async def authenticate(self, auth_code: str = None) -> tuple[bool, str]:
         """Autentica com Google Drive"""
         try:
-            from google_auth_oauthlib.flow import InstalledAppFlow
             from google.auth.transport.requests import Request
+            from google_auth_oauthlib.flow import InstalledAppFlow
             
             # Verificar se já tem credenciais válidas
             if self.credentials and self.credentials.valid:
@@ -139,7 +136,7 @@ class GoogleDriveClient:
             
         except Exception as e:
             logger.error(f"Erro na autenticação: {e}")
-            return False, f"Erro: {str(e)}"
+            return False, f"Erro: {e!s}"
     
     async def ensure_service(self) -> bool:
         """Garante que o serviço está inicializado"""
@@ -162,9 +159,9 @@ class GoogleDriveClient:
     
     async def search_files(self,
                           query: str = None,
-                          mime_types: List[str] = None,
+                          mime_types: list[str] = None,
                           order_by: str = 'modifiedTime desc',
-                          max_results: int = 20) -> Tuple[bool, str, List[DriveFile]]:
+                          max_results: int = 20) -> tuple[bool, str, list[DriveFile]]:
         """
         Busca arquivos no Drive
         
@@ -216,9 +213,9 @@ class GoogleDriveClient:
             
         except Exception as e:
             logger.error(f"Erro ao buscar arquivos: {e}")
-            return False, f"Erro: {str(e)}", []
+            return False, f"Erro: {e!s}", []
     
-    async def search_resume(self) -> Tuple[bool, str, Optional[DriveFile]]:
+    async def search_resume(self) -> tuple[bool, str, DriveFile | None]:
         """
         Busca o currículo mais recente
         
@@ -258,7 +255,7 @@ class GoogleDriveClient:
         
         return True, f"Currículo encontrado: {most_recent.name}", most_recent
     
-    async def download_file(self, file_id: str, destination: Path) -> Tuple[bool, str]:
+    async def download_file(self, file_id: str, destination: Path) -> tuple[bool, str]:
         """
         Baixa um arquivo do Drive
         
@@ -305,7 +302,7 @@ class GoogleDriveClient:
             
         except Exception as e:
             logger.error(f"Erro ao baixar arquivo: {e}")
-            return False, f"Erro: {str(e)}"
+            return False, f"Erro: {e!s}"
 
 
 async def main():
@@ -326,7 +323,7 @@ async def main():
     print(f"   {msg}")
     
     if success and resume_file:
-        print(f"\n✅ Encontrado:")
+        print("\n✅ Encontrado:")
         print(f"   Nome: {resume_file.name}")
         print(f"   Tamanho: {resume_file.size / 1024:.2f} KB")
         print(f"   Modificado: {resume_file.modified_time}")

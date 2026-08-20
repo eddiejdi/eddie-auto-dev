@@ -3,9 +3,8 @@
 from __future__ import annotations
 
 import json
-import sys
-import urllib.request
 import urllib.error
+import urllib.request
 
 BASE = "http://localhost:9000"
 TOKEN = "ak-homelab-authentik-api-2026"
@@ -62,7 +61,7 @@ def create_provider(name: str, client_id: str, client_secret: str,
         print(f"  OK — Provider ID: {r['pk']}")
         return r["pk"]
     if "name" in r.get("detail", "") or "already" in str(r):
-        print(f"  Já existe, buscando...")
+        print("  Já existe, buscando...")
         existing = api("GET", f"/api/v3/providers/oauth2/?search={name}")
         if existing.get("results"):
             pk = existing["results"][0]["pk"]
@@ -86,7 +85,7 @@ def create_application(name: str, slug: str, provider_pk: int, launch_url: str) 
         print(f"  OK — App: {r['slug']}")
         return True
     if "already" in str(r) or "slug" in str(r.get("detail", "")):
-        print(f"  Já existe, atualizando...")
+        print("  Já existe, atualizando...")
         api("PATCH", f"/api/v3/core/applications/{slug}/", data)
         return True
     return False
@@ -155,12 +154,12 @@ def main() -> None:
         print(f"  {slug}: {status} (provider_pk={info['provider_pk']})")
 
     # 4. OIDC config URLs
-    print(f"\n=== URLs OIDC ===")
-    print(f"  Issuer:    https://auth.rpa4all.com/application/o/<slug>/")
-    print(f"  Authorize: https://auth.rpa4all.com/application/o/authorize/")
-    print(f"  Token:     https://auth.rpa4all.com/application/o/token/")
-    print(f"  UserInfo:  https://auth.rpa4all.com/application/o/userinfo/")
-    print(f"  JWKS:      https://auth.rpa4all.com/application/o/<slug>/jwks/")
+    print("\n=== URLs OIDC ===")
+    print("  Issuer:    https://auth.rpa4all.com/application/o/<slug>/")
+    print("  Authorize: https://auth.rpa4all.com/application/o/authorize/")
+    print("  Token:     https://auth.rpa4all.com/application/o/token/")
+    print("  UserInfo:  https://auth.rpa4all.com/application/o/userinfo/")
+    print("  JWKS:      https://auth.rpa4all.com/application/o/<slug>/jwks/")
 
 
 if __name__ == "__main__":

@@ -1,11 +1,12 @@
 
 import os
+
 import django
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "authentik.root.settings")
 django.setup()
 
-from authentik.core.models import User, Group
+from authentik.core.models import Group, User
 
 print("=== CRIANDO GRUPOS ===")
 groups_data = [
@@ -66,4 +67,4 @@ for user in User.objects.filter(is_active=True)[:10]:
         for g in groups:
             print(f"   ├─ {g}")
     else:
-        print(f"   └─ Nenhum grupo")
+        print("   └─ Nenhum grupo")

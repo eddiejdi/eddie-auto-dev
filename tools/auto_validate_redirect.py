@@ -2,17 +2,18 @@
 """Auto-validate redirect/login page and notify DIRETOR until login appears.
 Saves success marker to /tmp/redirect_verified.json and logs to /tmp/auto_validate.log
 """
-import time
-import subprocess
-import pathlib
 import importlib.util
 import json
+import pathlib
+import subprocess
+import time
 
 try:
     import requests
 except Exception:
     requests = None
 import os
+
 URL = os.environ.get('VALIDATOR_URL')
 if not URL:
     print('VALIDATOR_URL not set — no public tunnel configured; auto_validate_redirect is a no-op')

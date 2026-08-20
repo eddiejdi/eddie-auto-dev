@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Testa o modelo shared-coder treinado"""
-import httpx
 import time
+
+import httpx
 
 print("=" * 50)
 print("Testando modelo shared-coder")
@@ -26,7 +27,7 @@ try:
         elapsed = time.time() - start
         
         print(f"\n⏱️ Tempo de resposta: {elapsed:.1f}s")
-        print(f"\n📝 Resposta do modelo:\n")
+        print("\n📝 Resposta do modelo:\n")
         print("-" * 50)
         print(result[:1500])
         print("-" * 50)

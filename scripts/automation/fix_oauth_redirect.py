@@ -9,6 +9,7 @@ Solução: Usar localhost sem porta explícita (http://localhost/)
 import subprocess
 import sys
 
+
 def main():
     print("""
 ╔════════════════════════════════════════════════════════════════════════════╗

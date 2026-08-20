@@ -3,17 +3,17 @@
 Test script to verify WAHA scanning capabilities
 Shows statistics of groups (including archived) and messages from last 30 days
 """
-import sys
-import os
 import json
 import subprocess
+import sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
 # Add parent dir to path
 sys.path.insert(0, str(Path(__file__).parent))
 
-from apply_real_job import get_waha_api_key, WAHA_API, logger
+from apply_real_job import WAHA_API, get_waha_api_key
+
 
 def main():
     print("🔍 Testing WAHA scan capabilities\n")
@@ -71,20 +71,20 @@ def main():
     active_groups = [g for g in group_chats if not (g.get('isArchived') or g.get('archived'))]
     
     print("=" * 70)
-    print(f"\n📊 GROUP STATISTICS:")
+    print("\n📊 GROUP STATISTICS:")
     print(f"   Total groups: {len(group_chats)}")
     print(f"   Active groups: {len(active_groups)}")
     print(f"   Archived groups: {len(archived_groups)}")
     
     # Sample groups
-    print(f"\n📋 SAMPLE GROUPS (first 10):")
+    print("\n📋 SAMPLE GROUPS (first 10):")
     for i, chat in enumerate(group_chats[:10], 1):
         name = chat.get('name') or chat.get('id', 'Unknown')[:20]
         archived = '🗄️' if (chat.get('isArchived') or chat.get('archived')) else '✅'
         print(f"   {i}. {archived} {name}")
     
     # Test message retrieval from first 3 groups
-    print(f"\n📨 MESSAGE SAMPLE (first 3 groups, last 30 days):")
+    print("\n📨 MESSAGE SAMPLE (first 3 groups, last 30 days):")
     cutoff_date = datetime.now() - timedelta(days=30)
     cutoff_timestamp = int(cutoff_date.timestamp())
     
@@ -128,10 +128,10 @@ def main():
     print(f"   Messages from last 30 days: {messages_last_30_days}")
     
     print("\n" + "=" * 70)
-    print(f"\n✅ Test complete! System will scan:")
+    print("\n✅ Test complete! System will scan:")
     print(f"   • Up to 1000 groups (including {len(archived_groups)} archived)")
-    print(f"   • Up to 100 messages per group")
-    print(f"   • Only messages from last 30 days")
+    print("   • Up to 100 messages per group")
+    print("   • Only messages from last 30 days")
     print(f"   • Estimated total: ~{len(group_chats) * 50} messages to check")
 
 

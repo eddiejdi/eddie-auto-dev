@@ -1,6 +1,13 @@
 #!/usr/bin/env python3
 """Troca código OAuth por token e cria/obtém GOOGLE_AI_API_KEY."""
-import json, urllib.parse, urllib.request, urllib.error, time, os, sys, subprocess
+import json
+import os
+import subprocess
+import sys
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 with open("credentials_google.json") as f:
     c = json.load(f)
@@ -33,7 +40,7 @@ try:
     with urllib.request.urlopen(req) as resp:
         token_data = json.loads(resp.read())
     access_token = token_data["access_token"]
-    print(f"   OK token obtido")
+    print("   OK token obtido")
 except urllib.error.HTTPError as e:
     print(f"   ERRO {e.code}: {e.read().decode()[:300]}")
     sys.exit(1)
@@ -87,7 +94,7 @@ if not api_key:
     r = api("POST", f"https://apikeys.googleapis.com/v2/projects/{PROJECT_ID}/locations/global/keys", body)
     if r and not r.get("error"):
         op = r.get("name", "")
-        print(f"   Aguardando operacao...")
+        print("   Aguardando operacao...")
         for _ in range(30):
             time.sleep(2)
             op_r = api("GET", f"https://apikeys.googleapis.com/v2/{op}")
@@ -96,7 +103,7 @@ if not api_key:
                 ks = api("GET", f"https://apikeys.googleapis.com/v2/{kn}/keyString")
                 if ks and not ks.get("error"):
                     api_key = ks.get("keyString")
-                    print(f"   OK Key criada")
+                    print("   OK Key criada")
                 break
             if op_r and op_r.get("error"):
                 print(f"   Erro: {op_r}")
@@ -115,7 +122,7 @@ print(f"5/5 Key obtida: {api_key[:10]}...{api_key[-4:]}")
 lines = []
 if os.path.exists(".env"):
     with open(".env") as f:
-        lines = [l for l in f.readlines() if not l.startswith("GOOGLE_AI_API_KEY=")]
+        lines = [l for l in f if not l.startswith("GOOGLE_AI_API_KEY=")]
 lines.append(f"GOOGLE_AI_API_KEY={api_key}\n")
 with open(".env", "w") as f:
     f.writelines(lines)

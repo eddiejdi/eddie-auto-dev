@@ -4,26 +4,26 @@ Bitcoin Trading Agent 24/7
 Agente autônomo de trading que opera continuamente
 """
 
-import os
-import sys
-import time
-import json
-import ast
-import re
-import random
-import hashlib
-import signal
-import logging
 import argparse
-import threading
-import statistics
-import tempfile
-import fcntl
+import ast
 import contextlib
-from pathlib import Path
-from datetime import datetime, timedelta, date
-from typing import Any, Dict, Optional
+import fcntl
+import hashlib
+import json
+import logging
+import os
+import random
+import re
+import signal
+import statistics
+import sys
+import tempfile
+import threading
+import time
 from dataclasses import dataclass, field
+from datetime import date
+from pathlib import Path
+from typing import Any
 
 import httpx
 
@@ -31,30 +31,34 @@ import httpx
 sys.path.insert(0, str(Path(__file__).parent))
 
 from kucoin_api import (
-    get_price, get_price_fast, get_orderbook, get_candles,
-    get_recent_trades, get_balances, get_balance,
-    place_market_order, analyze_orderbook, analyze_trade_flow,
-    inner_transfer, _has_keys, get_fills_for_order,
+    _has_keys,
+    analyze_orderbook,
+    analyze_trade_flow,
+    get_balance,
+    get_balances,
+    get_candles,
+    get_fills_for_order,
+    get_price,
+    get_price_fast,
+    inner_transfer,
+    place_market_order,
 )
+
 # Stop-loss functions (may not be available in all environments)
 try:
     from kucoin_api import (
-        place_stop_loss_order, place_take_profit_order,
-        cancel_stop_order, cancel_all_stop_orders, get_stop_orders,
+        cancel_all_stop_orders,
+        cancel_stop_order,
+        get_stop_orders,
+        place_stop_loss_order,
+        place_take_profit_order,
     )
     HAS_STOP_ORDERS = True
 except ImportError:
     HAS_STOP_ORDERS = False
 from fast_model import FastTradingModel, MarketState, Signal
-from training_db import TrainingDatabase, TrainingManager
+from llm import LLMRouter
 from market_rag import MarketRAG
-from track_record_confidence import (
-    TrackRecordConfidence,
-    apply_confidence_adjustment,
-    merge_track_record_cfg,
-)
-from sell_target_mixin import SellTargetMixin
-from risk_guardian_mixin import RiskGuardianMixin
 from position_manager_mixin import PositionManagerMixin
 from position_reconstruction import (
     compute_exposure_budget,
@@ -67,7 +71,14 @@ from profile_rules import (
     open_buy_net_sql_predicate,
     validate_profile_for_symbol,
 )
-from llm import LLMRouter
+from risk_guardian_mixin import RiskGuardianMixin
+from sell_target_mixin import SellTargetMixin
+from track_record_confidence import (
+    TrackRecordConfidence,
+    apply_confidence_adjustment,
+    merge_track_record_cfg,
+)
+from training_db import TrainingDatabase, TrainingManager
 
 _ollama_gate_logger = logging.getLogger("btc_trading_agent.ollama_gate")
 
@@ -115,13 +126,13 @@ def _ollama_host_gate(host: str, timeout: float = 20.0):
                 pass
 
 
-def _read_json_config(config_path: Path) -> Dict[str, Any]:
+def _read_json_config(config_path: Path) -> dict[str, Any]:
     """Lê config JSON do disco com encoding consistente."""
     with open(config_path, encoding="utf-8") as cfg_file:
         return json.load(cfg_file)
 
 
-def _explicit_runtime_config_requested(config_name: Optional[str] = None) -> bool:
+def _explicit_runtime_config_requested(config_name: str | None = None) -> bool:
     """Retorna True quando o processo recebeu um config específico da instância."""
     if config_name:
         return config_name != "config.json"
@@ -129,7 +140,7 @@ def _explicit_runtime_config_requested(config_name: Optional[str] = None) -> boo
     return env_name != "config.json"
 
 
-def _load_bootstrap_config(config_path: Path) -> Dict[str, Any]:
+def _load_bootstrap_config(config_path: Path) -> dict[str, Any]:
     """Carrega o config bootstrap usado na importação do módulo."""
     try:
         return _read_json_config(config_path)
@@ -139,7 +150,7 @@ def _load_bootstrap_config(config_path: Path) -> Dict[str, Any]:
 
 def _validated_profile_from_config(
     symbol: str,
-    config: Dict[str, Any],
+    config: dict[str, Any],
     *,
     config_name: str | None = None,
 ) -> str:
@@ -165,7 +176,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-def _resolve_process_dry_run(cli_live: bool, loaded_cfg: Optional[Dict[str, Any]] = None) -> bool:
+def _resolve_process_dry_run(cli_live: bool, loaded_cfg: dict[str, Any] | None = None) -> bool:
     """Resolve o modo efetivo do processo com override seguro pelo config.
 
     Regras:
@@ -236,7 +247,7 @@ class AgentState:
     buy_dynamic_batch_cap_usdt: float = 0.0
     dca_valley_low: float = 0.0  # Menor preço visto desde a última entrada DCA (0 = não rastreando)
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "running": self.running,
             "symbol": self.symbol,
@@ -327,7 +338,7 @@ class BitcoinTradingAgent(
     - PositionManagerMixin → tracking de slots, per-slot exits, max_hold_hours
     """
     
-    def __init__(self, symbol: str = DEFAULT_SYMBOL, dry_run: bool = True, config_name: Optional[str] = None):
+    def __init__(self, symbol: str = DEFAULT_SYMBOL, dry_run: bool = True, config_name: str | None = None):
         self.symbol = symbol
         self.config_name = config_name or os.environ.get("COIN_CONFIG_FILE", _config_file)
         self.config_path = Path(__file__).parent / self.config_name
@@ -377,7 +388,7 @@ class BitcoinTradingAgent(
         self._last_ai_trade_window_trigger_ts = 0.0
         self._last_ai_trade_window_regime = ""
         self._ai_trade_window_lock = threading.Lock()
-        self._buy_profit_guard_cache: Dict[str, Any] = {}
+        self._buy_profit_guard_cache: dict[str, Any] = {}
         # Cache de fontes confiáveis (acerto >= 50%, >= 5 previsões): atualizado a cada hora
         self._trusted_news_sources: list = []
         self._trusted_news_sources_ts: float = 0.0
@@ -418,7 +429,7 @@ class BitcoinTradingAgent(
             f"🤖 Agent initialized: {symbol} (dry_run={dry_run}, profile={self.state.profile}, config={self.config_name})"
         )
 
-    def _load_live_config(self, strict: bool = False) -> Dict:
+    def _load_live_config(self, strict: bool = False) -> dict:
         """Carrega o config ativo da instância; cai para o config de import em caso de falha."""
         try:
             return _read_json_config(self.config_path)
@@ -458,12 +469,12 @@ class BitcoinTradingAgent(
 
     def _decision_features_with_position(
         self,
-        features: Optional[Dict[str, Any]] = None,
+        features: dict[str, Any] | None = None,
         *,
-        price: Optional[float] = None,
-    ) -> Dict[str, Any]:
+        price: float | None = None,
+    ) -> dict[str, Any]:
         """Anexa snapshot de posição do profile ativo às features da decisão."""
-        enriched: Dict[str, Any] = dict(features or {})
+        enriched: dict[str, Any] = dict(features or {})
         current_price = price if price is not None else None
         position = float(self.state.position or 0.0)
         entry_price = float(self.state.entry_price or 0.0)
@@ -494,7 +505,7 @@ class BitcoinTradingAgent(
             enriched["target_sell_reason"] = self.state.target_sell_reason[:240]
         return enriched
 
-    def _get_runtime_risk_caps(self) -> Dict[str, Any]:
+    def _get_runtime_risk_caps(self) -> dict[str, Any]:
         """Retorna caps/configs ativos da instância sem depender do config de import."""
         live_cfg = self._load_live_config()
         return {
@@ -505,7 +516,7 @@ class BitcoinTradingAgent(
             "max_positions": max(1, int(live_cfg.get("max_positions", MAX_POSITIONS))),
         }
 
-    def _get_runtime_trade_day_limits(self) -> Dict[str, float]:
+    def _get_runtime_trade_day_limits(self) -> dict[str, float]:
         """Retorna limits diários ativos da instância a partir do config vivo."""
         live_cfg = self._load_live_config()
         return {
@@ -520,7 +531,7 @@ class BitcoinTradingAgent(
     def _block_trade(self, reason: str, **context: Any) -> bool:
         """Registra o motivo estruturado do bloqueio da decisão atual."""
         self.state.last_trade_block_reason = reason
-        cleaned: Dict[str, Any] = {}
+        cleaned: dict[str, Any] = {}
         for key, value in context.items():
             if value is None:
                 continue
@@ -570,7 +581,7 @@ class BitcoinTradingAgent(
         return 0.01
 
     def _resolve_rebuy_envelope(self, rag_adj, controls: "TradeControls",
-                                now: Optional[float] = None) -> Dict[str, Any]:
+                                now: float | None = None) -> dict[str, Any]:
         """Envelope determinístico de recompra + margem extra da IA (só aperta).
 
         O envelope é mecânico e SEMPRE ativo enquanto houver venda registrada —
@@ -653,7 +664,7 @@ class BitcoinTradingAgent(
             "source": "envelope+ai" if ai_margin > 0 else f"envelope_{phase}",
         }
 
-    def _resolve_dynamic_buy_batch_limit(self, remaining_exposure: float) -> Dict[str, float]:
+    def _resolve_dynamic_buy_batch_limit(self, remaining_exposure: float) -> dict[str, float]:
         """Resolve o cap dinâmico por lote usando a pressão recente do profile."""
         pressure = 0.0
         try:
@@ -680,7 +691,7 @@ class BitcoinTradingAgent(
     # _get_guardrail_sell_protection_cfg → RiskGuardianMixin
     # _estimate_sell_outcome             → RiskGuardianMixin
 
-    def _get_guardrail_sell_verdict(self, price: float) -> Optional[Dict[str, float | bool]]:
+    def _get_guardrail_sell_verdict(self, price: float) -> dict[str, float | bool] | None:
         """Retorna o veredito de SELL do guardrail ativo, se aplicável."""
         if self.state.position <= 0 or self.state.entry_price <= 0:
             return None
@@ -746,7 +757,7 @@ class BitcoinTradingAgent(
         )
 
     @staticmethod
-    def _extract_json_object(raw: str) -> Dict[str, Any]:
+    def _extract_json_object(raw: str) -> dict[str, Any]:
         """Extrai um objeto JSON mesmo quando o modelo devolve fences ou ruído."""
         def _balanced_object(text: str) -> str:
             start = text.find("{")
@@ -822,7 +833,7 @@ class BitcoinTradingAgent(
             if candidate and candidate not in candidates:
                 candidates.append(candidate)
 
-        last_error: Optional[Exception] = None
+        last_error: Exception | None = None
         for candidate in candidates:
             try:
                 parsed = _load_candidate(candidate)
@@ -836,10 +847,10 @@ class BitcoinTradingAgent(
         raise ValueError("Ollama payload is not a JSON object")
 
     @staticmethod
-    def _extract_loose_numeric_fields(raw: str, field_names: tuple[str, ...]) -> Dict[str, float]:
+    def _extract_loose_numeric_fields(raw: str, field_names: tuple[str, ...]) -> dict[str, float]:
         """Extrai campos numéricos de payloads quase-JSON quando a resposta vem truncada."""
         text = (raw or "").replace("\r", " ").replace("\n", " ")
-        extracted: Dict[str, float] = {}
+        extracted: dict[str, float] = {}
         for field_name in field_names:
             match = re.search(
                 rf'["\']?{re.escape(field_name)}["\']?(?:\s*[:=]\s*|\s+)["\']?(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)',
@@ -854,7 +865,7 @@ class BitcoinTradingAgent(
         return extracted
 
     @classmethod
-    def _resolve_numeric_field(cls, parsed: Dict[str, Any], raw: str, field_name: str, default: float) -> float:
+    def _resolve_numeric_field(cls, parsed: dict[str, Any], raw: str, field_name: str, default: float) -> float:
         """Lê um campo numérico do dict parseado e recorre ao extractor flexível se necessário."""
         value = parsed.get(field_name, default)
         try:
@@ -962,7 +973,7 @@ class BitcoinTradingAgent(
         return primary_host, primary_model, fallback_host, fallback_model
 
     @staticmethod
-    def _compact_prompt_json(payload: Dict[str, Any]) -> str:
+    def _compact_prompt_json(payload: dict[str, Any]) -> str:
         """Serializa contexto compacto para reduzir tokens nos prompts estruturados."""
         return json.dumps(payload, ensure_ascii=False, separators=(",", ":"), default=str)
 
@@ -1017,7 +1028,7 @@ class BitcoinTradingAgent(
         signal.features["track_record_mode"] = "apply"
         return signal
 
-    def _fetch_db_perf_context(self, profile: str = "default") -> Dict[str, Any]:
+    def _fetch_db_perf_context(self, profile: str = "default") -> dict[str, Any]:
         """Retorna resumo compacto de performance 7d do DB para injeção em prompts LLM."""
         try:
             perf = self.db.calculate_performance(self.symbol, days=7)
@@ -1075,10 +1086,10 @@ class BitcoinTradingAgent(
         fallback_model: str,
         primary_timeout_sec: float,
         fallback_timeout_sec: float,
-        options: Dict[str, Any],
+        options: dict[str, Any],
         parser,
         retries_per_target: int = 1,
-    ) -> tuple[Any, str, Dict[str, Any]]:
+    ) -> tuple[Any, str, dict[str, Any]]:
         """Delega ao LLMRouter: primary/fallback explícitos + NAS como terceiro tier."""
         return self._llm.request_structured(
             label=label,
@@ -1120,7 +1131,7 @@ class BitcoinTradingAgent(
         )
         return suggestion
 
-    def _get_trade_window_settings(self) -> Dict[str, float]:
+    def _get_trade_window_settings(self) -> dict[str, float]:
         """Retorna cadência e clamps da janela fresca por profile."""
         profile = self._current_profile()
         if profile == "aggressive":
@@ -1163,7 +1174,7 @@ class BitcoinTradingAgent(
         suffix = "" if profile == "default" else f"_{profile}"
         return trade_dir / f"trade_window_{self.symbol}{suffix}.json"
 
-    def _has_min_structured_ollama_evidence(self, rag_adj, rag_stats: Dict[str, Any]) -> tuple[bool, str]:
+    def _has_min_structured_ollama_evidence(self, rag_adj, rag_stats: dict[str, Any]) -> tuple[bool, str]:
         """Valida evidência mínima para aceitar análises estruturadas do Ollama.
 
         Evita aplicar janelas/controles quando o regime ainda não tem suporte
@@ -1264,7 +1275,7 @@ class BitcoinTradingAgent(
             raw=raw.strip(),
         )
 
-    def _get_fresh_ai_trade_window(self) -> Optional[Dict[str, Any]]:
+    def _get_fresh_ai_trade_window(self) -> dict[str, Any] | None:
         """Retorna a janela operacional fresca do profile atual, se válida."""
         try:
             trade_window_file = self._get_trade_window_file()
@@ -1287,7 +1298,7 @@ class BitcoinTradingAgent(
             logger.debug(f"Fresh trade window read error: {e}")
             return None
 
-    def _resolve_buy_gate_limits(self, rag_adj, signal: Optional[Signal] = None) -> Dict[str, Any]:
+    def _resolve_buy_gate_limits(self, rag_adj, signal: Signal | None = None) -> dict[str, Any]:
         """Calcula alvo e teto efetivos de compra, com override de janela fresca."""
         ai_buy_target = float(getattr(rag_adj, "ai_buy_target_price", 0.0) or 0.0)
         extra_discount_pct = self._get_buy_extra_discount_pct(rag_adj, signal)
@@ -1685,12 +1696,11 @@ class BitcoinTradingAgent(
         """Retorna a posição líquida total do símbolo no ledger live."""
         own_cursor = cursor is None
         if own_cursor:
-            with self.db._get_conn() as _conn:
-                with _conn.cursor() as _cur:
-                    return self._get_symbol_db_net_position(
-                        cursor=_cur,
-                        exclude_external_deposits=exclude_external_deposits,
-                    )
+            with self.db._get_conn() as _conn, _conn.cursor() as _cur:
+                return self._get_symbol_db_net_position(
+                    cursor=_cur,
+                    exclude_external_deposits=exclude_external_deposits,
+                )
 
         buy_clause = "side='buy'"
         if exclude_external_deposits:
@@ -1713,7 +1723,7 @@ class BitcoinTradingAgent(
         *,
         cursor=None,
         exclude_external_deposits: bool = False,
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Retorna profiles live com posição líquida aberta para o símbolo.
 
         BUY `closed` ou com `metadata.closed_reason` não entra no net — fantasmas
@@ -1721,12 +1731,11 @@ class BitcoinTradingAgent(
         """
         own_cursor = cursor is None
         if own_cursor:
-            with self.db._get_conn() as _conn:
-                with _conn.cursor() as _cur:
-                    return self._get_active_symbol_profiles(
-                        cursor=_cur,
-                        exclude_external_deposits=exclude_external_deposits,
-                    )
+            with self.db._get_conn() as _conn, _conn.cursor() as _cur:
+                return self._get_active_symbol_profiles(
+                    cursor=_cur,
+                    exclude_external_deposits=exclude_external_deposits,
+                )
 
         buy_clause = open_buy_net_sql_predicate(
             exclude_external_deposits=exclude_external_deposits,
@@ -1743,7 +1752,7 @@ class BitcoinTradingAgent(
             """,
             (self.symbol,),
         )
-        active_profiles: Dict[str, float] = {}
+        active_profiles: dict[str, float] = {}
         for profile, net_size in cursor.fetchall():
             profile_name = str(profile or "default")
             if profile_name in {"default", "exchange_sync"}:
@@ -1838,7 +1847,7 @@ class BitcoinTradingAgent(
         raw_text: str,
         rag_max_entries: int,
         rag_size_pct: float,
-    ) -> tuple[Optional[int], Optional[float], str]:
+    ) -> tuple[int | None, float | None, str]:
         """Extrai controles de sizing do bloco CONTROLES_IA no response do LLM.
 
         Retorna (max_entradas, tamanho_compra_pct, texto_sem_bloco).
@@ -1851,8 +1860,8 @@ class BitcoinTradingAgent(
         MAX_SIZE_PCT_HARD_CAP = 25.0
         MIN_SIZE_PCT = 1.0
 
-        max_entries: Optional[int] = None
-        size_pct: Optional[float] = None
+        max_entries: int | None = None
+        size_pct: float | None = None
 
         # Remover o bloco CONTROLES_IA do texto narrativo antes de retornar
         block_pattern = _re.compile(
@@ -1884,7 +1893,7 @@ class BitcoinTradingAgent(
                 size_pct = round(val_f, 2)
 
         # Parsear take_profit_pct (vem como % ex: 2.50 -> converte para decimal 0.025)
-        tp_pct: Optional[float] = None
+        tp_pct: float | None = None
         m_tp = _re.search(
             r"take_profit_pct\s*[:=]\s*([\d.]+)", raw_text, _re.IGNORECASE
         )
@@ -1896,7 +1905,7 @@ class BitcoinTradingAgent(
                 tp_pct = round(val_tp, 5)
 
         # Parsear dca_agora (sim/yes -> True)
-        dca_now: Optional[bool] = None
+        dca_now: bool | None = None
         m_dca = _re.search(
             r"dca_agora\s*[:=]\s*(\w+)", raw_text, _re.IGNORECASE
         )
@@ -2368,7 +2377,7 @@ class BitcoinTradingAgent(
         applied_adj,
         trigger: str,
         raw: str,
-        request_meta: Optional[Dict[str, Any]] = None,
+        request_meta: dict[str, Any] | None = None,
     ) -> None:
         """Persiste a última sugestão estruturada do Ollama para auditoria."""
         try:
@@ -2410,7 +2419,7 @@ class BitcoinTradingAgent(
     _LLM_LOG_CFG_TTL_SEC: float = 30.0
     _LLM_LOG_TYPE_KEY = {"controls": "log_controls", "window": "log_window", "plan": "log_plan"}
 
-    def _llm_log_config(self) -> Dict[str, Any]:
+    def _llm_log_config(self) -> dict[str, Any]:
         """Retorna a config de log de LLM, cacheada por _LLM_LOG_CFG_TTL_SEC.
 
         Best-effort: se o DB falhar, cai nos defaults (logar tudo) — a decisão de
@@ -2435,13 +2444,13 @@ class BitcoinTradingAgent(
         *,
         call_type: str,
         prompt: str,
-        response_text: Optional[str] = None,
-        response_json: Optional[Dict[str, Any]] = None,
-        model: Optional[str] = None,
-        host: Optional[str] = None,
-        latency_ms: Optional[float] = None,
-        trigger: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        response_text: str | None = None,
+        response_json: dict[str, Any] | None = None,
+        model: str | None = None,
+        host: str | None = None,
+        latency_ms: float | None = None,
+        trigger: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """Loga o prompt+resposta bruta de uma chamada ao Ollama (dataset de fine-tuning).
 
@@ -2678,7 +2687,7 @@ class BitcoinTradingAgent(
         finally:
             self._ai_trade_window_lock.release()
 
-    def _save_ai_trade_window(self, *, payload: Dict[str, Any], raw: str) -> None:
+    def _save_ai_trade_window(self, *, payload: dict[str, Any], raw: str) -> None:
         """Persiste a janela fresca em arquivo quente e banco para auditoria."""
         try:
             trade_window_file = self._get_trade_window_file()
@@ -2787,7 +2796,7 @@ class BitcoinTradingAgent(
         self,
         *,
         market_state: "MarketState",
-        rag_stats: Dict[str, Any],
+        rag_stats: dict[str, Any],
         position_info: str,
         usdt_balance: float,
         sell_unlock_price: float,
@@ -3004,8 +3013,7 @@ class BitcoinTradingAgent(
                 tp_pct = auto_tp_cfg.get("pct", 0.025)
             # FIX #14: Floor mínimo para TP
             min_tp_pct = auto_tp_cfg.get("min_pct", 0.015)
-            if tp_pct < min_tp_pct:
-                tp_pct = min_tp_pct
+            tp_pct = max(tp_pct, min_tp_pct)
             tp_target = plan_entry * (1 + tp_pct) if plan_entry > 0 else 0
             sl_price = plan_entry * (1 - sl_pct) if plan_entry > 0 else 0
             trailing_activation = trailing_cfg.get("activation_pct", 0.015)
@@ -3227,8 +3235,8 @@ class BitcoinTradingAgent(
             raw_text = ""
             plan_text = ""
             used_model = self._OLLAMA_PLAN_MODEL
-            _ai_ctrl_entries: Optional[int] = None
-            _ai_ctrl_size_pct: Optional[float] = None
+            _ai_ctrl_entries: int | None = None
+            _ai_ctrl_size_pct: float | None = None
             for host, model, opts in plan_targets:
                 try:
                     # Serializa chamadas ao mesmo host Ollama entre processos (thundering herd)
@@ -3504,7 +3512,7 @@ class BitcoinTradingAgent(
         price: float,
         regime: str,
         model: str,
-        metadata: Optional[Dict] = None,
+        metadata: dict | None = None,
     ) -> None:
         """Salva plano da IA na tabela btc.ai_plans e faz housekeeping."""
         try:
@@ -3566,7 +3574,7 @@ class BitcoinTradingAgent(
         except Exception as e:
             logger.warning(f"⚠️ Failed to save AI plan: {e}", exc_info=True)
 
-    def _get_ai_plan_overrides(self) -> tuple[Optional[int], Optional[float]]:
+    def _get_ai_plan_overrides(self) -> tuple[int | None, float | None]:
         """Retorna controles de sizing do plano de IA mais recente para este perfil.
 
         Lê o metadata do último ai_plan salvo no DB e extrai ai_ctrl_max_entries
@@ -3778,7 +3786,7 @@ class BitcoinTradingAgent(
                             f"abaixo de ${self.state.last_sell_entry_price:,.2f} "
                             f"(venda há {sell_age_h:.1f}h — envelope grace/decay aplica)"
                         )
-            logger.info(f"📭 Last trade was sell — no open position")
+            logger.info("📭 Last trade was sell — no open position")
             return
 
         # Reconstruir multi-posição com preço médio ponderado
@@ -3990,7 +3998,7 @@ class BitcoinTradingAgent(
     # _build_trade_metadata           → SellTargetMixin
     # _stamp_latest_open_buy_target   → SellTargetMixin
 
-    def _analyze_signal_context(self, rag_adj, signal: Optional[Signal] = None) -> dict:
+    def _analyze_signal_context(self, rag_adj, signal: Signal | None = None) -> dict:
         """Resume penalidades e bonificações implícitas no texto do sinal."""
         signal_reason = (signal.reason or "").lower() if signal else ""
         regime = getattr(rag_adj, "suggested_regime", "RANGING")
@@ -4084,7 +4092,7 @@ class BitcoinTradingAgent(
             "reason": signal_reason,
         }
 
-    def _get_sell_below_target_confidence(self, rag_adj, ai_controlled: bool, signal: Optional[Signal] = None) -> float:
+    def _get_sell_below_target_confidence(self, rag_adj, ai_controlled: bool, signal: Signal | None = None) -> float:
         """Retorna a confiança mínima para vender abaixo do target da IA.
 
         Em BEARISH, a saída deve ser mais permissiva para não segurar posição ruim
@@ -4109,7 +4117,7 @@ class BitcoinTradingAgent(
             return min(max(base_conf + 0.18, 0.75), 0.88)
         return min(max(base_conf + 0.10, 0.65), 0.80)
 
-    def _get_buy_extra_discount_pct(self, rag_adj, signal: Optional[Signal] = None) -> float:
+    def _get_buy_extra_discount_pct(self, rag_adj, signal: Signal | None = None) -> float:
         """Retorna desconto adicional exigido para BUY em contexto fraco.
 
         A ideia é evitar entradas de reversão rasa quando o próprio sinal já carrega
@@ -4130,7 +4138,7 @@ class BitcoinTradingAgent(
 
         return max(extra_discount, 0.0)
 
-    def _get_buy_target_tolerance_pct(self, rag_adj, signal: Optional[Signal] = None) -> float:
+    def _get_buy_target_tolerance_pct(self, rag_adj, signal: Signal | None = None) -> float:
         """Retorna tolerância pequena acima do alvo de compra em cenários neutros/fortes.
 
         A meta é evitar perder apenas as entradas marginais com melhor histórico.
@@ -4181,7 +4189,7 @@ class BitcoinTradingAgent(
 
         return 0.0
 
-    def _get_buy_target_uplift_pct(self, rag_adj, signal: Optional[Signal] = None) -> float:
+    def _get_buy_target_uplift_pct(self, rag_adj, signal: Signal | None = None) -> float:
         """Aproxima o buy target do mercado só nos cenários com melhor replay.
 
         Diferente da tolerância, o uplift move o próprio alvo efetivo de compra.
@@ -4217,7 +4225,7 @@ class BitcoinTradingAgent(
 
         return 0.0
 
-    def _get_profile_min_net_profit_cfg(self) -> Dict[str, float]:
+    def _get_profile_min_net_profit_cfg(self) -> dict[str, float]:
         """Retorna o lucro líquido mínimo efetivo por profile."""
         live_cfg = self._load_live_config()
         base_cfg = live_cfg.get("min_net_profit", {"usd": 0.01, "pct": 0.0005})
@@ -4242,7 +4250,7 @@ class BitcoinTradingAgent(
             "pct": max(base_pct, 0.0003),
         }
 
-    def _get_profile_buy_profit_guard_base_cfg(self) -> Dict[str, float]:
+    def _get_profile_buy_profit_guard_base_cfg(self) -> dict[str, float]:
         """Retorna o baseline do guard econômico por profile."""
         live_cfg = self._load_live_config()
         profile = self._current_profile()
@@ -4261,8 +4269,8 @@ class BitcoinTradingAgent(
         }
 
     def _get_profile_buy_profit_guard_pressure(
-        self, base_cfg: Dict[str, Any], current_price: float = 0.0
-    ) -> Dict[str, float]:
+        self, base_cfg: dict[str, Any], current_price: float = 0.0
+    ) -> dict[str, float]:
         """Resume a pressão de risco recente para apertar o BUY.
 
         Quanto pior o PnL realizado recente do profile, maior a pressão
@@ -4406,7 +4414,7 @@ class BitcoinTradingAgent(
 
         return data
 
-    def _get_profile_buy_profit_guard_cfg(self, current_price: float = 0.0) -> Dict[str, float]:
+    def _get_profile_buy_profit_guard_cfg(self, current_price: float = 0.0) -> dict[str, float]:
         """Retorna o edge mínimo projetado para aceitar novos BUYs."""
         live_cfg = self._load_live_config()
         profile = self._current_profile()
@@ -4546,7 +4554,7 @@ class BitcoinTradingAgent(
         except Exception as e:
             logger.debug(f"Indicator candle persist failed: {e}")
 
-    def _get_market_state(self) -> Optional[MarketState]:
+    def _get_market_state(self) -> MarketState | None:
         """Coleta estado atual do mercado"""
         try:
             # Preço
@@ -5450,8 +5458,7 @@ class BitcoinTradingAgent(
                     # Aplicar floor mínimo (config auto_take_profit.min_pct)
                     _atp_cfg = _config.get("auto_take_profit", {})
                     _min_tp = _atp_cfg.get("min_pct", 0.015)
-                    if ai_tp < _min_tp:
-                        ai_tp = _min_tp
+                    ai_tp = max(ai_tp, _min_tp)
                     old_target = self.state.target_sell_price
                     tp_target = price * (1 + ai_tp)
                     self.state.target_sell_price = tp_target
@@ -5875,8 +5882,7 @@ class BitcoinTradingAgent(
         trail_pct = ts_cfg.get("trail_pct", 0.008)  # 0.8%
 
         # Update trailing high
-        if price > self.state.trailing_high:
-            self.state.trailing_high = price
+        self.state.trailing_high = max(self.state.trailing_high, price)
 
         # Check if activation threshold was reached
         pnl_pct = (self.state.trailing_high / self.state.entry_price) - 1
@@ -6733,7 +6739,7 @@ class BitcoinTradingAgent(
         
         logger.info("✅ Agent stopped")
     
-    def get_status(self) -> Dict:
+    def get_status(self) -> dict:
         """Retorna status atual"""
         return {
             **self.state.to_dict(),

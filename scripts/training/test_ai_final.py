@@ -5,8 +5,8 @@ Teste final da IA treinada - versão simplificada
 
 import sys
 from pathlib import Path
+
 import requests
-import json
 
 BASE_DIR = Path(__file__).parent
 sys.path.insert(0, str(BASE_DIR))
@@ -53,7 +53,7 @@ def test_search_and_context():
     
     # Estatísticas
     stats = trainer.get_stats()
-    print(f"\n📊 Status:")
+    print("\n📊 Status:")
     print(f"   • ChromaDB: {'✅ OK' if stats['chromadb_available'] else '❌ ERRO'}")
     print(f"   • Emails indexados: {stats['emails_indexed']}")
     
@@ -168,7 +168,7 @@ def test_embedding_quality():
             print(f"   '{text1[:20]}...' vs '{text2[:20]}...'")
             print(f"      Similaridade: {similarity*100:.1f}%")
         else:
-            print(f"   ⚠️ Erro ao gerar embeddings")
+            print("   ⚠️ Erro ao gerar embeddings")
 
 
 def main():

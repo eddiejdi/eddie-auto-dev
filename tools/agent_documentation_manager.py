@@ -5,16 +5,14 @@ Levanta agentes não documentados, cria documentação e extrai secrets
 """
 
 import asyncio
-import json
-import re
-import os
-import sys
-from pathlib import Path
-from typing import Dict, List, Set, Tuple
-from dataclasses import dataclass
-from collections import defaultdict
-import httpx
 import logging
+import os
+import re
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+
+import httpx
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -48,8 +46,8 @@ class AgentInfo:
     doc_exists: bool
     doc_path: Path
     has_main: bool
-    functions: List[str]
-    secrets_found: Dict[str, List[str]]
+    functions: list[str]
+    secrets_found: dict[str, list[str]]
     class_name: str = ""
     description: str = ""
 
@@ -57,11 +55,11 @@ class AgentDocumentationManager:
     """Gerenciador de documentação de agentes"""
     
     def __init__(self):
-        self.discovered_agents: Dict[str, AgentInfo] = {}
-        self.secrets_extracted: Dict[str, List[Tuple[str, str]]] = defaultdict(list)
-        self.updated_docs: List[str] = []
+        self.discovered_agents: dict[str, AgentInfo] = {}
+        self.secrets_extracted: dict[str, list[tuple[str, str]]] = defaultdict(list)
+        self.updated_docs: list[str] = []
         
-    def discover_agents(self) -> List[AgentInfo]:
+    def discover_agents(self) -> list[AgentInfo]:
         """Descobre todos os agentes no projeto"""
         agents = []
         
@@ -129,7 +127,7 @@ class AgentDocumentationManager:
             logger.error(f"Erro ao analisar {file_path}: {e}")
             return None
     
-    def _extract_secrets(self, content: str) -> Dict[str, List[str]]:
+    def _extract_secrets(self, content: str) -> dict[str, list[str]]:
         """Extrai secrets do código usando padrões"""
         secrets = {}
         for secret_type, pattern in SECRET_PATTERNS.items():
@@ -147,7 +145,7 @@ class AgentDocumentationManager:
         ]
         
         if agent.functions:
-            content_parts.append(f"\n## 🔧 Funções Públicas\n")
+            content_parts.append("\n## 🔧 Funções Públicas\n")
             for func in sorted(agent.functions)[:20]:  # Limita a 20 funções
                 content_parts.append(f"- `{func}()`")
         
@@ -155,7 +153,7 @@ class AgentDocumentationManager:
             content_parts.append(f"\n## 🚀 Execução Direta\n\nEste agente pode ser executado diretamente:\n\n```bash\npython {agent.file_path.relative_to(PROJECT_ROOT)}\n```")
         
         if agent.secrets_found:
-            content_parts.append(f"\n## 🔐 Secrets Encontrados\n")
+            content_parts.append("\n## 🔐 Secrets Encontrados\n")
             for secret_type, values in agent.secrets_found.items():
                 content_parts.append(f"\n### {secret_type.title()}\n")
                 for val in values[:5]:  # Primeiros 5
@@ -167,21 +165,21 @@ class AgentDocumentationManager:
                     content_parts.append(f"- `{masked}` (armazenado em Secrets Agent)")
         
         content_parts.extend([
-            f"\n## 📝 Notas",
-            f"- Esta documentação foi **gerada automaticamente**",
+            "\n## 📝 Notas",
+            "- Esta documentação foi **gerada automaticamente**",
             f"- Arquivo source: {agent.file_path.relative_to(PROJECT_ROOT)}",
-            f"- Padrão: `agent_documentation_manager.py`",
+            "- Padrão: `agent_documentation_manager.py`",
             f"- Data: {__import__('datetime').datetime.now().isoformat()}",
         ])
         
         return "\n".join(content_parts)
     
-    def report_undocumented(self) -> Tuple[List[AgentInfo], int]:
+    def report_undocumented(self) -> tuple[list[AgentInfo], int]:
         """Retorna agentes não documentados"""
         undocumented = [a for a in self.discovered_agents.values() if not a.doc_exists]
         return undocumented, len(undocumented)
     
-    async def store_secrets(self) -> Dict[str, bool]:
+    async def store_secrets(self) -> dict[str, bool]:
         """Armazena secrets encontrados no Secrets Agent"""
         results = {}
         
@@ -270,7 +268,7 @@ class AgentDocumentationManager:
         total = len(self.discovered_agents)
         documented = sum(1 for a in self.discovered_agents.values() if a.doc_exists)
         
-        index_content += f"\n\n## 📊 Estatísticas\n\n"
+        index_content += "\n\n## 📊 Estatísticas\n\n"
         index_content += f"- Total de agentes: **{total}**\n"
         index_content += f"- Documentados: **{documented}** ✅\n"
         index_content += f"- Não documentados: **{total - documented}** ❌\n"

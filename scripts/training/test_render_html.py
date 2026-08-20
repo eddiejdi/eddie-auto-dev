@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
 """Teste do HTML gerado pela função render_conversations_html"""
 import sys
+
 sys.path.insert(0, '/home/shared/myClaude')
 import os
+
 os.chdir('/home/shared/myClaude')
 
-from specialized_agents.agent_interceptor import get_agent_interceptor
 import re
+
+from specialized_agents.agent_interceptor import get_agent_interceptor
+
 
 def get_interceptor():
     return get_agent_interceptor()

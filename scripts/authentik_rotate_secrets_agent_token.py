@@ -19,12 +19,13 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+
 import requests
 
 IDENTIFIER = "secrets-agent-api"
 OVERRIDE_PATH = "/etc/systemd/system/secrets_agent.service.d/override.conf"
 
-requests.packages.urllib3.disable_warnings()  # noqa: E501 — self-signed cert homelab
+requests.packages.urllib3.disable_warnings()
 
 
 def _headers(token: str) -> dict:

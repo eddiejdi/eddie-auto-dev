@@ -1,10 +1,10 @@
 """
 Configurações dos Agentes Especializados
 """
-import os
 import logging
+import os
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Any
 
 # Diretórios base
 BASE_DIR = Path(__file__).parent.parent
@@ -26,7 +26,7 @@ for d in [DATA_DIR, BACKUP_DIR, PROJECTS_DIR, RAG_DIR, UPLOAD_DIR]:
 #
 #  Prioridade: variável de ambiente > tabela abaixo > fallback 8192
 
-_MODEL_CTX_TABLE: Dict[str, int] = {
+_MODEL_CTX_TABLE: dict[str, int] = {
     # ── micro (≤ 2 GB) ──────────────────────
     "gemma3:1b":           32768,
     "smollm2:iq3m":        32768,
@@ -48,7 +48,7 @@ _DEFAULT_NUM_CTX = 8192
 _logger = logging.getLogger("shared.dynamic_ctx")
 
 
-def get_dynamic_num_ctx(model: Optional[str] = None) -> int:
+def get_dynamic_num_ctx(model: str | None = None) -> int:
     """Retorna num_ctx ideal para o modelo, sem desperdiçar VRAM/RAM.
 
     Ordem de resolução:
@@ -341,7 +341,7 @@ REMOTE_ORCHESTRATOR_CONFIG = {
 }
 
 # Templates Docker por Linguagem
-LANGUAGE_DOCKER_TEMPLATES: Dict[str, Dict[str, Any]] = {
+LANGUAGE_DOCKER_TEMPLATES: dict[str, dict[str, Any]] = {
     "python": {
         "base_image": "python:3.12-slim",
         "install_cmd": "pip install --no-cache-dir",

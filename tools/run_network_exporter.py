@@ -3,16 +3,17 @@
 Script para executar o Network Exporter como serviço
 Exporta métricas Prometheus para visualização em rede neural no Grafana
 """
-import sys
 import logging
 import signal
+import sys
 from pathlib import Path
 
 # Adicionar diretório pai ao path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from specialized_agents.agent_network_exporter import AgentNetworkExporter
 from prometheus_client import start_http_server
+
+from specialized_agents.agent_network_exporter import AgentNetworkExporter
 
 logging.basicConfig(
     level=logging.INFO,

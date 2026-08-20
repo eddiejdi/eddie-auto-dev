@@ -19,9 +19,9 @@ import argparse
 import json
 import logging
 import sys
+from collections.abc import Iterable
 from datetime import datetime
 from pathlib import Path
-from typing import Iterable, List
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -32,7 +32,7 @@ sys.path.insert(0, str(ROOT))
 DOMAINS = ("variables", "tables", "apis")
 
 
-def _parse_domains(raw: str) -> List[str]:
+def _parse_domains(raw: str) -> list[str]:
     if not raw or raw.strip().lower() in {"all", "*"}:
         return list(DOMAINS)
     parts = [p.strip().lower() for p in raw.split(",") if p.strip()]

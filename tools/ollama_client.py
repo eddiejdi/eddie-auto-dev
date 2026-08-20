@@ -16,10 +16,10 @@ Padrão de roteamento:
 """
 from __future__ import annotations
 
-import os
-import typing as t
 import json
+import os
 import re
+import typing as t
 
 try:
     import httpx
@@ -54,7 +54,7 @@ class OllamaClient:
         "traceback",
     )
 
-    def __init__(self, host: t.Optional[str] = None, model: t.Optional[str] = None, keep_alive: t.Optional[str] = None):
+    def __init__(self, host: str | None = None, model: str | None = None, keep_alive: str | None = None):
         """Inicializa cliente com defaults GPU-first.
 
         Args:
@@ -170,7 +170,7 @@ class OllamaClient:
         prompt: str,
         num_predict: int,
         num_ctx: int,
-        small_request: t.Optional[bool],
+        small_request: bool | None,
     ) -> bool:
         """Resolve roteamento explícito vs automático."""
         if small_request is not None:
@@ -184,9 +184,9 @@ class OllamaClient:
         num_ctx: int = 1024,
         timeout: int = 300,
         *,
-        small_request: t.Optional[bool] = None,
-        host: t.Optional[str] = None,
-        model: t.Optional[str] = None,
+        small_request: bool | None = None,
+        host: str | None = None,
+        model: str | None = None,
     ) -> dict:
         """Gera texto usando o Ollama.
 
@@ -225,9 +225,9 @@ class OllamaClient:
         num_ctx: int = 1024,
         timeout: int = 300,
         *,
-        small_request: t.Optional[bool] = None,
-        host: t.Optional[str] = None,
-        model: t.Optional[str] = None,
+        small_request: bool | None = None,
+        host: str | None = None,
+        model: str | None = None,
     ) -> str:
         """Gera texto simples extraindo a melhor chave disponível."""
         result = self.generate(
@@ -245,15 +245,15 @@ class OllamaClient:
         self,
         prompt: str,
         *,
-        validator: t.Optional[t.Callable[[str], t.Any]] = None,
-        repair_prompt_builder: t.Optional[t.Callable[[str, str, str], str]] = None,
+        validator: t.Callable[[str], t.Any] | None = None,
+        repair_prompt_builder: t.Callable[[str, str, str], str] | None = None,
         max_attempts: int = 2,
         num_predict: int = 128,
         num_ctx: int = 1024,
         timeout: int = 300,
-        small_request: t.Optional[bool] = None,
-        host: t.Optional[str] = None,
-        model: t.Optional[str] = None,
+        small_request: bool | None = None,
+        host: str | None = None,
+        model: str | None = None,
     ) -> str:
         """Gera texto com validação explícita e um retry de reparo."""
         if max_attempts < 1:
@@ -289,14 +289,14 @@ class OllamaClient:
         self,
         prompt: str,
         *,
-        validator: t.Optional[t.Callable[[t.Any], t.Any]] = None,
+        validator: t.Callable[[t.Any], t.Any] | None = None,
         max_attempts: int = 2,
         num_predict: int = 256,
         num_ctx: int = 2048,
         timeout: int = 300,
-        small_request: t.Optional[bool] = None,
-        host: t.Optional[str] = None,
-        model: t.Optional[str] = None,
+        small_request: bool | None = None,
+        host: str | None = None,
+        model: str | None = None,
     ) -> t.Any:
         """Gera JSON válido com retry automático quando o parse falha."""
         if max_attempts < 1:

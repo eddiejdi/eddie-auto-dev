@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Testa o modelo shared-coder no servidor local"""
-import requests
 import time
+
+import requests
 
 print("=" * 50)
 print("Testando modelo shared-coder")

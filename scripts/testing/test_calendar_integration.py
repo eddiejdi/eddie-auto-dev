@@ -2,12 +2,12 @@
 """Teste de integração do Google Calendar"""
 
 import sys
+
 sys.path.insert(0, '/home/homelab/myClaude')
 
 print("Testando imports...")
 
 try:
-    from google_calendar_integration import get_calendar_assistant, process_calendar_request
     print("✅ google_calendar_integration OK")
 except Exception as e:
     print(f"❌ Erro: {e}")

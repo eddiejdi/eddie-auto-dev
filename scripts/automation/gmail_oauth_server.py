@@ -3,12 +3,13 @@
 Gmail OAuth Server - Recebe callback do OAuth via tunnel fly.dev
 """
 
-import os
 import json
+import os
 import threading
 import webbrowser
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from urllib.parse import urlparse, parse_qs
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from urllib.parse import parse_qs, urlparse
+
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
@@ -163,7 +164,7 @@ def authenticate_gmail():
         prompt='consent'
     )
     
-    print(f"\n🌐 Abrindo navegador para autenticação...")
+    print("\n🌐 Abrindo navegador para autenticação...")
     print(f"\n📎 URL: {auth_url[:80]}...")
     
     # Iniciar servidor local para receber o callback via tunnel
@@ -188,7 +189,7 @@ def authenticate_gmail():
         print("\n❌ Não foi possível obter o código de autorização")
         return False
     
-    print(f"\n✅ Código recebido! Trocando por token...")
+    print("\n✅ Código recebido! Trocando por token...")
     
     # Trocar código por token
     try:
@@ -235,12 +236,12 @@ def test_gmail_connection(creds):
         email = profile.get('emailAddress', 'N/A')
         total_msgs = profile.get('messagesTotal', 0)
         
-        print(f"\n✅ Conectado com sucesso!")
+        print("\n✅ Conectado com sucesso!")
         print(f"   📧 Email: {email}")
         print(f"   📬 Total de mensagens: {total_msgs:,}")
         
         # Listar últimos emails
-        print(f"\n📋 Últimos 5 emails:")
+        print("\n📋 Últimos 5 emails:")
         results = service.users().messages().list(
             userId='me', 
             maxResults=5,

@@ -25,10 +25,11 @@ import socket
 import subprocess
 import sys
 import time
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any
 
 logger = logging.getLogger("tape-component-quality")
 logging.basicConfig(

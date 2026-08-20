@@ -8,11 +8,10 @@ O script mapeia o `project_key` para repositório via `PROJECT_REPOS` em
 `specialized_agents/jira/github_branch.py` e aplica comentário + atualiza o
 custom field se `JIRA_REPOSITORY_FIELD` estiver definido.
 """
-import asyncio
-import os
 import argparse
-from typing import Dict
+import asyncio
 import importlib.util
+import os
 
 
 def _load_module_from_path(path: str, name: str):

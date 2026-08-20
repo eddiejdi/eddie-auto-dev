@@ -4,9 +4,8 @@ Copiar credenciais de Gmail para Drive
 O Gmail já foi autorizado anteriormente
 """
 import json
-import pickle
-from pathlib import Path
 import shutil
+from pathlib import Path
 
 GMAIL_TOKEN = Path('/home/homelab/myClaude/gmail_data/token.json')
 DRIVE_DIR = Path('/home/homelab/myClaude/drive_data')

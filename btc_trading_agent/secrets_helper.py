@@ -6,7 +6,6 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +24,7 @@ for _extra_root in (
         sys.path.insert(0, str(_extra_root))
 
 _cache: dict[str, str] = {}
-_sa_client: Optional[object] = None
+_sa_client: object | None = None
 
 
 def clear_secret_cache() -> None:
@@ -48,7 +47,7 @@ def _iter_kucoin_secret_names() -> tuple[str, ...]:
     )
 
 
-def get_secret(name: str, field: str = "password", *, use_cache: bool = True) -> Optional[str]:
+def get_secret(name: str, field: str = "password", *, use_cache: bool = True) -> str | None:
     """Resolve a secret from the configured backends."""
     cache_key = f"{name}:{field}"
     if use_cache and cache_key in _cache:
@@ -137,7 +136,7 @@ def get_kucoin_credentials_with_source() -> tuple[str, str, str, str]:
     return merged_api_key, merged_api_secret, merged_passphrase, source
 
 
-def _try_vault_import(name: str, field: str) -> Optional[str]:
+def _try_vault_import(name: str, field: str) -> str | None:
     """Try direct vault access when available."""
     _configure_vault_runtime_env()
     try:
@@ -175,7 +174,7 @@ def _configure_vault_runtime_env() -> None:
             pass
 
 
-def _get_sa_client() -> Optional[object]:
+def _get_sa_client() -> object | None:
     """Return a lazy singleton SecretsAgentClient instance."""
     global _sa_client
     if _sa_client is not None:
@@ -195,7 +194,7 @@ def _get_sa_client() -> Optional[object]:
     return None
 
 
-def _try_secrets_agent_http(name: str, field: str) -> Optional[str]:
+def _try_secrets_agent_http(name: str, field: str) -> str | None:
     """Try the Secrets Agent HTTP API."""
     client = _get_sa_client()
     if client is not None:
@@ -212,8 +211,9 @@ def _try_secrets_agent_http(name: str, field: str) -> Optional[str]:
         return None
 
     try:
-        import requests as _req
         from urllib.parse import quote
+
+        import requests as _req
 
         encoded_name = quote(name, safe="")
         response = _req.get(
@@ -229,13 +229,15 @@ def _try_secrets_agent_http(name: str, field: str) -> Optional[str]:
     return None
 
 
-def _try_authentik_http(name: str, field: str) -> Optional[str]:
+def _try_authentik_http(name: str, field: str) -> str | None:
     """Try to resolve secret directly from Authentik API using the management helper.
 
     Uses environment variables `AUTHENTIK_URL` and `AUTHENTIK_TOKEN` when available.
     """
     try:
-        from tools.authentik_management.authentik_secret_fetcher import get_secret_from_authentik
+        from tools.authentik_management.authentik_secret_fetcher import (
+            get_secret_from_authentik,
+        )
 
         auth_url = os.environ.get("AUTHENTIK_URL", "https://auth.rpa4all.com")
         token = os.environ.get("AUTHENTIK_TOKEN", "")
@@ -247,7 +249,7 @@ def _try_authentik_http(name: str, field: str) -> Optional[str]:
     return None
 
 
-def _try_env_var(name: str, field: str) -> Optional[str]:
+def _try_env_var(name: str, field: str) -> str | None:
     """Try a normalized environment variable name."""
     env_name = name.replace("/", "_").upper()
     if field and field not in ("password",):

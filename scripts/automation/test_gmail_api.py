@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Teste rápido Gmail"""
 import json
+
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
 

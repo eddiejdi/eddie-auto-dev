@@ -17,8 +17,7 @@ import urllib.request
 from contextlib import contextmanager
 from datetime import datetime, time, timedelta
 from pathlib import Path
-from typing import Any, Dict
-
+from typing import Any
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 LOGGER = logging.getLogger("ltfs-recovery")
@@ -296,7 +295,7 @@ def _run_command_streaming(cmd: list[str], timeout: int | None = None) -> subpro
         return subprocess.CompletedProcess(cmd, 127, "", str(exc))
 
 
-def _run_orchestration_command(cmd: list[str], streaming: bool = False) -> Dict[str, Any]:
+def _run_orchestration_command(cmd: list[str], streaming: bool = False) -> dict[str, Any]:
     """Executa comando operacional e retorna payload padronizado."""
     proc = _run_command_streaming(cmd) if streaming else _run_command(cmd)
     return {
@@ -307,9 +306,9 @@ def _run_orchestration_command(cmd: list[str], streaming: bool = False) -> Dict[
     }
 
 
-def _parse_lsof_output(raw_output: str) -> list[Dict[str, str]]:
+def _parse_lsof_output(raw_output: str) -> list[dict[str, str]]:
     """Converte saída do lsof em registros simples de posse de device."""
-    holders: list[Dict[str, str]] = []
+    holders: list[dict[str, str]] = []
     for line in raw_output.splitlines():
         if not line.strip() or line.startswith("COMMAND"):
             continue
@@ -331,7 +330,7 @@ def _parse_lsof_output(raw_output: str) -> list[Dict[str, str]]:
     return holders
 
 
-def _list_tape_holders() -> list[Dict[str, str]]:
+def _list_tape_holders() -> list[dict[str, str]]:
     """Lista processos com descritor aberto nos devices de fita."""
     proc = _run_command(["lsof", LTFS_DEVICE, LTFS_TAPE_DEVICE])
     output = "\n".join(
@@ -341,10 +340,10 @@ def _list_tape_holders() -> list[Dict[str, str]]:
 
 
 def _filter_unexpected_holders(
-    holders: list[Dict[str, str]],
+    holders: list[dict[str, str]],
     allowed_pids: set[int],
     extra_allowed_cmd_tokens: tuple[str, ...] = (),
-) -> list[Dict[str, str]]:
+) -> list[dict[str, str]]:
     """Filtra holders que não pertencem ao processo atual/orquestrador."""
     allowed_cmd_tokens = (
         "ltfs_recovery.py",
@@ -353,7 +352,7 @@ def _filter_unexpected_holders(
         "ltfs-lto6-stop",
         *extra_allowed_cmd_tokens,
     )
-    unexpected: list[Dict[str, str]] = []
+    unexpected: list[dict[str, str]] = []
     for holder in holders:
         try:
             holder_pid = int(holder.get("pid", "0"))
@@ -375,7 +374,7 @@ _EOD_MISSING_PATTERNS = (
 )
 
 
-def _ltfsck_needs_deep_recovery(result: Dict[str, Any]) -> bool:
+def _ltfsck_needs_deep_recovery(result: dict[str, Any]) -> bool:
     """Verifica se a saída do ltfsck indica necessidade de --deep-recovery."""
     cmd = result.get("details", {}).get("command_result", {})
     combined = "\n".join([cmd.get("stdout", ""), cmd.get("stderr", "")])
@@ -390,7 +389,7 @@ _XML_PARSE_ERROR_PATTERNS = (
 )
 
 
-def _ltfsck_xml_parse_error(result: Dict[str, Any]) -> bool:
+def _ltfsck_xml_parse_error(result: dict[str, Any]) -> bool:
     """Detecta falha por índice XML ilegível ou posição inválida — indica necessidade de erase-history."""
     # Aceita resultado de _run_ltfsck, _run_deep_recovery ou _run_exclusive_operation
     cmd = result.get("details", {}).get("command_result", {})
@@ -403,7 +402,7 @@ def _ltfsck_xml_parse_error(result: Dict[str, Any]) -> bool:
     return any(p.lower() in combined.lower() for p in _XML_PARSE_ERROR_PATTERNS)
 
 
-def _ltfsck_was_blocked(result: Dict[str, Any]) -> bool:
+def _ltfsck_was_blocked(result: dict[str, Any]) -> bool:
     """Retorna True se o ltfsck não chegou a rodar (bloqueado por device ocupado)."""
     cmd = result.get("details", {}).get("command_result", {})
     stdout = cmd.get("stdout", "") or result.get("stdout", "")
@@ -442,15 +441,15 @@ def _parse_dt(value: str) -> datetime | None:
     return None
 
 
-def _parse_ltfsck_rollback_points(output: str) -> list[Dict[str, Any]]:
+def _parse_ltfsck_rollback_points(output: str) -> list[dict[str, Any]]:
     """Extrai gerações disponíveis da saída de `ltfsck -l/-m`.
 
     A saída varia entre builds LTFS, então o parser aceita formatos como
     `Generation: 342`, `Gen = 342` e timestamps ISO presentes na mesma linha
     ou nas linhas seguintes do mesmo bloco.
     """
-    points: list[Dict[str, Any]] = []
-    current: Dict[str, Any] | None = None
+    points: list[dict[str, Any]] = []
+    current: dict[str, Any] | None = None
     gen_re = re.compile(r"\b(?:generation|gen)\s*(?:=|:)?\s*(\d+)\b", re.IGNORECASE)
     ts_re = re.compile(
         r"(\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:\s*[+-]\d{2}:?\d{2})?)"
@@ -480,7 +479,7 @@ def _parse_ltfsck_rollback_points(output: str) -> list[Dict[str, Any]]:
     return points
 
 
-def _choose_rollback_point(points: list[Dict[str, Any]], cursor_time: datetime | None) -> Dict[str, Any] | None:
+def _choose_rollback_point(points: list[dict[str, Any]], cursor_time: datetime | None) -> dict[str, Any] | None:
     """Escolhe a geração mais nova não posterior ao cursor."""
     if not points:
         return None
@@ -497,17 +496,17 @@ def _choose_rollback_point(points: list[Dict[str, Any]], cursor_time: datetime |
 
 
 def _split_files_by_rollback_point(
-    files_written: list[Dict[str, Any]],
-    files_pending: list[Dict[str, Any]],
-    rollback_point: Dict[str, Any] | None,
-) -> tuple[list[Dict[str, Any]], list[Dict[str, Any]]]:
+    files_written: list[dict[str, Any]],
+    files_pending: list[dict[str, Any]],
+    rollback_point: dict[str, Any] | None,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Separa arquivos confirmados antes do rollback dos que precisam voltar para fila."""
     if not rollback_point or rollback_point.get("timestamp") is None:
         return files_written, files_pending
 
     rollback_time = rollback_point["timestamp"]
-    recovered: list[Dict[str, Any]] = []
-    requeue: list[Dict[str, Any]] = list(files_pending)
+    recovered: list[dict[str, Any]] = []
+    requeue: list[dict[str, Any]] = list(files_pending)
     for item in files_written:
         written_at = _parse_dt(str(item.get("written_at", "")))
         if written_at is not None and written_at <= rollback_time:
@@ -561,12 +560,12 @@ def _stop_ltfs_service_loop(wait_seconds: int = 15) -> None:
     LOGGER.warning("Device ainda ocupado após %ds — prosseguindo mesmo assim", wait_seconds)
 
 
-def _stop_conflicting_services() -> Dict[str, Any]:
+def _stop_conflicting_services() -> dict[str, Any]:
     """Para serviços que podem competir com mount/recovery da fita."""
     return _suspend_interfering_units("conflict-preflight", LTFS_CONFLICT_SERVICES)
 
 
-def _systemd_unit_snapshot(unit: str) -> Dict[str, Any]:
+def _systemd_unit_snapshot(unit: str) -> dict[str, Any]:
     """Captura o estado original para restaurar somente o que estava ativo."""
     active = _run_command(["systemctl", "is-active", unit])
     enabled = _run_command(["systemctl", "is-enabled", unit])
@@ -583,7 +582,7 @@ def _systemd_unit_snapshot(unit: str) -> Dict[str, Any]:
     }
 
 
-def _write_suspension_state(payload: Dict[str, Any]) -> None:
+def _write_suspension_state(payload: dict[str, Any]) -> None:
     try:
         LTFS_SUSPEND_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
         tmp = LTFS_SUSPEND_STATE_FILE.with_suffix(".tmp")
@@ -593,7 +592,7 @@ def _write_suspension_state(payload: Dict[str, Any]) -> None:
         LOGGER.warning("Falha ao gravar estado de suspensão %s: %s", LTFS_SUSPEND_STATE_FILE, exc)
 
 
-def _load_suspension_state() -> Dict[str, Any] | None:
+def _load_suspension_state() -> dict[str, Any] | None:
     for state_file in (LTFS_SUSPEND_STATE_FILE, LTFS_SUSPEND_STATE_FILE_LEGACY):
         try:
             if not state_file.exists():
@@ -604,9 +603,9 @@ def _load_suspension_state() -> Dict[str, Any] | None:
     return None
 
 
-def _suspend_interfering_units(reason: str, units: list[str]) -> Dict[str, Any]:
+def _suspend_interfering_units(reason: str, units: list[str]) -> dict[str, Any]:
     """Suspende units interferentes e registra como retornar ao estado anterior."""
-    records: list[Dict[str, Any]] = []
+    records: list[dict[str, Any]] = []
     seen: set[str] = set()
     for unit in units:
         if unit in seen:
@@ -637,7 +636,7 @@ def _suspend_interfering_units(reason: str, units: list[str]) -> Dict[str, Any]:
     return payload
 
 
-def _extract_suspension(payload: Dict[str, Any] | None) -> Dict[str, Any] | None:
+def _extract_suspension(payload: dict[str, Any] | None) -> dict[str, Any] | None:
     if not payload:
         return None
     if "suspension" in payload:
@@ -654,16 +653,16 @@ def _extract_suspension(payload: Dict[str, Any] | None) -> Dict[str, Any] | None
     return None
 
 
-def _resume_suspended_units(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def _resume_suspended_units(payload: dict[str, Any] | None = None) -> dict[str, Any]:
     """Restaura apenas units que estavam ativas antes da suspensão."""
     suspension = _extract_suspension(payload) or _load_suspension_state()
     if not suspension:
         return {"resumed_units": [], "started_services": [], "state_file": str(LTFS_SUSPEND_STATE_FILE)}
 
-    resumed: list[Dict[str, Any]] = []
+    resumed: list[dict[str, Any]] = []
     for record in reversed(suspension.get("units", [])):
         unit = record["unit"]
-        resume_record: Dict[str, Any] = {
+        resume_record: dict[str, Any] = {
             "unit": unit,
             "service": unit,
             "was_active": record.get("was_active", False),
@@ -691,7 +690,7 @@ def _resume_suspended_units(payload: Dict[str, Any] | None = None) -> Dict[str, 
     }
 
 
-def _resume_suspended_unit_sets(*payloads: Dict[str, Any] | None) -> Dict[str, Any]:
+def _resume_suspended_unit_sets(*payloads: dict[str, Any] | None) -> dict[str, Any]:
     results = [_resume_suspended_units(payload) for payload in payloads if _extract_suspension(payload)]
     if not results:
         results = [_resume_suspended_units(None)]
@@ -705,12 +704,12 @@ def _resume_suspended_unit_sets(*payloads: Dict[str, Any] | None) -> Dict[str, A
     }
 
 
-def _pause_background_ltfs_units() -> Dict[str, Any]:
+def _pause_background_ltfs_units() -> dict[str, Any]:
     """Pausa timers/units auxiliares enquanto recovery pesado está em curso."""
     return _suspend_interfering_units("background-recovery", LTFS_BACKGROUND_UNITS)
 
 
-def _resume_background_ltfs_units(payload: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def _resume_background_ltfs_units(payload: dict[str, Any] | None = None) -> dict[str, Any]:
     """Religa timers/units auxiliares após LTFS voltar a um estado saudável."""
     return _resume_suspended_units(payload)
 
@@ -766,7 +765,7 @@ def _run_exclusive_operation(
     extra_allowed_cmd_tokens: tuple[str, ...] = (),
     preflight: Any | None = None,
     success_codes: frozenset[int] = frozenset({0}),
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Executa operação exclusiva de fita com preflight anti-concorrência.
 
     success_codes: conjunto de exit codes considerados sucesso. Use frozenset({0, 1})
@@ -820,7 +819,7 @@ def _run_exclusive_operation(
         return _respond(False, str(exc), {"operation": operation, "lock_file": str(LTFS_ORCH_LOCK)})
 
 
-def _respond(success: bool, message: str, details: Dict[str, Any] | None = None) -> Dict[str, Any]:
+def _respond(success: bool, message: str, details: dict[str, Any] | None = None) -> dict[str, Any]:
     payload = {
         "success": success,
         "message": message,
@@ -836,7 +835,7 @@ def _journal_tail() -> str:
     return (proc.stdout or proc.stderr or "").strip()
 
 
-def _load_self_heal_state() -> Dict[str, Any]:
+def _load_self_heal_state() -> dict[str, Any]:
     try:
         if LTFS_SELF_HEAL_STATE_FILE.exists():
             return json.loads(LTFS_SELF_HEAL_STATE_FILE.read_text())
@@ -845,7 +844,7 @@ def _load_self_heal_state() -> Dict[str, Any]:
     return {}
 
 
-def _save_self_heal_state(state: Dict[str, Any]) -> None:
+def _save_self_heal_state(state: dict[str, Any]) -> None:
     try:
         LTFS_SELF_HEAL_STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
         LTFS_SELF_HEAL_STATE_FILE.write_text(json.dumps(state, ensure_ascii=False, indent=2))
@@ -863,7 +862,7 @@ def _action_cooldown_seconds(action: str) -> int:
     }.get(action, 0)
 
 
-def _action_in_cooldown(action: str, now: datetime | None = None) -> Dict[str, Any] | None:
+def _action_in_cooldown(action: str, now: datetime | None = None) -> dict[str, Any] | None:
     state = _load_self_heal_state()
     actions = state.get("actions", {})
     action_state = actions.get(action, {})
@@ -999,7 +998,7 @@ def _telegram_ask_yn(question: str, timeout_s: int = LTFS_TELEGRAM_CONFIRMATION_
     return None
 
 
-def _record_action_attempt(action: str, success: bool, details: Dict[str, Any] | None = None, now: datetime | None = None) -> None:
+def _record_action_attempt(action: str, success: bool, details: dict[str, Any] | None = None, now: datetime | None = None) -> None:
     state = _load_self_heal_state()
     actions = state.setdefault("actions", {})
     actions[action] = {
@@ -1010,7 +1009,7 @@ def _record_action_attempt(action: str, success: bool, details: Dict[str, Any] |
     _save_self_heal_state(state)
 
 
-def _collect_runtime_state(now: datetime | None = None) -> Dict[str, Any]:
+def _collect_runtime_state(now: datetime | None = None) -> dict[str, Any]:
     checked_at = (now or datetime.now()).isoformat()
     mount_expected = _is_mount_expected(now)
     mount_exists = LTFS_MOUNT_POINT.exists()
@@ -1038,7 +1037,7 @@ def _collect_runtime_state(now: datetime | None = None) -> Dict[str, Any]:
     }
 
 
-def _service_is_thrashing(state: Dict[str, Any]) -> bool:
+def _service_is_thrashing(state: dict[str, Any]) -> bool:
     service_state = (state.get("service_state") or "").strip().lower()
     journal = state.get("journal_excerpt", "").lower()
     if service_state in {"failed", "activating", "deactivating", "auto-restart"}:
@@ -1059,14 +1058,14 @@ def _service_is_thrashing(state: Dict[str, Any]) -> bool:
     return any(marker in journal for marker in recent_failure_markers)
 
 
-def _should_intervene_outside_window(state: Dict[str, Any]) -> bool:
+def _should_intervene_outside_window(state: dict[str, Any]) -> bool:
     return not state.get("mount_expected", True) and _service_is_thrashing(state)
 
 
 def _cursor_recovery_issue(
-    state: Dict[str, Any],
-    open_cursors: list[Dict[str, Any]] | None = None,
-) -> Dict[str, Any] | None:
+    state: dict[str, Any],
+    open_cursors: list[dict[str, Any]] | None = None,
+) -> dict[str, Any] | None:
     """Detecta sessão de escrita interrompida que exige recuperação por cursor."""
     cursors = open_cursors if open_cursors is not None else _list_recovery_cursors()
     if not cursors:
@@ -1086,7 +1085,7 @@ def _cursor_recovery_issue(
     }
 
 
-def diagnose_known_issue(now: datetime | None = None) -> Dict[str, Any]:
+def diagnose_known_issue(now: datetime | None = None) -> dict[str, Any]:
     state = _collect_runtime_state(now=now)
     if DEBUG:
         LOGGER.debug("[DIAGNOSE] service=%s mounted=%s expected=%s", state.get("service_state"), state.get("mounted"), state.get("mount_expected"))
@@ -1132,7 +1131,7 @@ def diagnose_known_issue(now: datetime | None = None) -> Dict[str, Any]:
     return _respond(True, f"Incidente LTFS conhecido detectado: {matched['title']}", details)
 
 
-def _run_selfheal_script() -> Dict[str, Any]:
+def _run_selfheal_script() -> dict[str, Any]:
     if LTFS_ENABLE_LEGACY_SELFHEAL_SCRIPT and Path(LTFS_LEGACY_SELFHEAL_SCRIPT).exists():
         proc = _run_command([LTFS_LEGACY_SELFHEAL_SCRIPT])
     else:
@@ -1144,7 +1143,7 @@ def _run_selfheal_script() -> Dict[str, Any]:
     }
 
 
-def _run_ltfsck() -> Dict[str, Any]:
+def _run_ltfsck() -> dict[str, Any]:
     result = _run_exclusive_operation("ltfsck", ["ltfsck", "-f", LTFS_DEVICE], streaming=True, success_codes=frozenset({0, 1}))
     details = result.get("details", {})
     command_result = details.get("command_result", {})
@@ -1157,7 +1156,7 @@ def _run_ltfsck() -> Dict[str, Any]:
     }
 
 
-def _run_deep_recovery() -> Dict[str, Any]:
+def _run_deep_recovery() -> dict[str, Any]:
     paused_units = _pause_background_ltfs_units()
     result = deep_recovery()
     details = result.get("details", {})
@@ -1172,7 +1171,7 @@ def _run_deep_recovery() -> Dict[str, Any]:
     }
 
 
-def _recovery_action_succeeded(action_result: Dict[str, Any], ltfsck_op: bool = False) -> bool:
+def _recovery_action_succeeded(action_result: dict[str, Any], ltfsck_op: bool = False) -> bool:
     if "success" in action_result:
         return bool(action_result.get("success"))
     try:
@@ -1183,8 +1182,8 @@ def _recovery_action_succeeded(action_result: Dict[str, Any], ltfsck_op: bool = 
         return False
 
 
-def _execute_recovery_action(action: str) -> Dict[str, Any]:
-    action_result: Dict[str, Any]
+def _execute_recovery_action(action: str) -> dict[str, Any]:
+    action_result: dict[str, Any]
     resume_background_units = False
 
     if action == "selfheal_remount":
@@ -1333,8 +1332,8 @@ def _execute_recovery_action(action: str) -> Dict[str, Any]:
 
 def _choose_escalation_action(
     previous_action: str,
-    diagnosis: Dict[str, Any],
-    action_result: Dict[str, Any] | None = None,
+    diagnosis: dict[str, Any],
+    action_result: dict[str, Any] | None = None,
 ) -> str | None:
     issue = diagnosis.get("details", {}).get("issue") or {}
     suggested_action = issue.get("recovery_action")
@@ -1356,9 +1355,9 @@ def _choose_escalation_action(
     return None
 
 
-def _active_unmount_block_units() -> list[Dict[str, Any]]:
+def _active_unmount_block_units() -> list[dict[str, Any]]:
     """Retorna writers que tornam stop/unmount inseguro."""
-    active_units: list[Dict[str, Any]] = []
+    active_units: list[dict[str, Any]] = []
     for unit in LTFS_UNMOUNT_BLOCK_UNITS:
         proc = _run_command(["systemctl", "is-active", unit])
         state = ((proc.stdout or proc.stderr).strip() or "inactive").splitlines()[0]
@@ -1367,7 +1366,7 @@ def _active_unmount_block_units() -> list[Dict[str, Any]]:
     return active_units
 
 
-def _unmount_safety_preflight() -> Dict[str, Any]:
+def _unmount_safety_preflight() -> dict[str, Any]:
     """Bloqueia unmount se houver escrita em andamento ou cursor aberto."""
     mount = _run_command(["findmnt", str(LTFS_MOUNT_POINT)])
     mounted = mount.returncode == 0
@@ -1395,7 +1394,7 @@ def _unmount_safety_preflight() -> Dict[str, Any]:
     }
 
 
-def orchestrated_mount() -> Dict[str, Any]:
+def orchestrated_mount() -> dict[str, Any]:
     """Monta LTFS via ltfs-fc-stable-start.
 
     NÃO usa _run_exclusive_operation: o próprio ltfs-fc-stable-start
@@ -1414,7 +1413,7 @@ def orchestrated_mount() -> Dict[str, Any]:
     _fc_start = os.environ.get("LTFS_FC_STABLE_START", "/var/db/ltfs-tools/ltfs-fc-stable-start")
     result = _run_orchestration_command([_fc_start], streaming=True)
     success = result["returncode"] == 0
-    resume_info: Dict[str, Any] = {}
+    resume_info: dict[str, Any] = {}
     if success:
         resume_info = {"resumed_background_units": _resume_suspended_units(service_actions)}
     else:
@@ -1422,14 +1421,14 @@ def orchestrated_mount() -> Dict[str, Any]:
             "background_units_paused": True,
             "explanation": "Mount falhou; timers/servicos de escrita ficam pausados para evitar remount/flush concorrente.",
         }
-    cursor_info: Dict[str, Any] = {}
+    cursor_info: dict[str, Any] = {}
     if success:
         volser = _detect_volser()
         LTFS_CURSOR_DIR.mkdir(parents=True, exist_ok=True)
         sid = datetime.now().strftime("%Y%m%d_%H%M%S")
         block = _read_tape_block()
         now_iso = datetime.now().isoformat()
-        cursor_data: Dict[str, Any] = {
+        cursor_data: dict[str, Any] = {
             "volser": volser,
             "session_id": sid,
             "device": LTFS_DEVICE,
@@ -1453,7 +1452,7 @@ def orchestrated_mount() -> Dict[str, Any]:
     )
 
 
-def orchestrated_stop() -> Dict[str, Any]:
+def orchestrated_stop() -> dict[str, Any]:
     """Desmonta LTFS de forma orquestrada e exclusiva."""
     # Durante stop, o processo ltfs montado e o holder esperado do device.
     # O wrapper de stop faz o unmount gracioso e aguarda a liberacao; bloquear
@@ -1467,7 +1466,7 @@ def orchestrated_stop() -> Dict[str, Any]:
     )
 
 
-def deep_recovery() -> Dict[str, Any]:
+def deep_recovery() -> dict[str, Any]:
     """Executa ltfsck --deep-recovery com lock exclusivo de fita.
 
     Para o loop de Restart= do serviço LTFS antes de adquirir o lock — sem isso,
@@ -1477,7 +1476,7 @@ def deep_recovery() -> Dict[str, Any]:
     return _run_exclusive_operation("deep-recovery", [LTFSCK_BIN, "--deep-recovery", LTFS_DEVICE], streaming=True, success_codes=frozenset({0, 1}))
 
 
-def force_mount_ro() -> Dict[str, Any]:
+def force_mount_ro() -> dict[str, Any]:
     """Monta LTFS em RO ignorando EOD ausente — último recurso antes de erase-history/mkltfs.
 
     Usa force_mount_no_eod do ltfs-patched para salvar dados legíveis mesmo com
@@ -1492,7 +1491,7 @@ def force_mount_ro() -> Dict[str, Any]:
     )
 
 
-def erase_history() -> Dict[str, Any]:
+def erase_history() -> dict[str, Any]:
     """Executa ltfsck --erase-history: reconstrói índice descartando histórico de gerações.
 
     Usado quando deep-recovery falha por LOCATE -20301. Pode perder dados gravados
@@ -1507,7 +1506,7 @@ def erase_history() -> Dict[str, Any]:
     )
 
 
-def _cursor_rollback_to_persistence(volser: str, data: Dict[str, Any]) -> Dict[str, Any]:
+def _cursor_rollback_to_persistence(volser: str, data: dict[str, Any]) -> dict[str, Any]:
     """Restaura a fita para o rollback point LTFS mais próximo do cursor."""
     cursor_time = _parse_dt(data.get("updated_at", "") or data.get("opened_at", ""))
     list_result = _run_exclusive_operation(
@@ -1564,7 +1563,7 @@ def _cursor_rollback_to_persistence(volser: str, data: Dict[str, Any]) -> Dict[s
     }
 
 
-def self_heal(now: datetime | None = None) -> Dict[str, Any]:
+def self_heal(now: datetime | None = None) -> dict[str, Any]:
     initial_check = check_catalog(now=now)
     if initial_check["success"]:
         runtime_state = _collect_runtime_state(now=now)
@@ -1606,11 +1605,11 @@ def self_heal(now: datetime | None = None) -> Dict[str, Any]:
         f"Ação: {action}"
     )
 
-    recovery_chain: list[Dict[str, Any]] = []
+    recovery_chain: list[dict[str, Any]] = []
     current_action: str = action
-    current_result: Dict[str, Any] | None = None
-    final_check: Dict[str, Any] = {}
-    followup_diagnosis: Dict[str, Any] | None = None
+    current_result: dict[str, Any] | None = None
+    final_check: dict[str, Any] = {}
+    followup_diagnosis: dict[str, Any] | None = None
     MAX_ESCALATION_STEPS = 4
 
     for _step in range(MAX_ESCALATION_STEPS):
@@ -1699,7 +1698,7 @@ def _is_mount_expected(now: datetime | None = None) -> bool:
     return current >= start_time or current < end_time
 
 
-def _expected_unmounted_response(now: datetime | None = None) -> Dict[str, Any]:
+def _expected_unmounted_response(now: datetime | None = None) -> dict[str, Any]:
     open_cursors = _list_recovery_cursors()
     if open_cursors:
         return _respond(
@@ -1726,7 +1725,7 @@ def _expected_unmounted_response(now: datetime | None = None) -> Dict[str, Any]:
     )
 
 
-def check_catalog(now: datetime | None = None) -> Dict[str, Any]:
+def check_catalog(now: datetime | None = None) -> dict[str, Any]:
     if not LTFS_MOUNT_POINT.exists():
         if not _is_mount_expected(now):
             return _expected_unmounted_response(now)
@@ -1755,7 +1754,7 @@ def _latest_backup_dir() -> Path | None:
     return max(dirs, key=lambda d: d.stat().st_mtime)
 
 
-def catalog_restore() -> Dict[str, Any]:
+def catalog_restore() -> dict[str, Any]:
     if not CATALOG_DB:
         return _respond(False, "TAPE_CATALOG_DB não configurado")
 
@@ -1774,7 +1773,7 @@ def catalog_restore() -> Dict[str, Any]:
     return check_catalog()
 
 
-def drive_check(now: datetime | None = None) -> Dict[str, Any]:
+def drive_check(now: datetime | None = None) -> dict[str, Any]:
     catalog_resp = check_catalog(now=now)
     if not catalog_resp["success"]:
         diagnosis = diagnose_known_issue(now=now)
@@ -1803,7 +1802,7 @@ def drive_check(now: datetime | None = None) -> Dict[str, Any]:
     return _respond(True, "Drive LTFS saudável")
 
 
-def backup_catalog() -> Dict[str, Any]:
+def backup_catalog() -> dict[str, Any]:
     if not CATALOG_DB:
         return _respond(False, "TAPE_CATALOG_DB indefinido")
 
@@ -1857,7 +1856,7 @@ def backup_catalog() -> Dict[str, Any]:
             shutil.rmtree(child, ignore_errors=True)
             cleaned.append(child.name)
 
-    details: Dict[str, Any] = {"dest": str(dest), "cleaned": cleaned}
+    details: dict[str, Any] = {"dest": str(dest), "cleaned": cleaned}
     if export_file.exists():
         details["export_file"] = str(export_file)
     if list_file.exists():
@@ -1885,14 +1884,14 @@ def _read_tape_block() -> int | None:
     return None
 
 
-def _cursor_write(path: Path, data: Dict[str, Any]) -> None:
+def _cursor_write(path: Path, data: dict[str, Any]) -> None:
     """Escrita atômica do cursor via rename."""
     tmp = path.with_suffix(".tmp")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2))
     tmp.rename(path)
 
 
-def _cursor_read(volser: str) -> tuple[Dict[str, Any] | None, str]:
+def _cursor_read(volser: str) -> tuple[dict[str, Any] | None, str]:
     """Lê cursor; retorna (dados, erro). erro='' se ok."""
     path = _cursor_path(volser)
     if not path.exists():
@@ -1903,7 +1902,7 @@ def _cursor_read(volser: str) -> tuple[Dict[str, Any] | None, str]:
         return None, f"Erro ao ler cursor: {exc}"
 
 
-def _cursor_summary(data: Dict[str, Any]) -> Dict[str, Any]:
+def _cursor_summary(data: dict[str, Any]) -> dict[str, Any]:
     """Resumo seguro para respostas CLI sem despejar listas grandes no journal."""
     files_written = data.get("files_written") or []
     files_pending = data.get("files_pending") or []
@@ -1925,19 +1924,19 @@ def _cursor_summary(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def _cursor_needs_recovery(data: Dict[str, Any]) -> bool:
+def _cursor_needs_recovery(data: dict[str, Any]) -> bool:
     return str(data.get("status") or "").strip() in LTFS_CURSOR_RECOVERY_STATUSES
 
 
-def _cursor_has_write_progress(data: Dict[str, Any]) -> bool:
+def _cursor_has_write_progress(data: dict[str, Any]) -> bool:
     return bool(data.get("last_file") or data.get("files_written") or data.get("files_pending"))
 
 
-def _list_recovery_cursors() -> list[Dict[str, Any]]:
+def _list_recovery_cursors() -> list[dict[str, Any]]:
     """Lista cursores abertos que tornam um unmount suspeito."""
     if not LTFS_CURSOR_DIR.exists():
         return []
-    cursors: list[Dict[str, Any]] = []
+    cursors: list[dict[str, Any]] = []
     for path in sorted(LTFS_CURSOR_DIR.glob("*.json")):
         try:
             data = json.loads(path.read_text())
@@ -1959,7 +1958,7 @@ def _list_recovery_cursors() -> list[Dict[str, Any]]:
     return cursors
 
 
-def _select_recovery_cursor(cursors: list[Dict[str, Any]] | None = None) -> Dict[str, Any] | None:
+def _select_recovery_cursor(cursors: list[dict[str, Any]] | None = None) -> dict[str, Any] | None:
     candidates = cursors if cursors is not None else _list_recovery_cursors()
     if not candidates:
         return None
@@ -1972,7 +1971,7 @@ def _select_recovery_cursor(cursors: list[Dict[str, Any]] | None = None) -> Dict
     )
 
 
-def cursor_open(volser: str, session_id: str | None = None) -> Dict[str, Any]:
+def cursor_open(volser: str, session_id: str | None = None) -> dict[str, Any]:
     """
     Abre uma sessão de escrita na fita e registra o bloco inicial.
     Deve ser chamado ANTES de qualquer write na sessão.
@@ -1981,7 +1980,7 @@ def cursor_open(volser: str, session_id: str | None = None) -> Dict[str, Any]:
     sid = session_id or datetime.now().strftime("%Y%m%d_%H%M%S")
     block = _read_tape_block()
     now = datetime.now().isoformat()
-    cursor: Dict[str, Any] = {
+    cursor: dict[str, Any] = {
         "volser": volser,
         "session_id": sid,
         "device": LTFS_DEVICE,
@@ -2002,7 +2001,7 @@ def cursor_open(volser: str, session_id: str | None = None) -> Dict[str, Any]:
     })
 
 
-def cursor_update(volser: str, file_path: str, block: int | None = None) -> Dict[str, Any]:
+def cursor_update(volser: str, file_path: str, block: int | None = None) -> dict[str, Any]:
     """
     Atualiza o cursor após gravar um arquivo com sucesso.
     Se block não for passado, lê a posição atual via mt tell.
@@ -2033,7 +2032,7 @@ def cursor_update(volser: str, file_path: str, block: int | None = None) -> Dict
     })
 
 
-def cursor_close(volser: str) -> Dict[str, Any]:
+def cursor_close(volser: str) -> dict[str, Any]:
     """
     Encerra a sessão de escrita com status 'clean'.
     Indica que a fita está consistente e não precisa de recovery.
@@ -2054,7 +2053,7 @@ def cursor_close(volser: str) -> Dict[str, Any]:
     })
 
 
-def cursor_status(volser: str) -> Dict[str, Any]:
+def cursor_status(volser: str) -> dict[str, Any]:
     """Exibe estado atual do cursor de escrita para um volser."""
     data, err = _cursor_read(volser)
     if err:
@@ -2064,7 +2063,7 @@ def cursor_status(volser: str) -> Dict[str, Any]:
     })
 
 
-def cursor_recover(volser: str) -> Dict[str, Any]:
+def cursor_recover(volser: str) -> dict[str, Any]:
     """
     Recovery a partir do cursor de escrita:
       1. Lê o checkpoint salvo (last_block + arquivos confirmados)
@@ -2099,7 +2098,7 @@ def cursor_recover(volser: str) -> Dict[str, Any]:
         [LTFSCK_BIN, "-f", LTFS_DEVICE],
         streaming=True,
     )
-    rollback_result: Dict[str, Any] | None = None
+    rollback_result: dict[str, Any] | None = None
 
     # ltfsck -f não resolve EOD missing — escalar automaticamente para --deep-recovery
     if not ltfsck_result["success"] and _ltfsck_needs_deep_recovery(ltfsck_result):
@@ -2148,7 +2147,7 @@ def cursor_recover(volser: str) -> Dict[str, Any]:
     if ltfsck_result["success"]:
         reset = _run_command(["systemctl", "reset-failed", LTFS_SERVICE])
         start = _run_command(["systemctl", "start", LTFS_SERVICE])
-        resume_result: Dict[str, Any] | None = None
+        resume_result: dict[str, Any] | None = None
         if start.returncode == 0:
             restart_success = True
             resume_result = _resume_suspended_unit_sets(
@@ -2193,7 +2192,7 @@ def cursor_recover(volser: str) -> Dict[str, Any]:
     )
 
 
-def cursor_list() -> Dict[str, Any]:
+def cursor_list() -> dict[str, Any]:
     """Lista todos os cursores ativos no LTFS_CURSOR_DIR."""
     if not LTFS_CURSOR_DIR.exists():
         return _respond(True, "Nenhum cursor encontrado (diretório ausente)", {"cursors": []})
@@ -2215,7 +2214,7 @@ def cursor_list() -> Dict[str, Any]:
     return _respond(True, f"{len(cursors)} cursor(es) encontrado(s)", {"cursors": cursors})
 
 
-def prepare_mirror() -> Dict[str, Any]:
+def prepare_mirror() -> dict[str, Any]:
     return _respond(
         True,
         "Fita secundária aguardando chegada",
@@ -2223,7 +2222,7 @@ def prepare_mirror() -> Dict[str, Any]:
     )
 
 
-def repair_partition1_label(volser: str = "") -> Dict[str, Any]:
+def repair_partition1_label(volser: str = "") -> dict[str, Any]:
     """Repara o label ANSI corrompido (< 80 bytes) na partição 1, bloco 0.
 
     QUANDO USAR: após SIGKILL mid-write do processo LTFS/FUSE, o label da
@@ -2375,7 +2374,7 @@ def repair_partition1_label(volser: str = "") -> Dict[str, Any]:
         label_file.unlink(missing_ok=True)
 
 
-def repair_partition1_ltfs_label() -> Dict[str, Any]:
+def repair_partition1_ltfs_label() -> dict[str, Any]:
     """Restaura o bloco LTFS label XML na partição 1 copiando da partição 0.
 
     QUANDO USAR: após --repair-partition1-label, o bloco XML (bloco 1 da partição 1)
@@ -2580,7 +2579,7 @@ def repair_partition1_ltfs_label() -> Dict[str, Any]:
             Path(f).unlink(missing_ok=True)
 
 
-def rollback_generation0() -> Dict[str, Any]:
+def rollback_generation0() -> dict[str, Any]:
     """ltfsck -r -g 0 -j: rollback para geração 0 (formato inicial) + apaga histórico.
 
     Cria um volume vazio mas consistente e montável quando a checagem de
@@ -2596,7 +2595,7 @@ def rollback_generation0() -> Dict[str, Any]:
     )
 
 
-def reformat(volser: str) -> Dict[str, Any]:
+def reformat(volser: str) -> dict[str, Any]:
     """Reformata a fita com mkltfs — apaga TODOS os dados permanentemente.
 
     Último recurso quando a estrutura LTFS está irrecuperável. Requer --volser
@@ -2654,7 +2653,7 @@ def _write_reconcile_metrics(orphan_cursors: int, cleared_locks: int, resumed_un
         LOGGER.warning("Falha ao escrever métricas de reconcile: %s", exc)
 
 
-def boot_reconcile() -> Dict[str, Any]:
+def boot_reconcile() -> dict[str, Any]:
     """Reconcilia estado do orchestrator após boot ou operação interrompida.
 
     Seguro por construção: nunca toca a fita. Apenas:
@@ -2716,7 +2715,7 @@ def boot_reconcile() -> Dict[str, Any]:
     )
 
 
-def run_mode(mode: str, volser: str = "", file_path: str = "", block: int | None = None, session_id: str | None = None) -> Dict[str, Any]:
+def run_mode(mode: str, volser: str = "", file_path: str = "", block: int | None = None, session_id: str | None = None) -> dict[str, Any]:
     if mode == "check":
         return check_catalog()
     if mode == "diagnose":
