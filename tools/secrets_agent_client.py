@@ -5,10 +5,11 @@ Exemplo:
   secret = client.get_secret("shared-jira-credentials")
   local  = client.get_local_secret("shared/telegram_bot_token", field="token")
 """
-import httpx
 import logging
-from typing import Optional, Dict, Any
+from typing import Any
 from urllib.parse import quote
+
+import httpx
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +27,7 @@ class SecretsAgentClient:
         self.api_key = api_key
         self.client = httpx.Client(timeout=10)
     
-    def list_secrets(self) -> Optional[Dict[str, Any]]:
+    def list_secrets(self) -> dict[str, Any] | None:
         """Lista títulos dos secrets disponíveis."""
         try:
             resp = self.client.get(f"{self.base_url}/secrets")
@@ -36,7 +37,7 @@ class SecretsAgentClient:
             logger.warning(f"SecretsAgent list_secrets failed: {e}")
             return None
     
-    def get_local_secret(self, name: str, field: str = "password") -> Optional[str]:
+    def get_local_secret(self, name: str, field: str = "password") -> str | None:
         """Busca um secret armazenado localmente no Secrets Agent."""
         try:
             encoded_name = quote(name, safe="")
@@ -52,7 +53,7 @@ class SecretsAgentClient:
             logger.debug(f"SecretsAgent get_local_secret({name}, {field}) failed: {e}")
             return None
     
-    def get_secret(self, item_id: str, field: str = "password") -> Optional[str]:
+    def get_secret(self, item_id: str, field: str = "password") -> str | None:
         """Retorna o valor de um secret (tenta local primeiro, depois Bitwarden)."""
         # 1. Tenta endpoint local
         val = self.get_local_secret(item_id, field=field)
@@ -71,7 +72,7 @@ class SecretsAgentClient:
             logger.warning(f"SecretsAgent get_secret({item_id}) failed: {e}")
             return None
     
-    def get_secret_field(self, item_id: str, field_name: str) -> Optional[str]:
+    def get_secret_field(self, item_id: str, field_name: str) -> str | None:
         """Retorna um campo específico de um item (local ou BW)."""
         # 1. Tenta local com field_name direto
         val = self.get_local_secret(item_id, field=field_name)

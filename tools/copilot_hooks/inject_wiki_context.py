@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import wiki_search_lib as wsl  # noqa: E402
+import wiki_search_lib as wsl
 
 MAX_CHARS = int(os.environ.get("RPA4ALL_WIKI_MAX_CHARS", "6000"))
 MODE_GLOBAL = os.environ.get("RPA4ALL_WIKI_MODE", "on").strip().lower()
@@ -87,9 +87,8 @@ def _block_keywords(root: Path) -> str:
     Usa o próprio detector de incompletude para só atuar no cenário de bloqueio real:
     paths + reason + snippet dos achados. Ecoa a lógica do block_incomplete_stop.
     """
-    import sys as _sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "hooks"))
-    import incomplete_markers as im  # noqa: E402
+    import incomplete_markers as im
 
     try:
         import os as _os

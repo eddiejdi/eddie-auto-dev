@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-from pathlib import Path
 import sys
 import time
+from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
@@ -77,8 +77,7 @@ def main():
             f.write(f"initial_url: {url}\n")
             f.write(f"final_url: {current_url}\n")
             f.write(f"submitted_form: {submitted}\n\n")
-            for e in network_events:
-                f.write(e + "\n")
+            f.writelines(e + "\n" for e in network_events)
 
         print(f"wrote HAR to {har_path}")
         print(f"wrote screenshot to {screenshot}")

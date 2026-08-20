@@ -30,7 +30,6 @@ import threading
 import time
 from collections import deque
 from pathlib import Path
-from typing import Optional
 
 import requests
 import urllib3
@@ -93,8 +92,8 @@ class AuthentikSecretManager:
         self._available: bool = False
         self._last_check: float = 0.0
         self._status_ttl: float = float(os.environ.get("AUTHENTIK_STATUS_TTL", "60"))
-        self._auth_flow_pk: Optional[str] = None
-        self._invalidation_flow_pk: Optional[str] = None
+        self._auth_flow_pk: str | None = None
+        self._invalidation_flow_pk: str | None = None
         self._lock = threading.Lock()
         self._http = requests.Session()
         self._http.verify = False
@@ -142,7 +141,7 @@ class AuthentikSecretManager:
             AK_STATUS_GAUGE.set(1 if self._available else 0)
         return self._available
 
-    def _get_flow_pk(self, designation: str, attr: str) -> Optional[str]:
+    def _get_flow_pk(self, designation: str, attr: str) -> str | None:
         """Obtém PK de um flow por designation (cacheado em atributo)."""
         cached = getattr(self, attr, None)
         if cached:
@@ -163,15 +162,15 @@ class AuthentikSecretManager:
             logger.warning("Authentik: falha ao buscar flow %s: %s", designation, exc)
         return None
 
-    def _get_auth_flow_pk(self) -> Optional[str]:
+    def _get_auth_flow_pk(self) -> str | None:
         return self._get_flow_pk("authorization", "_auth_flow_pk")
 
-    def _get_invalidation_flow_pk(self) -> Optional[str]:
+    def _get_invalidation_flow_pk(self) -> str | None:
         return self._get_flow_pk("invalidation", "_invalidation_flow_pk")
 
     # ── Leitura ──────────────────────────────────────────────
 
-    def get_secret(self, name: str, field: str = "password") -> Optional[str]:
+    def get_secret(self, name: str, field: str = "password") -> str | None:
         """Busca secret no Authentik por client_id exato."""
         client_id = self._client_id(name, field)
         try:
@@ -223,7 +222,7 @@ class AuthentikSecretManager:
 
     # ── Escrita ──────────────────────────────────────────────
 
-    def upsert_secret(self, payload: "SecretPayload") -> tuple[bool, str, Optional[str]]:
+    def upsert_secret(self, payload: SecretPayload) -> tuple[bool, str, str | None]:
         """Cria ou atualiza secret no Authentik via OAuth2 provider."""
         client_id = self._client_id(payload.name, payload.field)
         try:
@@ -291,7 +290,7 @@ class AuthentikSecretManager:
 
     # ── Remoção ──────────────────────────────────────────────
 
-    def delete_secret(self, name: str, field: str = "password") -> tuple[bool, Optional[str]]:
+    def delete_secret(self, name: str, field: str = "password") -> tuple[bool, str | None]:
         """Remove secret do Authentik."""
         client_id = self._client_id(name, field)
         try:
@@ -384,7 +383,7 @@ class LocalVault:
         self._dir = vault_dir
         self._dir.mkdir(parents=True, exist_ok=True)
         self._passfile = passfile
-        self._key: Optional[bytes] = None
+        self._key: bytes | None = None
 
     def _get_key(self) -> bytes:
         if self._key:
@@ -417,7 +416,7 @@ class LocalVault:
         return bytes(out)
 
     def store(
-        self, name: str, value: str, field: str = "password", notes: Optional[str] = None
+        self, name: str, value: str, field: str = "password", notes: str | None = None
     ) -> bool:
         try:
             payload = json.dumps({
@@ -439,7 +438,7 @@ class LocalVault:
             logger.error("Local vault store error: %s", exc)
             return False
 
-    def get(self, name: str, field: str = "password") -> Optional[str]:
+    def get(self, name: str, field: str = "password") -> str | None:
         fpath = self._dir / self._safe_filename(name, field)
         if not fpath.exists():
             return None
@@ -505,7 +504,7 @@ class SecretPayload(BaseModel):
     name: str
     value: str
     field: str = "password"
-    notes: Optional[str] = None
+    notes: str | None = None
 
 
 @app.on_event("startup")
@@ -536,7 +535,7 @@ def startup_event() -> None:
 
 def init_db() -> None:
     """Compatibilidade retroativa."""
-    return None
+    return
 
 
 def audit_log(ip: str, action: str, secret_id: str, result: str) -> None:

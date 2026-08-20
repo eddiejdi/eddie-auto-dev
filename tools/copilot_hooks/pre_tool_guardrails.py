@@ -26,7 +26,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-
 # ---------------------------------------------------------------------------
 # Idioma obrigatório — PT-BR em campos textuais globais do payload
 # ---------------------------------------------------------------------------
@@ -567,8 +566,8 @@ def _ask(reason: str, context: str) -> str:
 def _notify_caution_telegram(reason: str, command_snippet: str) -> None:
     """Notificação fire-and-forget no Telegram quando CAUTION é acionado.
     Nunca bloqueia o hook — exceções são silenciadas."""
-    import urllib.request as _ureq
     import urllib.parse as _uparse
+    import urllib.request as _ureq
 
     # Carregar credenciais de env vars — aceitar nomes padrão do homelab e aliases
     bot_tok = (

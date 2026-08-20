@@ -13,12 +13,12 @@ Saída:
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import Any, Dict, List, Optional
-import re
-import json
 import argparse
-from urllib.parse import urlparse, parse_qs
+import json
+import re
+from pathlib import Path
+from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 
 def is_playlist_url(url: str) -> bool:
@@ -35,7 +35,7 @@ def is_playlist_url(url: str) -> bool:
     )
 
 
-def extract_docid(url: str) -> Optional[str]:
+def extract_docid(url: str) -> str | None:
     """Extrai parâmetros comuns de id de vídeo (docid, v, videoId) de uma URL.
 
     Retorna None se não encontrar.
@@ -44,14 +44,14 @@ def extract_docid(url: str) -> Optional[str]:
         p = urlparse(url)
         qs = parse_qs(p.query)
         for k in ("docid", "v", "videoId", "video_id", "id"):
-            if k in qs and qs[k]:
+            if qs.get(k):
                 return qs[k][0]
     except Exception:
         return None
     return None
 
 
-def parse_content_text(text: str) -> Dict[str, Any]:
+def parse_content_text(text: str) -> dict[str, Any]:
     """Analisa o texto de um content.txt e retorna estruturas com eventos relevantes.
 
     Campos retornados:
@@ -59,7 +59,7 @@ def parse_content_text(text: str) -> Dict[str, Any]:
       - console_adds: lista de dicts com chaves (level, msg, category, vid)
       - other_request_failed: lista de dicts com (url, error, docid)
     """
-    out: Dict[str, Any] = {
+    out: dict[str, Any] = {
         "playlist_requests": [],
         "console_adds": [],
         "other_request_failed": [],
@@ -80,7 +80,7 @@ def parse_content_text(text: str) -> Dict[str, Any]:
 
     # Captura blocos de 'responses' com status 200 (quando presentes no snapshot JSON)
     # Busca por padrões "url": "..." e "status": <num> próximos
-    responses_block_re = re.compile(r'"responses"\s*:\s*\[(.*?)\]', re.S)
+    responses_block_re = re.compile(r'"responses"\s*:\s*\[(.*?)\]', re.DOTALL)
     block_m = responses_block_re.search(text)
     if block_m:
         block = block_m.group(1)
@@ -111,13 +111,13 @@ def parse_content_text(text: str) -> Dict[str, Any]:
     return out
 
 
-def summarize_session(session_path: Path) -> Dict[str, Any]:
+def summarize_session(session_path: Path) -> dict[str, Any]:
     """Varre os `call_*` em `session_path` e agrega um resumo.
 
     Retorna um dicionário com contagens e exemplos.
     """
     calls = sorted([p for p in session_path.iterdir() if p.is_dir() and p.name.startswith("call_")])
-    summary: Dict[str, Any] = {
+    summary: dict[str, Any] = {
         "total_calls": len(calls),
         "added": 0,
         "already": 0,

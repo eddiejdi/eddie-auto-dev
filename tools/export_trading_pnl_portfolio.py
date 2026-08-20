@@ -6,11 +6,10 @@ Uso:
 
 Se `DATABASE_URL` estiver definido no ambiente, o script usará ele.
 """
-import os
-import sys
 import argparse
 import csv
-import time
+import os
+import sys
 from datetime import datetime
 
 try:

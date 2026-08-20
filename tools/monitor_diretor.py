@@ -3,12 +3,13 @@
 
 Usage: python3 tools/monitor_diretor.py
 """
-from datetime import datetime, timedelta
-import time
-import subprocess
 # Load bus module by path to avoid import errors
 import importlib.util
+import subprocess
+import time
+from datetime import datetime, timedelta
 from pathlib import Path
+
 bus_path = Path(__file__).resolve().parents[1] / 'specialized_agents' / 'agent_communication_bus.py'
 spec = importlib.util.spec_from_file_location('agent_bus_local', str(bus_path))
 agent_bus = importlib.util.module_from_spec(spec)

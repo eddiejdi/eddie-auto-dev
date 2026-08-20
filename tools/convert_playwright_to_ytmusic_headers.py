@@ -17,15 +17,15 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 
-def load_capture(path: Path) -> Dict[str, Any]:
+def load_capture(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
     return data
 
 
-def find_best_headers(capture: Dict[str, Any]) -> Optional[Dict[str, str]]:
+def find_best_headers(capture: dict[str, Any]) -> dict[str, str] | None:
     # Prefer request entries that contain cookies or x-goog-authuser
     requests = capture.get("requests") or []
     def has_keys(hdrs, keys):
@@ -53,7 +53,7 @@ def find_best_headers(capture: Dict[str, Any]) -> Optional[Dict[str, str]]:
     return None
 
 
-def build_header_lines(headers: Dict[str, str]) -> str:
+def build_header_lines(headers: dict[str, str]) -> str:
     # Convert mapping into lines like copied from browser DevTools
     lines = []
     for k, v in headers.items():

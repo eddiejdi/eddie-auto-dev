@@ -10,13 +10,12 @@ Uso (CLI):
 from __future__ import annotations
 
 import os
-from typing import Optional
 from urllib.parse import quote
 
 import requests
 
 
-def get_secret_from_authentik(name: str, field: str = "password", auth_url: Optional[str] = None, token: Optional[str] = None) -> Optional[str]:
+def get_secret_from_authentik(name: str, field: str = "password", auth_url: str | None = None, token: str | None = None) -> str | None:
     """Tenta resolver um secret no Authentik.
 
     A função tenta, em ordem:
@@ -83,8 +82,8 @@ def get_secret_from_authentik(name: str, field: str = "password", auth_url: Opti
 
 
 def _main() -> None:
-    import sys
     import json
+    import sys
 
     if len(sys.argv) < 2:
         print("Uso: authentik_secret_fetcher.py <name> [field]")

@@ -3,12 +3,11 @@
 
 Checks main pages for expected content and API endpoints.
 """
-import requests
-from bs4 import BeautifulSoup
 import json
+import os
 import sys
 
-import os
+import requests
 
 HOST = os.environ.get('HOMELAB_HOST', 'localhost')
 

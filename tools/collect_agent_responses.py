@@ -3,10 +3,10 @@
 
 Usage: run the script; it listens for 5 seconds and prints any RESPONSE messages.
 """
-import time
-import pathlib
 import importlib.util
 import json
+import pathlib
+import time
 
 # Load bus module by path to avoid importing the whole package
 bus_path = pathlib.Path(__file__).resolve().parents[1] / 'specialized_agents' / 'agent_communication_bus.py'

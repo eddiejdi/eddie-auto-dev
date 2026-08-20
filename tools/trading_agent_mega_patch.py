@@ -19,8 +19,6 @@ Bugs corrigidos:
 13. LOW: risk_management/strategy config ignorados
 """
 
-import re
-import sys
 from pathlib import Path
 
 AGENT_PATH = Path("/apps/crypto-trader/trading/btc_trading_agent/trading_agent.py")

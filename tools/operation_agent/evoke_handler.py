@@ -1,8 +1,9 @@
-from fastapi import FastAPI, Header, HTTPException, Request
-from pydantic import BaseModel
-import os
-import httpx
 import logging
+import os
+
+import httpx
+from fastapi import FastAPI, Header, HTTPException
+from pydantic import BaseModel
 
 app = FastAPI(title="Operation Agent Evoke Handler")
 

@@ -7,6 +7,7 @@ depende de um Home Assistant real.
 """
 import asyncio
 import json
+
 from specialized_agents.home_automation.ha_adapter import HomeAssistantAdapter
 
 

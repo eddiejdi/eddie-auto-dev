@@ -11,8 +11,8 @@ from __future__ import annotations
 import logging
 import re
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 logger = logging.getLogger("meet_bot")
 
@@ -61,7 +61,6 @@ def _build_driver():
 def _click_first(driver, xpaths: list[str], timeout: float = 12) -> bool:
     """Clica no primeiro elemento clicável entre os xpaths (retorna False se nenhum)."""
     from selenium.webdriver.common.by import By
-    from selenium.webdriver.support.ui import WebDriverWait
 
     deadline = time.time() + timeout
     while time.time() < deadline:

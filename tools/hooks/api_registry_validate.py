@@ -121,7 +121,7 @@ def extract_candidates(blob: str, file_path: str = "") -> set[str]:
             if pm:
                 current_path = pm.group(1)
                 continue
-            mm = re.match(r"""^\s{2,8}(get|post|put|patch|delete|head|options):\s*$""", line, re.I)
+            mm = re.match(r"""^\s{2,8}(get|post|put|patch|delete|head|options):\s*$""", line, re.IGNORECASE)
             if mm and current_path:
                 found.add(_op_key(mm.group(1), current_path))
     return found
@@ -285,7 +285,7 @@ def run_as_cli(argv: list[str]) -> int:
         reader = _staged_added_lines
     else:
         files = [a for a in argv if not a.startswith("--")]
-        reader = lambda f: Path(f).read_text(errors="ignore")  # noqa: E731
+        reader = lambda f: Path(f).read_text(errors="ignore")
 
     skip_ext = (".lock", ".png", ".jpg", ".jpeg", ".pdf")
     duplicate_found = False

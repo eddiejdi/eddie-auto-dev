@@ -34,11 +34,11 @@ import os
 import subprocess
 import sys
 import time
+from collections.abc import Generator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Generator
 
 logging.basicConfig(
     level=logging.INFO,

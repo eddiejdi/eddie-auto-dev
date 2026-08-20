@@ -8,11 +8,10 @@ Fallback local: Pi + Ollama (sem evict de trading-*).
 from __future__ import annotations
 
 import json
-import os
+import sys
 import time
 import urllib.error
 import urllib.request
-import sys
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -22,7 +21,7 @@ _HOOKS_DIR = Path(__file__).resolve().parent
 if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
-from runtime_env import is_prod  # noqa: E402
+from runtime_env import is_prod
 
 FLEET_PATH: Final[Path] = Path.home() / "apps/agents/agents/free-openrouter/fleet.yaml"
 CACHE_PATH: Final[Path] = Path.home() / ".grok/state/sidequests/worker-cache.json"
@@ -145,7 +144,7 @@ def fetch_openrouter_model_ids(
     """Lista ids do catálogo OpenRouter. None se a rede falhar."""
     req = urllib.request.Request(url, headers={"User-Agent": "rpa4all-sidequest/1.0"})
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:  # noqa: S310
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             payload = json.loads(resp.read().decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError, ValueError):
         return None

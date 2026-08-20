@@ -15,7 +15,7 @@ import re
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any
 
 try:
     from tools.taxonomy_meta import (
@@ -53,7 +53,7 @@ SKIP_DIR_PARTS = {
 }
 
 # Infer schema from path when DDL does not declare one.
-PATH_SCHEMA_HINTS: List[Tuple[str, str]] = [
+PATH_SCHEMA_HINTS: list[tuple[str, str]] = [
     ("btc_trading_agent", "btc"),
     ("clear_trading_agent", "clear"),
     ("marketing", "marketing"),
@@ -65,7 +65,7 @@ PATH_SCHEMA_HINTS: List[Tuple[str, str]] = [
     ("specialized_agents", "public"),
 ]
 
-TABLE_CATEGORIES: Dict[str, str] = {
+TABLE_CATEGORIES: dict[str, str] = {
     "trading": r"(trade|candle|decision|position|order|market_state|learning_reward|performance|conversion|llm_call|llm_log|ai_plan|profile_alloc|ai_trade|exchange_|ledger)",
     "governance": r"(agent_action|schema_migration|agent_audit|governance)",
     "ipc": r"(agent_ipc|bus_message|communication)",
@@ -89,7 +89,7 @@ class TablesCatalog:
 
     def __init__(self, root_path: str = "/workspace/eddie-auto-dev"):
         self.root = Path(root_path)
-        self.catalog: Dict[str, Any] = {
+        self.catalog: dict[str, Any] = {
             "catalogVersion": "1.0.0",
             "domain": "tables",
             "generatedAt": datetime.now().isoformat(),
@@ -101,8 +101,8 @@ class TablesCatalog:
                 "schemaCount": 0,
             },
         }
-        self.tables: Dict[str, Dict[str, Any]] = {}
-        self.sources_scanned: List[str] = []
+        self.tables: dict[str, dict[str, Any]] = {}
+        self.sources_scanned: list[str] = []
 
     def _should_skip(self, path: Path) -> bool:
         try:
@@ -120,21 +120,21 @@ class TablesCatalog:
                 return True
         return False
 
-    def _path_schema_hint(self, filepath: Path) -> Optional[str]:
+    def _path_schema_hint(self, filepath: Path) -> str | None:
         rel = str(filepath.relative_to(self.root)).replace("\\", "/")
         for hint, schema in PATH_SCHEMA_HINTS:
             if rel.startswith(hint) or f"/{hint}" in f"/{rel}":
                 return schema
         return None
 
-    def _resolve_schema_const(self, content: str) -> Optional[str]:
+    def _resolve_schema_const(self, content: str) -> str | None:
         m = re.search(
             r"""(?:^|\n)\s*SCHEMA\s*=\s*['"]([A-Za-z_][A-Za-z0-9_]*)['"]""",
             content,
         )
         return m.group(1) if m else None
 
-    def _fqn(self, schema: Optional[str], table: str) -> str:
+    def _fqn(self, schema: str | None, table: str) -> str:
         sch = (schema or "public").lower()
         return f"{sch}.{table.lower()}"
 
@@ -144,8 +144,8 @@ class TablesCatalog:
                 return category
         return "general"
 
-    def _parse_columns(self, body: str) -> List[Dict[str, Any]]:
-        columns: List[Dict[str, Any]] = []
+    def _parse_columns(self, body: str) -> list[dict[str, Any]]:
+        columns: list[dict[str, Any]] = []
         # Split top-level commas roughly by lines first (DDL is usually line-oriented).
         for raw_line in body.splitlines():
             line = raw_line.strip().rstrip(",")
@@ -189,9 +189,9 @@ class TablesCatalog:
             )
         return columns
 
-    def _extract_pk_fk(self, body: str) -> Tuple[List[str], List[Dict[str, str]]]:
-        pks: List[str] = []
-        fks: List[Dict[str, str]] = []
+    def _extract_pk_fk(self, body: str) -> tuple[list[str], list[dict[str, str]]]:
+        pks: list[str] = []
+        fks: list[dict[str, str]] = []
         for m in re.finditer(
             r"PRIMARY\s+KEY\s*\(([^)]+)\)", body, re.IGNORECASE
         ):
@@ -227,13 +227,13 @@ class TablesCatalog:
 
     def _add_table(
         self,
-        schema: Optional[str],
+        schema: str | None,
         table: str,
         body: str,
         source: str,
         filepath: Path,
         line_num: int,
-        extra: Optional[Dict[str, Any]] = None,
+        extra: dict[str, Any] | None = None,
     ) -> None:
         table = table.strip().strip('"')
         if not table or not re.match(r"^[A-Za-z_]", table):
@@ -254,7 +254,7 @@ class TablesCatalog:
             schema=(schema or "public"),
         )
         status = "active"
-        related_apis: List[str] = []
+        related_apis: list[str] = []
         if extra:
             status = extra.get("status", status)
             if extra.get("owner"):
@@ -328,7 +328,7 @@ class TablesCatalog:
 
     def _add_index(
         self,
-        schema: Optional[str],
+        schema: str | None,
         index_name: str,
         table_ref: str,
         filepath: Path,
@@ -373,7 +373,7 @@ class TablesCatalog:
         re.IGNORECASE | re.VERBOSE,
     )
 
-    def _extract_balanced_body(self, content: str, open_paren_idx: int) -> Optional[str]:
+    def _extract_balanced_body(self, content: str, open_paren_idx: int) -> str | None:
         """open_paren_idx points at '('; return body inside matching ')'."""
         if open_paren_idx >= len(content) or content[open_paren_idx] != "(":
             return None
@@ -397,8 +397,8 @@ class TablesCatalog:
         return None
 
     def _resolve_token(
-        self, token: Optional[str], schema_const: Optional[str]
-    ) -> Optional[str]:
+        self, token: str | None, schema_const: str | None
+    ) -> str | None:
         if not token:
             return None
         token = token.strip().strip('"')
@@ -407,7 +407,7 @@ class TablesCatalog:
         return token
 
     def scan_text(
-        self, content: str, filepath: Path, source: str, schema_hint: Optional[str]
+        self, content: str, filepath: Path, source: str, schema_hint: str | None
     ) -> None:
         schema_const = self._resolve_schema_const(content)
         default_schema = schema_const or schema_hint
@@ -486,7 +486,7 @@ class TablesCatalog:
             schema_hint = self._path_schema_hint(py_file)
             self.scan_text(content, py_file, "python-ddl", schema_hint)
 
-    def generate_catalog(self) -> Dict[str, Any]:
+    def generate_catalog(self) -> dict[str, Any]:
         logger.info("\n" + "=" * 70)
         logger.info("🔍 TABLES CATALOG SCANNER")
         logger.info("=" * 70 + "\n")
@@ -494,8 +494,8 @@ class TablesCatalog:
         self.scan_sql_files()
         self.scan_python_ddl()
 
-        status_counts: Dict[str, int] = {}
-        owner_counts: Dict[str, int] = {}
+        status_counts: dict[str, int] = {}
+        owner_counts: dict[str, int] = {}
         for fqn, data in sorted(self.tables.items()):
             category = data.get("category") or self._categorize(data["name"])
             data["category"] = category
@@ -528,7 +528,7 @@ class TablesCatalog:
         logger.info("=" * 70 + "\n")
         return self.catalog
 
-    def save_catalog(self, output_file: Optional[str] = None) -> Path:
+    def save_catalog(self, output_file: str | None = None) -> Path:
         if output_file is None:
             output_file = self.root / ".tables-catalog" / "catalog.json"
         else:
@@ -543,7 +543,7 @@ class TablesCatalog:
         logger.info(f"💾 Tables catalog saved to: {output_file}")
         return output_file
 
-    def generate_reports(self, output_dir: Optional[Path] = None) -> None:
+    def generate_reports(self, output_dir: Path | None = None) -> None:
         out = Path(output_dir) if output_dir else self.root / ".tables-catalog"
         out.mkdir(parents=True, exist_ok=True)
 

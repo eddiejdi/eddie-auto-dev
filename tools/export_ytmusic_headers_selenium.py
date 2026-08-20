@@ -25,13 +25,13 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 try:
-    from seleniumwire import webdriver
     from selenium.webdriver.chrome.options import Options
     from selenium.webdriver.chrome.service import Service
-except Exception as e:  # pragma: no cover - runtime environment
+    from seleniumwire import webdriver
+except Exception:  # pragma: no cover - runtime environment
     print(
         "Dependência ausente: instale com 'pip install selenium selenium-wire' (opcional: webdriver-manager).",
         file=sys.stderr,
@@ -39,10 +39,10 @@ except Exception as e:  # pragma: no cover - runtime environment
     raise
 
 
-def capture_requests(driver: webdriver.Chrome, timeout: int, patterns: List[str]) -> List[Dict[str, Any]]:
+def capture_requests(driver: webdriver.Chrome, timeout: int, patterns: list[str]) -> list[dict[str, Any]]:
     driver.requests.clear()
     start = time.time()
-    captured: List[Dict[str, Any]] = []
+    captured: list[dict[str, Any]] = []
     seen: set[str] = set()
     while time.time() - start < timeout:
         for req in driver.requests:
@@ -69,7 +69,7 @@ def capture_requests(driver: webdriver.Chrome, timeout: int, patterns: List[str]
     return captured
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Capturar headers do YouTube Music usando Selenium + selenium-wire")
     parser.add_argument("--output", type=str, default=".cache/ytmusic_headers_selenium.json")
     parser.add_argument("--timeout", type=int, default=180, help="Timeout em segundos para capturar headers")

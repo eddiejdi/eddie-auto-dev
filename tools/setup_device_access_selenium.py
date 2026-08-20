@@ -14,7 +14,6 @@ Uso:
   python3 tools/setup_device_access_selenium.py
 """
 import json
-import os
 import re
 import sys
 import time
@@ -24,10 +23,7 @@ from pathlib import Path
 
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 # ---------------------------------------------------------------------------
@@ -262,7 +258,7 @@ def step3_oauth_sdm(driver, enterprise_id):
     }
     auth_url = "https://accounts.google.com/o/oauth2/v2/auth?" + urllib.parse.urlencode(auth_params)
 
-    print(f"Abrindo URL de autorização SDM...")
+    print("Abrindo URL de autorização SDM...")
     driver.get(auth_url)
     time.sleep(3)
     screenshot(driver, "03_oauth_consent")
@@ -348,7 +344,7 @@ def step4_save_credentials(tokens, enterprise_id):
     if ENV_FILE.exists():
         with open(ENV_FILE) as f:
             env_lines = [
-                l for l in f.readlines()
+                l for l in f
                 if not l.startswith("GOOGLE_HOME_TOKEN=")
                 and not l.startswith("GOOGLE_HOME_REFRESH_TOKEN=")
                 and not l.startswith("GOOGLE_SDM_PROJECT_ID=")

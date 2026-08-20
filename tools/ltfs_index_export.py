@@ -15,11 +15,10 @@ Deve ser executado:
 """
 
 import argparse
-import os
-import sys
-import subprocess
-import re
 import logging
+import os
+import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 

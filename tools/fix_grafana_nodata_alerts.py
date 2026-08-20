@@ -16,9 +16,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
-import json
 import logging
-import sys
 from typing import Any
 
 import requests
@@ -84,7 +82,7 @@ def update_alert_rule(
     )
 
     if resp.status_code == 200:
-        logger.info(f"    ✅ Atualizado com sucesso")
+        logger.info("    ✅ Atualizado com sucesso")
         return True
     else:
         logger.error(f"    ❌ Erro {resp.status_code}: {resp.text[:200]}")

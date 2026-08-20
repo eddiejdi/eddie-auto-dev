@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """PreToolUse hook: registra docker/systemctl stop para restauração ao fim da sessão."""
-import sys, json, re, os
+import json
+import re
+import sys
 
 data = json.load(sys.stdin)
 cmd = data.get("tool_input", {}).get("command", "") or ""
@@ -42,7 +44,6 @@ for m in re.finditer(r'\bsystemctl\s+stop\s+([^|&;<>\n]+)', cmd):
 
 if entries:
     with open(stopfile, "a") as f:
-        for e in entries:
-            f.write(json.dumps(e) + "\n")
+        f.writelines(json.dumps(e) + "\n" for e in entries)
 
 sys.exit(0)

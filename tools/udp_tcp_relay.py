@@ -16,8 +16,8 @@ Usage:
 import argparse
 import asyncio
 import logging
-import struct
 import signal
+import struct
 import sys
 
 logging.basicConfig(
@@ -173,7 +173,7 @@ async def run_client(udp_port: int, tcp_host: str, tcp_port: int):
             # Read from TCP → send to UDP client
             await tcp_reader(reader, proto)
         except ConnectionRefusedError:
-            log.warning(f"TCP connection refused, retrying in 2s...")
+            log.warning("TCP connection refused, retrying in 2s...")
         except Exception as e:
             log.error(f"Client error: {e}")
         finally:

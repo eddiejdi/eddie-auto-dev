@@ -55,7 +55,7 @@ class AgentConfig:
     dry_run: bool
 
     @classmethod
-    def from_env(cls) -> "AgentConfig":
+    def from_env(cls) -> AgentConfig:
         hostname = socket.gethostname().split(".")[0] or "notebook"
         device_id = os.getenv("NOTEBOOK_POWER_DEVICE_ID", hostname).strip()
         if not device_id:
@@ -304,7 +304,7 @@ def run_mqtt_agent(cfg: AgentConfig) -> None:
                 LOG.warning("%s", detail)
             else:
                 LOG.error("%s", detail)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             LOG.exception("falha ao processar comando")
             publish_state(last_error=str(exc))
 
@@ -383,7 +383,7 @@ def run_tuya_agent(cfg: AgentConfig) -> None:
             )
             publish_json(topic, response)
             report_state(last_action=action if ok else None, last_error="" if ok else detail)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             LOG.exception("falha ao processar mensagem Tuya")
             report_state(last_error=str(exc))
 

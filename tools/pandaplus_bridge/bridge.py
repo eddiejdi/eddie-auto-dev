@@ -17,7 +17,7 @@ import os
 import secrets
 import signal
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -156,7 +156,7 @@ class PandaplusBridge:
                 f"modo: "
                 f"{'observação' if self._cfg.observe_only else 'aprovação ativa'}",
             )
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("falha ao enviar mensagem inicial Telegram")
 
         # Consumer loop — roda concorrente ao supervisor. Se o supervisor
@@ -336,7 +336,7 @@ class PandaplusBridge:
         try:
             payload = json.dumps(token_info, ensure_ascii=True)
             self._runtime_tokens_path.write_text(payload, encoding="utf-8")
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("falha ao persistir token runtime")
 
     @staticmethod
@@ -391,7 +391,7 @@ class PandaplusBridge:
             return
         try:
             events = await self._tuya.poll_status_changes(RELEVANT_CODES)
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("falha no polling de fallback Tuya")
             return
 
@@ -448,7 +448,7 @@ class PandaplusBridge:
             )
             pending.telegram_message_id = msg.get("message_id", 0)
             pending.chat_id = self._cfg.telegram_chat_id
-        except Exception:  # noqa: BLE001
+        except Exception:
             logger.exception("falha ao enviar Telegram para token=%s", token)
 
         async with self._lock:
@@ -560,7 +560,7 @@ class PandaplusBridge:
             )
         try:
             tuya_resp = await self._tuya.reply_unlock_request(approve)
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             logger.exception("falha em reply_unlock_request token=%s", token)
             return web.json_response(
                 {"error": f"erro Tuya: {exc}"}, status=502

@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import time
-from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+
+from specialized_agents.agent_communication_bus import (
+    MessageType,
+    get_communication_bus,
+)
+
 
 def main():
     print('Monitorando mensagens do bus (REQUEST/RESPONSE para DIRETOR)...')

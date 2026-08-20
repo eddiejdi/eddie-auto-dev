@@ -25,8 +25,8 @@ _HOOKS_DIR = Path(__file__).resolve().parent
 if str(_HOOKS_DIR) not in sys.path:
     sys.path.insert(0, str(_HOOKS_DIR))
 
-from free_worker_picker import WorkerPick, pick_worker  # noqa: E402
-from runtime_env import resolve_runtime_env  # noqa: E402
+from free_worker_picker import WorkerPick, pick_worker
+from runtime_env import resolve_runtime_env
 
 SIDEQUEST_ROOT = Path.home() / ".grok/state/sidequests"
 MAX_STOP_BLOCKS = 2

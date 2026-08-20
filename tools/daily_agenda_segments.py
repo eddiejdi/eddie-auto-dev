@@ -38,9 +38,10 @@ import logging
 import re
 import struct
 import wave
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -2017,7 +2018,10 @@ def generate_modular_locution(
     # --- Fase 3: TTS só nos blocos editados (reparte se ainda longos) ---
     # Cues de produção (pausa/fundo/vinheta) saem da fala e viram áudio depois.
     try:
-        from daily_agenda_cues import load_cue_settings_from_audio_cfg, parse_and_strip_cues
+        from daily_agenda_cues import (
+            load_cue_settings_from_audio_cfg,
+            parse_and_strip_cues,
+        )
 
         _audio_for_cues = load_modular_audio_settings(
             {

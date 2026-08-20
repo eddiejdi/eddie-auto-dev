@@ -24,7 +24,7 @@ from html import escape
 from pathlib import Path
 
 import requests
-from bottle import Bottle, request, abort
+from bottle import Bottle, abort, request
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))

@@ -8,14 +8,15 @@ Metadados compartilhados da taxonomia expandida:
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Set, Tuple
+from typing import Any
 
 # ---------------------------------------------------------------------------
 # Ownership registry: path fragment → owner id + team
 # Ordem: mais específico primeiro.
 # ---------------------------------------------------------------------------
-OWNER_RULES: List[Tuple[str, Dict[str, str]]] = [
+OWNER_RULES: list[tuple[str, dict[str, str]]] = [
     ("btc_trading_agent", {"owner": "btc_trading_agent", "team": "trading"}),
     ("clear_trading_agent", {"owner": "clear_trading_agent", "team": "trading"}),
     ("mt5_bridge", {"owner": "mt5_bridge", "team": "trading"}),
@@ -51,7 +52,7 @@ OWNER_RULES: List[Tuple[str, Dict[str, str]]] = [
 ]
 
 # Schema → owner default when path is weak
-SCHEMA_OWNERS: Dict[str, Dict[str, str]] = {
+SCHEMA_OWNERS: dict[str, dict[str, str]] = {
     "btc": {"owner": "btc_trading_agent", "team": "trading"},
     "clear": {"owner": "clear_trading_agent", "team": "trading"},
     "marketing": {"owner": "marketing", "team": "growth"},
@@ -89,7 +90,7 @@ EXPERIMENTAL_MARKER_RE = re.compile(
 )
 
 
-def resolve_owner_from_path(path: str | Path, schema: str | None = None) -> Dict[str, str]:
+def resolve_owner_from_path(path: str | Path, schema: str | None = None) -> dict[str, str]:
     """Return {owner, team} from file path and optional DB schema."""
     rel = str(path).replace("\\", "/")
     for fragment, meta in OWNER_RULES:
@@ -105,10 +106,10 @@ def resolve_owner_from_path(path: str | Path, schema: str | None = None) -> Dict
     return {"owner": "unknown", "team": "unassigned"}
 
 
-def parse_taxonomy_annotations(blob: str) -> Dict[str, Any]:
+def parse_taxonomy_annotations(blob: str) -> dict[str, Any]:
     """Parse taxonomy: key=value annotations and tables: shorthand from text."""
-    result: Dict[str, Any] = {}
-    tables: List[str] = []
+    result: dict[str, Any] = {}
+    tables: list[str] = []
 
     for m in TAXONOMY_META_RE.finditer(blob):
         for km in TAXONOMY_KV_RE.finditer(m.group(0)):
@@ -129,7 +130,7 @@ def parse_taxonomy_annotations(blob: str) -> Dict[str, Any]:
     if tables:
         # normalize fqn-ish
         normed = []
-        seen: Set[str] = set()
+        seen: set[str] = set()
         for t in tables:
             t = t.strip().lower().strip('"')
             if not t or t in seen:
@@ -140,7 +141,7 @@ def parse_taxonomy_annotations(blob: str) -> Dict[str, Any]:
     return result
 
 
-def _split_tables(raw: str) -> List[str]:
+def _split_tables(raw: str) -> list[str]:
     return [p.strip() for p in re.split(r"[,]+", raw) if p.strip()]
 
 
@@ -170,10 +171,10 @@ def detect_status_from_openapi_op(op: dict) -> str:
     return detect_status_from_text(desc, default="active")
 
 
-def extract_tables_from_openapi_op(op: dict) -> List[str]:
+def extract_tables_from_openapi_op(op: dict) -> list[str]:
     if not isinstance(op, dict):
         return []
-    tables: List[str] = []
+    tables: list[str] = []
     for key in ("x-tables", "x-table", "x-db-tables", "x-db-table"):
         val = op.get(key)
         if isinstance(val, str):
@@ -187,8 +188,8 @@ def extract_tables_from_openapi_op(op: dict) -> List[str]:
     ann = parse_taxonomy_annotations(desc)
     tables.extend(ann.get("tables") or [])
     # normalize
-    out: List[str] = []
-    seen: Set[str] = set()
+    out: list[str] = []
+    seen: set[str] = set()
     for t in tables:
         t = t.lower().strip()
         if t and t not in seen:
@@ -205,10 +206,10 @@ def context_window(content: str, match_start: int, before: int = 400, after: int
 
 
 def merge_owner(
-    existing: Optional[Dict[str, str]],
-    new: Dict[str, str],
+    existing: dict[str, str] | None,
+    new: dict[str, str],
     prefer_existing: bool = True,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     if not existing:
         return dict(new)
     if prefer_existing and existing.get("owner") not in {None, "unknown", ""}:
@@ -220,23 +221,21 @@ def merge_owner(
 
 
 def resolve_table_refs(
-    refs: Sequence[str], known_fqns: Set[str]
-) -> List[str]:
+    refs: Sequence[str], known_fqns: set[str]
+) -> list[str]:
     """Map bare table names to known fqns when unambiguous."""
-    by_name: Dict[str, List[str]] = {}
+    by_name: dict[str, list[str]] = {}
     for fqn in known_fqns:
         name = fqn.split(".")[-1]
         by_name.setdefault(name, []).append(fqn)
 
-    resolved: List[str] = []
-    seen: Set[str] = set()
+    resolved: list[str] = []
+    seen: set[str] = set()
     for ref in refs:
         ref = ref.lower().strip()
         if not ref:
             continue
-        if ref in known_fqns:
-            cand = ref
-        elif "." in ref and ref in known_fqns:
+        if ref in known_fqns or "." in ref and ref in known_fqns:
             cand = ref
         elif ref in by_name and len(by_name[ref]) == 1:
             cand = by_name[ref][0]

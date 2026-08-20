@@ -14,11 +14,9 @@ immediately after `manager.update_device_cache()`.
 from __future__ import annotations
 
 import argparse
-import pathlib
 import subprocess
 import sys
 import textwrap
-
 
 PATCH_SCRIPT = textwrap.dedent(
     """

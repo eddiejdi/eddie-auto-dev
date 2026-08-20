@@ -15,13 +15,12 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import Dict, List, Optional
 
 
-def load_candidate(path: Path) -> Dict[str, str]:
+def load_candidate(path: Path) -> dict[str, str]:
     """Carrega linhas `Key: Value` em um dict de headers."""
     text = path.read_text(encoding="utf-8")
-    headers: Dict[str, str] = {}
+    headers: dict[str, str] = {}
     for line in text.splitlines():
         if not line.strip():
             continue
@@ -32,15 +31,15 @@ def load_candidate(path: Path) -> Dict[str, str]:
     return headers
 
 
-def build_header_lines(headers: Dict[str, str]) -> List[str]:
+def build_header_lines(headers: dict[str, str]) -> list[str]:
     """Retorna linhas formatadas para ytmusicapi.setup (Key: Value)."""
-    lines: List[str] = []
+    lines: list[str] = []
     for k, v in headers.items():
         lines.append(f"{k}: {v}")
     return lines
 
 
-def main(argv: List[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Completa headers candidatos do ytmusic e tenta gerar headers_auth.json")
     parser.add_argument("--candidate", default=".cache/ytmusic_headers_candidate_from_authentik.txt")
     parser.add_argument("--cookie", default=None, help="Valor completo do header Cookie (se ausente no candidato)")

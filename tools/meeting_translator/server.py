@@ -14,12 +14,11 @@ import time
 import uuid
 from pathlib import Path
 
+import meet_bot
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
-
-import meet_bot
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [meeting-translator] %(message)s")
 logger = logging.getLogger("meeting_translator")

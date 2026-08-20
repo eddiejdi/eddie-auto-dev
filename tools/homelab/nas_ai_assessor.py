@@ -5,12 +5,10 @@ import base64
 import json
 import os
 import re
-import time
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
-from typing import Dict, List, Optional
 
 PROMETHEUS_URL = os.environ.get("PROMETHEUS_URL", "http://127.0.0.1:9090")
 GRAFANA_URL = os.environ.get("GRAFANA_URL", "http://127.0.0.1:3002")
@@ -27,7 +25,7 @@ OLLAMA_URL = os.environ.get("OLLAMA_URL", "http://127.0.0.1:11434")
 OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma3:1b")
 REQUEST_TIMEOUT = int(os.environ.get("REQUEST_TIMEOUT_SECONDS", "30"))
 
-QUERIES: Dict[str, str] = {
+QUERIES: dict[str, str] = {
     "ltfs_service_up": 'nas_ltfs_service_up{job="nas-node-exporter",instance="rpa4all-nas-001",service="ltfs-lto6.service"}',
     "ltfs_mount_up": 'nas_ltfs_mount_up{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
     "ltfs_read_only": 'nas_ltfs_read_only{job="nas-node-exporter",instance="rpa4all-nas-001",mountpoint="/mnt/tape/lto6"}',
@@ -52,9 +50,9 @@ QUERIES: Dict[str, str] = {
 }
 
 
-def http_json(url: str, method: str = "GET", data: Optional[Dict] = None, auth: Optional[tuple[str, str]] = None) -> Optional[Dict]:
+def http_json(url: str, method: str = "GET", data: dict | None = None, auth: tuple[str, str] | None = None) -> dict | None:
     body = json.dumps(data).encode("utf-8") if data else None
-    headers: Dict[str, str] = {"Content-Type": "application/json"}
+    headers: dict[str, str] = {"Content-Type": "application/json"}
     if auth:
         token = base64.b64encode(("%s:%s" % auth).encode("ascii")).decode("ascii")
         headers["Authorization"] = "Basic " + token
@@ -66,7 +64,7 @@ def http_json(url: str, method: str = "GET", data: Optional[Dict] = None, auth: 
         return None
 
 
-def prom_query(expr: str) -> Optional[float]:
+def prom_query(expr: str) -> float | None:
     url = PROMETHEUS_URL + "/api/v1/query?" + urllib.parse.urlencode({"query": expr})
     resp = http_json(url)
     try:
@@ -75,11 +73,11 @@ def prom_query(expr: str) -> Optional[float]:
         return None
 
 
-def collect_metrics() -> Dict[str, Optional[float]]:
+def collect_metrics() -> dict[str, float | None]:
     return {name: prom_query(expr) for name, expr in QUERIES.items()}
 
 
-def human_bytes(size: Optional[float]) -> str:
+def human_bytes(size: float | None) -> str:
     if size is None:
         return "N/A"
     units = ["B", "KB", "MB", "GB", "TB"]
@@ -90,21 +88,21 @@ def human_bytes(size: Optional[float]) -> str:
     return f"{size:.1f} PB"
 
 
-def human_rate(units: Optional[float]) -> str:
+def human_rate(units: float | None) -> str:
     if units is None:
         return "N/A"
     return human_bytes(units) + "/s"
 
 
-def status_label(value: Optional[float], good_text: str, bad_text: str, na_text: str = "N/A") -> str:
+def status_label(value: float | None, good_text: str, bad_text: str, na_text: str = "N/A") -> str:
     if value is None:
         return na_text
     return good_text if value >= 1.0 else bad_text
 
 
-def build_summary(metrics: Dict[str, Optional[float]]) -> Dict:
-    issues: List[str] = []
-    positives: List[str] = []
+def build_summary(metrics: dict[str, float | None]) -> dict:
+    issues: list[str] = []
+    positives: list[str] = []
 
     ltfs_up = metrics.get("ltfs_service_up")
     mount_up = metrics.get("ltfs_mount_up")
@@ -158,7 +156,7 @@ def build_summary(metrics: Dict[str, Optional[float]]) -> Dict:
     return {"overall": overall, "issues": issues, "positives": positives}
 
 
-def fallback_html(summary: Dict, metrics: Dict[str, Optional[float]]) -> str:
+def fallback_html(summary: dict, metrics: dict[str, float | None]) -> str:
     BADGE_COLORS = {
         "saudavel": ("#16351f", "#79d27f", "Saudável"),
         "atencao": ("#3e3210", "#f1cf63", "Atenção"),
@@ -239,7 +237,7 @@ def fallback_html(summary: Dict, metrics: Dict[str, Optional[float]]) -> str:
 </div>"""
 
 
-def query_ollama(summary: Dict, metrics: Dict[str, Optional[float]]) -> Optional[str]:
+def query_ollama(summary: dict, metrics: dict[str, float | None]) -> str | None:
     metrics_str = json.dumps(
         {k: round(v, 4) if v is not None else None for k, v in metrics.items()},
         ensure_ascii=False,
@@ -265,8 +263,8 @@ def query_ollama(summary: Dict, metrics: Dict[str, Optional[float]]) -> Optional
     return html if html else None
 
 
-def ensure_panel(dashboard: Dict, html_content: str) -> Dict:
-    panels: List[Dict] = dashboard.setdefault("panels", [])
+def ensure_panel(dashboard: dict, html_content: str) -> dict:
+    panels: list[dict] = dashboard.setdefault("panels", [])
     for panel in panels:
         if panel.get("id") == GRAFANA_PANEL_ID:
             panel.setdefault("options", {})["content"] = html_content
@@ -284,7 +282,7 @@ def ensure_panel(dashboard: Dict, html_content: str) -> Dict:
     return dashboard
 
 
-def write_provisioned_dashboard(dashboard: Dict) -> None:
+def write_provisioned_dashboard(dashboard: dict) -> None:
     path = Path(GRAFANA_PROVISIONING_DIR) / f"{GRAFANA_DASHBOARD_UID}.json"
     path.write_text(json.dumps(dashboard, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 

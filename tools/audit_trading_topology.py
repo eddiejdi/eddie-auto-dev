@@ -14,9 +14,8 @@ import argparse
 import json
 import re
 import subprocess
-import sys
+from collections.abc import Iterable
 from dataclasses import asdict, dataclass
-from typing import Iterable
 
 KNOWN_COINS = (
     "BTC-USDT",
@@ -309,7 +308,7 @@ def main() -> int:
         print(json.dumps(report, indent=2, ensure_ascii=True))
     else:
         print(_render_summary(report))
-        print("")
+        print()
         print(json.dumps(report, indent=2, ensure_ascii=True))
     return 0
 

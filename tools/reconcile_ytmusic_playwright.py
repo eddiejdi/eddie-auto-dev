@@ -18,19 +18,17 @@ Docstrings em PT-BR. Tipos e validações básicos.
 """
 from __future__ import annotations
 
-from pathlib import Path
-from typing import List, Dict, Optional
-import json
-import time
 import argparse
+import json
 import logging
-import sys
+import time
+from pathlib import Path
 
 LOG = logging.getLogger("reconcile_ytmusic")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
 
-def chunk_videoids(videoids: List[str], start: int, batch_size: int) -> List[str]:
+def chunk_videoids(videoids: list[str], start: int, batch_size: int) -> list[str]:
     """Retorna um slice com os próximos `batch_size` ids a partir de `start`.
 
     Args:
@@ -48,7 +46,7 @@ def chunk_videoids(videoids: List[str], start: int, batch_size: int) -> List[str
     return videoids[start : start + batch_size]
 
 
-def write_call_dryrun(session_dir: Path, batch: List[str], note: str) -> Path:
+def write_call_dryrun(session_dir: Path, batch: list[str], note: str) -> Path:
     """Grava um diretório `call_*` com um `content.txt` descrevendo ações.
 
     Retorna o caminho do `call` criado.
@@ -68,13 +66,13 @@ def write_call_dryrun(session_dir: Path, batch: List[str], note: str) -> Path:
 
 
 def run_playwright_batch(
-    batch: List[str],
+    batch: list[str],
     playlist_name: str,
-    storage_state: Optional[Path],
+    storage_state: Path | None,
     headless: bool,
     max_retries: int,
     session_dir: Path,
-) -> Dict[str, int]:
+) -> dict[str, int]:
     """Tenta executar um lote via Playwright.
 
     Se Playwright não estiver disponível ou ocorrer erro de import, o método
@@ -157,7 +155,7 @@ def run_playwright_batch(
     return result
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Reconcilia Curtidas -> playlist pública via Playwright")
     parser.add_argument("--videoids", default=".cache/ytmusic_videoids.json", help="Arquivo JSON com lista de video IDs")
     parser.add_argument("--batch-size", type=int, default=10, help="Número de vídeos por lote")

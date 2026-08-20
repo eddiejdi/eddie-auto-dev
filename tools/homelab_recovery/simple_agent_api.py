@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-from urllib.parse import urlparse
-from pathlib import Path
 import shutil
+from http.server import BaseHTTPRequestHandler, HTTPServer
+from pathlib import Path
+from urllib.parse import urlparse
 
 HOST = '127.0.0.1'
 PORT = 8888

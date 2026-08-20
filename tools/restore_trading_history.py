@@ -7,12 +7,12 @@ Também baixa candles de 15min para todo o período.
 """
 from __future__ import annotations
 
+import argparse
 import json
 import logging
 import os
 import sys
 import time
-import argparse
 from datetime import datetime, timedelta
 from typing import Any
 

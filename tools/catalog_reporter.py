@@ -7,8 +7,7 @@ Creates human-readable reports from catalog.json
 import json
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
-from datetime import datetime
+
 
 class CatalogReporter:
     """Generate various reports from variables catalog."""
@@ -17,7 +16,7 @@ class CatalogReporter:
         self.catalog_path = Path(catalog_path)
         self.catalog = self._load_catalog()
     
-    def _load_catalog(self) -> Dict:
+    def _load_catalog(self) -> dict:
         """Load catalog from JSON."""
         if not self.catalog_path.exists():
             raise FileNotFoundError(f"Catalog not found at {self.catalog_path}")

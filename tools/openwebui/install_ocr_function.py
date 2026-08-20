@@ -6,13 +6,13 @@ Uso:
     WEBUI_EMAIL=admin@example.com WEBUI_PASS=xxx python3 install_ocr_function.py
 """
 
-import sys
-import os
-import json
-import urllib.request
-import urllib.error
 import getpass
+import json
+import os
 import pathlib
+import sys
+import urllib.error
+import urllib.request
 
 WEBUI_URL = os.environ.get("WEBUI_URL", "http://localhost:3000")
 FUNCTION_FILE = pathlib.Path(__file__).parent / "ocr_inteligente.py"

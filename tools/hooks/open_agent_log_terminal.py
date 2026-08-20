@@ -15,7 +15,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import signal
 import subprocess
 import sys
 import time
@@ -32,7 +31,7 @@ STATE_DIR = Path.home() / ".grok" / "state" / "agent-log-terminal"
 WEB_AGENT_RE = re.compile(
     r"web-agent__|web_agent__|web_run_task|web_fill_form|web_scrape|"
     r"web_ask_human|web_apply|web_analyze",
-    re.I,
+    re.IGNORECASE,
 )
 
 

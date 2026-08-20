@@ -28,7 +28,6 @@ import sys
 import time
 from datetime import datetime
 from pathlib import Path
-from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 # ─── Configuração ────────────────────────────────────────────────────────────
@@ -58,7 +57,7 @@ def _load_wiki_token() -> str:
         from tools.secrets_loader import get_field
 
         return get_field("wikijs/api_key", "password")
-    except Exception as exc:  # noqa: BLE001 — qualquer falha vira erro acionável
+    except Exception as exc:
         raise RuntimeError(
             "Token do Wiki.js indisponível: defina WIKI_TOKEN no ambiente ou "
             "garanta o secret 'wikijs/api_key' no Secrets Agent"

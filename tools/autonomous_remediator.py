@@ -10,10 +10,11 @@ Para permitir ações reais defina `AUTONOMOUS_MODE=1` no ambiente e execute sem
 """
 import argparse
 import os
-import time
 import subprocess
-import requests
+import time
 from urllib.parse import urljoin
+
+import requests
 
 # Fly.io removed: no default Fly tunnel URLs configured anymore.
 DEFAULT_URLS = []
@@ -109,7 +110,10 @@ def notify_bus(message: str):
     try:
         import sys
         sys.path.insert(0, os.getcwd())
-        from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+        from specialized_agents.agent_communication_bus import (
+            MessageType,
+            get_communication_bus,
+        )
         bus = get_communication_bus()
         bus.publish(MessageType.COORDINATOR, 'autonomous_remediator', 'agent_coordinator', message)
         log('Notified communication bus')
@@ -126,7 +130,10 @@ def request_agent_remediation(url: str, suggested_cmds: list, timeout: int = 30)
     try:
         import sys
         sys.path.insert(0, os.getcwd())
-        from specialized_agents.agent_communication_bus import get_communication_bus, MessageType
+        from specialized_agents.agent_communication_bus import (
+            MessageType,
+            get_communication_bus,
+        )
 
         bus = get_communication_bus()
         content = f"Detected unhealthy URL {url}. Suggested remediation steps: { [c[0] for c in suggested_cmds] }"
@@ -169,8 +176,8 @@ def main(timeout: int = None, poll: int = 10, dry_run: bool = True):
     try:
         import sys
         sys.path.insert(0, os.getcwd())
-        from tools.operations_agent import handle_message as _ops_handle
         from specialized_agents.agent_communication_bus import get_communication_bus
+        from tools.operations_agent import handle_message as _ops_handle
         get_communication_bus().subscribe(_ops_handle)
         log("Loaded in-process OperationsAgent handler")
     except Exception:

@@ -1,5 +1,6 @@
-from playwright.sync_api import sync_playwright
 import os
+
+from playwright.sync_api import sync_playwright
 
 # Use environment variable when available so public pages can point to the
 # external tunnel. Falls back to localhost for local dev.

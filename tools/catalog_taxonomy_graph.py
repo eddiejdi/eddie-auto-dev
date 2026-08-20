@@ -21,14 +21,13 @@ import re
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
 
 ROOT = Path(__file__).resolve().parents[1]
 
-SERVICE_DOMAIN: List[Tuple[str, str]] = [
+SERVICE_DOMAIN: list[tuple[str, str]] = [
     ("btc_trading", "trading"),
     ("clear_trading", "trading"),
     ("mt5_bridge", "trading"),
@@ -61,7 +60,7 @@ SCHEMA_DOMAIN = {
     "marketing": "marketing",
 }
 
-VAR_DOMAIN_PATTERNS: List[Tuple[str, str]] = [
+VAR_DOMAIN_PATTERNS: list[tuple[str, str]] = [
     (r"(TRADING|EXCHANGE|MT5|BTC|CRYPTO|ORDER|POSITION)", "trading"),
     (r"(TELEGRAM|SLACK|WHATSAPP|X_|TWITTER)", "social"),
     (r"(SECRET|VAULT|BITWARDEN|AUTHENTIK|JWT|TOKEN|PASSWORD)", "secrets"),
@@ -87,8 +86,8 @@ def _load_json(path: Path) -> dict:
         return {}
 
 
-def _flatten_catalog(catalog: dict) -> Dict[str, dict]:
-    out: Dict[str, dict] = {}
+def _flatten_catalog(catalog: dict) -> dict[str, dict]:
+    out: dict[str, dict] = {}
     for category, entries in (catalog.get("categories") or {}).items():
         if not isinstance(entries, dict):
             continue
@@ -100,7 +99,7 @@ def _flatten_catalog(catalog: dict) -> Dict[str, dict]:
     return out
 
 
-def _domain_from_service(service: str) -> Optional[str]:
+def _domain_from_service(service: str) -> str | None:
     s = (service or "").lower()
     for hint, domain in SERVICE_DOMAIN:
         if hint in s:
@@ -108,14 +107,14 @@ def _domain_from_service(service: str) -> Optional[str]:
     return None
 
 
-def _domain_from_var(name: str) -> Optional[str]:
+def _domain_from_var(name: str) -> str | None:
     for pattern, domain in VAR_DOMAIN_PATTERNS:
         if re.search(pattern, name, re.IGNORECASE):
             return domain
     return None
 
 
-def _path_tokens(path: str) -> Set[str]:
+def _path_tokens(path: str) -> set[str]:
     parts = re.split(r"[/_\-{}]+", path.lower())
     return {p for p in parts if len(p) >= 3}
 
@@ -132,8 +131,8 @@ _BROAD_TOP = {
 }
 
 
-def _file_prefix(locations: list) -> Set[str]:
-    prefixes: Set[str] = set()
+def _file_prefix(locations: list) -> set[str]:
+    prefixes: set[str] = set()
     for loc in locations or []:
         f = (loc.get("file") or "").replace("\\", "/")
         if not f:
@@ -173,7 +172,7 @@ def build_graph(root: Path = ROOT) -> dict:
     tables = _flatten_catalog(tables_cat)
     apis = _flatten_catalog(apis_cat)
 
-    by_domain: Dict[str, Dict[str, List[str]]] = defaultdict(
+    by_domain: dict[str, dict[str, list[str]]] = defaultdict(
         lambda: {"variables": [], "tables": [], "apis": []}
     )
 
@@ -197,8 +196,8 @@ def build_graph(root: Path = ROOT) -> dict:
         item["_domain"] = domain
         by_domain[domain]["apis"].append(key)
 
-    edges: List[dict] = []
-    seen: Set[Tuple[str, str, str, str, str]] = set()
+    edges: list[dict] = []
+    seen: set[tuple[str, str, str, str, str]] = set()
 
     def add_edge(
         src_type: str,
@@ -267,11 +266,11 @@ def build_graph(root: Path = ROOT) -> dict:
 
     # 1b) Explicit API ↔ table links (annotations / OpenAPI x-tables)
     known_fqns = set(tables.keys())
-    by_name: Dict[str, List[str]] = defaultdict(list)
+    by_name: dict[str, list[str]] = defaultdict(list)
     for fqn in known_fqns:
         by_name[fqn.split(".")[-1]].append(fqn)
 
-    def _resolve_ref(ref: str) -> List[str]:
+    def _resolve_ref(ref: str) -> list[str]:
         ref = (ref or "").lower().strip()
         if not ref:
             return []
@@ -316,7 +315,7 @@ def build_graph(root: Path = ROOT) -> dict:
                 )
 
     # 2) Name heuristics: API path tokens ↔ table names
-    table_by_name: Dict[str, List[str]] = defaultdict(list)
+    table_by_name: dict[str, list[str]] = defaultdict(list)
     for fqn, item in tables.items():
         name = item.get("name") or fqn.split(".")[-1]
         table_by_name[name].append(fqn)
@@ -347,15 +346,15 @@ def build_graph(root: Path = ROOT) -> dict:
     }
     configish = re.compile(
         r"(DATABASE|DB_|POSTGRES|HOST|PORT|URL|SCHEMA|DSN|CONN|USER|PASSWORD|POOL)",
-        re.I,
+        re.IGNORECASE,
     )
     for var_name in variables:
         if not configish.search(var_name):
             # still allow explicit schema-prefixed config vars like BTC_DB_*
-            if not re.search(r"(BTC|CLEAR|MARKETING).*(DB|DATABASE|POSTGRES|SCHEMA)", var_name, re.I):
+            if not re.search(r"(BTC|CLEAR|MARKETING).*(DB|DATABASE|POSTGRES|SCHEMA)", var_name, re.IGNORECASE):
                 continue
         for pattern, schema in schema_token_map.items():
-            if re.search(pattern, var_name, re.I):
+            if re.search(pattern, var_name, re.IGNORECASE):
                 for fqn, t in tables.items():
                     if t.get("schema") == schema:
                         add_edge(
@@ -372,7 +371,7 @@ def build_graph(root: Path = ROOT) -> dict:
     db_vars = [
         v
         for v in variables
-        if re.search(r"(DATABASE_URL|POSTGRES_|DB_HOST|DB_NAME)", v, re.I)
+        if re.search(r"(DATABASE_URL|POSTGRES_|DB_HOST|DB_NAME)", v, re.IGNORECASE)
     ]
     for v in db_vars[:20]:
         add_edge(
@@ -431,10 +430,10 @@ def build_graph(root: Path = ROOT) -> dict:
     affinity = [
         e for e in edges if e["relation"] == "domain_affinity" and e["from"]["type"] == "table"
     ]
-    by_table: Dict[str, List[dict]] = defaultdict(list)
+    by_table: dict[str, list[dict]] = defaultdict(list)
     for e in affinity:
         by_table[e["from"]["id"]].append(e)
-    drop: Set[int] = set()
+    drop: set[int] = set()
     edge_id = {id(e): i for i, e in enumerate(edges)}
     for fqn, elist in by_table.items():
         if len(elist) <= 8:
@@ -457,7 +456,7 @@ def build_graph(root: Path = ROOT) -> dict:
         for d, buckets in sorted(by_domain.items())
     }
 
-    degree: Dict[str, int] = defaultdict(int)
+    degree: dict[str, int] = defaultdict(int)
     for e in edges:
         degree[f"{e['from']['type']}:{e['from']['id']}"] += 1
         degree[f"{e['to']['type']}:{e['to']['id']}"] += 1

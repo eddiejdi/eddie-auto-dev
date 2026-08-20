@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 """Stop hook: restaura serviços parados durante a sessão."""
-import sys, json, os, subprocess
+import json
+import os
+import subprocess
+import sys
 
 data = json.load(sys.stdin)
 session = data.get("session_id", "default")

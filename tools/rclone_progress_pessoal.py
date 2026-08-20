@@ -163,7 +163,7 @@ def _to_bytes(value: float, unit: str) -> int:
     return int(value * multipliers.get(unit, 1))
 
 
-def _format_bytes(b: int | float) -> str:
+def _format_bytes(b: float) -> str:
     """Formata bytes em unidade legível."""
     if b < 1024:
         return f"{b} B"
@@ -216,7 +216,7 @@ def render_dashboard(
 
     title = " 📦 Google Drive Pessoal → Nextcloud "
     lines.append(f"{COLOR_BOLD}║{title:^{term_width - 2}}║{COLOR_RESET}")
-    subtitle = f" edenilson.teixeira → edenilson.paschoa@rpa4all.com "
+    subtitle = " edenilson.teixeira → edenilson.paschoa@rpa4all.com "
     lines.append(f"{COLOR_BOLD}║{COLOR_DIM}{subtitle:^{term_width - 2}}{COLOR_RESET}{COLOR_BOLD}║{COLOR_RESET}")
 
     lines.append(f"{COLOR_BOLD}╠{sep}╣{COLOR_RESET}")
@@ -237,8 +237,7 @@ def render_dashboard(
     checks = int(stats.get("checks", 0))
 
     # Usar contagens reais do disco se disponíveis
-    if real_files > files_done:
-        files_done = real_files
+    files_done = max(files_done, real_files)
     if real_bytes > int(stats.get("bytes_transferred", 0)):
         transferred = _format_bytes(real_bytes)
 
@@ -359,7 +358,7 @@ def main() -> None:
 
     except KeyboardInterrupt:
         print(f"\n\n{COLOR_CYAN}Monitor encerrado. Download continua em background.{COLOR_RESET}")
-        print(f"  Re-executar: python3 tools/rclone_progress_pessoal.py")
+        print("  Re-executar: python3 tools/rclone_progress_pessoal.py")
         print(f"  Ver log:     ssh {args.user}@{args.host} 'tail -f {args.log_file}'")
 
 

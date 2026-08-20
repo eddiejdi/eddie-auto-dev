@@ -14,7 +14,6 @@ Env var: CHROMA_DB_PATH (default: /home/homelab/myClaude/chroma_db)
 """
 from __future__ import annotations
 
-import os
 import subprocess
 import sys
 

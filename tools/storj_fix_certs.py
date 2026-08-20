@@ -8,7 +8,6 @@ Usage: python tools/storj_fix_certs.py
 """
 import subprocess
 import sys
-import shlex
 
 HOMELAB = "homelab@192.168.15.2"
 SSH_KEY = "/home/edenilson/.ssh/homelab_key"
@@ -150,7 +149,7 @@ except: print('API não respondeu ainda')
 
 echo ""
 echo "Erros recentes:"
-docker logs storagenode 2>&1 | grep -i "error\|FATAL\|mismatch" | tail -3
+docker logs storagenode 2>&1 | grep -i "error\\|FATAL\\|mismatch" | tail -3
 """)
     print(result)
 

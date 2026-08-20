@@ -44,7 +44,6 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
 
 # ─── Configuração ──────────────────────────────────────────────────────────────
 
@@ -70,7 +69,7 @@ log = logging.getLogger("ltfs-checkpoint")
 
 # ─── Global Tape Lock ──────────────────────────────────────────────────────────
 
-_GLOBAL_TAPE_LOCK_FD: Optional[int] = None
+_GLOBAL_TAPE_LOCK_FD: int | None = None
 
 
 def _acquire_global_tape_lock() -> bool:
@@ -136,7 +135,7 @@ def _save_journal(path: Path, data: dict) -> None:
     tmp.replace(path)
 
 
-def _find_incomplete_session() -> Optional[Path]:
+def _find_incomplete_session() -> Path | None:
     sessions_dir = JOURNAL_DIR / "sessions"
     if not sessions_dir.exists():
         return None
@@ -298,7 +297,7 @@ def sync_snapshot_to_tape(
     snap_name: str,
     src: Path,
     dest: Path,
-    only_files: Optional[list] = None,
+    only_files: list | None = None,
 ) -> int:
     """
     Executa rsync do snapshot para a fita.
@@ -320,7 +319,7 @@ def sync_snapshot_to_tape(
         "--stats",
     ]
 
-    files_from_path: Optional[Path] = None
+    files_from_path: Path | None = None
     if only_files is not None:
         files_from_path = Path(f"/tmp/ltfs-resume-{snap_name}.txt")
         files_from_path.write_text("\n".join(only_files))

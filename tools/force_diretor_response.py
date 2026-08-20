@@ -4,9 +4,8 @@
 Usage: python3 tools/force_diretor_response.py [--delay 2] [--content "approved"]
 """
 import argparse
-import time
 import json
-import os
+import time
 from datetime import datetime
 
 OUT = '/tmp/diretor_response.json'

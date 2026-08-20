@@ -7,6 +7,7 @@ import os
 import secrets
 import sys
 import urllib.parse
+
 import requests
 
 SECRETS_AGENT_URL = os.environ.get("SECRETS_AGENT_URL", "http://localhost:8088")

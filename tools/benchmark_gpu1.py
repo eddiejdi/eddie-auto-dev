@@ -11,10 +11,8 @@ import argparse
 import json
 import statistics
 import time
-from typing import Dict, List
-from urllib.request import Request, urlopen
 from urllib.error import URLError
-
+from urllib.request import Request, urlopen
 
 PROMPTS = [
     {"prompt": "What is 2+2? Answer in one word.", "max_tokens": 20},
@@ -25,7 +23,7 @@ PROMPTS = [
 ]
 
 
-def run_inference(host: str, model: str, prompt: str, max_tokens: int) -> Dict:
+def run_inference(host: str, model: str, prompt: str, max_tokens: int) -> dict:
     """Executa uma inferência e retorna métricas."""
     payload = json.dumps({
         "model": model,
@@ -68,7 +66,7 @@ def run_inference(host: str, model: str, prompt: str, max_tokens: int) -> Dict:
     }
 
 
-def run_benchmark(host: str, model: str, runs: int) -> List[Dict]:
+def run_benchmark(host: str, model: str, runs: int) -> list[dict]:
     """Executa benchmark completo com múltiplas rodadas."""
     results = []
 
@@ -93,7 +91,7 @@ def run_benchmark(host: str, model: str, runs: int) -> List[Dict]:
     return results
 
 
-def print_summary(results: List[Dict], model: str) -> None:
+def print_summary(results: list[dict], model: str) -> None:
     """Imprime resumo estatístico."""
     if not results:
         print("❌ Nenhum resultado válido")
@@ -107,17 +105,17 @@ def print_summary(results: List[Dict], model: str) -> None:
     print(f"📈 BENCHMARK SUMMARY — {model}")
     print(f"{'='*60}")
     print(f"  Runs válidas: {len(results)}")
-    print(f"  Generation (tok/s):")
+    print("  Generation (tok/s):")
     print(f"    Mean:   {statistics.mean(tok_rates):.1f}")
     print(f"    Median: {statistics.median(tok_rates):.1f}")
     print(f"    Min:    {min(tok_rates):.1f}")
     print(f"    Max:    {max(tok_rates):.1f}")
     if len(tok_rates) > 1:
         print(f"    StdDev: {statistics.stdev(tok_rates):.1f}")
-    print(f"  Prompt eval (tok/s):")
+    print("  Prompt eval (tok/s):")
     print(f"    Mean:   {statistics.mean(prompt_rates):.0f}")
     print(f"    Median: {statistics.median(prompt_rates):.0f}")
-    print(f"  Latency total (ms):")
+    print("  Latency total (ms):")
     print(f"    Mean:   {statistics.mean(total_ms):.0f}")
     print(f"    Median: {statistics.median(total_ms):.0f}")
     print(f"    P95:    {sorted(total_ms)[int(len(total_ms)*0.95)]:.0f}")

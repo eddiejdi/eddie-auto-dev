@@ -7,8 +7,8 @@ Uso: python3 tools/publish_qos_wiki.py
 import json
 import subprocess
 import sys
-import urllib.request
 import urllib.error
+import urllib.request
 from datetime import date
 
 WIKI_HOST = "192.168.15.2"

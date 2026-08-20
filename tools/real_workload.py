@@ -10,13 +10,13 @@ Gera carga de CPU real e produtiva no homelab usando:
 Auto-regulador: monitora CPU e ajusta paralelismo para manter ~70-75%
 """
 import asyncio
-import aiohttp
-import time
-import os
-import json
 import logging
-import subprocess
+import os
 import random
+import subprocess
+import time
+
+import aiohttp
 
 # Sentence transformers para embeddings CPU-intensive
 try:

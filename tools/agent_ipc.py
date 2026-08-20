@@ -10,11 +10,11 @@ CLI usage (used by .githooks/post-commit and copilot hooks):
     python3 tools/agent_ipc.py fetch --agent wiki_rpa4all
 """
 import argparse
-import os
 import json
+import os
 import sys
 import time
-from datetime import datetime
+
 import psycopg2
 import psycopg2.extras
 
@@ -44,9 +44,8 @@ def init_table():
     '''
     conn = _get_conn()
     try:
-        with conn:
-            with conn.cursor() as cur:
-                cur.execute(sql)
+        with conn, conn.cursor() as cur:
+            cur.execute(sql)
     finally:
         conn.close()
 

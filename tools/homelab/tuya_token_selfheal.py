@@ -274,13 +274,19 @@ def load_tuya_entry_meta() -> dict[str, str]:
 def _import_tuya_sharing() -> tuple[object, object]:
     """Importa CustomerApi/CustomerTokenInfo (system ou venv do bridge)."""
     try:
-        from tuya_sharing.customerapi import CustomerApi, CustomerTokenInfo  # type: ignore
+        from tuya_sharing.customerapi import (  # type: ignore
+            CustomerApi,
+            CustomerTokenInfo,
+        )
         return CustomerApi, CustomerTokenInfo
     except ImportError:
         site = str(TUYA_SHARING_SITE)
         if site not in sys.path and TUYA_SHARING_SITE.is_dir():
             sys.path.insert(0, site)
-        from tuya_sharing.customerapi import CustomerApi, CustomerTokenInfo  # type: ignore
+        from tuya_sharing.customerapi import (  # type: ignore
+            CustomerApi,
+            CustomerTokenInfo,
+        )
         return CustomerApi, CustomerTokenInfo
 
 
@@ -308,7 +314,7 @@ def force_refresh_token(
         def __init__(self) -> None:
             self.updated: dict | None = None
 
-        def update_token(self, new_token: dict) -> None:  # noqa: ANN001
+        def update_token(self, new_token: dict) -> None:
             self.updated = new_token
 
     listener = _Listener()
@@ -1050,7 +1056,7 @@ def main() -> int:
                     )
             else:
                 log.warning("Reload da entry falhou; seguindo para inject se aplicável")
-        except Exception:  # noqa: BLE001
+        except Exception:
             state["heal_failures_total"] += 1
             log.exception("Reload da entry falhou com exceção")
 
@@ -1105,7 +1111,7 @@ def main() -> int:
                     "Heal aplicado (mode=%s) mas entidades não voltaram — reauth QR necessária",
                     last_mode,
                 )
-        except Exception:  # noqa: BLE001
+        except Exception:
             state["heal_failures_total"] += 1
             log.exception("Heal falhou")
 

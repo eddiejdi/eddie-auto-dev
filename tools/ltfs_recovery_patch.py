@@ -228,8 +228,8 @@ def apply_patches() -> None:
     # Write patch files
     print(">>> Writing patch files...")
     # Use python on NAS to write patches (avoids heredoc issues)
-    import tempfile
     import os
+    import tempfile
 
     with tempfile.NamedTemporaryFile(mode='w', suffix='.patch', delete=False) as f1:
         f1.write(PATCH_CONTENT)

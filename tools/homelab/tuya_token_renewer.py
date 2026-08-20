@@ -16,11 +16,9 @@ import json
 import logging
 import os
 import subprocess
-import sys
 import time
 import urllib.error
 import urllib.request
-
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("tuya-monitor")

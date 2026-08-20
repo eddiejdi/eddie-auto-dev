@@ -15,7 +15,6 @@ import argparse
 import re
 import shutil
 import subprocess
-import sys
 import time
 
 # ── Constantes ──────────────────────────────────────────────────────────
@@ -161,7 +160,7 @@ def _to_bytes(value: float, unit: str) -> int:
     return int(value * multipliers.get(unit, 1))
 
 
-def _format_bytes(b: int | float) -> str:
+def _format_bytes(b: float) -> str:
     """Formata bytes em unidade legível."""
     if b < 1024:
         return f"{b} B"
@@ -419,7 +418,7 @@ def main() -> None:
 
     except KeyboardInterrupt:
         print(f"\n\n{COLOR_CYAN}Monitor encerrado. Download continua em background.{COLOR_RESET}")
-        print(f"  Re-executar: python3 tools/rclone_progress.py")
+        print("  Re-executar: python3 tools/rclone_progress.py")
         print(f"  Ver log: ssh {args.user}@{args.host} 'tail -f {args.log_file}'")
 
 

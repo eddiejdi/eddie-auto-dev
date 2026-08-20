@@ -39,7 +39,7 @@ import threading
 import time
 import urllib.request
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any
 
 logging.basicConfig(
     level=logging.INFO,
@@ -64,7 +64,7 @@ _tg_lock = threading.Lock()
 def _load_telegram_creds() -> tuple[str, str]:
     """Lê token e chat_id do env do orchestrator."""
     env_file = Path("/etc/default/ltfs-recovery")
-    env: Dict[str, str] = {}
+    env: dict[str, str] = {}
     if env_file.exists():
         for line in env_file.read_text().splitlines():
             line = line.strip()
@@ -155,8 +155,8 @@ class DriveWatcher:
         self._locked: bool = False   # PREVENT MEDIUM REMOVAL ativo
         self._op_lock = threading.Lock()  # impede operações paralelas no mesmo drive
 
-    def _load_env(self, path: Path) -> Dict[str, str]:
-        env: Dict[str, str] = {}
+    def _load_env(self, path: Path) -> dict[str, str]:
+        env: dict[str, str] = {}
         for line in path.read_text().splitlines():
             line = line.strip()
             if not line or line.startswith("#") or "=" not in line:
@@ -165,7 +165,7 @@ class DriveWatcher:
             env[k.strip()] = v.strip().strip("'\"")
         return env
 
-    def _orch_env(self) -> Dict[str, str]:
+    def _orch_env(self) -> dict[str, str]:
         """Monta env para subprocess do orchestrator com vars do drive."""
         env = os.environ.copy()
         env.update(self.env)
@@ -300,7 +300,7 @@ class DriveWatcher:
             _prevent_removal(self.sg_dev, True)
             self._locked = True
 
-    def status(self) -> Dict[str, Any]:
+    def status(self) -> dict[str, Any]:
         present = _has_medium(self.sg_dev) if Path(self.sg_dev).exists() else None
         return {
             "drive": self.label,
@@ -360,7 +360,7 @@ class ButtonWatchDaemon:
             for w in self.watchers:
                 try:
                     w.poll()
-                except Exception as exc:  # noqa: BLE001
+                except Exception as exc:
                     logger.exception("[%s] Erro no poll: %s", w.label, exc)
             time.sleep(POLL_INTERVAL)
 

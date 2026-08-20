@@ -21,7 +21,6 @@ import time
 import urllib.error
 import urllib.request
 
-
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(message)s",

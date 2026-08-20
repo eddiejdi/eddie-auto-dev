@@ -22,7 +22,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import incomplete_markers as im  # noqa: E402
+import incomplete_markers as im
 
 MAX_BLOCKS = 3  # re-prompts por sessão antes de liberar com aviso
 MAX_LISTED = 12  # achados listados no reason

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-import pathlib, importlib.util, json
+import importlib.util
+import json
+import pathlib
+
 # load bus
 bus_path = pathlib.Path(__file__).resolve().parents[1] / 'specialized_agents' / 'agent_communication_bus.py'
 spec = importlib.util.spec_from_file_location('agent_bus_local', str(bus_path))
@@ -12,6 +15,7 @@ MessageType = agent_bus.MessageType
 body_path = '/tmp/fly_body.html'
 URL = None
 import os
+
 # Allow explicit override via env; fallback to local homelab host mapping
 URL = os.environ.get('VALIDATOR_URL')
 if not URL:
@@ -20,6 +24,7 @@ if not URL:
 
 # fetch page body for analysis
 import subprocess
+
 try:
     subprocess.run(['curl', '-sS', URL, '-o', body_path], check=True, timeout=20)
 except Exception:
@@ -35,6 +40,7 @@ except Exception as e:
 
 # status line from first curl saved to stdout; re-run quick status fetch for clarity
 import subprocess
+
 try:
     status = subprocess.check_output(['curl','-s','-S','-o','/dev/null','-w','%{http_code} %{url_effective}', URL], text=True).strip()
 except Exception as e:

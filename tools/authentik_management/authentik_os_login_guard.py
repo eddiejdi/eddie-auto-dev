@@ -14,9 +14,10 @@ import shlex
 import subprocess
 import sys
 from base64 import urlsafe_b64decode
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Mapping, Sequence
+from typing import Any
 
 import requests
 
@@ -81,7 +82,7 @@ class AuthentikLoginSettings:
         cls,
         environ: Mapping[str, str] | None = None,
         env_file: Path | None = None,
-    ) -> "AuthentikLoginSettings":
+    ) -> AuthentikLoginSettings:
         """Monta configuracao a partir de variaveis de ambiente e arquivo local."""
         env_map: dict[str, str] = {}
         if env_file is not None:

@@ -14,14 +14,14 @@ required_open_webui_version: 0.3.0
 
 from __future__ import annotations
 
+import json
 import os
 import re
-import json
-import urllib.request
 import urllib.error
-from typing import Iterator
-from pydantic import BaseModel, Field
+import urllib.request
+from collections.abc import Iterator
 
+from pydantic import BaseModel, Field
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 

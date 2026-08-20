@@ -47,6 +47,7 @@ print(f"Total modified: {len(modified)}")
 
 # run quick py_compile on changed py files
 import subprocess
+
 errors = []
 for m in modified:
     if m.endswith('.py'):

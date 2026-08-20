@@ -39,7 +39,6 @@ from typing import Any
 
 import psycopg2
 
-
 PROFILES = ("aggressive", "conservative")
 ACTIONS = ("BUY", "SELL", "HOLD")
 

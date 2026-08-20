@@ -22,7 +22,6 @@ from urllib.parse import urlparse
 
 import requests
 
-
 DEFAULT_STORAGE = Path(
     "/home/homelab/homeassistant/config/.storage/"
     "tuya_local_remote_ebf9cf282b8d78ddd8t7ql_codes"

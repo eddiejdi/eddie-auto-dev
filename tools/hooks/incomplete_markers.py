@@ -26,8 +26,8 @@ import ast
 import re
 import subprocess
 import sys
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
-from typing import Callable, Iterable
 
 # ---------------------------------------------------------------------------
 # Supressão inline — permite stub intencional sem acionar o guardrail

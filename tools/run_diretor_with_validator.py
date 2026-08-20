@@ -3,10 +3,10 @@
 This starts `dev_agent.run_diretor_service.main()` and the validator loop in threads,
 then attaches to the bus to print messages for debugging.
 """
+import importlib.util
+import pathlib
 import threading
 import time
-import pathlib
-import importlib.util
 
 repo = pathlib.Path(__file__).resolve().parents[1]
 # load diretor module

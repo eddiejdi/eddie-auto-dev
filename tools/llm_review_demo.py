@@ -4,25 +4,27 @@
 This script stubs Google libs to allow importing `apply_real_job` without
 installing heavy dependencies, mocks the LLM call and runs a sample review.
 """
-import sys, types
+import sys
+import types
 from pathlib import Path
+
 
 # Create stubs for google / googleapiclient used at module import
 def _inject_google_stubs():
     m_google = types.ModuleType('google')
     m_google_oauth2 = types.ModuleType('google.oauth2')
     m_google_oauth2_credentials = types.ModuleType('google.oauth2.credentials')
-    setattr(m_google_oauth2_credentials, 'Credentials', type('Credentials', (), {}))
+    m_google_oauth2_credentials.Credentials = type('Credentials', (), {})
     m_google_auth = types.ModuleType('google.auth')
     m_google_auth_transport = types.ModuleType('google.auth.transport')
     m_google_auth_transport_requests = types.ModuleType('google.auth.transport.requests')
-    setattr(m_google_auth_transport_requests, 'Request', type('Request', (), {}))
+    m_google_auth_transport_requests.Request = type('Request', (), {})
     m_googleapiclient = types.ModuleType('googleapiclient')
     m_googleapiclient_discovery = types.ModuleType('googleapiclient.discovery')
-    setattr(m_googleapiclient_discovery, 'build', lambda *a, **k: None)
+    m_googleapiclient_discovery.build = lambda *a, **k: None
     m_googleapiclient_http = types.ModuleType('googleapiclient.http')
-    setattr(m_googleapiclient_http, 'MediaFileUpload', type('MediaFileUpload', (), {}))
-    setattr(m_googleapiclient_http, 'MediaIoBaseDownload', type('MediaIoBaseDownload', (), {}))
+    m_googleapiclient_http.MediaFileUpload = type('MediaFileUpload', (), {})
+    m_googleapiclient_http.MediaIoBaseDownload = type('MediaIoBaseDownload', (), {})
 
     stubs = {
         'google': m_google,

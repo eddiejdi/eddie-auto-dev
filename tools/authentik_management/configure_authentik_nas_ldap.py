@@ -283,7 +283,7 @@ def ensure_nas_ldap_bind_token(*, dry_run: bool = True) -> str:
 
     # 4. Criar novo token
     if dry_run:
-        return f"<será gerado ao executar --apply>"
+        return "<será gerado ao executar --apply>"
 
     import secrets as _secrets
     new_key = _secrets.token_urlsafe(32)

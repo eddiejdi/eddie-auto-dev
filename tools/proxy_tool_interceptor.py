@@ -47,12 +47,10 @@ REFERÊNCIA:
     - specialized_agents/llm_tools_api.py (API endpoints)
 """
 
-import os
-import json
-import time
 import copy
+import json
 import logging
-from typing import Optional
+import os
 
 try:
     import httpx
@@ -412,7 +410,7 @@ class ToolInterceptor:
 # FastAPI Middleware (para integrar diretamente no proxy)
 # ══════════════════════════════════════════════════════════════════════════
 
-def create_tool_middleware(app, interceptor: Optional[ToolInterceptor] = None):
+def create_tool_middleware(app, interceptor: ToolInterceptor | None = None):
     """
     Cria um middleware FastAPI que intercepta /api/chat.
 
@@ -435,10 +433,11 @@ def create_tool_middleware(app, interceptor: Optional[ToolInterceptor] = None):
             return response
     """
     try:
+        import asyncio
+
         from starlette.middleware.base import BaseHTTPMiddleware
         from starlette.requests import Request
         from starlette.responses import JSONResponse
-        import asyncio
     except ImportError:
         logger.warning("starlette não disponível, middleware não criado")
         return

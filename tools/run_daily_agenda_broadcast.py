@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-
 TOOLS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TOOLS_DIR.parent
 if str(REPO_ROOT) not in sys.path:
@@ -28,7 +27,11 @@ from daily_agenda_segments import (
     generate_modular_locution,
     should_use_modular,
 )
-from specialized_agents.telegram_notify import send_telegram_audio, send_telegram_message
+
+from specialized_agents.telegram_notify import (
+    send_telegram_audio,
+    send_telegram_message,
+)
 from tools.secrets_loader import get_agenda_telegram_chat_id
 
 logger = logging.getLogger(__name__)
@@ -276,9 +279,9 @@ def prepare_locution_and_audio(
             audio_cfg.get("segment_target_seconds", 180),
         )
         from daily_agenda_segments import (
-            classify_source_mode,
             DEFAULT_SEM_PAUTA_MAX_DURATION,
             DEFAULT_SEM_PAUTA_MAX_SEGMENTS,
+            classify_source_mode,
         )
 
         source_mode = classify_source_mode(source_text)

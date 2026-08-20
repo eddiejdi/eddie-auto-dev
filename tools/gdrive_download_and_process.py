@@ -7,9 +7,10 @@ Exemplo:
   python3 tools/gdrive_download_and_process.py --out /home/homelab/gdrive_docs --folder RPA4All
 """
 import argparse
-import os
-import io
 import importlib.util
+import io
+import os
+
 from googleapiclient.http import MediaIoBaseDownload
 
 # Carrega GDriveAgent diretamente do arquivo para evitar importar o package

@@ -8,12 +8,13 @@ Uso:
   python3 tools/gdrive_fetch_direct.py --out /home/homelab/gdrive_docs --folder RPA4All --tokens-dir specialized_agents/gdrive_tokens
 """
 import argparse
+import io
 import json
 import os
-import io
-from googleapiclient.http import MediaIoBaseDownload
+
 from google.oauth2.credentials import Credentials
 from googleapiclient.discovery import build
+from googleapiclient.http import MediaIoBaseDownload
 
 
 def load_accounts(tokens_dir):

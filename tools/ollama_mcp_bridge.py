@@ -5,7 +5,7 @@ Designed for callers that pass tools=[] and only need plain LLM generation.
 from __future__ import annotations
 
 import os
-from typing import Any, List, Optional
+from typing import Any
 
 from tools.ollama_client import OllamaClient
 
@@ -15,8 +15,8 @@ class OllamaMCPBridge:
 
     def __init__(
         self,
-        model: Optional[str] = None,
-        host: Optional[str] = None,
+        model: str | None = None,
+        host: str | None = None,
         num_ctx: int = 8192,
         num_predict: int = 2048,
         timeout: int = 300,
@@ -26,13 +26,13 @@ class OllamaMCPBridge:
         self.num_ctx = num_ctx
         self.num_predict = num_predict
         self.timeout = timeout
-        self._client: Optional[OllamaClient] = None
+        self._client: OllamaClient | None = None
 
-    def __enter__(self) -> "OllamaMCPBridge":
+    def __enter__(self) -> OllamaMCPBridge:
         self._client = OllamaClient(host=self.host, model=self.model)
         return self
 
-    def __exit__(self, *_: Any) -> None:
+    def __exit__(self, *_: object) -> None:
         if self._client:
             self._client.close()
             self._client = None
@@ -41,7 +41,7 @@ class OllamaMCPBridge:
         self,
         user_msg: str,
         system: str = "",
-        tools: List[Any] = [],
+        tools: list[Any] = [],
     ) -> str:
         """Run inference. tools=[] means plain generation (no MCP tool calls)."""
         if self._client is None:

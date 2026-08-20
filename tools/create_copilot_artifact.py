@@ -12,7 +12,6 @@ Todos os artefatos criados são validados com lint-frontmatter.py antes de serem
 
 from __future__ import annotations
 
-import json
 import subprocess
 import sys
 from dataclasses import dataclass

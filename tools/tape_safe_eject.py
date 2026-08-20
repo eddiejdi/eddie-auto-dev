@@ -24,16 +24,12 @@ from __future__ import annotations
 
 import argparse
 import fcntl
-import http.server
 import json
 import logging
 import os
-import select
 import signal
-import struct
 import subprocess
 import sys
-import threading
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -75,7 +71,7 @@ def _acquire_orch_lock(timeout: int = _ORCH_LOCK_TIMEOUT) -> bool:
     mas libera quando iniciar uma ejeção real (re-adquire via safe_eject).
     No modo one-shot, o lock é adquirido e liberado na função safe_eject.
     """
-    global _orch_lock_fd  # noqa: PLW0603
+    global _orch_lock_fd
     _ORCH_LOCK_PATH.parent.mkdir(parents=True, exist_ok=True)
     fd = os.open(str(_ORCH_LOCK_PATH), os.O_WRONLY | os.O_CREAT, 0o644)
     deadline = time.time() + timeout
@@ -98,7 +94,7 @@ def _acquire_orch_lock(timeout: int = _ORCH_LOCK_TIMEOUT) -> bool:
 
 def _release_orch_lock() -> None:
     """Libera o lock do orquestrador."""
-    global _orch_lock_fd  # noqa: PLW0603
+    global _orch_lock_fd
     if _orch_lock_fd is not None:
         try:
             fcntl.flock(_orch_lock_fd, fcntl.LOCK_UN)

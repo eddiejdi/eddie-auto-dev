@@ -8,9 +8,9 @@ Usage:
 
 By default the script only previews changes. Pass --apply to modify files.
 """
+import argparse
 import os
 import re
-import argparse
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]

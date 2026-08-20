@@ -20,7 +20,7 @@ import struct
 import wave
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Iterable, Literal
+from typing import Any, Literal
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ _FREEFORM_PATTERNS: tuple[tuple[re.Pattern[str], str, str | None], ...] = (
     (
         re.compile(
             r"\*{2,3}\s*som\s+de\s+fundo(?:\s+de\s+locu[cç][aã]o)?\s*\*{2,3}",
-            re.I,
+            re.IGNORECASE,
         ),
         "bed",
         "locucao",
@@ -49,7 +49,7 @@ _FREEFORM_PATTERNS: tuple[tuple[re.Pattern[str], str, str | None], ...] = (
     (
         re.compile(
             r"\[\s*som(?:\s+de\s+fundo)?(?:\s+de\s+locu[cç][aã]o)?[^\]]{0,40}\]",
-            re.I,
+            re.IGNORECASE,
         ),
         "bed",
         "locucao",
@@ -57,7 +57,7 @@ _FREEFORM_PATTERNS: tuple[tuple[re.Pattern[str], str, str | None], ...] = (
     (
         re.compile(
             r"\(\s*som(?:\s+de\s+fundo)?(?:\s+de\s+locu[cç][aã]o)?[^)]{0,40}\)",
-            re.I,
+            re.IGNORECASE,
         ),
         "bed",
         "locucao",
@@ -65,7 +65,7 @@ _FREEFORM_PATTERNS: tuple[tuple[re.Pattern[str], str, str | None], ...] = (
     (
         re.compile(
             r"\*{2,3}\s*pausa(?:\s+de)?\s*(\d+)\s*(?:seg(?:undos?)?|s)?\s*\*{2,3}",
-            re.I,
+            re.IGNORECASE,
         ),
         "pause",
         None,  # seconds from group 1
@@ -73,7 +73,7 @@ _FREEFORM_PATTERNS: tuple[tuple[re.Pattern[str], str, str | None], ...] = (
     (
         re.compile(
             r"(?m)^\s*(?:[-–—*•]\s*)?pausa(?:\s+de)?\s*(\d+)\s*(?:seg(?:undos?)?|s)?\s*[.!]?\s*$",
-            re.I,
+            re.IGNORECASE,
         ),
         "pause",
         None,
@@ -81,7 +81,7 @@ _FREEFORM_PATTERNS: tuple[tuple[re.Pattern[str], str, str | None], ...] = (
     (
         re.compile(
             r"\bpausa(?:\s+de)?\s*(\d+)\s*(?:seg(?:undos?)?|s)\b",
-            re.I,
+            re.IGNORECASE,
         ),
         "pause",
         None,
@@ -89,7 +89,7 @@ _FREEFORM_PATTERNS: tuple[tuple[re.Pattern[str], str, str | None], ...] = (
     (
         re.compile(
             r"\*{2,3}\s*(?:vinheta|abertura)\s*\*{2,3}",
-            re.I,
+            re.IGNORECASE,
         ),
         "vinheta",
         "open",
@@ -97,7 +97,7 @@ _FREEFORM_PATTERNS: tuple[tuple[re.Pattern[str], str, str | None], ...] = (
     (
         re.compile(
             r"\[\s*(?:vinheta|trilha\s*abertura)[^\]]{0,40}\]",
-            re.I,
+            re.IGNORECASE,
         ),
         "vinheta",
         "open",
@@ -105,14 +105,14 @@ _FREEFORM_PATTERNS: tuple[tuple[re.Pattern[str], str, str | None], ...] = (
     (
         re.compile(
             r"\b(?:trilha|m[uú]sica|sfx|bgm)\s*:\s*[^\n.!?]{0,40}",
-            re.I,
+            re.IGNORECASE,
         ),
         "bed",
         "locucao",
     ),
 )
 
-_LABEL_ONLY_RE = re.compile(r"\b(?:locutor|off|narrador)\s*:\s*", re.I)
+_LABEL_ONLY_RE = re.compile(r"\b(?:locutor|off|narrador)\s*:\s*", re.IGNORECASE)
 
 
 @dataclass(frozen=True)

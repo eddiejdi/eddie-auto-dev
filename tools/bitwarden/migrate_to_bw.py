@@ -8,11 +8,12 @@ Environment:
   BW_SESSION or read from /tmp/bw_session.txt
 """
 
-import sys
-import os
 import json
+import os
 import subprocess
+import sys
 from pathlib import Path
+
 
 def get_bw_session():
     """Get BW_SESSION from env or /tmp/bw_session.txt"""

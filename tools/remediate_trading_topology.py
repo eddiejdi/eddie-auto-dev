@@ -13,15 +13,20 @@ import json
 import subprocess
 import sys
 from collections import defaultdict
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from tools.audit_trading_topology import UnitRecord, build_report, parse_listeners, parse_systemctl_units
+from tools.audit_trading_topology import (
+    UnitRecord,
+    build_report,
+    parse_listeners,
+    parse_systemctl_units,
+)
 
 KNOWN_PROFILES = ("conservative", "aggressive", "default")
 UNIT_PATTERNS = (

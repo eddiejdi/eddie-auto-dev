@@ -21,9 +21,7 @@ import wave
 from pathlib import Path
 
 import httpx
-
 from ollama_client import OllamaClient
-
 
 DEFAULT_SOURCE_TEXT = (
     "Flávio Bolsonaro tem, até o momento, dois compromissos públicos "
