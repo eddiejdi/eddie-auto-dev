@@ -29,9 +29,10 @@ ssh "$HOMELAB" "
 # 3. Deploy config
 echo "[3/6] Deploying tunnel config..."
 ssh "$HOMELAB" "
-  sudo mkdir -p /etc/shared /var/lib/shared/tunnel-heal
+  sudo mkdir -p /etc/shared /etc/eddie /var/lib/shared/tunnel-heal
   sudo cp $REMOTE_REPO/grafana/exporters/tunnel_healthcheck_config.json /etc/shared/tunnel_healthcheck.json
-  sudo chown root:root /etc/shared/tunnel_healthcheck.json
+  sudo cp $REMOTE_REPO/grafana/exporters/tunnel_healthcheck_config.json /etc/eddie/tunnel_healthcheck.json
+  sudo chown root:root /etc/shared/tunnel_healthcheck.json /etc/eddie/tunnel_healthcheck.json
 "
 
 # 4. Deploy systemd service

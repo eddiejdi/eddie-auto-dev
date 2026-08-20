@@ -1567,6 +1567,9 @@ class TelegramBot:
         self._last_state_save = 0.0
         self.state_path = Path(__file__).parent / "data" / "telegram_bot_state.json"
         self.lock_path = Path(__file__).parent / "data" / "telegram_bot.lock"
+        self.inbox_path = Path(
+            os.environ.get("TELEGRAM_INBOX", self.state_path.parent / "telegram_inbox.jsonl")
+        )
         
         # Integração de Modelos
         self.integration = get_integration_client() if INTEGRATION_AVAILABLE else None
@@ -1582,6 +1585,30 @@ class TelegramBot:
                 self.last_update_id = int(data.get("last_update_id", 0))
         except Exception as e:
             print(f"[State] Falha ao carregar estado: {e}")
+
+    def _append_inbox(self, update: dict) -> None:
+        """Grava update no JSONL compartilhado (MCP/approval leem; sem getUpdates extra)."""
+        try:
+            from tools.telegram_inbox import append_update
+            append_update(update, path=self.inbox_path)
+            return
+        except Exception:
+            pass
+        rec = {
+            "ts": datetime.now().isoformat(),
+            "update_id": update.get("update_id"),
+            "type": "callback_query" if update.get("callback_query") else "message",
+            "text": (update.get("message") or {}).get("text")
+            or (update.get("message") or {}).get("caption")
+            or "",
+            "chat_id": ((update.get("message") or {}).get("chat") or {}).get("id"),
+            "from_username": ((update.get("message") or {}).get("from") or {}).get("username") or "",
+            "message": update.get("message"),
+            "callback_query": update.get("callback_query"),
+        }
+        self.inbox_path.parent.mkdir(parents=True, exist_ok=True)
+        with self.inbox_path.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(rec, ensure_ascii=False, default=str) + "\n")
 
     def _save_state(self) -> None:
         try:
@@ -3305,9 +3332,13 @@ class TelegramBot:
         """Processa mensagem recebida com sistema de Auto-Desenvolvimento e Calendário"""
         chat_id = message["chat"]["id"]
         user_id = message["from"]["id"]
-        text = message.get("text", "")
+        text = message.get("text") or message.get("caption") or ""
         msg_id = message["message_id"]
         user_name = message["from"].get("first_name", "Usuário")
+        print(
+            f"[Inbox] chat={chat_id} from={user_name} "
+            f"id={msg_id} text={text[:80]!r}"
+        )
         
         if not text:
             return
@@ -3702,6 +3733,10 @@ class TelegramBot:
                         self.last_update_id = update["update_id"]
                         if time.time() - self._last_state_save > 5:
                             self._save_state()
+                        try:
+                            self._append_inbox(update)
+                        except Exception as inbox_err:
+                            print(f"[Inbox] falha ao gravar: {inbox_err}")
                         
                         if "message" in update:
                             try:
@@ -3717,9 +3752,14 @@ class TelegramBot:
                     error = result.get("error", result.get("description", "Unknown error"))
                     if "409" in str(result.get("error_code", "")) or "Conflict" in str(error):
                         conflict_count += 1
-                        if conflict_count <= 5 or conflict_count % 100 == 0:
-                            print(f"[409] Conflito de polling (#{conflict_count}), aguardando 5s")
-                        await asyncio.sleep(5)
+                        wait_s = min(30, 5 * conflict_count)
+                        if conflict_count <= 5 or conflict_count % 20 == 0:
+                            print(
+                                f"[409] Outro getUpdates no mesmo token "
+                                f"(MCP/approval-gateway). Bot é o poller canônico. "
+                                f"#{conflict_count} wait={wait_s}s"
+                            )
+                        await asyncio.sleep(wait_s)
                     else:
                         print(f"[Erro] API Telegram: {error}")
                         await asyncio.sleep(5)

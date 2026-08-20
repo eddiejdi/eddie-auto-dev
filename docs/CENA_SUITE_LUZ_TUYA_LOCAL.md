@@ -153,24 +153,39 @@ Arquivo: `/home/homelab/homeassistant/config/automations.yaml`
 
 ### 1. `suite_botao_ventilador_aciona_lampada`
 
-- **Alias:** Suite — Botão do ventilador aciona a lâmpada  
-- **Trigger:** state de  
-  - `light.luz_e_ventilador_suite_local` (preferido)  
-  - `light.quarto` (fallback cloud)  
-- **Condição:** transição real `on`↔`off`; ignora `unavailable`/`unknown`  
-- **Action:** `switch.turn_on` / `turn_off` em  
-  - `switch.rele_mini_suite_local`  
-  - `switch.mi_ni_…_4_interruptor_1` (fallback, `continue_on_error: true`)
+- **Alias:** Suite — Botão do ventilador aciona a lâmpada
+- **Trigger:** state de
+  - `light.luz_e_ventilador_suite_local` (preferido)
+  - `light.quarto` (fallback cloud)
+- **Condição:** transição real `on`↔`off`; ignora `unavailable`/`unknown`
+  - **+ Lock:** verifica `input_boolean.suite_switch_changed_by_auto2 == off`
+    (impede loop de feedback — ver seção "Correção do loop" abaixo)
+- **Action:**
+  1. Seta `input_boolean.suite_light_changed_by_auto1 = on`
+  2. `switch.turn_on` / `turn_off` em
+     - `switch.rele_mini_suite_local`
+     - `switch.mi_ni_…_4_interruptor_1` (fallback, `continue_on_error: true`)
+  3. Aguarda 500ms
+  4. Limpa `input_boolean.suite_light_changed_by_auto1 = off`
+- **Mode:** `single`
 
 ### 2. `suite_lampada_sincroniza_botao_ventilador`
 
-- **Alias:** Suite — Lâmpada sincroniza o botão do ventilador  
-- **Trigger:** state de  
-  - `switch.rele_mini_suite_local`  
-  - `switch.mi_ni_…_4` (fallback)  
-- **Action:** espelha em  
-  - `light.luz_e_ventilador_suite_local`  
-  - `light.quarto` (fallback)
+- **Alias:** Suite — Lâmpada sincroniza o botão do ventilador
+- **Trigger:** state de
+  - `switch.rele_mini_suite_local`
+  - `switch.mi_ni_…_4` (fallback)
+- **Condição:** transição real `on`↔`off`; ignora `unavailable`/`unknown`
+  - **+ Lock:** verifica `input_boolean.suite_light_changed_by_auto1 == off`
+    (impede loop de feedback — ver seção "Correção do loop" abaixo)
+- **Action:**
+  1. Seta `input_boolean.suite_switch_changed_by_auto2 = on`
+  2. `light.turn_on` / `turn_off` em
+     - `light.luz_e_ventilador_suite_local`
+     - `light.quarto` (fallback, `continue_on_error: true`)
+  3. Aguarda 500ms
+  4. Limpa `input_boolean.suite_switch_changed_by_auto2 = off`
+- **Mode:** `single`
 
 Reload após edição:
 
@@ -307,14 +322,71 @@ Incidente completo (timers failed + 1010 + QR + `docker_restart`):
 
 ---
 
+## Correção do loop de feedback (2026-08-13)
+
+### Problema
+
+As duas automações estavam em **loop de feedback** — cada uma acionava a
+outra, criando um ciclo infinito de toggle a cada 1–1.5 segundos (325+
+mudanças de estado em 20 minutos).
+
+```
+Auto1: light.quarto muda → alterna switch.rele_mini_suite_local
+Auto2: switch.rele_mini_suite_local muda → alterna light.quarto
+→ loop infinito
+```
+
+### Solução: flags de lock (input_boolean)
+
+Dois `input_boolean` foram criados como locks de re-entrada:
+
+| Input Boolean | Setado por | Verificado por |
+|---|---|---|
+| `input_boolean.suite_light_changed_by_auto1` | Auto1 (antes de agir) | Auto2 (condição) |
+| `input_boolean.suite_switch_changed_by_auto2` | Auto2 (antes de agir) | Auto1 (condição) |
+
+**Fluxo de bloqueio:**
+
+1. Auto1 dispara → verifica se `suite_switch_changed_by_auto2 == off` → OK
+2. Auto1 seta `suite_light_changed_by_auto1 = on`
+3. Auto1 alterna os switches
+4. A mudança do switch dispara Auto2
+5. Auto2 verifica `suite_light_changed_by_auto1 == on` → **pula (lock ativo)**
+6. Após 500ms Auto1 limpa sua flag
+
+### Input Booleans necessários
+
+Criar via HA UI ou API:
+
+```bash
+# Criar input_boolean.suite_light_changed_by_auto1
+curl -X POST -H "Authorization: Bearer $HA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"state":"off","attributes":{"friendly_name":"Suite Light Changed by Auto1"}}' \
+  http://192.168.15.2:8123/api/states/input_boolean.suite_light_changed_by_auto1
+
+# Criar input_boolean.suite_switch_changed_by_auto2
+curl -X POST -H "Authorization: Bearer $HA_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"state":"off","attributes":{"friendly_name":"Suite Switch Changed by Auto2"}}' \
+  http://192.168.15.2:8123/api/states/input_boolean.suite_switch_changed_by_auto2
+```
+
+Documento detalhado do incidente:
+[INCIDENTS/2026-08-13_SUITE_LIGHT_AUTOMATION_FEEDBACK_LOOP.md](INCIDENTS/2026-08-13_SUITE_LIGHT_AUTOMATION_FEEDBACK_LOOP.md)
+
+---
+
 ## Lições aprendidas
 
 1. **Cenas críticas devem ser 100% `tuya_local` (LAN).** Cloud Tuya Sharing é frágil (token 2h, 1010, sign invalid).
-2. **“Hora funciona hora não”** quase sempre = gatilho/action em entidade cloud `unavailable` enquanto o device local está online.
+2. **"Hora funciona hora não"** quase sempre = gatilho/action em entidade cloud `unavailable` enquanto o device local está online.
 3. **Token fresco no storage ≠ integração HA `tuya` loaded.** Validar com SDK `Manager.update_device_cache()` e com estados de entidades, não só com o arquivo de token.
 4. **Minis (`tdq` / 1ch)** rotacionam `local_key`; self-heal é obrigatório após reauth.
 5. **Descoberta de IP:** `device.ip` da API cloud costuma ser **WAN**; usar `tinytuya.deviceScan()` + probe com `local_key` na subnet `192.168.15.0/24`.
 6. **Não commitar** tokens, `local_key`, QR de sessão nem dumps de `core.config_entries` com secrets.
+7. **Automações bidirecionais precisam de lock.** Sempre incluir `input_boolean` como flag de re-entrada ao criar sincronização A↔B. `mode: single` não impede loops — apenas serializa execuções. Condição de "estado já correto" não basta quando os alvos são múltiplas entidades.
+8. **Monitorar `last_triggered` e `current`** das automações: se ambas estão com `current: 1` e `last_triggered` com segundos de diferença, é loop.
 
 ---
 
@@ -323,10 +395,18 @@ Incidente completo (timers failed + 1010 + QR + `docker_restart`):
 - [ ] `light.luz_e_ventilador_suite_local` ∈ {on, off} (não unavailable)
 - [ ] `switch.rele_mini_suite_local` ∈ {on, off}
 - [ ] Automação `suite_botao_ventilador_aciona_lampada` = on
-- [ ] Toggle light local → mini acompanha em &lt; 2s
+- [ ] Automação `suite_lampada_sincroniza_botao_ventilador` = on
+- [ ] `input_boolean.suite_light_changed_by_auto1` = off
+- [ ] `input_boolean.suite_switch_changed_by_auto2` = off
+- [ ] Toggle light local → mini acompanha em < 2s
 - [ ] Botão físico do ventilador → mesma reação
+<<<<<<< Updated upstream
 - [ ] (Opcional) token Sharing remaining &gt; 30 min para self-heal de keys
 - [ ] Closet `switch.luz_closet_local` **desacoplado** do relé mini (4 automações com `initial_state: false`)
+=======
+- [ ] Sem loop: monitorar por 30s sem toggle espúreo
+- [ ] (Opcional) token Sharing remaining > 30 min para self-heal de keys
+>>>>>>> Stashed changes
 
 ---
 

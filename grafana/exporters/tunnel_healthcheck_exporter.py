@@ -83,9 +83,11 @@ class TunnelDef:
     systemd_unit: str
     health_url: Optional[str] = None  # HTTP endpoint to probe
     health_port: Optional[int] = None  # TCP port to check
+    health_dns: Optional[str] = None  # resolver IP for a real DNS query
     expected_process: Optional[str] = None  # grep pattern for ps
     restart_command: Optional[str] = None  # override for restart
     docker_container: Optional[str] = None  # Docker container name (for type=docker)
+    heal_checks: Optional[List[str]] = None  # only these failing trigger restart
     enabled: bool = True
 
 
@@ -139,6 +141,13 @@ def load_tunnel_config(config_path: str) -> List[TunnelDef]:
     return DEFAULT_TUNNELS
 
 
+class _NoRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Stop urllib from following 3xx — treat the redirect itself as the probe."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
 # ── Health check engine ────────────────────────────────────────────────
 
 @dataclass
@@ -173,13 +182,23 @@ class TunnelHealthChecker:
             return False
 
     def check_http(self, url: str, timeout: float = 5) -> Tuple[bool, float]:
-        """HTTP probe. Returns (ok, response_time_seconds)."""
+        """HTTP probe. 2xx/3xx count as up; redirects are not followed.
+
+        Pi-hole (and similar admin UIs) answer 302 to /admin/login. Following
+        that redirect to ``pi.hole`` or a login page used to mark DNS as down
+        and restart the container.
+        """
         start = time.monotonic()
+        opener = urllib.request.build_opener(_NoRedirectHandler)
+        req = urllib.request.Request(url, method="GET")
         try:
-            req = urllib.request.Request(url, method="GET")
-            with urllib.request.urlopen(req, timeout=timeout) as resp:
+            with opener.open(req, timeout=timeout) as resp:
                 elapsed = time.monotonic() - start
-                return resp.status < 500, elapsed
+                status = getattr(resp, "status", 0)
+                return 200 <= status < 400, elapsed
+        except urllib.error.HTTPError as exc:
+            elapsed = time.monotonic() - start
+            return 200 <= exc.code < 400, elapsed
         except Exception:
             return False, time.monotonic() - start
 
@@ -199,6 +218,35 @@ class TunnelHealthChecker:
                 capture_output=True, text=True, timeout=5,
             )
             return result.returncode == 0
+        except Exception:
+            return False
+
+    def check_docker_container_running(self, container_name: str) -> bool:
+        """True if the named Docker container is running (not the daemon)."""
+        try:
+            result = subprocess.run(
+                [
+                    "docker", "inspect",
+                    "-f", "{{.State.Running}}",
+                    container_name,
+                ],
+                capture_output=True, text=True, timeout=5,
+            )
+            return result.returncode == 0 and result.stdout.strip().lower() == "true"
+        except Exception:
+            return False
+
+    def check_dns(self, server: str, name: str = "example.com") -> bool:
+        """Query ``server`` for ``name``. Empty/failed answers are down."""
+        try:
+            result = subprocess.run(
+                [
+                    "dig", f"@{server}", name,
+                    "+time=2", "+tries=1", "+short",
+                ],
+                capture_output=True, text=True, timeout=5,
+            )
+            return result.returncode == 0 and bool(result.stdout.strip())
         except Exception:
             return False
 
@@ -307,34 +355,42 @@ class TunnelHealthChecker:
             state.last_check = time.time()
             return False
 
-        checks = []
+        checks: List[Tuple[str, bool]] = []
 
-        # 1. Systemd unit active
-        systemd_ok = self.check_systemd_active(tunnel.systemd_unit)
-        checks.append(("systemd", systemd_ok))
+        if tunnel.tunnel_type == "docker":
+            container = tunnel.docker_container or tunnel.name
+            checks.append(("docker", self.check_docker_container_running(container)))
+            if tunnel.systemd_unit and tunnel.systemd_unit not in {
+                "docker.service", "docker",
+            }:
+                checks.append(("systemd", self.check_systemd_active(tunnel.systemd_unit)))
+        else:
+            checks.append(("systemd", self.check_systemd_active(tunnel.systemd_unit)))
+            if tunnel.expected_process:
+                checks.append(("process", self.check_process(tunnel.expected_process)))
 
-        # 2. HTTP health (if configured)
-        response_time = 0
         if tunnel.health_url:
             http_ok, response_time = self.check_http(tunnel.health_url)
             checks.append(("http", http_ok))
             state.response_time = response_time
 
-        # 3. TCP port (if configured)
         if tunnel.health_port:
-            tcp_ok = self.check_tcp_port(tunnel.health_port)
-            checks.append(("tcp", tcp_ok))
+            checks.append(("tcp", self.check_tcp_port(tunnel.health_port)))
 
-        # 4. Process running (if configured)
-        if tunnel.expected_process:
-            proc_ok = self.check_process(tunnel.expected_process)
-            checks.append(("process", proc_ok))
+        if tunnel.health_dns:
+            checks.append(("dns", self.check_dns(tunnel.health_dns)))
 
-        # Determine overall health — all checks must pass
-        all_ok = all(ok for _, ok in checks) and len(checks) > 0
         state.last_check = time.time()
+        failed = [c for c, ok in checks if not ok]
+        if tunnel.heal_checks:
+            heal_set = set(tunnel.heal_checks)
+        else:
+            functional = [c for c, _ in checks if c in {"http", "tcp", "dns"}]
+            heal_set = set(functional) if functional else {c for c, _ in checks}
+        failed_heal = [c for c in failed if c in heal_set]
+        operational = len(checks) > 0 and not failed_heal
 
-        if all_ok:
+        if operational:
             if state.consecutive_failures > 0:
                 log.info("RECOVERED: %s is healthy again after %d failures",
                          name, state.consecutive_failures)
@@ -342,21 +398,21 @@ class TunnelHealthChecker:
                             f"after {state.consecutive_failures} failures")
             state.consecutive_failures = 0
             state.up = True
+            if failed:
+                log.warning("DEGRADED: %s — non-critical checks: %s", name, failed)
         else:
             state.consecutive_failures += 1
             state.up = False
-            failed = [c for c, ok in checks if not ok]
             log.warning("UNHEALTHY: %s — failed checks: %s (attempt %d)",
                         name, failed, state.consecutive_failures)
 
-            # Self-heal after 2 consecutive failures
             if state.consecutive_failures >= 2:
                 if name in NO_RESTART_TUNNELS:
                     self._routes_only_heal(tunnel, state)
                 else:
                     self.restart_service(tunnel, state)
 
-        return all_ok
+        return operational
 
     def check_all(self):
         """Run checks on all tunnels (thread-safe)."""

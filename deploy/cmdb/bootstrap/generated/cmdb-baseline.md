@@ -1,10 +1,10 @@
 # CMDB Baseline
 
-- Generated at: `2026-08-20T13:34:13.595340+00:00`
+- Generated at: `2026-08-20T18:21:39.046609+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
 - Repo services discovered: `214`
-- Critical services flagged for MVP: `87`
+- Critical services flagged for MVP: `214`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
@@ -12,10 +12,7 @@
 
 - `identity`: 4
 - `monitoring`: 19
-- `network`: 25
-- `operations`: 116
-- `storage`: 39
-- `trading`: 11
+- `network`: 191
 
 ## Trading profile instances (`12`)
 
@@ -61,23 +58,23 @@
 - `storj-payout-monitor.timer` (monitoring, systemd) from `systemd/storj-payout-monitor.timer`
 - `tape-component-quality-exporter.service` (monitoring, systemd) from `systemd/tape-component-quality-exporter.service`
 - `tunnel-healthcheck-exporter.service` (monitoring, systemd) from `systemd/tunnel-healthcheck-exporter.service`
-- `pihole` (network, compose) from `deploy/pihole/docker-compose.yml`
-- `proxy` (network, compose) from `deploy/cmdb/docker-compose.yml`
-- `cloudflared-named@.service` (network, systemd) from `tools/tunnels/cloudflared-named@.service`
-- `cloudflared-tunnel-guardian.service` (network, systemd) from `systemd/cloudflared-tunnel-guardian.service`
-- `cloudflared-tunnel-guardian.timer` (network, systemd) from `systemd/cloudflared-tunnel-guardian.timer`
-- `cloudflared.service` (network, systemd) from `tools/tunnels/cloudflared/cloudflared.service`
-- `dhcp-selfheal.service` (network, systemd) from `systemd/dhcp-selfheal.service`
-- `homelab-lan-gateway.service` (network, systemd) from `deploy/vpn/homelab-lan-gateway.service`
-- `iot-vpn-bypass-watchdog.service` (network, systemd) from `systemd/iot-vpn-bypass-watchdog.service`
-- `iot-vpn-bypass-watchdog.timer` (network, systemd) from `systemd/iot-vpn-bypass-watchdog.timer`
-- `ipv6-proxy.service` (network, systemd) from `systemd/ipv6-proxy.service`
-- `localtunnel@.service` (network, systemd) from `tools/tunnels/localtunnel@.service`
-- `pihole-ipv6-dns-fix.service` (network, systemd) from `systemd/pihole-ipv6-dns-fix.service`
-- `pihole.service` (network, systemd) from `systemd/pihole.service`
-- `protonvpn-best-server.service` (network, systemd) from `systemd/protonvpn-best-server.service`
-- `protonvpn-best-server.timer` (network, systemd) from `systemd/protonvpn-best-server.timer`
-- `protonvpn-boot-selfheal.service` (network, systemd) from `systemd/protonvpn-boot-selfheal.service`
+- `glpi` (network, compose) from `deploy/cmdb/docker-compose.yml`
+- `glpi-db` (network, compose) from `deploy/cmdb/docker-compose.yml`
+- `hostd` (network, compose) from `docker/docker-compose.sia.yml`
+- `mail-db` (network, compose) from `docker/docker-compose.simple-mail.yml`
+- `mail-server` (network, compose) from `docker/docker-compose.simple-mail.yml`
+- `mailu-backend` (network, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-db` (network, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-dovecot` (network, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-frontend` (network, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-postfix` (network, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-redis` (network, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-roundcube` (network, compose) from `docker/docker-compose.mailu.yml`
+- `netbox` (network, compose) from `deploy/cmdb/docker-compose.yml`
+- `netbox-postgres` (network, compose) from `deploy/cmdb/docker-compose.yml`
+- `netbox-redis` (network, compose) from `deploy/cmdb/docker-compose.yml`
+- `netbox-redis-cache` (network, compose) from `deploy/cmdb/docker-compose.yml`
+- `netbox-worker` (network, compose) from `deploy/cmdb/docker-compose.yml`
 
 ## Serviços anotados manualmente
 

@@ -14,7 +14,10 @@ Restart=on-failure
 RestartSec=15
 StartLimitIntervalSec=120
 StartLimitBurst=5
-ExecStart=/bin/sh -c "/usr/bin/docker network inspect storj_macvlan >/dev/null 2>&1 || /usr/bin/docker network create -d macvlan --subnet=192.168.15.0/24 --gateway=192.168.15.1 --ip-range=192.168.15.250/32 -o parent=eth-wan storj_macvlan"
+# Recria se a rede não existir OU se o parent persistido for um nome antigo
+# (ex.: enx00e04c596710 após rename udev para eth-wan). Sem isso o container
+# fica Exited 128 e o self-heal só faz docker restart em loop.
+ExecStart=/bin/sh -c 'PARENT=$(/usr/bin/docker network inspect storj_macvlan -f "{{index .Options \"parent\"}}" 2>/dev/null || true); if [ "$PARENT" != "eth-wan" ]; then /usr/bin/docker network rm storj_macvlan >/dev/null 2>&1 || true; /usr/bin/docker network create -d macvlan --subnet=192.168.15.0/24 --gateway=192.168.15.1 --ip-range=192.168.15.250/32 -o parent=eth-wan storj_macvlan; fi'
 ExecStartPost=/bin/sh -c "systemctl --no-block try-restart storj-host-shim.service || true"
 ExecStop=/bin/true
 

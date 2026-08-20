@@ -126,6 +126,14 @@ def load_candidates() -> list[Candidate]:
             log.warning("Endpoint sem porta, ignorado: %s", cand.endpoint)
             continue
         out.append(cand)
+    if len(out) < 3:
+        log.warning(
+            "Pool de candidatos pequeno (%d). Sem peers em países livres "
+            "próximos (ex.: AR/CL/US) o seletor não consegue baixar a latência "
+            "— veja docs/TASKS/2026-08-14_PROTONVPN_BEST_SERVER_POOL.md e "
+            "config/protonvpn-best-server.example.json",
+            len(out),
+        )
     return out
 
 

@@ -71,3 +71,79 @@ def test_non_docker_tunnel_still_uses_process_check():
 
     assert checker.check_tunnel("nginx-proxy") is True
     assert calls == {"process": 1}
+
+
+def test_http_treats_redirect_as_up(monkeypatch):
+    class _Resp:
+        status = 302
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    class _Opener:
+        def open(self, _req, timeout=5):
+            return _Resp()
+
+    monkeypatch.setattr(
+        MODULE.urllib.request, "build_opener", lambda *_a, **_k: _Opener()
+    )
+    checker = TunnelHealthChecker([])
+    ok, _elapsed = checker.check_http("http://127.0.0.1:8053/admin/")
+    assert ok is True
+
+
+def test_pihole_dns_up_does_not_restart_when_admin_http_fails():
+    tunnel = TunnelDef(
+        name="pihole",
+        tunnel_type="docker",
+        systemd_unit="pihole.service",
+        docker_container="pihole",
+        health_url="http://127.0.0.1:8053/admin/",
+        health_dns="127.0.0.1",
+        heal_checks=["dns"],
+    )
+    checker = TunnelHealthChecker([tunnel])
+    restarts = {"n": 0}
+    checker.check_docker_container_running = lambda _name: True
+    checker.check_systemd_active = lambda _unit: True
+    checker.check_http = lambda _url, timeout=5: (False, 0.01)
+    checker.check_dns = lambda _server, name="example.com": True
+
+    def _restart(_tunnel, _state):
+        restarts["n"] += 1
+        return False
+
+    checker.restart_service = _restart
+    assert checker.check_tunnel("pihole") is True
+    assert checker.check_tunnel("pihole") is True
+    assert restarts["n"] == 0
+    assert checker.states["pihole"].up is True
+
+
+def test_pihole_dns_down_triggers_restart_after_two_failures():
+    tunnel = TunnelDef(
+        name="pihole",
+        tunnel_type="docker",
+        systemd_unit="pihole.service",
+        docker_container="pihole",
+        health_dns="127.0.0.1",
+        heal_checks=["dns"],
+    )
+    checker = TunnelHealthChecker([tunnel])
+    restarts = {"n": 0}
+    checker.check_docker_container_running = lambda _name: True
+    checker.check_systemd_active = lambda _unit: True
+    checker.check_dns = lambda _server, name="example.com": False
+
+    def _restart(_tunnel, _state):
+        restarts["n"] += 1
+        return True
+
+    checker.restart_service = _restart
+    assert checker.check_tunnel("pihole") is False
+    assert restarts["n"] == 0
+    assert checker.check_tunnel("pihole") is False
+    assert restarts["n"] == 1

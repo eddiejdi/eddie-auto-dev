@@ -59,7 +59,8 @@ _CHAT:     str = ""
 DB_POLL_SECS   = int(os.environ.get("DB_POLL_SECS",   "5"))
 TG_LONG_POLL   = int(os.environ.get("TG_LONG_POLL",   "30"))
 INTENT_EXP_MIN = int(os.environ.get("INTENT_EXP_MIN", "10"))
-TG_POLL_ENABLED = os.environ.get("APPROVAL_GATEWAY_TG_POLL", "1").lower() not in {
+# Default off: eddie-telegram-bot é o único getUpdates. Gateway lê o inbox JSONL.
+TG_POLL_ENABLED = os.environ.get("APPROVAL_GATEWAY_TG_POLL", "0").lower() not in {
     "0", "false", "no", "off",
 }
 
@@ -230,7 +231,19 @@ def _send_ctx(intent: dict[str, Any]) -> None:
     })
 
 
+def _poll_inbox() -> list[dict[str, Any]]:
+    """Lê updates do JSONL do bot — não chama getUpdates (evita 409)."""
+    try:
+        from tools.telegram_inbox import read_since_offset
+        return read_since_offset()
+    except Exception as exc:
+        log.warning("inbox poll falhou: %s", exc)
+        return []
+
+
 def _poll_tg() -> list[dict[str, Any]]:
+    if not TG_POLL_ENABLED:
+        return _poll_inbox()
     res = _tg("getUpdates", {
         "offset":          _tg_offset,
         "timeout":         TG_LONG_POLL,
