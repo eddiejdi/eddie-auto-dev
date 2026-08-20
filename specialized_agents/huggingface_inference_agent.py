@@ -17,7 +17,10 @@ import aiohttp
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from specialized_agents.config import HUGGINGFACE_INFERENCE_CONFIG, MEDIA_GENERATION_CONFIG
+from specialized_agents.config import (
+    HUGGINGFACE_INFERENCE_CONFIG,
+    MEDIA_GENERATION_CONFIG,
+)
 
 logger = logging.getLogger(__name__)
 

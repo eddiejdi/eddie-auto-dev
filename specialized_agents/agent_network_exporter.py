@@ -2,14 +2,13 @@
 Agent Network Metrics Exporter
 Exporta métricas de comunicação entre agents para visualização em rede neural no Grafana
 """
-import os
 import json
-import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Set
-from collections import defaultdict
-from prometheus_client import start_http_server, Gauge, Counter, Info
 import logging
+import os
+import time
+from datetime import datetime
+
+from prometheus_client import Counter, Gauge, Info, start_http_server
 
 try:
     from sqlalchemy import create_engine, text
@@ -17,7 +16,7 @@ try:
 except ImportError:
     SQLALCHEMY_AVAILABLE = False
 
-from .agent_communication_bus import get_communication_bus, MessageType
+from .agent_communication_bus import MessageType, get_communication_bus
 from .config import DATA_DIR
 
 logging.basicConfig(level=logging.INFO)
@@ -195,8 +194,7 @@ class AgentNetworkExporter:
                 for row in result:
                     source, target, msg_type, count, latency = row
                     connections.append((source, target, count, latency))
-                    if count > max_messages:
-                        max_messages = count
+                    max_messages = max(max_messages, count)
                 
                 # Atualiza métricas
                 for source, target, count, latency in connections:
@@ -241,7 +239,7 @@ class AgentNetworkExporter:
         except Exception as e:
             logger.error(f"Erro ao atualizar métricas de rede: {e}")
     
-    def get_network_topology(self) -> Dict:
+    def get_network_topology(self) -> dict:
         """Retorna topologia da rede de agents para visualização"""
         if not self.engine:
             return {"nodes": [], "edges": []}
@@ -310,9 +308,7 @@ class AgentNetworkExporter:
         """Classifica agent em grupos para visualização"""
         agent_lower = agent_name.lower()
         
-        if 'python' in agent_lower:
-            return 'language'
-        elif any(lang in agent_lower for lang in ['javascript', 'typescript', 'go', 'rust', 'java', 'csharp', 'php']):
+        if 'python' in agent_lower or any(lang in agent_lower for lang in ['javascript', 'typescript', 'go', 'rust', 'java', 'csharp', 'php']):
             return 'language'
         elif 'coordinator' in agent_lower:
             return 'coordinator'

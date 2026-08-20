@@ -7,7 +7,11 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
 
-from .mercadopago_connector import BankAuthError, BankConnectionError, MercadoPagoConnector
+from .mercadopago_connector import (
+    BankAuthError,
+    BankConnectionError,
+    MercadoPagoConnector,
+)
 
 logger = logging.getLogger(__name__)
 

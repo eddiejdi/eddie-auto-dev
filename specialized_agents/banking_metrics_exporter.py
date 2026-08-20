@@ -16,11 +16,7 @@ Porta: 9102 (standalone) ou via /metrics/banking no FastAPI 8503.
 import asyncio
 import logging
 import os
-import time
-from collections import defaultdict
-from datetime import date, datetime, timedelta
-from decimal import Decimal
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import httpx
 from prometheus_client import (
@@ -28,7 +24,6 @@ from prometheus_client import (
     Counter,
     Gauge,
     Histogram,
-    Info,
     generate_latest,
     start_http_server,
 )
@@ -44,7 +39,7 @@ class BankingMetricsExporter:
     def __new__(cls, *args, **kwargs):
         return super().__new__(cls)
 
-    def __init__(self, registry: Optional[CollectorRegistry] = None):
+    def __init__(self, registry: CollectorRegistry | None = None):
         self.registry = registry or CollectorRegistry()
 
         self.balance_available = Gauge(
@@ -338,7 +333,7 @@ class BankingMetricsExporter:
         """Retorna métricas em formato Prometheus."""
         return generate_latest(self.registry)
 
-    def get_summary(self) -> Dict[str, Any]:
+    def get_summary(self) -> dict[str, Any]:
         """Retorna resumo JSON das métricas."""
         return {"service": "eddie-banking-metrics", "version": "1.0.0"}
 

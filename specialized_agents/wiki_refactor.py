@@ -8,8 +8,8 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any
 from types import SimpleNamespace
+from typing import Any
 
 try:
     import aiohttp
@@ -19,7 +19,7 @@ except ModuleNotFoundError:  # pragma: no cover - fallback para ambientes mínim
             raise ModuleNotFoundError("aiohttp is required for runtime HTTP calls")
 
     class _ClientTimeout:
-        def __init__(self, total: int | float | None = None) -> None:
+        def __init__(self, total: float | None = None) -> None:
             self.total = total
 
     aiohttp = SimpleNamespace(  # type: ignore[assignment]
@@ -33,8 +33,7 @@ from pydantic import BaseModel, Field
 
 from specialized_agents.config import LLM_CONFIG, LLM_GPU1_CONFIG, get_dynamic_num_ctx
 from specialized_agents.wiki_client import WikiJsClient
-from specialized_agents.wiki_paths import canonical_wiki_path, normalize_slug
-
+from specialized_agents.wiki_paths import canonical_wiki_path
 
 _ROOT_INDEX_TITLES = {
     "home": "RPA4All Wiki",

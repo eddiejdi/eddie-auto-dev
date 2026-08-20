@@ -45,10 +45,10 @@ import os
 import sys
 import traceback
 import uuid
-from typing import Any, Literal, TypedDict
+from typing import Literal, TypedDict
 
-from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.postgres import PostgresSaver
+from langgraph.graph import END, START, StateGraph
 
 # ── State ─────────────────────────────────────────────────────────────────────
 
@@ -157,9 +157,8 @@ def _intent_complete(intent_id: str, outcome: str, error: str | None = None) -> 
     """Fecha o registro com outcome/error_detail."""
     conn = _db_connect()
     new_status = "failed" if error else "done"
-    with conn:
-        with conn.cursor() as cur:
-            cur.execute("""
+    with conn, conn.cursor() as cur:
+        cur.execute("""
                 UPDATE agent_actions
                    SET status = %s,
                        outcome = %s,
@@ -167,7 +166,7 @@ def _intent_complete(intent_id: str, outcome: str, error: str | None = None) -> 
                        resolved_at = NOW()
                  WHERE intent_id = %s
             """, (new_status, outcome[:2000] if outcome else None,
-                  error[:1000] if error else None, intent_id))
+              error[:1000] if error else None, intent_id))
     conn.close()
 
 

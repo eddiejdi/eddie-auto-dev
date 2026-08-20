@@ -114,7 +114,7 @@ async def _run_hba_test_task(
         _active_job["status"] = "running"
     try:
         # Import lazy para não falhar na inicialização do FastAPI fora do NAS
-        from tools.fc_hba_tester import run_dual_hba_test, report_to_dict
+        from tools.fc_hba_tester import report_to_dict, run_dual_hba_test
 
         report = await asyncio.get_event_loop().run_in_executor(
             None,
@@ -148,7 +148,10 @@ async def _run_component_quality_task(
     if _active_component_quality_job:
         _active_component_quality_job["status"] = "running"
     try:
-        from tools.tape_component_quality_agent import collect_component_quality, report_to_dict
+        from tools.tape_component_quality_agent import (
+            collect_component_quality,
+            report_to_dict,
+        )
 
         report = await asyncio.get_event_loop().run_in_executor(
             None,

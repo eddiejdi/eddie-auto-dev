@@ -84,7 +84,7 @@ def _today_iso() -> str:
 def _load_local_secret(field: str) -> str | None:
     os.environ.setdefault("SECRETS_AGENT_DATA", "/var/lib/eddie/secrets_agent")
     try:
-        from tools.secrets_agent.secrets_agent import local_vault  # noqa: PLC0415
+        from tools.secrets_agent.secrets_agent import local_vault
 
         value = local_vault.get(CONUBE_SECRET_NAME, field)
         if value:
@@ -231,7 +231,7 @@ class ConubePortalAgent:
         except Exception:
             pass
 
-    def __enter__(self) -> "ConubePortalAgent":
+    def __enter__(self) -> ConubePortalAgent:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:
@@ -801,7 +801,9 @@ def conube_remediate_client_pending(payload: ConubeActionRequest | None = None) 
 def conube_close_overdue_balances(payload: ConubeCloseBalancesRequest) -> dict[str, Any]:
     if lg := _conube_langgraph():
         return lg.close_overdue_balances(payload)
-    from specialized_agents.conube_selenium import close_overdue_balances_without_movement
+    from specialized_agents.conube_selenium import (
+        close_overdue_balances_without_movement,
+    )
 
     agent = _build_agent(payload.headless)
     try:

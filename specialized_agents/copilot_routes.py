@@ -7,12 +7,13 @@ Fornece:
 - POST /v1/chat/completions - Chat com fallback automático (GPU0 → GPU1 → sk-or)
 """
 
+import logging
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-import logging
 
-from .copilot_model_router import get_copilot_router, get_active_model_info
+from .copilot_model_router import get_active_model_info, get_copilot_router
 
 logger = logging.getLogger(__name__)
 
@@ -25,15 +26,15 @@ class ChatMessage(BaseModel):
 
 
 class ChatCompletionRequest(BaseModel):
-    model: Optional[str] = None
-    messages: List[ChatMessage]
-    temperature: Optional[float] = 0.3
-    max_tokens: Optional[int] = 8192
-    top_p: Optional[float] = 0.9
+    model: str | None = None
+    messages: list[ChatMessage]
+    temperature: float | None = 0.3
+    max_tokens: int | None = 8192
+    top_p: float | None = 0.9
 
 
 @router.get("/v1/models")
-async def list_models() -> Dict[str, Any]:
+async def list_models() -> dict[str, Any]:
     """
     Listar modelos disponíveis (compatível com OpenAI API).
     
@@ -63,7 +64,7 @@ async def list_models() -> Dict[str, Any]:
 
 
 @router.post("/v1/chat/completions")
-async def chat_completions(request: ChatCompletionRequest) -> Dict[str, Any]:
+async def chat_completions(request: ChatCompletionRequest) -> dict[str, Any]:
     """
     Chat completion com modelo automático (GPU0 → GPU1 → sk-or fallback).
     
@@ -100,7 +101,7 @@ async def chat_completions(request: ChatCompletionRequest) -> Dict[str, Any]:
 
 
 @router.get("/copilot/model-info")
-async def model_info() -> Dict[str, Any]:
+async def model_info() -> dict[str, Any]:
     """
     Informações do modelo ativo (para debug/monitoring).
     

@@ -34,7 +34,6 @@ Deploy:
 from __future__ import annotations
 
 import asyncio
-import json
 import logging
 import os
 import sys
@@ -245,7 +244,8 @@ def _poll_tg() -> list[dict[str, Any]]:
 # ══════════════════════════════════════════════════════════════════════════
 
 def _conn():
-    import psycopg2, psycopg2.extras
+    import psycopg2
+    import psycopg2.extras
     c = psycopg2.connect(_DB_DSN)
     c.cursor_factory = psycopg2.extras.RealDictCursor
     return c

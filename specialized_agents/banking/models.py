@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import datetime
 from decimal import Decimal
 from enum import Enum
 from typing import Any
@@ -21,7 +21,7 @@ class Balance:
     provider: BankProvider
     account_id: str
     available: Decimal
-    blocked: Decimal = Decimal("0")
+    blocked: Decimal = Decimal(0)
     total: Decimal | None = None
     currency: str = "BRL"
     as_of: datetime = field(default_factory=datetime.utcnow)
@@ -56,9 +56,9 @@ class CofrinhoYieldReport:
     provider: BankProvider = BankProvider.MERCADOPAGO
     pots_ids: list[str] = field(default_factory=list)
     current_month: str = ""
-    current_month_yield: Decimal = Decimal("0")
-    current_month_deposits: Decimal = Decimal("0")
-    last_30_days_yield: Decimal = Decimal("0")
+    current_month_yield: Decimal = Decimal(0)
+    current_month_deposits: Decimal = Decimal(0)
+    last_30_days_yield: Decimal = Decimal(0)
     monthly: list[CofrinhoSummary] = field(default_factory=list)
     latest_credit: CofrinhoCredit | None = None
     credits: list[CofrinhoCredit] = field(default_factory=list)

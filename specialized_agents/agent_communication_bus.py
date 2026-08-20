@@ -4,12 +4,13 @@ Sistema de interceptação e logging de comunicação entre agentes em tempo rea
 """
 import asyncio
 import json
-from datetime import datetime
-from typing import Dict, List, Any, Optional, Callable
-from dataclasses import dataclass, field
-from enum import Enum
-from collections import deque
 import threading
+from collections import deque
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any
 
 from fastapi import APIRouter
 from pydantic import BaseModel, Field
@@ -48,9 +49,9 @@ class AgentMessage:
     source: str               # Agente de origem
     target: str               # Agente de destino (ou "all" para broadcast)
     content: str              # Conteúdo da mensagem
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
     
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         return {
             "id": self.id,
             "timestamp": self.timestamp.isoformat(),
@@ -69,7 +70,7 @@ class CommunicationPublishRequest(BaseModel):
     source: str = "coordinator"
     target: str = "all"
     message_type: str = MessageType.COORDINATOR.value
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class CommunicationTestRequest(BaseModel):
@@ -104,10 +105,10 @@ class AgentCommunicationBus:
         self.message_buffer: deque = deque(maxlen=1000)
         
         # Subscribers para notificações em tempo real
-        self.subscribers: List[Callable[[AgentMessage], None]] = []
+        self.subscribers: list[Callable[[AgentMessage], None]] = []
         
         # Filtros ativos
-        self.active_filters: Dict[str, bool] = {
+        self.active_filters: dict[str, bool] = {
             MessageType.REQUEST.value: True,
             MessageType.RESPONSE.value: True,
             MessageType.TASK_START.value: True,
@@ -153,7 +154,7 @@ class AgentCommunicationBus:
         source: str,
         target: str,
         content: str,
-        metadata: Dict[str, Any] = None
+        metadata: dict[str, Any] = None
     ) -> AgentMessage:
         """
         Publica uma mensagem no bus.
@@ -220,11 +221,11 @@ class AgentCommunicationBus:
     def get_messages(
         self,
         limit: int = 100,
-        message_types: List[MessageType] = None,
+        message_types: list[MessageType] = None,
         source: str = None,
         target: str = None,
         since: datetime = None
-    ) -> List[AgentMessage]:
+    ) -> list[AgentMessage]:
         """
         Obtém mensagens com filtros opcionais.
         
@@ -257,7 +258,7 @@ class AgentCommunicationBus:
         # Retornar últimas mensagens
         return messages[-limit:]
     
-    def get_conversation_thread(self, task_id: str = None) -> List[AgentMessage]:
+    def get_conversation_thread(self, task_id: str = None) -> list[AgentMessage]:
         """Obtém thread de conversa por task_id"""
         if not task_id:
             return list(self.message_buffer)
@@ -291,7 +292,7 @@ class AgentCommunicationBus:
         """Retoma a gravação de mensagens"""
         self.recording = True
     
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Retorna estatísticas de comunicação"""
         uptime = (datetime.now() - self.stats["start_time"]).total_seconds()
         return {
@@ -332,7 +333,7 @@ def get_communication_bus() -> AgentCommunicationBus:
     return _bus_instance
 
 
-def activate_agent(agent_id: str) -> List[str]:
+def activate_agent(agent_id: str) -> list[str]:
     """Marca um agente como ativo para respostas locais no bus."""
     normalized = agent_id.strip().lower()
     with _active_agents_lock:
@@ -341,7 +342,7 @@ def activate_agent(agent_id: str) -> List[str]:
         return sorted(_active_agents)
 
 
-def get_active_agents() -> List[str]:
+def get_active_agents() -> list[str]:
     """Lista de agentes ativos conhecidos pelo bus."""
     with _active_agents_lock:
         return sorted(_active_agents)
@@ -355,14 +356,14 @@ def clear_active_agents() -> None:
 
 # taxonomy: tables=public.agent_ipc; owner=agent_bus
 @router.get("/messages")
-async def communication_messages(limit: int = 100) -> Dict[str, Any]:
+async def communication_messages(limit: int = 100) -> dict[str, Any]:
     """Retorna as últimas mensagens registradas no bus."""
     messages = [message.to_dict() for message in get_communication_bus().get_messages(limit=limit)]
     return {"messages": messages, "count": len(messages)}
 
 
 @router.get("/stats")
-async def communication_stats() -> Dict[str, Any]:
+async def communication_stats() -> dict[str, Any]:
     """Retorna estatísticas do communication bus."""
     return get_communication_bus().get_stats()
 
@@ -370,7 +371,7 @@ async def communication_stats() -> Dict[str, Any]:
 # taxonomy: tables=public.agent_ipc
 @router.post("/publish")
 @router.post("/send")
-async def communication_publish(payload: CommunicationPublishRequest) -> Dict[str, Any]:
+async def communication_publish(payload: CommunicationPublishRequest) -> dict[str, Any]:
     """Publica uma mensagem genérica no bus via API."""
     try:
         message_type = MessageType(payload.message_type)
@@ -387,7 +388,7 @@ async def communication_publish(payload: CommunicationPublishRequest) -> Dict[st
 
 
 @router.post("/test")
-async def communication_test(payload: CommunicationTestRequest) -> Dict[str, Any]:
+async def communication_test(payload: CommunicationTestRequest) -> dict[str, Any]:
     """Dispara um broadcast de teste e gera respostas locais previsíveis para CI."""
     bus = get_communication_bus()
     published = bus.publish(
@@ -397,7 +398,7 @@ async def communication_test(payload: CommunicationTestRequest) -> Dict[str, Any
         payload.message,
         {"source": "communication_test", "start_responder": payload.start_responder},
     )
-    local_responses: List[Dict[str, Any]] = []
+    local_responses: list[dict[str, Any]] = []
 
     if payload.start_responder:
         await asyncio.sleep(max(0.0, min(payload.wait_seconds, 1.0)))

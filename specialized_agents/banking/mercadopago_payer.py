@@ -98,7 +98,7 @@ class MercadoPagoWebPayer:
                 pass
             self.driver = None
 
-    def __enter__(self) -> "MercadoPagoWebPayer":
+    def __enter__(self) -> MercadoPagoWebPayer:
         return self
 
     def __exit__(self, exc_type, exc, tb) -> None:

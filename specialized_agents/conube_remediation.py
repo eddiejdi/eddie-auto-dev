@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 import os
 from calendar import monthrange
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Any
 from urllib.parse import urlencode
 
@@ -23,12 +23,7 @@ CONUBE_TELEGRAM_NOTIFY = os.getenv("CONUBE_TELEGRAM_NOTIFY", "1").lower() not in
 }
 
 from specialized_agents.conube_operational import (
-    _count_by_responsible,
-    _dedupe_pending_items,
-    _filter_items_for_open_periods,
     _normalize_last_periods,
-    _normalize_pending_docs,
-    _open_period_keys,
     fetch_operational_snapshot,
 )
 
@@ -503,7 +498,9 @@ def check_billing_boletos(agent: Any, *, declare_payment_intent: bool = True) ->
     }
     if declare_payment_intent:
         try:
-            from specialized_agents.conube_agent_langgraph import ConubeScheduledBillingPaymentAgent
+            from specialized_agents.conube_agent_langgraph import (
+                ConubeScheduledBillingPaymentAgent,
+            )
 
             payment_agent = ConubeScheduledBillingPaymentAgent()
             try:

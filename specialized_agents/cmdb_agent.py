@@ -23,7 +23,7 @@ import unicodedata
 from collections import Counter
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from ipaddress import ip_address, ip_interface
+from ipaddress import ip_interface
 from pathlib import Path
 from typing import Any, Literal
 
