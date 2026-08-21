@@ -75,9 +75,9 @@
   "guardrails_positive_only_sells": true,
   "rebuy_lock_enabled": true,
   "rebuy_envelope": {
-    "grace_hours": 2,
-    "decay_pct_per_hour": 0.25,
-    "max_premium_pct": 5.0
+    "grace_hours": 1,
+    "decay_pct_per_hour": 1.5,
+    "max_premium_pct": 10.0
   },
   "track_record_confidence": {
     "enabled": true,

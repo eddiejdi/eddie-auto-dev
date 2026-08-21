@@ -30,6 +30,12 @@ logger = logging.getLogger("btc_trading_agent")
 
 _TRADING_FEE_PCT = 0.001  # 0.1% — espelho da constante em trading_agent.py
 
+# Pré-checagem de saldo: evita enviar ordens SELL que a exchange rejeitará
+# com "Balance insufficient" (código 200004) e impede re-tentativas imediatas
+# de slots fantasma enquanto o reconcile está em andamento.
+_BALANCE_CHECK_TOLERANCE_PCT = 0.005  # 0.5% de tolerância size vs saldo
+_BALANCE_INSUFFICIENT_COOLDOWN_S = 60  # cooldown após falha de saldo
+
 
 class PositionManagerMixin:
     """Mixin que encapsula tracking de posição e saídas automáticas por slot."""
@@ -62,21 +68,52 @@ class PositionManagerMixin:
             if isinstance(live_cfg, dict)
             else ""
         )
+        def _from_trade_accounts() -> tuple[float, float]:
+            from kucoin_api import get_balances
+
+            rows = get_balances(account_type="trade")
+            by_ccy = {
+                str(row.get("currency") or ""): float(row.get("available", 0) or 0)
+                for row in rows
+            }
+            return by_ccy.get(quote_cur, 0.0), by_ccy.get(base_cur, 0.0)
+
         if subaccount:
             from kucoin_api import get_sub_account_balances
 
-            rows = get_sub_account_balances()
+            try:
+                rows = get_sub_account_balances()
+            except Exception as exc:
+                logger.info(
+                    "📐 sub-account listing failed (%s); using authenticated TRADE "
+                    "balances (sub API key? sub=%s)",
+                    exc,
+                    subaccount,
+                )
+                return _from_trade_accounts()
+
+            want = subaccount.casefold()
 
             def _sum(currency: str) -> float:
                 return sum(
                     float(account.get("available", 0) or 0)
                     for account in rows
-                    if account.get("sub_name") == subaccount
+                    if str(account.get("sub_name") or "").casefold() == want
                     and account.get("account_type") == "trade"
                     and account.get("currency") == currency
                 )
 
-            return _sum(quote_cur), _sum(base_cur)
+            quote, base = _sum(quote_cur), _sum(base_cur)
+            if quote > 0 or base > 0:
+                return quote, base
+            # Key de subconta: /api/v1/sub-accounts (master) volta vazio e
+            # o equity ia a $0 (BTC aggressive 2026-08-20). A key autenticada
+            # JÁ É a TRADE da subconta.
+            logger.info(
+                "📐 sub-account listing empty for %s; using authenticated TRADE balances",
+                subaccount,
+            )
+            return _from_trade_accounts()
 
         from kucoin_api import get_balance
 
@@ -113,6 +150,27 @@ class PositionManagerMixin:
         if price > 0:
             self.state.position_value = aligned * float(price)
         self._sync_position_tracking()
+
+    def _read_base_balance_available(self) -> float:
+        """Lê saldo disponível da moeda base (ex: SOL, BTC) da subconta TRADE.
+
+        Retorna -1.0 quando não é possível ler (desativando a pré-checagem)
+        ou em dry_run (sem saldo real). Usado pelo guard de SELL para evitar
+        ordens que a KuCoin rejeitaria com código 200004 (Balance insufficient).
+        """
+        if getattr(self.state, "dry_run", False):
+            return -1.0
+        base_currency = str(self.symbol).split("-")[0]
+        quote_currency = str(self.symbol).split("-")[1]
+        try:
+            _, base_qty = self._read_subaccount_spot_balances(quote_currency)
+            return float(base_qty or 0.0)
+        except Exception as exc:
+            logger.debug(
+                "Saldo %s indisponível para pré-checagem SELL: %s",
+                base_currency, exc,
+            )
+            return -1.0
 
     def _sync_position_tracking(self) -> None:
         """Mantém contagem bruta e slot lógico coerentes com a posição atual."""
@@ -164,6 +222,20 @@ class PositionManagerMixin:
         """
         sold = 0
         for decision in sorted(decisions, key=lambda item: item.entry_idx, reverse=True):
+            # Guard de cooldown após "Balance insufficient": se um slot acabou de
+            # falhar por saldo (200004) ou pré-checagem, o reconcile síncrono foi
+            # disparado e o estado pode ainda conter slots fantasma. Parar o
+            # processamento dos próximos slots evita bombardear a exchange com
+            # ordens inválidas no mesmo ciclo.
+            cooldown_until = getattr(self, "_sell_balance_cooldown_until", 0.0)
+            if time.time() < cooldown_until:
+                logger.info(
+                    "🔒 Batch SELL abortado: cooldown saldo insuficiente ativo "
+                    "(restam %.1fs, %d slot(s) pendente(s) não tentados)",
+                    cooldown_until - time.time(),
+                    len(decisions) - sold,
+                )
+                break
             if not decision.bypass_guardrail:
                 entries = list(getattr(self.state, "entries", []) or [])
                 entry = next(
@@ -280,6 +352,49 @@ class PositionManagerMixin:
                 if entry_price <= 0 or size <= 0:
                     return False
 
+                # ── Pré-checagem de saldo (modo real): abortar SELL antes de
+                # enviar ordem inválida. Slots fantasma no state (após venda de
+                # subconta compartilhada ou reconciliação incompleta) levariam
+                # a rejeições 200004 pela exchange e, sem este guard, a
+                # re-tentativas imediatas no ciclo seguinte.
+                if not self.state.dry_run:
+                    cooldown_until = getattr(
+                        self, "_sell_balance_cooldown_until", 0.0
+                    )
+                    if time.time() < cooldown_until:
+                        logger.info(
+                            "🔒 SELL slot #%d abortado (cooldown saldo insuficiente): "
+                            "size=%.8f — aguardando reconcile",
+                            entry_idx + 1, size,
+                        )
+                        return False
+
+                    available = self._read_base_balance_available()
+                    if available >= 0:
+                        dust = self._min_tradeable_dust()
+                        tolerance = max(size * _BALANCE_CHECK_TOLERANCE_PCT, dust)
+                        if size > available + tolerance:
+                            base_cur = str(self.symbol).split("-")[0]
+                            logger.warning(
+                                "⚠️ SELL slot #%d abortado por pré-checagem: "
+                                "size=%.8f %s > saldo real=%.8f %s (tol=%.8f). "
+                                "Disparando reconcile síncrono + cooldown %ds.",
+                                entry_idx + 1, size, base_cur,
+                                available, base_cur, tolerance,
+                                _BALANCE_INSUFFICIENT_COOLDOWN_S,
+                            )
+                            try:
+                                self._reconcile_position_with_exchange(price)
+                            except Exception as exc:
+                                logger.debug(
+                                    "reconcile síncrono após pré-check falhou: %s",
+                                    exc,
+                                )
+                            self._sell_balance_cooldown_until = (
+                                time.time() + _BALANCE_INSUFFICIENT_COOLDOWN_S
+                            )
+                            return False
+
                 gross_pnl = (price - entry_price) * size
                 sell_fee = price * size * fee_pct
                 buy_fee = entry_price * size * fee_pct
@@ -306,17 +421,63 @@ class PositionManagerMixin:
                         },
                     )
                     if not result.get("success"):
-                        logger.error("❌ Slot sell failed: %s", result)
                         err_code = str(
                             (result.get("raw") or result).get("code", "")
                         )
+                        if err_code == "dust_skip" or result.get("skip_notify"):
+                            logger.warning(
+                                "🧹 SELL dust skip silencioso slot #%d size=%.8f — "
+                                "removendo slot do state (sem Telegram).",
+                                entry_idx + 1, size,
+                            )
+                            try:
+                                buy_trade_id = entry.get("trade_id")
+                                if buy_trade_id:
+                                    self.db.merge_trade_metadata(
+                                        int(buy_trade_id),
+                                        {"closed_reason": "dust_below_minsize"},
+                                    )
+                            except Exception as exc:
+                                logger.debug("dust metadata: %s", exc)
+                            entries.pop(entry_idx)
+                            self.state.entries = entries
+                            self.state.position = max(0.0, self.state.position - size)
+                            if entries:
+                                total_sz = sum(float(e.get("size", 0) or 0) for e in entries)
+                                total_ct = sum(
+                                    float(e.get("size", 0) or 0) * float(e.get("price", 0) or 0)
+                                    for e in entries
+                                )
+                                self.state.entry_price = total_ct / total_sz if total_sz > 0 else 0.0
+                            else:
+                                self.state.entry_price = 0.0
+                                self.state.entries = []
+                                self.state.position = 0.0
+                            self._sync_position_tracking()
+                            return True
+                        logger.error("❌ Slot sell failed: %s", result)
                         if err_code == "200004":  # Balance insufficient
-                            threading.Thread(
-                                target=self._reconcile_position_with_exchange,
-                                args=(price,),
-                                daemon=True,
-                                name="reconcile-phantom",
-                            ).start()
+                            # Reconcile SÍNCRONO: slots fantasma precisam ser
+                            # saneados antes do próximo ciclo disparar novas
+                            # ordens inválidas. Thread daemon deixava o state
+                            # desincronizado por vários ciclos de polling.
+                            logger.warning(
+                                "⚠️ SELL rejeitado (Balance insufficient): "
+                                "size=%.8f, slot #%d. Reconcile síncrono + "
+                                "cooldown %ds ativados.",
+                                size, entry_idx + 1,
+                                _BALANCE_INSUFFICIENT_COOLDOWN_S,
+                            )
+                            try:
+                                self._reconcile_position_with_exchange(price)
+                            except Exception as exc:
+                                logger.debug(
+                                    "reconcile síncrono após 200004 falhou: %s",
+                                    exc,
+                                )
+                            self._sell_balance_cooldown_until = (
+                                time.time() + _BALANCE_INSUFFICIENT_COOLDOWN_S
+                            )
                         return False
                     order_id = result.get("orderId")
                     logger.info(
@@ -1089,4 +1250,78 @@ class PositionManagerMixin:
                 closed, self.state.position, len(self.state.entries),
             )
 
+        self._sanitize_stale_positions()
         return closed
+
+    def _sanitize_stale_positions(self) -> None:
+        """Scan DB for stale BUY positions and close them.
+
+        Runs after every reconciliation cycle. Detects:
+        1. Shadow simulation positions (dry_run=True) without closed_reason
+        2. Positions older than 30 days (orphan safety net)
+        3. Positions from inactive profiles (service stopped)
+
+        Each detection rule is independent (OR logic). Closed positions get
+        a `closed_reason` in metadata so they're excluded from future scans
+        and don't appear in Grafana dashboards.
+        """
+        try:
+            profile = (
+                self._current_profile()
+                if callable(getattr(self, "_current_profile", None))
+                else "default"
+            )
+        except Exception:
+            profile = "default"
+
+        try:
+            live_cfg = self._load_live_config()
+        except Exception:
+            live_cfg = getattr(self, "config", {}) or {}
+
+        # Determine which profiles are active (have a running service)
+        # by checking if this agent's profile matches. Other profiles
+        # that we know about but aren't running are "inactive".
+        active_profiles = {profile}
+
+        # Profiles that this agent instance knows are definitely running
+        # (aggressive instance knows aggressive is active, etc.)
+        # Conservative profiles are handled by separate instances —
+        # don't mark them stale if they might have their own agent running.
+        # Only mark profiles that are clearly dead (no service, balance=0).
+        inactive_candidates = []
+        try:
+            if hasattr(self, "db") and self.db:
+                # Check if conservative profiles have any recent activity
+                for candidate_profile in ("conservative", "default", "exchange_sync"):
+                    if candidate_profile == profile:
+                        continue
+                    recent = self.db.count_trades_since(
+                        self.symbol,
+                        time.time() - 86400,  # last 24h
+                        dry_run=False,
+                        profile=candidate_profile,
+                    )
+                    if recent == 0:
+                        inactive_candidates.append(candidate_profile)
+        except Exception:
+            pass
+
+        try:
+            if hasattr(self, "db") and self.db:
+                results = self.db.sanitize_stale_positions(
+                    self.symbol,
+                    max_age_days=30,
+                    exclude_profiles=inactive_candidates if inactive_candidates else None,
+                )
+                if results:
+                    total = sum(results.values())
+                    reasons_str = ", ".join(
+                        f"{k}={v}" for k, v in sorted(results.items())
+                    )
+                    logger.warning(
+                        "🧹 [sanitize] %d stale position(s) closed: %s",
+                        total, reasons_str,
+                    )
+        except Exception as exc:
+            logger.debug("[sanitize] skip: %s", exc)

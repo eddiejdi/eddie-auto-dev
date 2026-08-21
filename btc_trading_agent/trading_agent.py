@@ -1791,8 +1791,8 @@ class BitcoinTradingAgent(
     _OLLAMA_PLAN_FALLBACK_MODEL = os.getenv("OLLAMA_PLAN_FALLBACK_MODEL", "").strip()
     _OLLAMA_TRADE_PARAMS_HOST = os.getenv("OLLAMA_TRADE_PARAMS_HOST", _OLLAMA_PLAN_HOST)
     _OLLAMA_TRADE_PARAMS_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_MODEL", _OLLAMA_PLAN_MODEL)
-    _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL", "gemma3:1b")
-    _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "gemma3:1b")
+    _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL", "trading-analyst")
+    _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "trading-analyst")
     _OLLAMA_TRADE_PARAMS_MODE = os.getenv("OLLAMA_TRADE_PARAMS_MODE", "apply")
     _OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC", "300"))
     # gemma3-fast gera 64 tokens em ~1s mas pode esperar até 60s na fila do coordinator;
@@ -1802,7 +1802,7 @@ class BitcoinTradingAgent(
     _OLLAMA_TRADE_WINDOW_HOST = os.getenv("OLLAMA_TRADE_WINDOW_HOST", _OLLAMA_TRADE_PARAMS_HOST)
     _OLLAMA_TRADE_WINDOW_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_MODEL", _OLLAMA_TRADE_PARAMS_MODEL)
     _OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL", _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL)
-    _OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_MODEL", "gemma3:1b")
+    _OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_MODEL", "trading-analyst")
     _OLLAMA_TRADE_WINDOW_MODE = os.getenv("OLLAMA_TRADE_WINDOW_MODE", "apply")
     _OLLAMA_TRADE_WINDOW_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_MIN_INTERVAL_SEC", "30"))
     _OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC", "20"))
@@ -5526,6 +5526,19 @@ class BitcoinTradingAgent(
                     # Use _calculate_trade_size for fee check (force bypasses)
                     size = self._calculate_trade_size(signal, price, force=force)
                     if size <= 0:
+                        return False
+                    if float(getattr(self.state, "entry_price", 0) or 0) <= 0:
+                        logger.warning(
+                            "🛑 SELL abortado: position=%.8f sem cost basis "
+                            "(entry_price=0) — não enviar ordem nem Telegram "
+                            "com pnl_pct=0 / invested=0. Reconcile.",
+                            size,
+                        )
+                        self._block_trade("sell_no_cost_basis", size=size)
+                        try:
+                            self._reconcile_position_with_exchange(price)
+                        except Exception as exc:
+                            logger.debug("reconcile após sell_no_cost_basis: %s", exc)
                         return False
                     order_id = None
                     trade_metadata = None

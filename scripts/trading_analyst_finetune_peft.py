@@ -38,12 +38,12 @@ MERGED_OUTPUT = OUTPUT_DIR / "merged_model"
 
 CALL_TYPES = ("controls", "window", "plan")
 
-MAX_SEQ_LENGTH = int(os.environ.get("FT_MAX_SEQ", "2048"))
+MAX_SEQ_LENGTH = int(os.environ.get("FT_MAX_SEQ", "1024"))
 EPOCHS = float(os.environ.get("FT_EPOCHS", "2"))
 BATCH_SIZE = int(os.environ.get("FT_BATCH", "1"))
 GRAD_ACCUM = int(os.environ.get("FT_GRAD_ACCUM", "8"))
-LORA_RANK = int(os.environ.get("FT_LORA_RANK", "16"))
-LORA_ALPHA = int(os.environ.get("FT_LORA_ALPHA", "32"))
+LORA_RANK = int(os.environ.get("FT_LORA_RANK", "8"))
+LORA_ALPHA = int(os.environ.get("FT_LORA_ALPHA", "16"))
 LR = float(os.environ.get("FT_LR", "2e-4"))
 WARMUP = int(os.environ.get("FT_WARMUP", "10"))
 MIN_SAMPLES = int(os.environ.get("FT_MIN_SAMPLES", "120"))
@@ -156,11 +156,15 @@ def train(dry_run: bool, do_merge: bool) -> int:
         tokenize, batched=True, remove_columns=["instruction", "input", "output"])
     log.info("Dataset tokenizado: %d exemplos", len(ds))
 
+    model.gradient_checkpointing_enable()
+    model.enable_input_require_grads()
+
     args = TrainingArguments(
         output_dir=str(LORA_OUTPUT), per_device_train_batch_size=BATCH_SIZE,
         gradient_accumulation_steps=GRAD_ACCUM, num_train_epochs=EPOCHS,
         learning_rate=LR, warmup_steps=WARMUP, fp16=True, logging_steps=5,
         save_strategy="no", optim="paged_adamw_8bit", seed=42, report_to="none",
+        gradient_checkpointing=True,
     )
     trainer = Trainer(
         model=model, args=args, train_dataset=ds,

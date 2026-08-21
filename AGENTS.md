@@ -31,7 +31,8 @@ Exceções: skill Traycer que **exige** harness pago; risco extremo trading/LTO/
 
 1. **Sem LLM chinês em PROD** (Qwen, DeepSeek, MiMo, ERNIE, ChatGLM, etc.) — política 2026-07-01. Em **DEV** (workstation, Traycer, sidequests) MiMo/DeepSeek são permitidos se funcionais. Preferir Llama, Mistral, Gemma, Phi em produção. Sidequest não-bloqueante: `tools/hooks/sidequest_nonblocking.py`.
 2. **PostgreSQL** na porta **5433** (schema `btc`); SQLite proibido para trading.
-2b. **Trading intocável no cluster LLM**: modelos `trading-*` nunca são evictados. O analyst (`trading-analyst:latest`) reside no **NAS (RTX 2060 SUPER, `:11436`)** desde 2026-08-12 (decisão documentada em `docs/DECISION_TRADING_ANALYST_NAS_2026-08-12.md` — decode mais rápido por bandwidth e sem risco de migração em live). Sempre que um modelo `trading-*` estiver residente num endpoint, aquele endpoint não pode despejá-lo nem receber auxiliar que o compita (`GPU_COORD_PROTECTED_MODELS`, `GPU_COORD_TRADING_RESERVE_GPU0`).
+2b. **Trading intocável no cluster LLM**: modelos `trading-*` nunca são evictados. O analyst (`trading-analyst:latest`) reside no **NAS (RTX 2060 SUPER, `:11436`)** desde 2026-08-12 (decisão documentada em `docs/DECISION_TRADING_ANALYST_NAS_2026-08-12.md` — decode mais rápido por bandwidth e sem risco de migração em live). Sempre que um modelo `trading-*` estiver residente num endpoint, aquele endpoint não pode despejá-lo nem receber auxiliar que o compita (`GPU_COORD_PROTECTED_MODELS`, `GPU_COORD_TRADING_RESERVE_GPU0`). Fallback de trade **nunca** é `smollm2` — é o próprio `trading-analyst` (NAS); se a RTX 3060 estiver ocupada o coordinator tenta a GTX 1050 só se o modelo couber.
+2c. **SHADOW É LIVE**: perfil `shadow` opera com `dry_run=false` e envia ordens reais na KuCoin. Não tratar shadow como simulação e não forçar `dry_run=true` (decisão operador 2026-08-20).
 3. **Fita LTO**: nunca `ltfsck`/`mkltfs`/`sg_raw` diretos — usar orchestrator `ltfs_recovery.py`.
 4. **Sem force-push** em `main`; sem `rm -rf` / `git reset --hard` sem ordem explícita do usuário.
 5. **Secrets**: vault/Authentik/env — nunca hardcode em código.
@@ -64,6 +65,19 @@ Painel treino cloud: https://grafana.rpa4all.com/d/cloud-ft-runpod/cloud-ft-runp
 - Incidente eco SEM_PAUTA (2026-07-31): `docs/INCIDENTS/2026-07-31_AGENDA_REPETITION_AND_SEM_PAUTA_CAP.md`
 - Painel: `http://192.168.15.2:8093/` · LLM via coordinator `:11437`
 - Orquestrador: `tools/run_daily_agenda_broadcast.py`
+
+### Fine-tuning trading-analyst (2026-08-20)
+
+- **Timer:** `trading-analyst-finetune.timer` — Dom 03:00
+- **Pipeline:** `scripts/trading_analyst_finetune_orchestrator.py`
+  1. Dataset builder (homelab, CPU) → JSONL de `btc.llm_calls`
+  2. rsync → NAS (`/mnt/tank/finetune/data/`)
+  3. QLoRA training (NAS, RTX 2060 SUPER)
+  4. Import Ollama NAS → `trading-analyst-candidate:latest`
+  5. Validação + relatório
+- **Promoção:** manual via Telegram (nunca automática)
+- **Docs:** `docs/FINETUNE_TRADING_ANALYST_SETUP.md`
+- **Status:** venv NAS ok, dataset 356 exemplos, timer ativo
 
 ## Preferências de código
 
