@@ -580,6 +580,40 @@ class TestPostSellNotifyWorker:
         }
         assert "proxies" not in direct_call.kwargs
 
+    def test_telegram_markdown_fallback_on_parse_error(self):
+        """Comunicado do LLM com Markdown inválido → reenvia sem parse_mode."""
+        agent = _make_agent()
+        ollama_resp = SimpleNamespace(ok=True, json=lambda: {"response": "msg *unbalanced"})
+        seen = []  # parse_mode capturado no MOMENTO da chamada (payload é mutado)
+
+        def _post_side_effect(url, **kwargs):
+            if url.endswith("/api/generate"):
+                return ollama_resp
+            body = kwargs.get("json", {})
+            seen.append(body.get("parse_mode"))
+            if body.get("parse_mode") == "Markdown":
+                return SimpleNamespace(
+                    ok=False, status_code=400,
+                    text="Bad Request: can't parse entities: Can't find end of the entity starting at byte offset 106",
+                )
+            return SimpleNamespace(ok=True, status_code=200, text="ok")
+
+        with (
+            patch("position_manager_mixin.subprocess.run", return_value=SimpleNamespace(returncode=0, stderr=b"")),
+            patch("kucoin_api._resolve_telegram_bot_token", return_value="token"),
+            patch("kucoin_api._resolve_telegram_chat_id", return_value="chat"),
+            patch("kucoin_api._resolve_telegram_thread_id", return_value="", create=True),
+            patch("kucoin_api._get_extra_telegram_chat_ids", return_value=[], create=True),
+            patch("requests.post", side_effect=_post_side_effect) as post_mock,
+            patch.dict("os.environ", {}, clear=False),
+        ):
+            agent._post_sell_notify_worker(90_000.0, 91_000.0, 0.001, 1.0, 1.1, "TARGET", 0)
+
+        # ollama + telegram(Markdown 400) + telegram(plain 200)
+        assert post_mock.call_count == 3
+        # 1ª tentativa com Markdown, 2ª (fallback) sem parse_mode
+        assert seen == ["Markdown", None]
+
 
 # ── _guardrail_allows_slot_sell (RiskGuardianMixin) ──────────────────────────
 

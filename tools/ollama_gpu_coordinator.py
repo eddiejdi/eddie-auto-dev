@@ -923,6 +923,43 @@ class GPUCluster:
             log.warning("nenhum endpoint elegível para model=%s (mesmo após eviction)", model)
             return None
 
+        # Trading: se a 3060 está ocupada, tentar adequar na 1050 (só se
+        # o modelo couber após eviction de não-protegidos). NAS já entra
+        # no least-load com bônus; este spill só dispara quando o pick
+        # caiu na 3060 saturada.
+        gpu0_name = "gpu0-rtx3060"
+        gpu1_name = "gpu1-gtx1050"
+        if (
+            is_trading_request(model)
+            and best.name == gpu0_name
+            and best.active_requests >= SOFT_PIN_BUSY_THRESHOLD
+        ):
+            gpu1 = next((ep for ep in self._endpoints if ep.name == gpu1_name), None)
+            if gpu1 is not None and gpu1.name not in exclude and gpu1.healthy:
+                needed = _estimate_vram_mb(model)
+                if not gpu1.has_model(model):
+                    self._evict_for_space(gpu1, needed)
+                s1 = gpu1.score(model)
+                if s1 < float("inf"):
+                    log.info(
+                        "3060 ocupada (active=%d) — trading spill model=%s → %s "
+                        "(vram_free=%.0fMB)",
+                        best.active_requests,
+                        model,
+                        gpu1.name,
+                        gpu1.vram_free_mb,
+                    )
+                    best = gpu1
+                else:
+                    log.info(
+                        "3060 ocupada mas 1050 não cabe model=%s (est=%.0fMB, "
+                        "free=%.0fMB) — mantém %s (NAS é o fallback de trading)",
+                        model,
+                        needed,
+                        gpu1.vram_free_mb,
+                        best.name,
+                    )
+
         log.info(
             "roteando model=%s → %s (active=%d vram_free=%.0fMB%s)",
             model,

@@ -568,7 +568,10 @@ class LLMRouter:
         # Só faz fan-out de modelos NÃO-pinados.
         tried_hosts = {h for h, _, _ in explicit_pairs}
         extra_pairs: list[tuple[str, str, float]] = []
-        extra_model = (fallback_model or primary_model).strip()
+        # Terceiro tier (NAS / outras GPUs): sempre o modelo de trading
+        # (primary), nunca o toy fallback (smollm2:135m alucina e já
+        # contaminou planos live). Se primary vazio, aí sim fallback.
+        extra_model = (primary_model or fallback_model).strip()
         extra_is_pinned = bool(re.search(r":(gpu\d+|nas)$", extra_model))
         if not extra_is_pinned:
             for ep in self._endpoints:
