@@ -3947,16 +3947,22 @@ class BitcoinTradingAgent(
         except Exception as e:
             logger.warning(f"⚠️ Could not restore metrics: {e}")
 
-        # 5. Adiar target de venda até a primeira recalibração real do RAG
-        if self.state.position > 0 and self.state.entry_price > 0:
-            try:
-                self.state.target_sell_price = 0.0
-                self.state.target_sell_reason = ""
+        # Keep ledger slot TPs. Blanking target_sell_price here (ETH shadow 2026-08-21)
+        # left auto-TP as N/A until a RAG cycle that often never armed it.
+        if self.state.position > 0:
+            slot_targets = [
+                float(e.get("target_sell") or 0.0)
+                for e in list(getattr(self.state, "entries", []) or [])
+                if float(e.get("target_sell") or 0.0) > 0.0
+            ]
+            if slot_targets:
+                self.state.target_sell_price = min(slot_targets)
+                self.state.target_sell_reason = "restored_slot_targets"
                 logger.info(
-                    "⏳ Target SELL adiado até a primeira recalibração real da IA"
+                    "🎯 Target SELL restaurado dos slots: $%.2f (%d alvo(s))",
+                    self.state.target_sell_price,
+                    len(slot_targets),
                 )
-            except Exception as e:
-                logger.warning(f"⚠️ Could not restore target_sell_price: {e}")
 
     def _collect_historical_data(self):
         """Coleta candles históricos da KuCoin para popular indicadores.

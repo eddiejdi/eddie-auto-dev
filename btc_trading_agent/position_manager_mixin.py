@@ -104,11 +104,19 @@ class PositionManagerMixin:
                 )
 
             quote, base = _sum(quote_cur), _sum(base_cur)
+            # Listing pode ter USDT e omitir a base (ETH shadow na sub BTCAgressive
+            # 2026-08-21): não tratar quote>0 como saldo completo.
+            if base <= 0:
+                tq, tb = _from_trade_accounts()
+                if tb > 0:
+                    logger.info(
+                        "📐 sub-account listing missing %s for %s; using authenticated TRADE",
+                        base_cur,
+                        subaccount,
+                    )
+                    return (tq if tq > 0 else quote), tb
             if quote > 0 or base > 0:
                 return quote, base
-            # Key de subconta: /api/v1/sub-accounts (master) volta vazio e
-            # o equity ia a $0 (BTC aggressive 2026-08-20). A key autenticada
-            # JÁ É a TRADE da subconta.
             logger.info(
                 "📐 sub-account listing empty for %s; using authenticated TRADE balances",
                 subaccount,
@@ -139,6 +147,22 @@ class PositionManagerMixin:
         dust = self._min_tradeable_dust()
         tracked = max(float(getattr(self.state, "position", 0.0) or 0.0), 0.0)
         aligned = 0.0 if base_qty < dust else max(float(base_qty), 0.0)
+        entries = list(getattr(self.state, "entries", []) or [])
+        slot_qty = sum(max(float(e.get("size") or 0.0), 0.0) for e in entries)
+        # Não apagar slots do ledger se o listing devolver base=0 (ciclo ETH shadow).
+        if aligned <= dust and slot_qty > dust:
+            keep = tracked if tracked > dust else slot_qty
+            logger.warning(
+                "📐 Align refused to zero %d live slot(s) (exchange=%.8f, keep=%.8f)",
+                len(entries),
+                aligned,
+                keep,
+            )
+            self.state.position = keep
+            if price > 0:
+                self.state.position_value = keep * float(price)
+            self._sync_position_tracking()
+            return
         if abs(aligned - tracked) > max(dust, tracked * 0.005):
             logger.info(
                 "📐 Position aligned to subaccount: tracked=%.8f -> exchange=%.8f "

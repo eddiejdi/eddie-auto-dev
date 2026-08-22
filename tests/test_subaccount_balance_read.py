@@ -6,6 +6,8 @@ import types
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "btc_trading_agent"))
 sys.modules.setdefault("httpx", types.SimpleNamespace())
 sys.modules.setdefault(
@@ -71,8 +73,49 @@ def test_master_listing_uses_named_sub() -> None:
         },
     ]
     with patch("kucoin_api.get_sub_account_balances", return_value=rows), patch(
-        "kucoin_api.get_balances"
+        "kucoin_api.get_balances", return_value=[]
     ) as gb:
         quote, _base = agent._read_subaccount_spot_balances("USDT")
     assert quote == 29.5
-    gb.assert_not_called()
+    gb.assert_called_with(account_type="trade")
+
+
+def test_listing_quote_without_base_uses_trade_auth() -> None:
+    agent = _agent()
+    agent.symbol = "ETH-USDT"
+    listing = [
+        {
+            "sub_name": "BTCAgressive",
+            "account_type": "trade",
+            "currency": "USDT",
+            "available": 591.0,
+        }
+    ]
+    trade_rows = [
+        {"currency": "USDT", "available": 591.0},
+        {"currency": "ETH", "available": 0.01754483},
+    ]
+    with patch("kucoin_api.get_sub_account_balances", return_value=listing), patch(
+        "kucoin_api.get_balances", return_value=trade_rows
+    ):
+        quote, base = agent._read_subaccount_spot_balances("USDT")
+    assert quote == 591.0
+    assert base == pytest.approx(0.01754483)
+
+
+def test_align_does_not_zero_live_slots() -> None:
+    agent = _agent()
+    agent.symbol = "ETH-USDT"
+    agent.state = types.SimpleNamespace(
+        position=0.0,
+        position_value=0.0,
+        dry_run=False,
+        entries=[{"price": 2279.85, "size": 0.01754483, "target_sell": 2336.84}],
+        position_count=0,
+        raw_entry_count=0,
+        logical_position_slots=0,
+    )
+    agent._min_tradeable_dust = lambda: 0.00001
+    with patch.object(agent, "_read_subaccount_spot_balances", return_value=(591.0, 0.0)):
+        agent._align_position_to_exchange(2426.0)
+    assert agent.state.position == pytest.approx(0.01754483)
