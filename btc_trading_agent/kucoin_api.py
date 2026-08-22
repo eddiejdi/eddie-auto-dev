@@ -1517,11 +1517,12 @@ def get_stop_orders(
         return {"success": False, "error": str(e), "orders": []}
 
 
-def get_stop_order_by_client_oid(client_oid: str) -> Optional[Dict[str, Any]]:
+def get_stop_order_by_client_oid(client_oid: str, symbol: str = "BTC-USDT") -> Optional[Dict[str, Any]]:
     """Busca uma stop-order pelo clientOid.
 
     Args:
         client_oid: ID cliente
+        symbol: Par de trading (clientOid é único por símbolo na KuCoin)
 
     Returns:
         Dict com dados da ordem ou None
@@ -1529,7 +1530,7 @@ def get_stop_order_by_client_oid(client_oid: str) -> Optional[Dict[str, Any]]:
     validate_credentials()
 
     endpoint = "/api/v1/stop-order/queryClientOid"
-    params = {"clientOid": client_oid, "symbol": "BTC-USDT"}
+    params = {"clientOid": client_oid, "symbol": symbol}
 
     try:
         r = _signed_request("GET", endpoint, params=params, timeout=10)
