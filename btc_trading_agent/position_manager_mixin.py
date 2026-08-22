@@ -726,48 +726,54 @@ class PositionManagerMixin:
             bot_token = _resolve_telegram_bot_token()
             chat_id = _resolve_telegram_chat_id()
             thread_id = _resolve_telegram_thread_id()
-            if bot_token and chat_id:
-                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-                payload = {"chat_id": chat_id, "text": msg, "parse_mode": "Markdown"}
-                if thread_id:
-                    payload["message_thread_id"] = int(thread_id)
-                proxy_url = (os.getenv("TELEGRAM_PROXY_URL", "") or "").strip()
-                response = None
 
+            def _post_tg(tgt_chat, tgt_thread=None):
+                if not bot_token or not tgt_chat:
+                    return
+                url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+                payload = {"chat_id": tgt_chat, "text": msg, "parse_mode": "Markdown"}
+                if tgt_thread:
+                    payload["message_thread_id"] = int(tgt_thread)
+                proxy_url = (os.getenv("TELEGRAM_PROXY_URL", "") or "").strip()
+                r = None
                 if proxy_url:
                     try:
-                        response = _req.post(
-                            url,
-                            json=payload,
-                            proxies={"https": proxy_url, "http": proxy_url},
-                            timeout=10,
-                        )
-                    except Exception as exc:
-                        logger.warning(
-                            "Telegram sell notify via proxy falhou, retry direto: %s", exc
-                        )
-
-                if response is None:
-                    response = _req.post(url, json=payload, timeout=10)
-
-                if getattr(response, "ok", True):
-                    logger.info("📨 Telegram sell notify enviado")
-                else:
-                    logger.warning(
-                        "Telegram sell notify rejeitado: status=%s body=%s",
-                        getattr(response, "status_code", "?"),
-                        getattr(response, "text", "")[:200],
-                    )
-                # Enviar para destinatários extras (sem tópico)
-                for _extra in _get_extra_telegram_chat_ids():
-                    try:
-                        _req.post(
-                            f"https://api.telegram.org/bot{bot_token}/sendMessage",
-                            json={"chat_id": _extra, "text": msg, "parse_mode": "Markdown"},
-                            timeout=10,
+                        r = _req.post(
+                            url, json=payload,
+                            proxies={"https": proxy_url, "http": proxy_url}, timeout=10,
                         )
                     except Exception as _ex:
-                        logger.warning("Telegram extra notify falhou (%s): %s", _extra, _ex)
+                        logger.warning(
+                            "Telegram sell notify via proxy falhou, retry direto: %s", _ex
+                        )
+                        r = None
+                if r is None:
+                    try:
+                        r = _req.post(url, json=payload, timeout=10)
+                    except Exception as _ex:
+                        logger.warning("Telegram sell notify erro: %s", _ex)
+                        return
+                if getattr(r, "status_code", 200) == 200 and getattr(r, "ok", True):
+                    return
+                # Comunicado do LLM pode vir com Markdown desbalanceado →
+                # Telegram retorna 400 "can't parse entities". Reenvia sem parse_mode.
+                logger.warning(
+                    "Telegram sell notify rejeitado (parse_mode): %s — retry sem parse_mode",
+                    getattr(r, "text", "")[:120],
+                )
+                payload.pop("parse_mode", None)
+                payload.pop("message_thread_id", None)
+                try:
+                    _req.post(url, json=payload, timeout=10)
+                except Exception as _ex:
+                    logger.warning("Telegram sell notify (plain) erro: %s", _ex)
+
+            if bot_token and chat_id:
+                _post_tg(chat_id, thread_id)
+                logger.info("📨 Telegram sell notify enviado")
+            # Enviar para destinatários extras (sem tópico)
+            for _extra in _get_extra_telegram_chat_ids():
+                _post_tg(_extra)
         except Exception as exc:
             logger.warning("Telegram sell notify erro: %s", exc)
 
