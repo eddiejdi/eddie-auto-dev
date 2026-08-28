@@ -1,0 +1,8 @@
+{"prompt": "Como integrar Open WebUI com Telegram?", "completion": "Use openwebui_integration.py que conecta ao Ollama (192.168.15.2:11434) com seleção automática de modelo."}
+{"prompt": "Qual modelo usar para assistente pessoal?", "completion": "Use eddie-assistant baseado em dolphin-llama3:8b, sem censura para uso pessoal."}
+{"prompt": "Como configurar WAHA para WhatsApp?", "completion": "docker run -d --name waha -p 3001:3000 -e WAHA_NO_API_KEY=True devlikeapro/waha:latest. Dashboard em :3001/dashboard"}
+{"prompt": "Como criar modelo restrito para código?", "completion": "Use Modelfile com SYSTEM prompt restritivo. Exemplo: eddie-coder-strict.Modelfile"}
+{"prompt": "Quais comandos do Telegram bot?", "completion": "/models (lista), /profiles (perfis), /profile <nome>, /use <modelo>, /auto_profile"}
+{"prompt": "O QR Code do WhatsApp expira rápido?", "completion": "Use engine WEBJS: -e WHATSAPP_DEFAULT_ENGINE=WEBJS. Mais estável que NOWEB."}
+{"prompt": "Diferença eddie-assistant e eddie-coder?", "completion": "eddie-assistant (dolphin) sem censura para uso pessoal. eddie-coder (qwen) restrito a código."}
+{"prompt": "Onde ficam os serviços?", "completion": "Ollama: 192.168.15.2:11434, Open WebUI: :3000, WAHA: :3001, Streamlit: localhost:8502"}

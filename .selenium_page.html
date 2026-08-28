@@ -1,0 +1,289 @@
+<html lang="pt-BR"><head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RPA4ALL — Automação Inteligente para Empresas</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <header class="topnav">
+    <div class="brand">
+      <div class="logo">R4</div>
+      <div class="title">
+        <h1>RPA4ALL</h1>
+        <p class="tag">Automação inteligente, observabilidade e IA aplicada para operações críticas</p>
+      </div>
+    </div>
+
+    <nav class="tabs" role="navigation" aria-label="Navegação principal">
+      <button class="tab active" data-target="home">Home</button>
+      <button class="tab" data-target="solutions">Soluções</button>
+      <button class="tab" data-target="projects">Projetos</button>
+      <button class="tab" data-target="ide">IDE Python</button>
+      <button class="tab" data-target="platforms">Plataformas</button>
+      <button class="tab" data-target="contact">Contato</button>
+    </nav>
+  </header>
+
+  <main class="container">
+    <section id="home" class="panel active">
+      <div class="hero">
+        <div class="hero-copy">
+          <p class="eyebrow">RPA + IA aplicada</p>
+          <h2>Transforme processos críticos em fluxos inteligentes e auditáveis.</h2>
+          <p>O RPA4ALL integra automações, agentes de IA, observabilidade e governança para reduzir custos operacionais
+            e aumentar a previsibilidade. Tudo em uma plataforma modular, pronta para escalar.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="https://openwebui.rpa4all.com/" target="_blank" rel="noopener">Abrir Open
+              WebUI</a>
+            <a class="btn ghost" href="https://www.rpa4all.com/grafana/" target="_blank" rel="noopener">Ver
+              Observabilidade</a>
+          </div>
+        </div>
+        <div class="hero-card">
+          <h3>O que entregamos</h3>
+          <ul>
+            <li>Automação de ponta a ponta com agentes inteligentes</li>
+            <li>Monitoramento em tempo real com dashboards executivos</li>
+            <li>Governança, trilhas de auditoria e conformidade</li>
+            <li>Integrações com APIs, ERPs e canais de atendimento</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="highlights">
+        <div class="card">
+          <h3>Resultados práticos</h3>
+          <p>Redução de tempo operacional, priorização automática de tarefas e respostas em tempo real, com
+            rastreabilidade total dos fluxos.</p>
+        </div>
+
+        <div class="card">
+          <h3>Arquitetura confiável</h3>
+          <p>Ambiente distribuído com containers isolados, barramento de mensagens e RAG especializado por domínio.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="agent_chat" class="panel" style="display:block">
+      <h2>Agent Chat (modo demo)</h2>
+      <p>Chat local de demonstração para testes E2E.</p>
+      <div class="chat-container">
+        <div id="chatOutput" class="chat-output" style="border:1px solid #ddd;padding:8px;height:120px;overflow:auto;background:#fff;"></div>
+        <textarea id="agentChatInput" data-testid="stChatInputTextArea" placeholder="Digite sua mensagem aqui..." style="width:100%;height:56px;margin-top:8px"></textarea>
+      </div>
+    </section>
+
+    <section id="solutions" class="panel">
+      <h2>Soluções</h2>
+      <div class="solution-grid">
+        <article class="solution">
+          <h3>Operações inteligentes</h3>
+          <p>Orquestração de processos críticos com priorização automática, alertas e respostas em tempo real.</p>
+        </article>
+        <article class="solution">
+          <h3>IA aplicada aos fluxos</h3>
+          <p>Agentes treinados por contexto com RAG, capazes de interpretar dados e gerar ações automatizadas.</p>
+        </article>
+        <article class="solution">
+          <h3>Observabilidade executiva</h3>
+          <p>Dashboards com métricas, SLAs e análise preditiva para tomada de decisão estratégica.</p>
+        </article>
+        <article class="solution">
+          <h3>Segurança e governança</h3>
+          <p>Trilhas de auditoria, controle de acesso e integração com autenticação segura.</p>
+        </article>
+      </div>
+    </section>
+
+    <section id="projects" class="panel">
+      <h2>Projetos em destaque</h2>
+      <div class="projects-grid">
+        <article class="proj">
+          <h3>RPA4ALL — Core Platform</h3>
+          <p>Arquitetura distribuída de agentes, pipelines de automação e observabilidade integrada.</p>
+          <a href="https://github.com/eddiejdi/eddie-auto-dev" target="_blank" rel="noopener">Ver repositório</a>
+        </article>
+
+        <article class="proj">
+          <h3>Dashboards Operacionais</h3>
+          <p>Monitoramento com SLAs e métricas de negócio em tempo real.</p>
+          <a href="https://www.rpa4all.com/grafana/" target="_blank" rel="noopener">Abrir Grafana</a>
+        </article>
+
+        <article class="proj">
+          <h3>Agentes IA (Open WebUI)</h3>
+          <p>Interface inteligente para criação e execução de agentes especializados.</p>
+          <a href="https://openwebui.rpa4all.com/" target="_blank" rel="noopener">Abrir Open WebUI</a>
+        </article>
+      </div>
+    </section>
+
+    <section id="ide" class="panel">
+      <h2>🐍 Python IDE Online</h2>
+      <p class="ide-subtitle">IDE leve e poderosa para desenvolver, compilar e executar Python diretamente no navegador.
+      </p>
+
+      <div class="ide-container">
+        <div class="ide-sidebar">
+          <div class="ide-sidebar-header">📁 Arquivos</div>
+          <div id="fileTabs" class="ide-file-tabs-list"></div>
+          <button class="ide-new-file" id="newFile" title="Novo arquivo">+ Novo arquivo</button>
+        </div>
+        <div class="ide-content">
+          <div class="ide-toolbar">
+            <div class="ide-actions">
+              <button class="ide-btn run" id="runCode" title="Executar (Ctrl+Enter)">
+                <span class="play-icon">▶</span> Executar
+              </button>
+              <button class="ide-btn" id="openProjectFolder" title="Abrir pasta do projeto">
+                📂 Abrir pasta
+              </button>
+              <button class="ide-btn" id="saveProject" title="Salvar arquivos">
+                💾 Salvar
+              </button>
+              <button class="ide-btn clear" id="clearOutput" title="Limpar saída">Limpar</button>
+              <select class="ide-theme-select" id="themeSelect">
+                <option value="vs-dark">Dark</option>
+                <option value="vs">Light</option>
+                <option value="hc-black">High Contrast</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="ide-ai-bar">
+            <div class="ide-ai-input">
+              <div class="ide-ai-modes">
+                <button class="ide-ai-mode active" data-mode="code" title="Gerar ou alterar código">💻 Código</button>
+                <button class="ide-ai-mode" data-mode="ask" title="Perguntar sobre o código ou conceitos">❓
+                  Perguntar</button>
+                <button class="ide-ai-mode" data-mode="agents" title="Utilizar agentes especializados">🤖
+                  Agentes</button>
+              </div>
+              <textarea id="aiPrompt" placeholder="Ex: melhore este código, adicione logs ou crie o script completo do zero."></textarea>
+              <div class="ide-ai-hints" id="aiHints">
+                <span class="ide-ai-hint" data-hint="Adicione tratamento de erros">+ try/except</span>
+                <span class="ide-ai-hint" data-hint="Adicione docstrings e comentários explicativos">+ docstrings</span>
+                <span class="ide-ai-hint" data-hint="Otimize a performance deste código">+ otimizar</span>
+              </div>
+            </div>
+            <div class="ide-ai-actions">
+              <div class="ide-ai-scope">
+                <label class="ide-toggle" title="Ativado: IA acessa todos os arquivos. Desativado: IA vê só o arquivo atual.">
+                  <input type="checkbox" id="aiScopeToggle">
+                  <span class="ide-toggle-slider"></span>
+                </label>
+                <span class="ide-ai-scope-label" id="aiScopeLabel">📄 Arquivo atual</span>
+              </div>
+              <button class="ide-btn ai-run" id="aiPromptRun">Executar Prompt</button>
+            </div>
+          </div>
+
+          <div class="ide-main">
+            <div class="ide-editor-wrapper">
+              <div id="editor" class="ide-editor"></div>
+            </div>
+            <div class="ide-output-wrapper">
+              <div class="ide-output-header">
+                <span>📋 Saída</span>
+                <span class="ide-status" id="ideStatus">✅ Servidor disponível</span>
+              </div>
+              <pre id="output" class="ide-output"></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ide-features">
+        <div class="ide-feature">
+          <h4>⚡ Execução Instantânea</h4>
+          <p>Python executa no servidor com isolamento seguro. Resultados em tempo real via API.</p>
+        </div>
+        <div class="ide-feature">
+          <h4>📦 Bibliotecas Populares</h4>
+          <p>NumPy, Pandas, Matplotlib, SciPy e muitas outras disponíveis para importação.</p>
+        </div>
+        <div class="ide-feature">
+          <h4>💾 Armazenamento Local</h4>
+          <p>Seu código é salvo automaticamente no navegador. Continue de onde parou.</p>
+        </div>
+        <div class="ide-feature">
+          <h4>🎨 Temas e Atalhos</h4>
+          <p>Editor Monaco (mesmo do VS Code) com syntax highlighting e atalhos de teclado.</p>
+        </div>
+      </div>
+
+      <div class="ide-examples">
+        <h3>Exemplos rápidos</h3>
+        <div class="ide-example-grid">
+          <button class="ide-example" data-code="print('Hello, World!')">Hello World</button>
+          <button class="ide-example" data-code="import numpy as np\narr = np.array([1, 2, 3, 4, 5])\nprint(f'Array: {arr}')\nprint(f'Soma: {arr.sum()}')\nprint(f'Média: {arr.mean()}')">NumPy
+            Básico</button>
+          <button class="ide-example" data-code="import pandas as pd\ndata = {'Nome': ['Ana', 'Bruno', 'Carla'], 'Idade': [25, 30, 28]}\ndf = pd.DataFrame(data)\nprint(df)">Pandas
+            DataFrame</button>
+          <button class="ide-example" data-code="def fibonacci(n):\n    if n &lt;= 1:\n        return n\n    return fibonacci(n-1) + fibonacci(n-2)\n\nfor i in range(10):\n    print(f'F({i}) = {fibonacci(i)}')">Fibonacci</button>
+          <button class="ide-example" data-code="class Pessoa:\n    def __init__(self, nome, idade):\n        self.nome = nome\n        self.idade = idade\n    \n    def apresentar(self):\n        return f'Olá, sou {self.nome} e tenho {self.idade} anos.'\n\np = Pessoa('Eddie', 3)\nprint(p.apresentar())">Classes
+            Python</button>
+          <button class="ide-example" data-code="# List comprehension\nnumeros = [x**2 for x in range(1, 11)]\nprint(f'Quadrados: {numeros}')\n\n# Filter\npares = [x for x in numeros if x % 2 == 0]\nprint(f'Quadrados pares: {pares}')">List
+            Comprehension</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="platforms" class="panel">
+      <h2>Plataformas do projeto</h2>
+      <div class="platform-grid">
+        <a class="platform" href="#ide" onclick="document.querySelector('[data-target=ide]').click(); return false;">
+          <span>🐍 Python IDE</span>
+          <small>IDE online para desenvolver e executar Python</small>
+        </a>
+        <a class="platform" href="https://openwebui.rpa4all.com/" target="_blank" rel="noopener">
+          <span>Open WebUI</span>
+          <small>IA operacional e agentes inteligentes</small>
+        </a>
+        <a class="platform" href="https://www.rpa4all.com/grafana/" target="_blank" rel="noopener">
+          <span>Grafana</span>
+          <small>Observabilidade e métricas em tempo real</small>
+        </a>
+        <a class="platform" href="https://github.com/eddiejdi/eddie-auto-dev" target="_blank" rel="noopener">
+          <span>Repositório GitHub</span>
+          <small>Documentação técnica e evolução do projeto</small>
+        </a>
+        <a class="platform" href="https://github.com/eddiejdi" target="_blank" rel="noopener">
+          <span>GitHub do autor</span>
+          <small>Outros projetos e contribuições</small>
+        </a>
+      </div>
+    </section>
+
+    <section id="contact" class="panel">
+      <h2>Contato</h2>
+      <p>Quer conversar sobre automação ou IA aplicada? Vamos falar.</p>
+      <div class="contact-grid">
+        <div>
+          <h4>Email</h4>
+          <a href="mailto:contato@rpa4all.com">contato@rpa4all.com</a>
+        </div>
+        <div>
+          <h4>GitHub</h4>
+          <a href="https://github.com/eddiejdi" target="_blank" rel="noopener">github.com/eddiejdi</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>© 2026 RPA4ALL · Automação inteligente · Observabilidade · IA aplicada</p>
+  </footer>
+
+  <!-- Monaco Editor -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.45.0/min/vs/loader.min.js"></script>
+  <!-- Pyodide removido: execução via backend (/agents-api/code/run) -->
+
+  <script src="script.js"></script>
+  <script src="ide.js?v=tree-view-1770385200"></script>
+
+
+
+</body></html>

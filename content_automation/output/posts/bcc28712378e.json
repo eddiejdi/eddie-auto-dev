@@ -1,0 +1,26 @@
+{
+  "post_id": "bcc28712378e",
+  "platform": "kwai",
+  "published_at": "2026-07-15T02:16:50.988550+00:00",
+  "mock": true,
+  "content": {
+    "topic": "viral_trends",
+    "title": "Trend alert: Desafio em 15 segundos que está bombando",
+    "script": "Hook: Essa trend está com score 0.97 agora.\nPasso 1: Use o gancho nos primeiros 2 segundos.\nPasso 2: Entregue valor rápido sobre Desafio em 15 segundos que está bombando.\nPasso 3: CTA claro no final para aumentar retenção.\nTags: challenge, tiktok.",
+    "cta": "Marca alguém que precisa surfar essa trend hoje!",
+    "trend_score": 0.968,
+    "metadata": {
+      "prompt_file": "content_automation/data/prompts/viral_trends.yaml",
+      "trend_source": "mock_feed",
+      "tags": [
+        "challenge",
+        "tiktok"
+      ]
+    }
+  },
+  "video": {
+    "mp4_path": "content_automation/output/videos/trend_alert_desafio_em_15_segundos_que_est_bomba/final.mp4",
+    "duration_seconds": 17.2,
+    "srt_path": "content_automation/output/videos/trend_alert_desafio_em_15_segundos_que_est_bomba/captions.srt"
+  }
+}

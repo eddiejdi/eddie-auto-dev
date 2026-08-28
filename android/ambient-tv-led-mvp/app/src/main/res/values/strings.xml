@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ambient TV LED MVP</string>
+    <string name="capture_notification_channel">Screen Capture</string>
+    <string name="capture_notification_title">Ambient TV LED MVP</string>
+    <string name="capture_notification_text">Capturando a tela para calcular a cor ambiente.</string>
+</resources>

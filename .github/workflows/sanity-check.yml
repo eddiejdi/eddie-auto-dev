@@ -1,0 +1,9 @@
+name: Sanity Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  selenium-e2e:
+    name: Selenium E2E
+    uses: ./.github/workflows/selenium-tests.yml

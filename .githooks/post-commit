@@ -1,0 +1,70 @@
+#!/bin/bash
+# Post-commit hook — (1) Indexar commit na memória; (2) Publicar .md na Wiki RPA4All
+#
+# CMDB baseline foi movido para pre-commit (.githooks/pre-commit check 9)
+# para evitar commits órfãos chore(cmdb) separados do trabalho real.
+
+set -euo pipefail
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+# Em worktrees, .git é um arquivo (não diretório) apontando para o gitdir
+# privado do worktree — usar --git-common-dir para achar o .git compartilhado
+# de verdade, senão "$REPO_ROOT/.git/wiki_sync.log" falha com ENOTDIR.
+GIT_COMMON_DIR="$(git rev-parse --git-common-dir)"
+
+# ─── Memory ingestor (git → Chroma) ───────────────────────────────────────────
+INGESTOR="tools/memory_ingestors/git_ingestor.py"
+if [ -f "$INGESTOR" ]; then
+    PY_MEM="$(dirname "$0")/../.venv/bin/python"
+    [ -x "$PY_MEM" ] || PY_MEM="python3"
+    "$PY_MEM" "$INGESTOR" >/dev/null 2>&1 || true
+fi
+
+# ─── Wiki sync (publicação automática) ────────────────────────────────────────
+SKIP_PATTERNS=(
+  "^wiki_"
+  "CONVERSAS_"
+  "COMPARISON"
+  "^\.github/"
+  "^docs/confluence"
+  "^\.claude/"
+)
+
+MD_FILES=$(git diff-tree --no-commit-id -r --name-only --diff-filter=AM HEAD | grep "\.md$" || true)
+
+if [ -z "$MD_FILES" ]; then
+    exit 0
+fi
+
+TO_SEND=""
+for f in $MD_FILES; do
+    skip=0
+    for pat in "${SKIP_PATTERNS[@]}"; do
+        if echo "$f" | grep -qE "$pat"; then
+            skip=1
+            break
+        fi
+    done
+    [ $skip -eq 0 ] && TO_SEND="$TO_SEND $f"
+done
+
+TO_SEND=$(echo "$TO_SEND" | xargs)
+if [ -z "$TO_SEND" ]; then
+    exit 0
+fi
+
+echo ""
+echo "📚 [wiki-sync] Publicando .md na Wiki RPA4All (locale pt)..."
+for f in $TO_SEND; do
+    echo "   → $f"
+done
+
+PY_BIN="$(dirname "$0")/../.venv/bin/python"
+[ -x "$PY_BIN" ] || PY_BIN="python3"
+WIKI_SYNC="$(dirname "$0")/../tools/hooks/wiki_sync.py"
+
+for f in $TO_SEND; do
+    "$PY_BIN" "$WIKI_SYNC" "$f" >>"$GIT_COMMON_DIR/wiki_sync.log" 2>&1 &
+done
+
+exit 0

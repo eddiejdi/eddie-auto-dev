@@ -1,0 +1,223 @@
+name: Fix VPN Routing on Homelab
+
+on:
+  push:
+    paths:
+      - 'deploy/vpn/**'
+      - 'deploy/vpn-portal/**'
+      - 'deploy/vpn-deb/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-vpn-fix:
+    runs-on:
+      - self-hosted
+      - linux
+      - homelab-only
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          clean: true
+          fetch-depth: 1
+
+      - name: Show runner info
+        run: |
+          echo "Runner: $(hostname)"
+          echo "Date: $(date -Iseconds)"
+          echo "Public IP: $(curl -s --max-time 5 ifconfig.me || curl -s --max-time 5 api.ipify.org || echo 'unknown')"
+
+      - name: Deploy fix-wireguard-routing.sh
+        run: |
+          set -e
+
+          # Copiar script para o homelab
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 'sudo mkdir -p /opt/vpn'
+          scp -o StrictHostKeyChecking=no deploy/vpn/fix-wireguard-routing.sh homelab@192.168.15.2:/tmp/fix-wireguard-routing.sh
+          scp -o StrictHostKeyChecking=no deploy/vpn/wireguard-nat.service homelab@192.168.15.2:/tmp/wireguard-nat.service
+
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+            set -e
+            
+            # Instalar script
+            sudo cp /tmp/fix-wireguard-routing.sh /opt/vpn/fix-wireguard-routing.sh
+            sudo chmod 755 /opt/vpn/fix-wireguard-routing.sh
+
+            # Instalar e habilitar serviço systemd
+            sudo cp /tmp/wireguard-nat.service /etc/systemd/system/wireguard-nat.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable wireguard-nat.service
+
+            # Executar agora
+            sudo /opt/vpn/fix-wireguard-routing.sh
+
+            # Limpar temporários
+            rm -f /tmp/fix-wireguard-routing.sh /tmp/wireguard-nat.service
+          SSH
+
+      - name: Deploy VPN Portal HTML
+        run: |
+          set -e
+          scp -o StrictHostKeyChecking=no deploy/vpn-portal/index.html homelab@192.168.15.2:/tmp/vpn-index.html
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+            set -e
+            sudo mkdir -p /var/www/vpn-auth
+            sudo cp /tmp/vpn-index.html /var/www/vpn-auth/index.html
+            sudo chown www-data:www-data /var/www/vpn-auth/index.html 2>/dev/null || true
+            rm -f /tmp/vpn-index.html
+            echo "VPN Portal HTML deployed: $(md5sum /var/www/vpn-auth/index.html)"
+          SSH
+
+      - name: Add desktop peer if script exists
+        run: |
+          set -e
+          if [ -f deploy/vpn/add-desktop-peer.sh ]; then
+            scp -o StrictHostKeyChecking=no deploy/vpn/add-desktop-peer.sh homelab@192.168.15.2:/tmp/add-desktop-peer.sh
+            ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+              set -e
+              sudo bash /tmp/add-desktop-peer.sh
+              rm -f /tmp/add-desktop-peer.sh
+          SSH
+          else
+            echo "No add-desktop-peer.sh found, skipping"
+          fi
+
+      - name: Fix firewall — garante UFW/iptables libera UDP 51820
+        run: |
+          set -e
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 bash << 'SSH'
+            set -e
+
+            echo "=== UFW status para 51820 ==="
+            sudo ufw status numbered 2>/dev/null | grep -i "51820" || echo "(porta 51820 não encontrada no UFW)"
+
+            # Adicionar regra UFW se não existir (grep falhar = porta não existe)
+            UFW_HAS_PORT=$(sudo ufw status 2>/dev/null | grep "51820/udp" || true)
+            if [ -z "$UFW_HAS_PORT" ]; then
+              echo "Adicionando regra UFW para WireGuard UDP 51820..."
+              sudo ufw allow 51820/udp comment "WireGuard VPN" || echo "(UFW não disponível, usando iptables)"
+              sudo iptables -C INPUT -p udp --dport 51820 -j ACCEPT 2>/dev/null || \
+                sudo iptables -I INPUT -p udp --dport 51820 -j ACCEPT
+              echo "✅ Porta 51820/udp liberada"
+            else
+              echo "✅ Porta 51820/udp já estava liberada no UFW"
+            fi
+
+            echo "=== iptables INPUT para 51820 ==="
+            sudo iptables -L INPUT -v -n | grep 51820 || echo "(sem regra INPUT iptables para 51820)"
+
+            echo "=== wg0 escutando? ==="
+            ss -ulnp | grep 51820 || echo "(verificar se wg0 está ativo)"
+
+            echo "=== wg0 show ==="
+            sudo wg show wg0 2>&1 | head -20 || echo "(wg0 não disponível)"
+          SSH
+
+      - name: Verify VPN routing
+        run: |
+          set -e
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+            set -e
+            echo "=== ip_forward ==="
+            sysctl net.ipv4.ip_forward
+
+            echo "=== MASQUERADE ==="
+            sudo iptables -t nat -L POSTROUTING -v -n | grep -E "MASQ.*10\.66\.66" && echo "OK" || { echo "FAIL: sem MASQUERADE"; exit 1; }
+
+            echo "=== FORWARD wg0 ==="
+            sudo iptables -L FORWARD -v -n | grep wg0 && echo "OK" || { echo "FAIL: sem FORWARD wg0"; exit 1; }
+
+            echo "=== wg0 status ==="
+            sudo wg show wg0 | head -20
+
+            echo "=== Peers com handshake ==="
+            sudo wg show wg0 | grep -A3 "peer" | grep "latest handshake" || echo "(nenhum handshake recente — cliente precisa reconectar)"
+
+            echo "✅ VPN routing verificado"
+          SSH
+
+      - name: Deploy DDNS server-side (Cloudflare)
+        run: |
+          set -e
+          scp -o StrictHostKeyChecking=no deploy/vpn/ddns-cloudflare-update.sh homelab@192.168.15.2:/tmp/ddns-cloudflare-update.sh
+          scp -o StrictHostKeyChecking=no deploy/vpn/rpa4all-ddns-server.service homelab@192.168.15.2:/tmp/rpa4all-ddns-server.service
+          scp -o StrictHostKeyChecking=no deploy/vpn/rpa4all-ddns-server.timer homelab@192.168.15.2:/tmp/rpa4all-ddns-server.timer
+
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 << 'SSH'
+            set -e
+
+            # Instalar script
+            sudo cp /tmp/ddns-cloudflare-update.sh /opt/vpn/ddns-cloudflare-update.sh
+            sudo chmod 755 /opt/vpn/ddns-cloudflare-update.sh
+
+            # Instalar units systemd
+            sudo cp /tmp/rpa4all-ddns-server.service /etc/systemd/system/
+            sudo cp /tmp/rpa4all-ddns-server.timer /etc/systemd/system/
+            sudo systemctl daemon-reload
+            sudo systemctl enable --now rpa4all-ddns-server.timer
+
+            # Executar agora para criar/atualizar o record
+            sudo /opt/vpn/ddns-cloudflare-update.sh || echo "DDNS update falhou (CF token pode não estar acessível)"
+
+            # Verificar timer
+            systemctl status rpa4all-ddns-server.timer --no-pager | head -8
+
+            # Limpar
+            rm -f /tmp/ddns-cloudflare-update.sh /tmp/rpa4all-ddns-server.service /tmp/rpa4all-ddns-server.timer
+
+            echo "✅ DDNS server-side deployed"
+          SSH
+
+  # Fallback: se self-hosted runner não disponível, tenta via SSH remoto
+  deploy-vpn-fix-remote:
+    needs: deploy-vpn-fix
+    if: failure() || needs.deploy-vpn-fix.result == 'skipped'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup SSH
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then
+            echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          elif [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          else
+            echo "No SSH key — cannot deploy remotely" >&2
+            exit 1
+          fi
+          chmod 600 ~/.ssh/id_rsa
+          HOST="${{ secrets.HOMELAB_HOST }}"
+          if [ -n "$HOST" ]; then
+            ssh-keyscan -H "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          fi
+
+      - name: Deploy and run fix
+        env:
+          HOMELAB_USER: ${{ secrets.HOMELAB_USER }}
+          HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
+        run: |
+          set -e
+          HOST="${HOMELAB_HOST:?HOMELAB_HOST not set}"
+          USER="${HOMELAB_USER:?HOMELAB_USER not set}"
+
+          # Enviar script
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "$USER@$HOST" 'sudo mkdir -p /opt/vpn'
+          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no deploy/vpn/fix-wireguard-routing.sh "$USER@$HOST:/tmp/fix-wireguard-routing.sh"
+          scp -o ConnectTimeout=10 -o StrictHostKeyChecking=no deploy/vpn/wireguard-nat.service "$USER@$HOST:/tmp/wireguard-nat.service"
+
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no "$USER@$HOST" << 'SSH'
+            set -e
+            sudo cp /tmp/fix-wireguard-routing.sh /opt/vpn/fix-wireguard-routing.sh
+            sudo chmod 755 /opt/vpn/fix-wireguard-routing.sh
+            sudo cp /tmp/wireguard-nat.service /etc/systemd/system/wireguard-nat.service
+            sudo systemctl daemon-reload
+            sudo systemctl enable wireguard-nat.service
+            sudo /opt/vpn/fix-wireguard-routing.sh
+            rm -f /tmp/fix-wireguard-routing.sh /tmp/wireguard-nat.service
+          SSH
+
+          echo "✅ VPN fix deployed via remote SSH"

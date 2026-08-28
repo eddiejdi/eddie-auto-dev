@@ -1,0 +1,212 @@
+name: Deploy RPA4All Snapshot Monitor
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rpa4all-snapshot*.service'
+      - 'rpa4all-snapshot*.sh'
+      - 'rpa4all-snapshot*.py'
+      - 'rpa4all-snapshot*.yml'
+      - 'rpa4all-snapshot*.tmpl'
+      - '.github/workflows/deploy-rpa4all-snapshot-monitor.yml'
+  workflow_dispatch:
+    inputs:
+      homelab_host:
+        description: "Homelab host"
+        required: true
+        default: "192.168.15.2"
+
+jobs:
+  deploy:
+    # Self-hosted runner no homelab — acessa rede privada 192.168.15.x diretamente
+    runs-on: [self-hosted, linux, homelab]
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy watchdog services
+        run: |
+          set -euo pipefail
+
+          sudo cp rpa4all-snapshot.service /etc/systemd/system/
+          sudo cp rpa4all-snapshot-recovery.service /etc/systemd/system/
+          sudo cp rpa4all-snapshot-health.service /etc/systemd/system/
+          sudo cp rpa4all-snapshot-health.timer /etc/systemd/system/
+          sudo cp rpa4all-snapshot-health.sh /usr/local/bin/
+          sudo chmod +x /usr/local/bin/rpa4all-snapshot-health.sh
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable rpa4all-snapshot-health.timer
+          sudo systemctl restart rpa4all-snapshot-health.timer
+
+          echo "✅ Watchdog services: OK"
+          systemctl status rpa4all-snapshot-health.timer --no-pager | grep -E "Active|Trigger"
+
+      - name: Deploy Prometheus exporter
+        run: |
+          HOST="${{ inputs.homelab_host || '192.168.15.2' }}"
+          USER="${{ secrets.HOMELAB_USER || 'homelab' }}"
+
+          scp -i ~/.ssh/id_rsa rpa4all-snapshot-exporter.py "${USER}@${HOST}:/tmp/"
+          scp -i ~/.ssh/id_rsa rpa4all-snapshot-exporter.service "${USER}@${HOST}:/tmp/"
+
+      - name: Deploy Prometheus exporter
+        run: |
+          set -euo pipefail
+
+          sudo cp rpa4all-snapshot-exporter.py /usr/local/bin/
+          sudo chmod +x /usr/local/bin/rpa4all-snapshot-exporter.py
+          sudo cp rpa4all-snapshot-exporter.service /etc/systemd/system/
+
+          sudo systemctl daemon-reload
+          sudo systemctl enable rpa4all-snapshot-exporter.service
+          sudo systemctl restart rpa4all-snapshot-exporter.service
+
+          sleep 3
+          curl -sf http://localhost:9752/metrics | grep "rpa4all_snapshot_service_up" || {
+            echo "❌ Exporter não respondeu na porta 9752"
+            journalctl -u rpa4all-snapshot-exporter -n 20 --no-pager
+            exit 1
+          }
+          echo "✅ Exporter: OK (porta 9752)"
+
+      - name: Deploy Prometheus alert rules
+        run: |
+          set -euo pipefail
+
+          # Paths reais dos volumes Docker do Prometheus
+          PROM_RULES_DIR="/home/homelab/monitoring/prometheus"
+          PROM_CONFIG="/home/homelab/monitoring/prometheus.yml"
+
+          sudo cp rpa4all-snapshot-alerts.yml "$PROM_RULES_DIR/"
+          sudo docker exec prometheus promtool check rules /etc/prometheus/prometheus/rpa4all-snapshot-alerts.yml
+
+          sudo python3 - << 'PYEOF'
+          from pathlib import Path
+
+          path = Path('/home/homelab/monitoring/prometheus.yml')
+          content = path.read_text()
+
+          if "  - 'prometheus/rpa4all-snapshot-alerts.yml'\n" not in content:
+              content = content.replace(
+                  'rule_files:\n',
+                  "rule_files:\n  - 'prometheus/rpa4all-snapshot-alerts.yml'\n",
+                  1,
+              )
+              path.write_text(content)
+              print('Rule file adicionado')
+          else:
+              print('Rule file ja existe')
+          PYEOF
+
+          if ! grep -q "rpa4all-snapshot" /home/homelab/monitoring/prometheus.yml; then
+            printf '\n  - job_name: '"'"'rpa4all-snapshot'"'"'\n    static_configs:\n      - targets: ['"'"'localhost:9752'"'"']\n    scrape_interval: 30s\n' \
+              | sudo tee -a /home/homelab/monitoring/prometheus.yml > /dev/null
+            echo "Scrape job adicionado"
+          fi
+
+          sudo docker exec prometheus promtool check config /etc/prometheus/prometheus.yml
+
+          # Prometheus roda em Docker — usar SIGHUP para reload
+          if docker ps --filter name=prometheus -q | grep -q .; then
+            docker kill --signal=SIGHUP prometheus
+            sleep 5
+            echo "✅ Prometheus recarregado (Docker SIGHUP)"
+          elif systemctl is-active prometheus &>/dev/null; then
+            sudo systemctl reload prometheus
+            sleep 5
+          else
+            echo "⚠️ Prometheus não encontrado — config salva, reload manual necessário"
+          fi
+          echo "✅ Alert rules + Prometheus: OK"
+
+      - name: Configure AlertManager Telegram route
+        run: |
+          set -euo pipefail
+
+          sudo mkdir -p /etc/alertmanager/templates
+          sudo cp rpa4all-snapshot-telegram-template.tmpl \
+            /etc/alertmanager/templates/ 2>/dev/null || true
+
+          sudo python3 - << 'PYEOF'
+          from pathlib import Path
+          import shutil
+          import sys
+
+          import yaml
+
+          path = Path('/etc/alertmanager/alertmanager.yml')
+          data = yaml.safe_load(path.read_text())
+          routes = data.setdefault('route', {}).setdefault('routes', [])
+
+          for route in routes:
+            if route.get('match_re', {}).get('alertname') == 'RPA4AllSnapshot.*':
+              print('Rota ja existe')
+              sys.exit(0)
+
+          shutil.copy2(path, f'{path}.bak-rpa4all')
+          routes.insert(0, {
+            'match_re': {'alertname': 'RPA4AllSnapshot.*'},
+            'receiver': 'telegram-webhook',
+            'group_wait': '30s',
+            'group_interval': '5m',
+            'repeat_interval': '1h',
+          })
+          path.write_text(yaml.safe_dump(data, sort_keys=False))
+          print('Rota inserida')
+          PYEOF
+
+          sudo amtool check-config /etc/alertmanager/alertmanager.yml
+          sudo systemctl reload alertmanager
+          echo "✅ AlertManager Telegram: OK"
+
+      - name: Fix snapshot service timeout (drop-in)
+        run: |
+          set -euo pipefail
+
+          sudo mkdir -p /etc/systemd/system/rpa4all-snapshot.service.d
+          printf '[Service]\nTimeoutStartSec=3600\nTimeoutStopSec=300\n' \
+            | sudo tee /etc/systemd/system/rpa4all-snapshot.service.d/timeout.conf > /dev/null
+
+          sudo systemctl daemon-reload
+          TIMEOUT=$(systemctl show rpa4all-snapshot.service --property=TimeoutStartUSec | cut -d= -f2)
+          echo "Timeout efetivo: $TIMEOUT"
+          echo "✅ Timeout drop-in: OK"
+
+      - name: Validate full stack
+        run: |
+          set -euo pipefail
+          PASS=0; FAIL=0
+
+          check() {
+            local name="$1"; local cmd="$2"
+            if eval "$cmd" &>/dev/null; then
+              echo "  ✅ $name"; PASS=$((PASS+1))
+            else
+              echo "  ❌ $name"; FAIL=$((FAIL+1))
+            fi
+          }
+
+          echo "=== Validação Final ==="
+          check "health.timer ativo"        "systemctl is-active rpa4all-snapshot-health.timer"
+          check "exporter ativo"            "systemctl is-active rpa4all-snapshot-exporter.service"
+          check "exporter :9752 OK"         "curl -sf http://localhost:9752/metrics | grep -q rpa4all_snapshot_service_up"
+          check "alert rules carregadas"    "curl -sf http://localhost:9090/api/v1/rules | grep -q RPA4AllSnapshot"
+          check "alertmanager ativo"        "systemctl is-active alertmanager"
+
+          echo "Resultado: ${PASS} OK / ${FAIL} FALHAS"
+          [[ $FAIL -eq 0 ]] || exit 1
+
+      - name: Notify deployment result
+        if: always()
+        run: |
+          STATUS="${{ job.status }}"
+          MSG="*RPA4All Snapshot Monitor Deploy*%0AStatus: ${STATUS}%0ACommit: ${{ github.sha }}%0ARun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          curl -s -X POST \
+            "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+            -d "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+            -d "text=${MSG}" \
+            -d "parse_mode=Markdown" || true

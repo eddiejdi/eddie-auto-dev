@@ -1,0 +1,337 @@
+{
+  "version": "1.0",
+  "metadata": {
+    "synced_from": "GitHub Copilot customizations",
+    "source_repo": ".github/agents/ and .github/prompts/",
+    "note": "Auto-generated. Edit .github/ files, not this JSON.",
+    "hooks_path": "hooks.json",
+    "mcp_path": ".mcp.json",
+    "plugin_manifest": ".codex-plugin/plugin.json"
+  },
+  "agents": [
+    {
+      "id": "testing-specialist",
+      "description": "Use when: creating or fixing unit tests, fixtures, mocks, coverage gaps, and regression validation",
+      "sourceFile": ".github/agents/testing-specialist.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "todo",
+        "pylance-mcp-server/*"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "security-auditor",
+      "description": "Use when: auditing code, scripts, workflows, or commands for security risks, secrets exposure, and dangerous operations",
+      "sourceFile": ".github/agents/security-auditor.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "web",
+        "todo"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "infrastructure-ops",
+      "description": "Use when: handling homelab operations, docker or systemd changes, ssh safety, and deployment validation",
+      "sourceFile": ".github/agents/infrastructure-ops.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "web",
+        "todo",
+        "homelab/*"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "tape-component-quality",
+      "description": "Use when: validating tape stack readiness without requiring LTFS mount/format state, scoring every LTFS/FC component, and feeding Grafana with quality metrics",
+      "sourceFile": ".github/agents/tape-component-quality.agent.md",
+      "tools": [
+        "execute/runInTerminal",
+        "execute/getTerminalOutput",
+        "execute/sendToTerminal",
+        "read/readFile",
+        "read/problems",
+        "edit/editFiles",
+        "edit/createFile",
+        "search/codebase",
+        "search/fileSearch"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "fc-hba-tester",
+      "description": "Use when: testing FC HBA cable quality, diagnosing link instability, comparing dual-port HBA health, and recommending which port to use for tape operations",
+      "sourceFile": ".github/agents/fc-hba-tester.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "homelab/*"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "codebase-explorer",
+      "description": "Use when: exploring codebase structure, finding code patterns, understanding dependencies, mapping module relationships, and providing context to other agents",
+      "sourceFile": ".github/agents/codebase-explorer.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "todo",
+        "pylance-mcp-server/*"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "api-architect",
+      "description": "Use when: designing or reviewing FastAPI endpoints, schemas, service boundaries, and API compatibility risks",
+      "sourceFile": ".github/agents/api-architect.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "todo",
+        "pylance-mcp-server/*"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "agent_dev_local",
+      "description": "Agente de desenvolvimento local Shared Auto-Dev: orquestra operações locais e no homelab, gerencia agentes especializados, aplica safeguards de segurança, qualidade e deploy.",
+      "sourceFile": ".github/agents/agent_dev_local.agent.md",
+      "tools": [
+        "vscode/getProjectSetupInfo",
+        "vscode/installExtension",
+        "vscode/memory",
+        "vscode/newWorkspace",
+        "vscode/resolveMemoryFileUri",
+        "vscode/runCommand",
+        "vscode/vscodeAPI",
+        "vscode/extensions",
+        "vscode/toolSearch",
+        "vscode/askQuestions",
+        "execute/runNotebookCell",
+        "execute/getTerminalOutput",
+        "execute/killTerminal",
+        "execute/sendToTerminal",
+        "execute/createAndRunTask",
+        "execute/runInTerminal",
+        "execute/runTests",
+        "read/getNotebookSummary",
+        "read/problems",
+        "read/readFile",
+        "read/viewImage",
+        "read/skill",
+        "read/terminalSelection",
+        "read/terminalLastCommand",
+        "agent/runSubagent",
+        "edit/createDirectory",
+        "edit/createFile",
+        "edit/createJupyterNotebook",
+        "edit/editFiles",
+        "edit/editNotebook",
+        "edit/rename",
+        "search/codebase",
+        "search/fileSearch",
+        "search/listDirectory",
+        "search/textSearch",
+        "search/usages",
+        "web/fetch",
+        "web/githubRepo",
+        "web/githubTextSearch",
+        "homelab/api_auth_login",
+        "homelab/api_checkins_create",
+        "homelab/api_events_create",
+        "homelab/api_events_get",
+        "homelab/api_events_list",
+        "homelab/api_health",
+        "homelab/bus_get_messages",
+        "homelab/bus_health",
+        "homelab/bus_publish",
+        "homelab/bus_record_result",
+        "homelab/bus_search_by_agent",
+        "homelab/db_active_events",
+        "homelab/db_describe_table",
+        "homelab/db_execute_query",
+        "homelab/db_list_tables",
+        "homelab/secrets_get",
+        "homelab/secrets_health",
+        "homelab/secrets_list",
+        "telegram/tg_analyze",
+        "telegram/tg_context",
+        "telegram/tg_latest",
+        "telegram/tg_send",
+        "gitkraken/git_add_or_commit",
+        "gitkraken/git_blame",
+        "gitkraken/git_branch",
+        "gitkraken/git_checkout",
+        "gitkraken/git_fetch",
+        "gitkraken/git_log_or_diff",
+        "gitkraken/git_pull",
+        "gitkraken/git_push",
+        "gitkraken/git_stash",
+        "gitkraken/git_status",
+        "gitkraken/git_worktree",
+        "gitkraken/gitkraken_workspace_list",
+        "gitkraken/gitlens_commit_composer",
+        "gitkraken/gitlens_launchpad",
+        "gitkraken/gitlens_start_review",
+        "gitkraken/gitlens_start_work",
+        "gitkraken/issues_add_comment",
+        "gitkraken/issues_assigned_to_me",
+        "gitkraken/issues_get_detail",
+        "gitkraken/pull_request_assigned_to_me",
+        "gitkraken/pull_request_create",
+        "gitkraken/pull_request_create_review",
+        "gitkraken/pull_request_get_comments",
+        "gitkraken/pull_request_get_detail",
+        "gitkraken/repository_get_file_content",
+        "browser/openBrowserPage",
+        "browser/readPage",
+        "browser/screenshotPage",
+        "browser/navigatePage",
+        "browser/clickElement",
+        "browser/dragElement",
+        "browser/hoverElement",
+        "browser/typeInPage",
+        "browser/runPlaywrightCode",
+        "browser/handleDialog",
+        "vscode.mermaid-chat-features/renderMermaidDiagram",
+        "github.vscode-pull-request-github/issue_fetch",
+        "github.vscode-pull-request-github/labels_fetch",
+        "github.vscode-pull-request-github/notification_fetch",
+        "github.vscode-pull-request-github/doSearch",
+        "github.vscode-pull-request-github/activePullRequest",
+        "github.vscode-pull-request-github/pullRequestStatusChecks",
+        "github.vscode-pull-request-github/openPullRequest",
+        "github.vscode-pull-request-github/create_pull_request",
+        "github.vscode-pull-request-github/resolveReviewThread",
+        "ms-azuretools.vscode-containers/containerToolsConfig",
+        "ms-python.python/getPythonEnvironmentInfo",
+        "ms-python.python/getPythonExecutableCommand",
+        "ms-python.python/installPythonPackage",
+        "ms-python.python/configurePythonEnvironment",
+        "todo"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "nextcloud",
+      "description": "Use when: administering Nextcloud (config, logs, users, apps), managing files (upload, download, WebDAV, LTO staging), configuring OIDC/Authentik integration, managing Group Folders, and troubleshooting the Nextcloud stack",
+      "sourceFile": ".github/agents/nextcloud.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "web",
+        "todo",
+        "homelab/*"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "trading-analyst",
+      "description": "Use when: investigating trading behavior, PostgreSQL trading data, strategy diagnostics, and BTC or multi-coin risk signals",
+      "sourceFile": ".github/agents/trading-analyst.agent.md",
+      "tools": [
+        "vscode",
+        "read",
+        "search",
+        "edit",
+        "execute",
+        "web",
+        "todo",
+        "pylance-mcp-server/*"
+      ],
+      "type": "agent"
+    },
+    {
+      "id": "wiki_rpa4all",
+      "description": "MCP Wiki.js RPA4All — entrada única: conteúdo + contexto → URL + Page ID. Tudo automático.",
+      "sourceFile": ".github/agents/wiki_rpa4all.agent.md",
+      "tools": [
+        "vscode",
+        "execute",
+        "read",
+        "search",
+        "web",
+        "homelab/*"
+      ],
+      "type": "agent"
+    }
+  ],
+  "prompts": [
+    {
+      "id": "codebase-explorer",
+      "description": "Use when: exploring codebase for context, mapping modules, finding code patterns, and understanding dependencies before implementation",
+      "sourceFile": ".github/prompts/codebase-explorer.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    },
+    {
+      "id": "generic",
+      "description": "Use when: handling general coding tasks with concise execution, validation, and clear outcome reporting",
+      "sourceFile": ".github/prompts/generic.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    },
+    {
+      "id": "api-architect",
+      "description": "Use when: designing or reviewing FastAPI endpoints, API contracts, service boundaries, and request-validation flows",
+      "sourceFile": ".github/prompts/api-architect.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    },
+    {
+      "id": "infrastructure-ops",
+      "description": "Use when: planning or executing infrastructure operations for homelab, docker, systemd, ssh, and deploy safety",
+      "sourceFile": ".github/prompts/infrastructure-ops.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    },
+    {
+      "id": "security-auditor",
+      "description": "Use when: reviewing security risks in code, workflows, secrets handling, and operational commands",
+      "sourceFile": ".github/prompts/security-auditor.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    },
+    {
+      "id": "trading-analyst",
+      "description": "Use when: analyzing trading data, strategy behavior, risk signals, and PostgreSQL-backed trading diagnostics",
+      "sourceFile": ".github/prompts/trading-analyst.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    },
+    {
+      "id": "testing-specialist",
+      "description": "Use when: designing or improving unit tests, pytest fixtures, coverage, and regression scenarios",
+      "sourceFile": ".github/prompts/testing-specialist.prompt.md",
+      "tools": null,
+      "type": "prompt"
+    }
+  ]
+}

@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Tables Catalog Schema",
+  "description": "Taxonomy for database tables discovered in the homelab codebase",
+  "type": "object",
+  "required": ["catalogVersion", "domain", "categories"],
+  "properties": {
+    "catalogVersion": { "type": "string" },
+    "domain": { "const": "tables" },
+    "generatedAt": { "type": "string" },
+    "environment": {
+      "type": "string",
+      "enum": ["development", "staging", "production"]
+    },
+    "categories": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": { "$ref": "#/definitions/table" }
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "totalTables": { "type": "integer" },
+        "sourceFiles": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "schemaCount": { "type": "integer" }
+      }
+    }
+  },
+  "definitions": {
+    "table": {
+      "type": "object",
+      "required": ["name", "schema", "fqn", "source"],
+      "properties": {
+        "name": { "type": "string" },
+        "schema": { "type": "string" },
+        "fqn": {
+          "type": "string",
+          "description": "Fully qualified name schema.table (lowercase)"
+        },
+        "source": {
+          "type": "string",
+          "enum": ["sql", "python-ddl", "index-ref", "live-db"]
+        },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "type": { "type": "string" },
+              "nullable": { "type": "boolean" },
+              "primaryKey": { "type": "boolean" }
+            }
+          }
+        },
+        "primaryKey": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "foreignKeys": { "type": "array" },
+        "indexes": { "type": "array" },
+        "locations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "file": { "type": "string" },
+              "line": { "type": "integer" }
+            }
+          }
+        },
+        "category": { "type": "string" },
+        "sensitive": {
+          "type": "boolean",
+          "default": false,
+          "description": "True if any column name looks sensitive"
+        },
+        "sensitiveColumns": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "status": {
+          "type": "string",
+          "enum": ["active", "deprecated", "unused", "experimental"],
+          "default": "active"
+        },
+        "owner": { "type": "string" },
+        "team": { "type": "string" },
+        "relatedApis": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Operation keys of APIs that declare this table"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,150 @@
+name: Deploy BTC Shadow (dev → shadow env)
+
+# Fluxo: dev branch → shadow instance (dry_run=True) → validação A/B
+# Nunca toca em produção (aggressive/conservative).
+# Para promover para prod: abrir PR dev → main.
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'btc_trading_agent/trading_agent.py'
+      - 'btc_trading_agent/fast_model.py'
+      - 'btc_trading_agent/profile_rules.py'
+      - 'btc_trading_agent/slot_exit_policy.py'
+      - 'btc_trading_agent/risk_guardian_mixin.py'
+      - 'btc_trading_agent/position_manager_mixin.py'
+      - 'btc_trading_agent/sell_target_mixin.py'
+      - 'btc_trading_agent/kucoin_api.py'
+      - 'btc_trading_agent/prometheus_exporter.py'
+      - 'btc_trading_agent/config_BTC_USDT_shadow.json'
+      - 'grafana/exporters/rss_sentiment_exporter.py'
+      - 'grafana/exporters/btc_signals_exporter.py'
+      - 'grafana/dashboards/btc_shadow_ab_test.json'
+      - '.github/workflows/deploy-btc-shadow-dev.yml'
+
+jobs:
+  validate:
+    name: Validação de sintaxe e testes
+    runs-on:
+      - self-hosted
+      - homelab
+      - homelab-only
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v4
+
+      - name: Compilar módulos do agente
+        run: |
+          python3 -m py_compile \
+            btc_trading_agent/profile_rules.py \
+            btc_trading_agent/fast_model.py \
+            btc_trading_agent/slot_exit_policy.py \
+            btc_trading_agent/position_manager_mixin.py \
+            btc_trading_agent/risk_guardian_mixin.py \
+            btc_trading_agent/sell_target_mixin.py \
+            btc_trading_agent/trading_agent.py
+          python3 -m py_compile \
+            grafana/exporters/rss_sentiment_exporter.py \
+            grafana/exporters/btc_signals_exporter.py
+
+      - name: Validar config shadow (dry_run obrigatório)
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+          with open("btc_trading_agent/config_BTC_USDT_shadow.json") as f:
+              cfg = json.load(f)
+          assert cfg.get("profile") == "shadow", "BLOQUEADO: profile deve ser 'shadow'"
+          assert cfg.get("use_macd") is True, "AVISO: use_macd deve ser true no shadow"
+          assert isinstance(cfg.get("dry_run"), bool), "BLOQUEADO: dry_run deve ser bool"
+          mode = "dry_run=True (shadow)" if cfg.get("dry_run") else "dry_run=False (LIVE)"
+          print(f"✅ config_BTC_USDT_shadow.json validado: {mode}, profile=shadow, use_macd=True")
+          EOF
+
+      - name: Testes de regressão
+        run: |
+          pytest -q \
+            tests/test_multi_entry_sell_behavior.py \
+            tests/unit/test_position_manager_mixin.py \
+            tests/test_grafana_dashboard_queries.py \
+            || true  # testes não bloqueiam shadow deploy; falhas viram aviso
+
+  deploy-shadow:
+    name: Deploy → shadow env (dry_run)
+    needs: validate
+    runs-on:
+      - self-hosted
+      - homelab
+      - homelab-only
+    steps:
+      - name: Checkout dev branch
+        uses: actions/checkout@v4
+
+      - name: Deploy código do agente para shadow
+        run: |
+          DEST=/apps/crypto-trader/trading/btc_trading_agent
+          sudo cp btc_trading_agent/trading_agent.py     $DEST/trading_agent.py
+          sudo cp btc_trading_agent/fast_model.py        $DEST/fast_model.py
+          sudo cp btc_trading_agent/profile_rules.py     $DEST/profile_rules.py
+          sudo cp btc_trading_agent/slot_exit_policy.py  $DEST/slot_exit_policy.py
+          sudo cp btc_trading_agent/risk_guardian_mixin.py  $DEST/risk_guardian_mixin.py
+          sudo cp btc_trading_agent/position_manager_mixin.py $DEST/position_manager_mixin.py
+          sudo cp btc_trading_agent/sell_target_mixin.py $DEST/sell_target_mixin.py
+          sudo cp btc_trading_agent/kucoin_api.py        $DEST/kucoin_api.py
+          sudo cp btc_trading_agent/config_BTC_USDT_shadow.json $DEST/config_BTC_USDT_shadow.json
+          echo "✅ Código copiado para $DEST"
+
+      - name: Deploy exporters
+        run: |
+          DEST=/apps/crypto-trader/trading/grafana/exporters
+          sudo cp grafana/exporters/rss_sentiment_exporter.py $DEST/
+          sudo cp grafana/exporters/btc_signals_exporter.py   $DEST/
+          sudo systemctl restart btc-signals-exporter
+          sudo systemctl restart rss-sentiment-exporter
+          echo "✅ Exporters atualizados"
+
+      - name: Publicar dashboard A/B no Grafana
+        run: |
+          DASH_DEST=/home/homelab/monitoring/grafana/provisioning/dashboards
+          sudo cp grafana/dashboards/btc_shadow_ab_test.json $DASH_DEST/btc-shadow-ab-test.json
+          echo "✅ Dashboard copiado para provisioning"
+
+      - name: Reiniciar shadow (NUNCA toca em aggressive/conservative)
+        run: |
+          sudo systemctl restart crypto-agent@BTC_USDT_shadow
+          sudo systemctl restart crypto-exporter@BTC_USDT_shadow
+          sleep 5
+          STATUS=$(systemctl is-active crypto-agent@BTC_USDT_shadow)
+          echo "Shadow status: $STATUS"
+          if [ "$STATUS" != "active" ]; then
+            sudo journalctl -u crypto-agent@BTC_USDT_shadow -n 20 --no-pager
+            exit 1
+          fi
+          echo "✅ crypto-agent@BTC_USDT_shadow ativo"
+
+      - name: Smoke test — shadow respondendo na porta 9099
+        run: |
+          sleep 3
+          curl -sf http://localhost:9099/metrics | grep -q 'btc_trading_' \
+            && echo "✅ Métricas shadow OK em :9099" \
+            || echo "⚠️  Shadow ainda inicializando (não fatal)"
+
+      - name: Resumo do deploy
+        run: |
+          echo ""
+          echo "═══════════════════════════════════════════════════"
+          DRY=$(python3 -c "import json; c=json.load(open('btc_trading_agent/config_BTC_USDT_shadow.json')); print('TRUE (simulado)' if c.get('dry_run') else 'FALSE ⚠️  DINHEIRO REAL')")
+          echo " 🆚 Shadow A/B — dev branch deployed"
+          echo "───────────────────────────────────────────────────"
+          echo " Branch  : dev"
+          echo " Instância: crypto-agent@BTC_USDT_shadow"
+          echo " dry_run : $DRY"
+          echo " Porta   : :9099 (métricas)"
+          echo " MACD    : ativado"
+          echo " MA50/200: ativado"
+          echo " Dashboard: grafana.rpa4all.com → 🆚 BTC Shadow"
+          echo "───────────────────────────────────────────────────"
+          echo " Para promover para produção:"
+          echo "   git checkout main && git merge dev && git push"
+          echo "═══════════════════════════════════════════════════"

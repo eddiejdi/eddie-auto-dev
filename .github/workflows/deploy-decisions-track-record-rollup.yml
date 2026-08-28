@@ -1,0 +1,113 @@
+name: Deploy Decisions Track Record Rollup
+
+on:
+  workflow_dispatch:
+    inputs:
+      backfill_hours:
+        description: "Horas de backfill (default: 2200 ~ 91 dias)"
+        required: false
+        default: "2200"
+  push:
+    branches: [main]
+    paths:
+      - "scripts/decisions_track_record_rollup.py"
+      - "scripts/deploy_decisions_track_record_rollup.sh"
+      - "systemd/decisions-track-record-rollup.service"
+      - "systemd/decisions-track-record-rollup.timer"
+      - "tests/test_decisions_track_record_rollup.py"
+      - ".github/workflows/deploy-decisions-track-record-rollup.yml"
+
+jobs:
+  deploy-rollup:
+    name: Testes regressivos + deploy do rollup
+    runs-on: [self-hosted, linux]
+    env:
+      HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
+      HOMELAB_USER: ${{ secrets.HOMELAB_USER || 'homelab' }}
+      BACKFILL_HOURS: ${{ github.event.inputs.backfill_hours || '2200' }}
+    steps:
+      - name: Bloquear deploy automatico por push direto na main
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "::error::Deploy bloqueado: push direto na main nao aciona deploy automatico. Abra um PR e use workflow_dispatch apos revisao."
+          exit 1
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configurar SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$HOMELAB_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Testes regressivos (rollup script)
+        run: |
+          python3 -m py_compile scripts/decisions_track_record_rollup.py
+          python3 -m pytest -q tests/test_decisions_track_record_rollup.py
+
+      - name: Validar JSON do dashboard (painel Track Record)
+        run: |
+          python3 -c "import json; json.load(open('grafana/dashboards/btc-trading-monitor.json')); print('JSON ok')"
+
+      - name: Snapshot pré-deploy — serviços de trading ativos
+        run: |
+          test -n "$HOMELAB_HOST" || { echo "❌ HOMELAB_HOST não configurado"; exit 1; }
+          ssh -o StrictHostKeyChecking=no "$HOMELAB_USER@$HOMELAB_HOST" '
+            for svc in \
+              crypto-agent@BTC_USDT_aggressive.service \
+              crypto-agent@BTC_USDT_conservative.service \
+              crypto-agent@BTC_USDT_shadow.service \
+              crypto-exporter@BTC_USDT_aggressive.service \
+              crypto-exporter@BTC_USDT_conservative.service \
+              crypto-exporter@BTC_USDT_shadow.service
+            do
+              systemctl is-active --quiet "$svc" || { echo "❌ $svc já não estava ativo antes do deploy — abortando"; exit 1; }
+            done
+            echo "✅ Snapshot pré-deploy ok — serviços de trading ativos"
+          '
+
+      - name: Deploy do rollup (script + units + backfill + timer)
+        run: |
+          chmod +x scripts/deploy_decisions_track_record_rollup.sh
+          BACKFILL_HOURS="$BACKFILL_HOURS" scripts/deploy_decisions_track_record_rollup.sh "$HOMELAB_USER@$HOMELAB_HOST"
+
+      - name: Verificar timer do rollup e não-quebra da produção
+        run: |
+          ssh -o StrictHostKeyChecking=no "$HOMELAB_USER@$HOMELAB_HOST" '
+            set -e
+            echo "--- timer do rollup ---"
+            systemctl is-active decisions-track-record-rollup.timer
+            systemctl show decisions-track-record-rollup.service -p Result -p ExecMainStatus
+
+            echo "--- tabela populada ---"
+            source /apps/crypto-trader/envfiles/trading-database.env
+            ROWS=$(psql "$DATABASE_URL" -tAc "SELECT count(*) FROM btc.decisions_track_record_hourly")
+            echo "linhas no rollup: $ROWS"
+            [ "$ROWS" -gt 0 ] || { echo "❌ rollup vazio após backfill"; exit 1; }
+
+            echo "--- serviços de trading continuam ativos (guarantee no breakage) ---"
+            for svc in \
+              crypto-agent@BTC_USDT_aggressive.service \
+              crypto-agent@BTC_USDT_conservative.service \
+              crypto-agent@BTC_USDT_shadow.service \
+              crypto-exporter@BTC_USDT_aggressive.service \
+              crypto-exporter@BTC_USDT_conservative.service \
+              crypto-exporter@BTC_USDT_shadow.service
+            do
+              systemctl is-active --quiet "$svc" || { echo "❌ $svc caiu após o deploy do rollup"; exit 1; }
+              echo "✅ $svc"
+            done
+          '
+
+      - name: Resumo
+        run: |
+          echo "### Deploy Decisions Track Record Rollup" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Host | \`$HOMELAB_HOST\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Backfill (h) | \`$BACKFILL_HOURS\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY

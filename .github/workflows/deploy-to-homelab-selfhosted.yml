@@ -1,0 +1,55 @@
+name: Deploy to Homelab (Self-hosted)
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        description: Host to deploy to (HOMELAB_HOST)
+        required: true
+        default: 192.168.15.2
+      user:
+        description: SSH user to connect as
+        required: true
+        default: homelab
+jobs:
+  deploy-selfhost:
+    runs-on:
+    - self-hosted
+    - linux
+    - homelab-only
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Show inputs
+      run: 'echo "Deploying to ${{ github.event.inputs.user }}@${{ github.event.inputs.host
+        }}"
+
+        '
+    - name: Run deploy on homelab
+      run: |
+        set -e
+        TARGET="${{ github.event.inputs.user }}@${{ github.event.inputs.host }}"
+
+        ssh -o StrictHostKeyChecking=no "$TARGET" '
+          set -e
+          cd /home/homelab/myClaude
+          git fetch origin main
+          git reset --hard origin/main
+        '
+
+        ssh -o StrictHostKeyChecking=no "$TARGET" '
+          sudo systemctl stop specialized-agents 2>/dev/null || true
+          sleep 2
+        '
+
+        ssh -o StrictHostKeyChecking=no "$TARGET" '
+          cd /home/homelab/myClaude
+          nohup python3 -m uvicorn specialized_agents.api:app \
+            --host 0.0.0.0 \
+            --port 8503 \
+            >/tmp/specialized-agents.log 2>&1 &
+          sleep 4
+        '
+
+        HEALTH="$(ssh -o StrictHostKeyChecking=no "$TARGET" 'curl -s http://localhost:8503/health 2>/dev/null || echo TIMEOUT')"
+        echo "$HEALTH"
+        echo "$HEALTH" | grep -q "healthy"

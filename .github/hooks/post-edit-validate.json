@@ -1,0 +1,13 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "type": "command",
+        "command": "python tools/copilot_hooks/post_edit_validate.py",
+        "linux": "/workspace/eddie-auto-dev/.venv/bin/python tools/copilot_hooks/post_edit_validate.py",
+        "cwd": ".",
+        "timeout": 30
+      }
+    ]
+  }
+}

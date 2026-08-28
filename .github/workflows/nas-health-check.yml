@@ -1,0 +1,68 @@
+name: NAS Runner Health Check
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  health-check:
+    name: NAS runner diagnostics
+    runs-on: [self-hosted, Linux, nas]
+    timeout-minutes: 5
+
+    steps:
+      - name: System info
+        run: |
+          echo "=== Runner: $(hostname) ==="
+          echo "Date: $(date -Is)"
+          echo "User: $(whoami)"
+          echo "Arch: $(uname -m)"
+          echo "Python: $(python3 --version)"
+
+      - name: Verificar ltfs-catalog
+        run: |
+          echo "=== ltfs-catalog ==="
+          python3 /usr/local/sbin/ltfs-catalog list
+
+      - name: Verificar LTFS mountpoint
+        run: |
+          echo "=== LTFS ==="
+          mountpoint -q /mnt/tape/lto6 && df -h /mnt/tape/lto6 || echo "LTFS nao montado (aceitavel fora da janela de uso)"
+
+      - name: LTFS recovery check
+        run: |
+          set -euo pipefail
+          echo "=== LTFS recovery check ==="
+          if python3 tools/ltfs_recovery.py --check; then
+            echo "LTFS check passou"
+          else
+            echo "LTFS check falhou, tentando restaurar catálogo"
+            python3 tools/ltfs_recovery.py --catalog-restore
+            echo "Verificando novamente"
+            python3 tools/ltfs_recovery.py --check
+          fi
+
+      - name: Verificar PostgreSQL
+        env:
+          TAPE_CATALOG_DB: ${{ secrets.TAPE_CATALOG_DB }}
+        run: |
+          echo "=== PostgreSQL ==="
+          python3 - << 'EOF'
+          import os, psycopg2
+          conn = psycopg2.connect(os.environ['TAPE_CATALOG_DB'])
+          conn.autocommit = True
+          cur = conn.cursor()
+          cur.execute("""
+              SELECT t.serial, t.status,
+                     COUNT(f.id) AS total_arquivos,
+                     COALESCE(SUM(f.size_bytes), 0) AS total_bytes
+              FROM tape_catalog.tapes t
+              LEFT JOIN tape_catalog.files f ON f.tape_serial = t.serial
+              GROUP BY t.serial, t.status
+              ORDER BY t.serial
+          """)
+          for row in cur.fetchall():
+              serial, status, total_arq, total_bytes = row
+              print(f"  {serial} ({status}) — {total_arq} arquivos, {int(total_bytes)/1e9:.1f}GB")
+          conn.close()
+          print("PostgreSQL OK")
+          EOF

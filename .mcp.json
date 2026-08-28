@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "homelab": {
+      "command": "ssh",
+      "args": [
+        "homelab",
+        "set -a; . /etc/default/eddie-common; set +a; exec /home/homelab/mcp/venv/bin/python /home/homelab/myClaude/scripts/homelab_mcp_server.py"
+      ]
+    },
+    "telegram": {
+      "command": "ssh",
+      "args": [
+        "homelab",
+        "set -a; . /etc/default/eddie-common; set +a; TG_TOKEN=\"$TELEGRAM_BOT_TOKEN\" TG_CHAT_ID=\"$TELEGRAM_CHAT_ID\" OLLAMA_BASE=http://127.0.0.1:11434 VISION_MODEL=moondream:latest MEDIA_DIR=/tmp/tg_media exec /home/homelab/myClaude/venv/bin/python3 /home/homelab/myClaude/telegram_mcp_server.py"
+      ]
+    },
+    "codex-agent": {
+      "command": "/workspace/eddie-auto-dev/.venv/bin/python",
+      "args": [
+        "/workspace/eddie-auto-dev/scripts/codex_mcp_server.py"
+      ],
+      "env": {
+        "HOMELAB_URL": "http://192.168.15.2:8503",
+        "CODEX_WORKSPACE": "/workspace/eddie-auto-dev"
+      }
+    },
+    "ollama-local": {
+      "command": "/workspace/eddie-auto-dev/.venv/bin/python",
+      "args": [
+        "/workspace/eddie-auto-dev/scripts/ollama_mcp_server.py"
+      ],
+      "env": {
+        "LLM_GPU0_HOST": "http://192.168.15.2:11544",
+        "LLM_GPU1_HOST": "http://192.168.15.2:11545",
+        "LLM_NAS_HOST": "http://192.168.15.4:11546",
+        "LLM_GPU0_MODEL": "trading-analyst",
+        "LLM_GPU1_MODEL": "lfm2.5-fast:gpu1",
+        "LLM_NAS_MODEL": "phi4-mini:latest"
+      }
+    }
+  }
+}

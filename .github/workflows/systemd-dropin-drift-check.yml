@@ -1,0 +1,59 @@
+name: Systemd Drop-in Drift Check
+
+# Detecta divergência entre os drop-ins versionados e os instalados no homelab,
+# nos DOIS sentidos:
+#   - repo → host: alguém corrigiu o .conf no git e o deploy não rodou.
+#   - host → repo: alguém editou /etc/systemd/system/ à mão (fora do git).
+# O deploy do trading já falha na divergência; este job cobre o drift que
+# aparece FORA de um deploy (edição manual, rollback, incidente).
+
+on:
+  schedule:
+    # 09:10 e 21:10 BRT (12:10/00:10 UTC)
+    - cron: '10 12,0 * * *'
+  workflow_dispatch:
+    inputs:
+      fail_on_host_only:
+        description: 'Falhar também quando houver .conf só no host'
+        type: boolean
+        default: false
+
+jobs:
+  check-dropin-drift:
+    name: Check systemd drop-in parity on homelab
+    runs-on:
+      - self-hosted
+      - homelab
+      - homelab-only
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Compare repo drop-ins with /etc/systemd/system
+        id: drift
+        run: |
+          set -euo pipefail
+          EXTRA=""
+          if [ "${{ inputs.fail_on_host_only }}" = "true" ]; then
+            EXTRA="--fail-on-host-only"
+          fi
+          python3 scripts/check_systemd_dropin_drift.py --strict --verbose ${EXTRA} \
+            | tee /tmp/dropin-drift.txt
+
+      - name: Report host-only drop-ins (não versionados)
+        if: always()
+        run: |
+          # Não falha: só torna visível o que existe no host e não está no git.
+          scripts/export_host_systemd_dropins.sh || true
+
+      - name: Notify Telegram on drift
+        if: failure()
+        run: |
+          if [ -n "${{ secrets.TELEGRAM_BOT_TOKEN }}" ] && [ -n "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
+            DETAIL="$(head -c 2500 /tmp/dropin-drift.txt 2>/dev/null || echo 'sem detalhe')"
+            MESSAGE="$(printf '⚠️ Drift de drop-ins systemd no homelab\n\n%s\n\nRun: %s/%s/actions/runs/%s' \
+              "${DETAIL}" "${{ github.server_url }}" "${{ github.repository }}" "${{ github.run_id }}")"
+            curl -sS -X POST "https://api.telegram.org/bot${{ secrets.TELEGRAM_BOT_TOKEN }}/sendMessage" \
+              --data-urlencode "chat_id=${{ secrets.TELEGRAM_CHAT_ID }}" \
+              --data-urlencode "text=${MESSAGE}" >/dev/null
+          fi

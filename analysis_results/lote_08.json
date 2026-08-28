@@ -1,0 +1,49 @@
+[
+  {
+    "arquivo": "gdrive_service.py",
+    "caminho": "shared-auto-dev/specialized_agents/gdrive_service.py",
+    "gpu": 0,
+    "shared_count": 0,
+    "shared_linhas": [],
+    "imports_count": 0,
+    "funcoes_publicas": [],
+    "linhas_total": 1,
+    "sucesso": true
+  },
+  {
+    "arquivo": "telegram_auto_responder.py",
+    "caminho": "shared-auto-dev/specialized_agents/telegram_auto_responder.py",
+    "gpu": 1,
+    "shared_count": 2,
+    "shared_linhas": [
+      [
+        108,
+        "ollama_model = os.getenv(\"OLLAMA_MODEL\", \"shared-assistant\")"
+      ],
+      [
+        174,
+        "\"model\": os.getenv(\"OPENWEBUI_MODEL\", \"shared-assistant:latest\"),"
+      ]
+    ],
+    "imports_count": 9,
+    "funcoes_publicas": [
+      "walk",
+      "start_auto_responder"
+    ],
+    "linhas_total": 241,
+    "sucesso": true
+  },
+  {
+    "arquivo": "agents_webui_bridge.py",
+    "caminho": "shared-auto-dev/specialized_agents/agents_webui_bridge.py",
+    "gpu": 0,
+    "shared_count": 0,
+    "shared_linhas": [],
+    "imports_count": 9,
+    "funcoes_publicas": [
+      "get_agents_webui_bridge"
+    ],
+    "linhas_total": 368,
+    "sucesso": true
+  }
+]

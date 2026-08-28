@@ -1,0 +1,114 @@
+name: Agent Responder Integration Test
+on:
+  pull_request:
+    branches:
+    - main
+  workflow_dispatch: null
+jobs:
+  changes:
+    runs-on:
+    - ubuntu-latest
+    outputs:
+      responder: ${{ steps.filter.outputs.responder }}
+    steps:
+    - uses: actions/checkout@v4
+    - id: filter
+      uses: dorny/paths-filter@v3
+      with:
+        filters: |
+          responder:
+            - 'scripts/test_agent_responder.sh'
+            - 'specialized_agents/**'
+            - 'agents_inbox/**'
+
+  responder-integration:
+    name: Agent Responder Integration Test
+    needs: changes
+    if: ${{ !cancelled() }}
+    runs-on:
+    - self-hosted
+    - linux
+    - homelab
+    steps:
+    - name: Skip (sem mudanças relevantes)
+      if: ${{ github.event_name != 'workflow_dispatch' && needs.changes.outputs.responder != 'true' }}
+      run: echo "Sem mudanças em scripts/test_agent_responder.sh, specialized_agents/ ou agents_inbox/ — check satisfeito (sem execução)."
+    - uses: actions/checkout@v4
+      if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
+    - name: Ensure jq installed
+      if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
+      run: "if ! command -v jq >/dev/null; then\n  sudo apt-get update && sudo apt-get\
+        \ install -y jq\nfi\n"
+    - name: Ensure specialized-agents API is available
+      if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
+      env:
+        API_URL: http://127.0.0.1:8503
+      run: |
+        set -euo pipefail
+        if curl -fsS "$API_URL/health" >/dev/null 2>&1; then
+          echo "API already available at $API_URL"
+          exit 0
+        fi
+
+        echo "API not responding; trying local systemd service..."
+        if command -v systemctl >/dev/null; then
+          sudo systemctl restart specialized-agents-api || true
+          for i in $(seq 1 10); do
+            if curl -fsS "$API_URL/health" >/dev/null 2>&1; then
+              echo "API recovered via systemd"
+              exit 0
+            fi
+            sleep 2
+          done
+          sudo systemctl status specialized-agents-api --no-pager || true
+        fi
+
+        echo "Falling back to in-repo uvicorn startup..."
+        nohup python3 -m uvicorn specialized_agents.api:app --host 127.0.0.1 --port 8503 \
+          >/tmp/specialized-agents-api-ci.log 2>&1 &
+        for i in $(seq 1 15); do
+          if curl -fsS "$API_URL/health" >/dev/null 2>&1; then
+            echo "API started from repository checkout"
+            exit 0
+          fi
+          sleep 2
+        done
+
+        echo "Failed to start API locally; dumping log" >&2
+        test -f /tmp/specialized-agents-api-ci.log && cat /tmp/specialized-agents-api-ci.log >&2 || true
+        exit 1
+    - name: Check in-process responder (pre-check)
+      if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
+      env:
+        API_URL: http://127.0.0.1:8503
+      run: "set -euo pipefail\necho \"Checking in-process responder via $API_URL/communication/test\"\
+        \n# Attempt to start responder in-process and wait briefly; expect at least\
+        \ one local response\nif curl -sS -X POST \"$API_URL/communication/test\"\
+        \ -H 'Content-Type: application/json' -d '{\"message\":\"please_respond\"\
+        ,\"start_responder\":true,\"wait_seconds\":1.0}' | jq -e '.local_responses_count\
+        \ and (.local_responses_count > 0)'; then\n  echo \"In-process responder check\
+        \ OK\"\nelse\n  echo \"In-process responder not active in this API process\
+        \ (failing early)\" >&2\n  echo \"Dumping subscribers and recent messages\
+        \ for debugging...\" >&2\n  curl -sS \"$API_URL/debug/communication/subscribers\"\
+        \ || true\n  curl -sS \"$API_URL/communication/messages?limit=50\" | jq '.messages\
+        \ | length' || true\n  # show the temporary responder log if present\n  test\
+        \ -f /tmp/responder.log && cat /tmp/responder.log || true\n  exit 1\nfi\n"
+    - name: Run agent responder integration script
+      if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
+      env:
+        API_URL: http://127.0.0.1:8503
+      run: "set -euo pipefail\necho \"Running responder integration test against $API_URL\"\
+        \nbash scripts/test_agent_responder.sh | tee /tmp/responder.log\n"
+    - name: Upload logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: responder-log
+        path: |
+          /tmp/responder.log
+          /tmp/specialized-agents-api-ci.log
+  selenium-e2e:
+    name: Selenium E2E
+    needs: changes
+    if: ${{ github.event_name == 'workflow_dispatch' || needs.changes.outputs.responder == 'true' }}
+    uses: ./.github/workflows/selenium-tests.yml

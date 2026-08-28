@@ -1,0 +1,14 @@
+{
+  "hosts": {
+    "homelab": {
+      "name": "homelab",
+      "hostname": "${HOMELAB_HOST}",
+      "username": "homelab",
+      "port": 22,
+      "key_file": null,
+      "password": "homelab",
+      "description": "Servidor Homelab principal - Ubuntu"
+    }
+  },
+  "updated_at": "2026-04-20T00:00:00"
+}

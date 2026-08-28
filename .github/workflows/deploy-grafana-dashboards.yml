@@ -1,0 +1,173 @@
+name: Deploy Grafana Dashboards
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "grafana/dashboards/**/*.json"
+      - "grafana/btc_trading_dashboard_v3_prometheus.json"
+      - "monitoring/grafana/provisioning/dashboards/*.json"
+      - "monitoring/grafana/provisioning/dashboards/dashboards.yml"
+  workflow_dispatch:
+    inputs:
+      dashboard:
+        description: "Arquivo do dashboard (relativo ao repo, deixe vazio para todos)"
+        required: false
+        default: ""
+      dry_run:
+        description: "Dry run (valida JSON sem fazer deploy)"
+        required: false
+        default: "false"
+        type: choice
+        options: ["true", "false"]
+
+jobs:
+  deploy-dashboards:
+    name: Deploy Grafana Dashboards
+    runs-on: [self-hosted, linux]
+    env:
+      HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
+      HOMELAB_USER: ${{ secrets.HOMELAB_USER || 'homelab' }}
+      GRAFANA_PROVISIONING_DIR: /home/${{ secrets.HOMELAB_USER || 'homelab' }}/monitoring/grafana/provisioning/dashboards
+      GRAFANA_URL: ${{ secrets.GRAFANA_URL || 'http://192.168.15.2:3002' }}
+      GRAFANA_ADMIN_USER: ${{ secrets.GRAFANA_USER || 'admin' }}
+      GRAFANA_ADMIN_PASS: ${{ secrets.GRAFANA_PASS }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Configurar SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H "$HOMELAB_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Sincronizar config de provisioning (pipeline-only)
+        run: |
+          test -n "$HOMELAB_HOST" || { echo "❌ HOMELAB_HOST não configurado"; exit 1; }
+          rsync -av --mkpath \
+            monitoring/grafana/provisioning/dashboards/dashboards.yml \
+            "$HOMELAB_USER@$HOMELAB_HOST:$GRAFANA_PROVISIONING_DIR/dashboards.yml"
+          echo "✅ dashboards.yml sincronizado"
+
+      - name: Detectar dashboards alterados
+        id: changed
+        run: |
+          INPUT="${{ github.event.inputs.dashboard }}"
+          if [ -n "$INPUT" ]; then
+            FILES="$INPUT"
+            COUNT=1
+            echo "files=$INPUT" >> $GITHUB_OUTPUT
+            echo "count=1" >> $GITHUB_OUTPUT
+          elif [ "${{ github.event_name }}" = "push" ]; then
+            FILES="$(
+              git diff --name-only HEAD^ HEAD -- \
+                grafana/dashboards/*.json \
+                grafana/btc_trading_dashboard_v3_prometheus.json \
+                'monitoring/grafana/provisioning/dashboards/*.json' \
+              | grep -v 'dashboards\.yml$' | tr '\n' ' ' | xargs
+            )"
+            COUNT=$(echo "$FILES" | wc -w)
+            echo "files=$FILES" >> $GITHUB_OUTPUT
+            echo "count=$COUNT" >> $GITHUB_OUTPUT
+          else
+            # workflow_dispatch sem input → todos os dashboards
+            FILES="$(
+              {
+                find grafana/dashboards -maxdepth 1 -name '*.json'
+                printf '%s\n' grafana/btc_trading_dashboard_v3_prometheus.json
+                find monitoring/grafana/provisioning/dashboards -maxdepth 1 -name '*.json'
+              } | grep -v 'dashboards\.yml$' | sort -u | tr '\n' ' ' | xargs
+            )"
+            COUNT="$(
+              {
+                find grafana/dashboards -maxdepth 1 -name '*.json'
+                printf '%s\n' grafana/btc_trading_dashboard_v3_prometheus.json
+                find monitoring/grafana/provisioning/dashboards -maxdepth 1 -name '*.json'
+              } | grep -v 'dashboards\.yml$' | sort -u | wc -l
+            )"
+            echo "files=$FILES" >> $GITHUB_OUTPUT
+            echo "count=$COUNT" >> $GITHUB_OUTPUT
+          fi
+          echo "Dashboards a processar: $FILES"
+          if [ -z "$FILES" ]; then
+            echo "has_files=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_files=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validar JSON dos dashboards
+        if: ${{ steps.changed.outputs.has_files == 'true' }}
+        run: |
+          for f in ${{ steps.changed.outputs.files }}; do
+            echo "Validando $f..."
+            python3 -c "import json,sys; json.load(open('$f'))" || { echo "❌ JSON inválido: $f"; exit 1; }
+            echo "  ✅ JSON válido"
+          done
+
+      - name: Sincronizar dashboards provisionados
+        if: ${{ steps.changed.outputs.has_files == 'true' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          for f in ${{ steps.changed.outputs.files }}; do
+            base="$(basename "$f")"
+            if [ "$f" = "grafana/btc_trading_dashboard_v3_prometheus.json" ]; then
+              target_name="btc_trading_dashboard_v3_prometheus.json"
+            else
+              target_name="$base"
+            fi
+            echo "━━━ Sincronizando $f -> $GRAFANA_PROVISIONING_DIR/$target_name"
+            rsync -av "$f" "$HOMELAB_USER@$HOMELAB_HOST:$GRAFANA_PROVISIONING_DIR/$target_name"
+          done
+          echo "✅ Arquivos sincronizados"
+
+      - name: Sanear UIDs duplicados no host
+        if: ${{ steps.changed.outputs.has_files == 'true' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          rsync -av scripts/grafana_dedup_provisioning.py \
+            "$HOMELAB_USER@$HOMELAB_HOST:/tmp/grafana_dedup_provisioning.py"
+          ssh "$HOMELAB_USER@$HOMELAB_HOST" \
+            python3 /tmp/grafana_dedup_provisioning.py "$GRAFANA_PROVISIONING_DIR"
+
+      - name: Recarregar provisioning do Grafana
+        if: ${{ steps.changed.outputs.has_files == 'true' && github.event.inputs.dry_run != 'true' }}
+        run: |
+          curl -s -X POST \
+            -u "${GRAFANA_ADMIN_USER:-admin}:${GRAFANA_ADMIN_PASS:-admin}" \
+            "${GRAFANA_URL}/api/admin/provisioning/dashboards/reload" | grep -E 'message|error' || true
+          echo "✅ Provisioning recarregado"
+
+      - name: Dry run — listar painéis
+        if: ${{ steps.changed.outputs.has_files == 'true' && github.event.inputs.dry_run == 'true' }}
+        run: |
+          for f in ${{ steps.changed.outputs.files }}; do
+            echo "━━━ Painéis em $f:"
+            python3 -c "
+          import json, sys
+          d = json.load(open('$f'))
+          panels = d.get('panels', d.get('dashboard', {}).get('panels', []))
+          for p in panels:
+              print(f'  [{p.get(\"id\",\"?\")}] {p.get(\"title\",\"?\")}')
+          print(f'Total: {len(panels)} painéis')
+            "
+          done
+
+      - name: Sem alterações de dashboard
+        if: ${{ steps.changed.outputs.has_files != 'true' }}
+        run: echo "Nenhum dashboard alterado para sincronizar."
+
+      - name: Resumo
+        run: |
+          echo "### Deploy Grafana" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Campo | Valor |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Grafana URL | \`$GRAFANA_URL\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Provisioning Dir | \`$GRAFANA_PROVISIONING_DIR\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dashboards | \`${{ steps.changed.outputs.count }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dry run | \`${{ github.event.inputs.dry_run }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | \`${{ github.event_name }}\` |" >> $GITHUB_STEP_SUMMARY

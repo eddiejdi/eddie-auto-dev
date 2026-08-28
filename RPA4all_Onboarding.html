@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bem-vindo à RPA4All — Onboarding</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #1a1a2e; line-height: 1.6; }
+  .email-wrapper { max-width: 780px; margin: 0 auto; background: #fff; }
+  /* Header */
+  .header { background: linear-gradient(135deg, #0f0c29, #302b63, #24243e); padding: 50px 40px; text-align: center; position: relative; overflow: hidden; }
+  .header::before { content: ''; position: absolute; top: -100px; right: -100px; width: 300px; height: 300px; background: rgba(0,200,255,0.08); border-radius: 50%; }
+  .header::after { content: ''; position: absolute; bottom: -80px; left: -60px; width: 250px; height: 250px; background: rgba(100,100,255,0.06); border-radius: 50%; }
+  .logo-ascii { font-family: 'Courier New', monospace; font-size: 12px; color: #00d4ff; letter-spacing: 1px; white-space: pre; display: inline-block; text-align: left; margin-bottom: 20px; text-shadow: 0 0 10px rgba(0,212,255,0.4); }
+  .header h1 { color: #fff; font-size: 28px; font-weight: 300; margin-bottom: 8px; position: relative; z-index: 1; }
+  .header h1 strong { font-weight: 700; color: #00d4ff; }
+  .header p { color: rgba(255,255,255,0.7); font-size: 15px; position: relative; z-index: 1; }
+  .badge { display: inline-block; background: rgba(0,212,255,0.15); color: #00d4ff; padding: 4px 14px; border-radius: 20px; font-size: 11px; margin-top: 12px; border: 1px solid rgba(0,212,255,0.3); letter-spacing: 1px; text-transform: uppercase; }
+  /* AI Art */
+  .ai-art-container { position: relative; margin-bottom: 20px; z-index: 1; }
+  #ai-canvas { border-radius: 12px; border: 1px solid rgba(0,212,255,0.2); box-shadow: 0 0 30px rgba(0,212,255,0.15); }
+  .ai-art-label { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
+  .ai-art-label span { color: rgba(255,255,255,0.4); font-size: 11px; letter-spacing: 0.5px; }
+  .ai-art-label .seed { color: #00d4ff; font-family: 'Courier New', monospace; font-size: 11px; }
+  .ai-art-label .dot { width: 6px; height: 6px; border-radius: 50%; background: #00d4ff; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100% { opacity: 0.4; } 50% { opacity: 1; } }
+  .ollama-svg-container { margin-bottom: 20px; z-index: 1; position: relative; }
+  .ollama-svg-container svg { max-width: 320px; max-height: 200px; border-radius: 12px; }
+  /* Content */
+  .content { padding: 40px; }
+  .intro { font-size: 16px; color: #444; margin-bottom: 30px; border-left: 4px solid #00d4ff; padding-left: 16px; }
+  /* Section */
+  .section { margin-bottom: 36px; }
+  .section-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 2px solid #f0f2f5; }
+  .section-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .icon-sso { background: #e8f4fd; }
+  .icon-vpn { background: #fef3e2; }
+  .icon-email { background: #f3e8fd; }
+  .icon-ai { background: #e8fdf0; }
+  .icon-bots { background: #fde8e8; }
+  .icon-dash { background: #f0e8fd; }
+  .icon-db { background: #e8f0fd; }
+  .icon-docs { background: #fdf8e8; }
+  .icon-repo { background: #e8fdf8; }
+  .icon-inv { background: #f0f0f0; }
+  .section-header h2 { font-size: 18px; color: #1a1a2e; font-weight: 600; }
+  .section-desc { color: #666; font-size: 14px; margin-bottom: 14px; }
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+  th { background: #f7f8fa; color: #555; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 14px; text-align: left; border-bottom: 2px solid #e8e8e8; }
+  td { padding: 10px 14px; border-bottom: 1px solid #f0f0f0; font-size: 14px; color: #333; }
+  tr:hover td { background: #fafbfc; }
+  a { color: #0066cc; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .url-cell { font-family: 'Courier New', monospace; font-size: 13px; }
+  /* Info blocks */
+  .info-block { background: #f7f8fa; border-radius: 8px; padding: 16px 20px; margin-bottom: 12px; }
+  .info-block strong { color: #1a1a2e; }
+  .info-block code { background: #e8ecf0; padding: 2px 7px; border-radius: 4px; font-size: 13px; color: #d63384; }
+  ul.clean { list-style: none; padding: 0; }
+  ul.clean li { padding: 6px 0; font-size: 14px; color: #555; }
+  ul.clean li::before { content: '→'; color: #00d4ff; margin-right: 8px; font-weight: bold; }
+  /* Full inventory table */
+  .inv-table th { font-size: 10px; padding: 8px 10px; }
+  .inv-table td { padding: 8px 10px; font-size: 12px; }
+  .inv-table tr:nth-child(even) td { background: #fafbfc; }
+  .cat-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; }
+  .cat-sso { background: #e8f4fd; color: #0066cc; }
+  .cat-llm { background: #e8fdf0; color: #0a7d3e; }
+  .cat-api { background: #fef3e2; color: #b8600a; }
+  .cat-chat { background: #fde8e8; color: #c0392b; }
+  .cat-log { background: #f0e8fd; color: #7d3c98; }
+  .cat-db { background: #e8f0fd; color: #2c3e80; }
+  .cat-web { background: #fdf8e8; color: #7d6608; }
+  .cat-vpn { background: #fef3e2; color: #b8600a; }
+  /* Footer */
+  .footer { background: #1a1a2e; padding: 30px 40px; text-align: center; }
+  .footer p { color: rgba(255,255,255,0.5); font-size: 13px; margin-bottom: 6px; }
+  .footer .brand { color: #00d4ff; font-weight: 700; font-size: 15px; }
+  .footer .social { margin-top: 16px; }
+  .footer .social a { display: inline-block; margin: 0 6px; color: rgba(255,255,255,0.5); font-size: 13px; }
+  /* Separator */
+  .sep { height: 1px; background: linear-gradient(90deg, transparent, #ddd, transparent); margin: 10px 0; }
+  /* CTA */
+  .cta { text-align: center; margin: 30px 0; }
+  .cta a { display: inline-block; background: linear-gradient(135deg, #0066cc, #00d4ff); color: #fff; padding: 14px 36px; border-radius: 8px; font-size: 15px; font-weight: 600; text-decoration: none; box-shadow: 0 4px 15px rgba(0,102,204,0.3); transition: transform 0.2s; }
+  .cta a:hover { transform: translateY(-2px); }
+  @media (max-width: 600px) {
+    .content { padding: 20px; }
+    .header { padding: 30px 20px; }
+    .logo-ascii { font-size: 9px; }
+    .header h1 { font-size: 22px; }
+    table { font-size: 12px; }
+  }
+</style>
+</head>
+<body>
+<div class="email-wrapper">
+  <!-- HEADER -->
+  <div class="header">
+    <!-- AI-generated art container -->
+    <div class="ai-art-container">
+      <canvas id="ai-canvas" width="700" height="220"></canvas>
+      <div class="ai-art-label">
+        <div class="dot"></div>
+        <span>Arte gerada por IA local (Ollama Homelab) — seed:</span>
+        <span class="seed" id="seed-display">—</span>
+      </div>
+    </div>
+    <!-- Ollama SVG (injected dynamically) -->
+    <div class="ollama-svg-container" id="ollama-svg-slot" style="display:none;"></div>
+    <h1>Bem-vindo(a) à <strong>RPA4All</strong></h1>
+    <p>Seu guia completo de onboarding — infraestrutura, acessos e ferramentas</p>
+    <span class="badge">Robotic Process Automation</span>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <p class="intro">
+      Estamos muito felizes em ter você a bordo! Nossa missão é transformar e otimizar processos 
+      através da automação inteligente. Abaixo você encontrará <strong>todos os acessos</strong>, 
+      URLs, serviços e ferramentas que usamos no dia a dia.
+    </p>
+
+    <!-- 1. SSO -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon icon-sso">🌐</div>
+        <h2>1. Portais Externos e SSO (Authentik)</h2>
+      </div>
+      <p class="section-desc">Todos os acessos são gerenciados via Single Sign-On com Authentik. Faça login no portal SSO com suas credenciais provisórias.</p>
+      <table>
+        <thead><tr><th>Serviço</th><th>URL</th></tr></thead>
+        <tbody>
+          <tr><td>Portal SSO (Authentik)</td><td class="url-cell"><a href="https://auth.rpa4all.com">https://auth.rpa4all.com</a></td></tr>
+          <tr><td>Nextcloud (Arquivos &amp; Docs)</td><td class="url-cell"><a href="https://nextcloud.rpa4all.com">https://nextcloud.rpa4all.com</a></td></tr>
+          <tr><td>Grafana (Monitoramento)</td><td class="url-cell"><a href="https://grafana.rpa4all.com">https://grafana.rpa4all.com</a></td></tr>
+          <tr><td>OpenWebUI (Interface de IA)</td><td class="url-cell"><a href="https://openwebui.rpa4all.com">https://openwebui.rpa4all.com</a></td></tr>
+          <tr><td>Site Institucional</td><td class="url-cell"><a href="https://www.rpa4all.com">https://www.rpa4all.com</a></td></tr>
+          <tr><td>IDE Web</td><td class="url-cell"><a href="https://ide.rpa4all.com">https://ide.rpa4all.com</a></td></tr>
+          <tr><td>Wiki.js (Documentação Interna)</td><td class="url-cell"><a href="https://wiki.rpa4all.com">https://wiki.rpa4all.com</a></td></tr>
+          <tr><td>Jira (Gestão de Projetos)</td><td class="url-cell"><a href="https://rpa4all.atlassian.net">https://rpa4all.atlassian.net</a></td></tr>
+          <tr><td>Confluence (Wiki &amp; Docs)</td><td class="url-cell"><a href="https://rpa4all.atlassian.net/wiki">https://rpa4all.atlassian.net/wiki</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CTA -->
+    <div class="cta">
+      <a href="https://auth.rpa4all.com">Acessar Portal SSO →</a>
+    </div>
+
+    <!-- 2. VPN -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon icon-vpn">🔐</div>
+        <h2>2. VPN (WireGuard + Cloudflare Tunnel)</h2>
+      </div>
+      <p class="section-desc">Para acesso remoto à infraestrutura interna:</p>
+      <div class="info-block">
+        <ul class="clean">
+          <li><strong>Endpoint:</strong> <code>vpn.rpa4all.com</code></li>
+          <li><strong>Porta:</strong> <code>51822</code> (UDP / TCP Tunnel)</li>
+          <li><strong>Configuração:</strong> <code>/etc/wireguard/rpa4all.conf</code></li>
+          <li><strong>Script de Conexão:</strong> <code>connect-homelab-vpn.sh</code></li>
+          <li>Chaves e credenciais são distribuídas via <strong>Simple Vault</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 3. Email -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon icon-email">✉️</div>
+        <h2>3. Email Corporativo (@rpa4all.com)</h2>
+      </div>
+      <p class="section-desc">Servidor próprio com Postfix + Dovecot:</p>
+      <div class="info-block">
+        <ul class="clean">
+          <li><strong>SMTP:</strong> <code>mail.rpa4all.com</code> — porta <code>587</code> (TLS)</li>
+          <li><strong>IMAP:</strong> <code>mail.rpa4all.com</code> — porta <code>993</code> (TLS)</li>
+          <li><strong>Webmail:</strong> Roundcube — acesse via navegador</li>
+          <li>Credenciais serão enviadas separadamente pelo <strong>Simple Vault</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 4. IA e Homelab -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon icon-ai">🧠</div>
+        <h2>4. IA e Homelab ("Eddie")</h2>
+      </div>
+      <p class="section-desc">Cluster multi-GPU com modelos Open Source locais via Ollama:</p>
+      <table>
+        <thead><tr><th>Recurso</th><th>Endereço</th><th>Detalhes</th></tr></thead>
+        <tbody>
+          <tr><td>Ollama GPU0</td><td class="url-cell">http://192.168.15.2:11434</td><td>RTX 2060</td></tr>
+          <tr><td>Ollama GPU1</td><td class="url-cell">http://192.168.15.2:11435</td><td>GTX 1050</td></tr>
+          <tr><td>API de Agentes (FastAPI)</td><td class="url-cell">http://localhost:8503</td><td>Agentes especializados</td></tr>
+          <tr><td>Code Runner</td><td class="url-cell">http://localhost:2000</td><td>Execução de código</td></tr>
+        </tbody>
+      </table>
+      <div class="info-block">
+        <ul class="clean">
+          <li>Toda comunicação inter-agentes passa pelo <strong>Agent Communication Bus</strong></li>
+          <li>Modelos disponíveis: Qwen3, Phi4-mini, Eddie-Assistant, Eddie-Coder e mais</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 5. Bots -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon icon-bots">💬</div>
+        <h2>5. Bots e Integrações de Chat</h2>
+      </div>
+      <table>
+        <thead><tr><th>Canal</th><th>Detalhes</th></tr></thead>
+        <tbody>
+          <tr><td>Telegram Bot</td><td>Gerenciado via systemd (<code>eddie-telegram-bot.service</code>). Token no Vault.</td></tr>
+          <tr><td>WhatsApp (WAHA)</td><td>API HTTP em <code>http://192.168.15.2:3001</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 6. Dashboards -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon icon-dash">📊</div>
+        <h2>6. Dashboards e Monitoramento</h2>
+      </div>
+      <table>
+        <thead><tr><th>Dashboard</th><th>URL Interna</th><th>Descrição</th></tr></thead>
+        <tbody>
+          <tr><td>Streamlit (Monitor)</td><td class="url-cell">http://localhost:8501</td><td>Monitoramento de agentes</td></tr>
+          <tr><td>Streamlit (Dev)</td><td class="url-cell">http://localhost:8502</td><td>GitHub Agent e Testes</td></tr>
+          <tr><td>Grafana</td><td class="url-cell">http://192.168.15.2:3002</td><td>Métricas e alertas</td></tr>
+          <tr><td>OpenSearch Dashboards</td><td class="url-cell">http://192.168.15.2:5601</td><td>Logs centralizados</td></tr>
+          <tr><td>Pi-hole DNS</td><td>Docker container local</td><td>Filtragem DNS e ad-block</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- 7. Database -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon icon-db">🗄️</div>
+        <h2>7. Banco de Dados (PostgreSQL)</h2>
+      </div>
+      <div class="info-block">
+        <ul class="clean">
+          <li><strong>Host:</strong> <code>192.168.15.2</code></li>
+          <li><strong>Porta:</strong> <code>5433</code></li>
+          <li><strong>Schema principal:</strong> <code>btc</code></li>
+          <li>Sempre usar <code>conn.autocommit = True</code> e placeholders <code>%s</code></li>
+          <li>Credenciais gerenciadas pelo <strong>Simple Vault</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 8. Docs -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon icon-docs">📝</div>
+        <h2>8. Wiki e Documentação</h2>
+      </div>
+      <p class="section-desc">Modelo Docs-as-Code: Confluence + Draw.io + Markdown</p>
+      <table>
+        <thead><tr><th>Ferramenta</th><th>Uso</th></tr></thead>
+        <tbody>
+          <tr><td>Confluence</td><td><a href="https://rpa4all.atlassian.net/wiki">rpa4all.atlassian.net/wiki</a> — Space <code>'ED'</code></td></tr>
+          <tr><td>Jira</td><td><a href="https://rpa4all.atlassian.net">rpa4all.atlassian.net</a> — tickets e workflows</td></tr>
+          <tr><td>Draw.io</td><td>Diagramas <code>.drawio</code> commitados no repositório</td></tr>
+          <tr><td>Markdown</td><td>RFCs, ADRs e tutoriais processados pelo <strong>ConfluenceAgent</strong></td></tr>
+        </tbody>
+      </table>
+      <div class="info-block">
+        <ul class="clean">
+          <li>Pipeline automática converte e publica no Confluence a cada push na master</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 9. Repo -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon icon-repo">🔧</div>
+        <h2>9. Repositório e Código</h2>
+      </div>
+      <div class="info-block">
+        <ul class="clean">
+          <li><strong>GitHub:</strong> <a href="https://github.com/eddiejdi/shared-auto-dev">github.com/eddiejdi/shared-auto-dev</a></li>
+          <li><strong>Branch principal:</strong> <code>master</code></li>
+          <li><strong>CI/CD:</strong> GitHub Agent integrado via MCP</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 10. INVENTÁRIO COMPLETO -->
+    <div class="section">
+      <div class="section-header">
+        <div class="section-icon icon-inv">📋</div>
+        <h2>10. Inventário Completo de Serviços</h2>
+      </div>
+      <table class="inv-table">
+        <thead><tr><th>Categoria</th><th>Serviço</th><th>Endereço</th><th>Porta</th></tr></thead>
+        <tbody>
+          <tr><td><span class="cat-badge cat-sso">SSO</span></td><td>Authentik</td><td>auth.rpa4all.com</td><td>HTTPS</td></tr>
+          <tr><td><span class="cat-badge cat-sso">Cloud</span></td><td>Nextcloud</td><td>nextcloud.rpa4all.com</td><td>HTTPS</td></tr>
+          <tr><td><span class="cat-badge cat-sso">Monitor</span></td><td>Grafana</td><td>grafana.rpa4all.com</td><td>HTTPS</td></tr>
+          <tr><td><span class="cat-badge cat-llm">IA UI</span></td><td>OpenWebUI</td><td>openwebui.rpa4all.com</td><td>HTTPS</td></tr>
+          <tr><td><span class="cat-badge cat-llm">LLM</span></td><td>Ollama GPU0</td><td>192.168.15.2</td><td>11434</td></tr>
+          <tr><td><span class="cat-badge cat-llm">LLM</span></td><td>Ollama GPU1</td><td>192.168.15.2</td><td>11435</td></tr>
+          <tr><td><span class="cat-badge cat-api">API</span></td><td>Specialized Agents</td><td>localhost</td><td>8503</td></tr>
+          <tr><td><span class="cat-badge cat-api">API</span></td><td>Code Runner</td><td>localhost</td><td>2000</td></tr>
+          <tr><td><span class="cat-badge cat-api">Dashboard</span></td><td>Streamlit 1</td><td>localhost</td><td>8501</td></tr>
+          <tr><td><span class="cat-badge cat-api">Dashboard</span></td><td>Streamlit 2</td><td>localhost</td><td>8502</td></tr>
+          <tr><td><span class="cat-badge cat-chat">Chat</span></td><td>Telegram Bot</td><td>via Telegram</td><td>—</td></tr>
+          <tr><td><span class="cat-badge cat-chat">Chat</span></td><td>WhatsApp WAHA</td><td>192.168.15.2</td><td>3001</td></tr>
+          <tr><td><span class="cat-badge cat-sso">Email</span></td><td>Mail Server</td><td>mail.rpa4all.com</td><td>587/993</td></tr>
+          <tr><td><span class="cat-badge cat-log">Logs</span></td><td>OpenSearch</td><td>192.168.15.2</td><td>9200</td></tr>
+          <tr><td><span class="cat-badge cat-log">Logs</span></td><td>OS Dashboards</td><td>192.168.15.2</td><td>5601</td></tr>
+          <tr><td><span class="cat-badge cat-db">DNS</span></td><td>Pi-hole</td><td>Docker</td><td>53</td></tr>
+          <tr><td><span class="cat-badge cat-web">PM</span></td><td>Jira</td><td>rpa4all.atlassian.net</td><td>HTTPS</td></tr>
+          <tr><td><span class="cat-badge cat-web">Docs</span></td><td>Wiki.js (On-Premise)</td><td><a href="https://wiki.rpa4all.com">wiki.rpa4all.com</a></td><td>HTTPS</td></tr>
+          <tr><td><span class="cat-badge cat-web">Docs</span></td><td>Confluence</td><td><a href="https://rpa4all.atlassian.net/wiki">rpa4all.atlassian.net/wiki</a></td><td>HTTPS</td></tr>
+          <tr><td><span class="cat-badge cat-db">DB</span></td><td>PostgreSQL</td><td>192.168.15.2</td><td>5433</td></tr>
+          <tr><td><span class="cat-badge cat-vpn">VPN</span></td><td>WireGuard</td><td>vpn.rpa4all.com</td><td>51822</td></tr>
+          <tr><td><span class="cat-badge cat-web">Web</span></td><td>Site Público</td><td>www.rpa4all.com</td><td>HTTPS</td></tr>
+          <tr><td><span class="cat-badge cat-web">IDE</span></td><td>IDE Web</td><td>ide.rpa4all.com</td><td>HTTPS</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="sep"></div>
+
+    <p style="text-align:center; color:#888; font-size:14px; margin:20px 0;">
+      Dúvidas? Mande mensagem no canal interno com a tag <code style="background:#e8ecf0;padding:2px 7px;border-radius:4px;color:#d63384;">@it-support</code> ou entre em contato via Telegram Bot.
+    </p>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <p class="brand">RPA4All</p>
+    <p>Equipe de Infraestrutura &amp; Operações</p>
+    <p style="margin-top:10px; font-size:11px; color:rgba(255,255,255,0.3);">Este email foi gerado automaticamente pelo sistema Shared Auto-Dev (Eddie Homelab)</p>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// RPA4All — Generative AI Art Engine
+// Uses Ollama Homelab LLM for SVG generation
+// with procedural Canvas fallback
+// ==========================================
+const OLLAMA_URL = 'http://192.168.15.2:11434/api/generate';
+const OLLAMA_MODEL = 'qwen3:1.7b';
+const SEED = Math.floor(Math.random() * 999999);
+
+document.getElementById('seed-display').textContent = SEED.toString(16).toUpperCase();
+
+// ---- Procedural Canvas Art (immediate, unique per seed) ----
+function seededRandom(s) {
+  return function() {
+    s = (s * 1664525 + 1013904223) & 0xFFFFFFFF;
+    return (s >>> 0) / 0xFFFFFFFF;
+  };
+}
+
+function drawProceduralArt(canvas, seed) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const rand = seededRandom(seed);
+
+  // Dark gradient background
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#0a0a1a');
+  bg.addColorStop(0.5, '#141432');
+  bg.addColorStop(1, '#0a0a1a');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid pattern
+  ctx.strokeStyle = 'rgba(0,212,255,0.04)';
+  ctx.lineWidth = 1;
+  const gridSize = 20 + Math.floor(rand() * 15);
+  for (let x = 0; x < W; x += gridSize) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += gridSize) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // Floating particles
+  const particleCount = 40 + Math.floor(rand() * 60);
+  for (let i = 0; i < particleCount; i++) {
+    const px = rand() * W, py = rand() * H;
+    const pr = 1 + rand() * 3;
+    const alpha = 0.1 + rand() * 0.4;
+    ctx.beginPath();
+    ctx.arc(px, py, pr, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(0, ${150 + Math.floor(rand()*105)}, 255, ${alpha})`;
+    ctx.fill();
+  }
+
+  // Connection lines (neural network style)
+  const nodes = [];
+  const nodeCount = 8 + Math.floor(rand() * 12);
+  for (let i = 0; i < nodeCount; i++) {
+    nodes.push({ x: 60 + rand() * (W - 120), y: 30 + rand() * (H - 60) });
+  }
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const dist = Math.hypot(nodes[i].x - nodes[j].x, nodes[i].y - nodes[j].y);
+      if (dist < 200 && rand() > 0.3) {
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x, nodes[i].y);
+        ctx.lineTo(nodes[j].x, nodes[j].y);
+        ctx.strokeStyle = `rgba(0, 212, 255, ${0.08 + (1 - dist/200) * 0.15})`;
+        ctx.lineWidth = 0.5 + rand();
+        ctx.stroke();
+      }
+    }
+  }
+  // Node dots
+  nodes.forEach(n => {
+    ctx.beginPath();
+    ctx.arc(n.x, n.y, 2 + rand() * 4, 0, Math.PI * 2);
+    const g = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, 6);
+    g.addColorStop(0, 'rgba(0,212,255,0.8)');
+    g.addColorStop(1, 'rgba(0,212,255,0)');
+    ctx.fillStyle = g;
+    ctx.fill();
+  });
+
+  // Robot silhouette (procedural, position varies)
+  const rx = 280 + rand() * 140, ry = 50 + rand() * 30;
+  const rScale = 0.8 + rand() * 0.5;
+  ctx.save();
+  ctx.translate(rx, ry);
+  ctx.scale(rScale, rScale);
+  // Head
+  ctx.fillStyle = 'rgba(0,212,255,0.12)';
+  ctx.strokeStyle = 'rgba(0,212,255,0.4)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(-30, 0, 60, 50, 8);
+  ctx.fill(); ctx.stroke();
+  // Eyes
+  const eyeStyle = Math.floor(rand() * 3);
+  ctx.fillStyle = '#00d4ff';
+  if (eyeStyle === 0) {
+    // Circle eyes
+    ctx.beginPath(); ctx.arc(-12, 20, 6, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(12, 20, 6, 0, Math.PI * 2); ctx.fill();
+  } else if (eyeStyle === 1) {
+    // Square eyes
+    ctx.fillRect(-18, 14, 12, 12);
+    ctx.fillRect(6, 14, 12, 12);
+  } else {
+    // Visor
+    ctx.beginPath();
+    ctx.roundRect(-22, 16, 44, 10, 5);
+    ctx.fillStyle = 'rgba(0,212,255,0.6)';
+    ctx.fill();
+  }
+  // Antenna
+  const antennaStyle = Math.floor(rand() * 3);
+  ctx.strokeStyle = 'rgba(0,212,255,0.5)';
+  ctx.lineWidth = 2;
+  if (antennaStyle === 0) {
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -15); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, -18, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#00d4ff'; ctx.fill();
+  } else if (antennaStyle === 1) {
+    ctx.beginPath(); ctx.moveTo(-10, 0); ctx.lineTo(-15, -20); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(15, -20); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-8, -22); ctx.lineTo(8, -22); ctx.closePath();
+    ctx.strokeStyle = 'rgba(0,212,255,0.4)'; ctx.stroke();
+  }
+  // Body
+  ctx.fillStyle = 'rgba(0,212,255,0.08)';
+  ctx.strokeStyle = 'rgba(0,212,255,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.roundRect(-35, 55, 70, 70, 6);
+  ctx.fill(); ctx.stroke();
+  // Body details (random)
+  const detailCount = 2 + Math.floor(rand() * 4);
+  for (let d = 0; d < detailCount; d++) {
+    const dx = -25 + rand() * 50, dy = 60 + rand() * 55;
+    const dw = 8 + rand() * 15;
+    ctx.fillStyle = `rgba(0,212,255,${0.15 + rand() * 0.2})`;
+    ctx.fillRect(dx, dy, dw, 4 + rand() * 6);
+  }
+  // Arms
+  ctx.strokeStyle = 'rgba(0,212,255,0.3)';
+  ctx.lineWidth = 3;
+  const armAngle = rand() * 0.5;
+  ctx.beginPath(); ctx.moveTo(-35, 65); ctx.lineTo(-55, 85 + armAngle * 30); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(35, 65); ctx.lineTo(55, 85 + armAngle * 30); ctx.stroke();
+  // Hands
+  ctx.beginPath(); ctx.arc(-55, 88 + armAngle * 30, 5, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,212,255,0.2)'; ctx.fill();
+  ctx.beginPath(); ctx.arc(55, 88 + armAngle * 30, 5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Gears (decorative)
+  const gearCount = 2 + Math.floor(rand() * 3);
+  for (let g = 0; g < gearCount; g++) {
+    const gx = 40 + rand() * (W - 80), gy = 30 + rand() * (H - 60);
+    const gr = 10 + rand() * 20;
+    const teeth = 6 + Math.floor(rand() * 6);
+    ctx.save();
+    ctx.translate(gx, gy);
+    ctx.rotate(rand() * Math.PI * 2);
+    ctx.strokeStyle = `rgba(0,180,255,${0.08 + rand() * 0.1})`;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let t = 0; t < teeth; t++) {
+      const a = (t / teeth) * Math.PI * 2;
+      const a2 = ((t + 0.5) / teeth) * Math.PI * 2;
+      ctx.lineTo(Math.cos(a) * gr, Math.sin(a) * gr);
+      ctx.lineTo(Math.cos(a) * (gr + 6), Math.sin(a) * (gr + 6));
+      ctx.lineTo(Math.cos(a2) * (gr + 6), Math.sin(a2) * (gr + 6));
+      ctx.lineTo(Math.cos(a2) * gr, Math.sin(a2) * gr);
+    }
+    ctx.closePath();
+    ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, 0, gr * 0.3, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+
+  // "RPA4All" text with glow
+  ctx.save();
+  ctx.font = 'bold 36px "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.shadowColor = '#00d4ff';
+  ctx.shadowBlur = 20;
+  ctx.fillStyle = '#00d4ff';
+  ctx.fillText('RPA4All', W / 2, H - 30);
+  ctx.shadowBlur = 0;
+  ctx.font = '11px "Courier New", monospace';
+  ctx.fillStyle = 'rgba(0,212,255,0.4)';
+  ctx.fillText('Robotic Process Automation for Everyone', W / 2, H - 12);
+  ctx.restore();
+
+  // Data flow arrows (random paths)
+  const arrowCount = 3 + Math.floor(rand() * 5);
+  for (let a = 0; a < arrowCount; a++) {
+    const ax = rand() * W, ay = rand() * H;
+    const al = 20 + rand() * 40;
+    const aa = rand() * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(ax + Math.cos(aa) * al, ay + Math.sin(aa) * al);
+    ctx.strokeStyle = `rgba(0,212,255,${0.1 + rand() * 0.15})`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Arrowhead
+    const ex = ax + Math.cos(aa) * al, ey = ay + Math.sin(aa) * al;
+    ctx.beginPath();
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - Math.cos(aa - 0.4) * 8, ey - Math.sin(aa - 0.4) * 8);
+    ctx.moveTo(ex, ey);
+    ctx.lineTo(ex - Math.cos(aa + 0.4) * 8, ey - Math.sin(aa + 0.4) * 8);
+    ctx.stroke();
+  }
+}
+
+// Draw Canvas art immediately
+drawProceduralArt(document.getElementById('ai-canvas'), SEED);
+
+// ---- Ollama SVG Art (async, replaces canvas when ready) ----
+async function fetchOllamaSVG() {
+  const themes = [
+    'a friendly robot waving hello',
+    'interlocking gears with circuit boards',
+    'a robotic arm assembling components',
+    'a neural network brain with glowing nodes',
+    'a futuristic automation dashboard',
+    'a robot reading a book',
+    'mechanical gears and digital circuits merging',
+    'a small robot navigating a maze',
+  ];
+  const theme = themes[SEED % themes.length];
+  const prompt = `Generate ONLY a valid SVG image (no text explanation, no markdown, just raw SVG code starting with <svg and ending with </svg>). The SVG should depict: ${theme}. Use a dark background (#0f0c29), and cyan (#00d4ff) as the primary color. Keep it simple with basic shapes. Width="320" height="200" viewBox="0 0 320 200".`;
+
+  try {
+    const resp = await fetch(OLLAMA_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: OLLAMA_MODEL,
+        prompt: prompt,
+        stream: false,
+        options: { temperature: 1.2, seed: SEED, num_predict: 1500 }
+      }),
+      signal: AbortSignal.timeout(30000)
+    });
+    if (!resp.ok) return;
+    const data = await resp.json();
+    const text = data.response || '';
+    // Extract SVG from response
+    const svgMatch = text.match(/<svg[\s\S]*?<\/svg>/i);
+    if (svgMatch) {
+      const slot = document.getElementById('ollama-svg-slot');
+      // Sanitize: remove script/event handlers from SVG
+      const clean = svgMatch[0]
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '');
+      slot.innerHTML = clean;
+      slot.style.display = 'block';
+      // Update label
+      const label = document.querySelector('.ai-art-label span:first-of-type');
+      if (label) label.textContent = `Arte SVG gerada por ${OLLAMA_MODEL} (Ollama Homelab) — seed:`;
+    }
+  } catch (e) {
+    // Canvas fallback already rendered, silently ignore
+    console.log('Ollama SVG: usando fallback Canvas (', e.message, ')');
+  }
+}
+
+// Attempt Ollama call in background
+fetchOllamaSVG();
+</script>
+
+</body>
+</html>

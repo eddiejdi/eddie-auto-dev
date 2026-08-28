@@ -1,0 +1,35 @@
+1
+00:00:00,000 --> 00:00:02,488
+Hook (3s): Você viu o que aconteceu com
+
+2
+00:00:02,488 --> 00:00:04,977
+cripto hoje? Corpo (45s): Bitcoin rompe
+
+3
+00:00:04,977 --> 00:00:07,466
+resistência e mercado reage. Em menos de
+
+4
+00:00:07,466 --> 00:00:09,955
+60 segundos: o mercado reagiu, traders
+
+5
+00:00:09,955 --> 00:00:12,444
+ajustaram posição e o volume subiu. Tags
+
+6
+00:00:12,444 --> 00:00:14,933
+em alta: btc, halving. Relevância agora:
+
+7
+00:00:14,933 --> 00:00:17,422
+0.89. Fechamento (10s): Se entrar agora,
+
+8
+00:00:17,422 --> 00:00:19,911
+faça gestão de risco e acompanhe o próximo
+
+9
+00:00:19,911 --> 00:00:22,400
+movimento.

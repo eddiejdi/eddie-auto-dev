@@ -1,0 +1,8 @@
+topic: curiosidades
+title_template: "Você sabia? {trend_title}"
+script_template: |
+  Hook: Em 60 segundos você vai entender {trend_title}.
+  Fato 1: Um detalhe pouco conhecido que muda a forma de ver o assunto.
+  Fato 2: Por que isso viraliza agora ({tags}).
+  Fechamento: Curiosidade prática para compartilhar hoje.
+cta_template: "Comenta qual curiosidade você quer no próximo vídeo!"

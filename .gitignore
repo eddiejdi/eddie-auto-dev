@@ -1,0 +1,148 @@
+# Ignorar arquivos sensíveis e temporários
+.env
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+ENV/
+env/
+
+# Logs
+*.log
+/tmp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Cache
+.cache/
+*.egg-info/
+dist/
+build/
+
+# Chaves e credenciais
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+credentials*.json
+client_secret*.json
+token*.json
+*.json:Zone.Identifier
+.secrets/
+.eddie_dashboard_config.json
+tuya_credentials.json
+google_home_credentials.json
+artifacts/daily_agenda/youtube/credentials.json
+artifacts/daily_agenda/youtube/token.pickle
+artifacts/daily_agenda/youtube/oauth_pending.json
+artifacts/daily_agenda/panel_job.json
+artifacts/daily_agenda/*/locution.wav
+artifacts/daily_agenda/*/locution.mp4
+artifacts/daily_agenda/*/publish_meta.json
+tinytuya.json
+tuya_devices.json
+tmp_selenium_device_access/
+
+# Arquivos com secrets Google OAuth
+save_creds.py
+exchange_code.py
+gmail_oauth_local.py
+gmail_oauth_manual.py
+oauth_server.py
+
+# Dados locais
+training_data/chats_raw/
+*.sqlite
+*.db
+chroma_db/
+# Chroma DB runtime SQLite files (generated)
+**/chroma.sqlite3
+agent_rag/python/chromadb/chroma.sqlite3
+**/*.sqlite3
+# Dev artifacts
+tools/simple_vault/deep_search_results.txt
+tools/simple_vault/*.txt
+
+# Node
+node_modules/
+
+# Temporários
+*.tmp
+*.temp
+screenshots/
+tmp/
+data/logs/
+logs/
+
+# Dados de execução
+dev_projects/python/exec_*/
+
+# Sessions e dados de navegador
+whatsapp_data/sessions/
+gmail_data/
+calendar_data/
+agent_data/
+# Ignorar arquivos sensíveis
+privatekey
+publickey
+wg0.conf
+stout
+=5.9.0
+dashboard_venv/
+*.pkl
+py_compile_errors.txt
+snapshot.json
+homeassistant/docker_config/
+.github_agent_config.json
+secrets/
+
+# Virtualenvs and test caches (added to avoid committing env artifacts)
+.venv_github_agent/
+.venv*/
+.pw_venv/
+.venv_rotate/
+.pytest_cache/
+
+reports/
+specialized_agents/gdrive_tokens/*.json
+specialized_agents/gdrive_tokens/client_secret.json
+estou-aqui/
+agent_rag/
+backups/
+_test_pg_quick.py
+grafana_dashboard_instructions.md
+
+# Runtime/personal data
+data/curriculo_*
+data/job_applications/
+data/linkedin_jobs/
+data/token_economy.jsonl
+data/telegram_bot.lock
+*.lock
+data/twitter_cookies*.txt
+ollama-linux-amd64.tar.zst
+.coverage
+wget-log*
+
+# Artefatos locais grandes / imagens de sistema
+philco10b_raspios/
+*.iso
+*.img
+
+# Grok: config local pode conter secrets MCP (hooks em .grok/hooks/ são versionados)
+.grok/config.toml
+
+# Pi coding agent runtime (keep source settings/extensions tracked)
+.pi/npm/
+.pi/git/
+tools/ollama_gpu_coordinator.py.orig
+
+# Wiki doc analyzer hook: contexto transitório de task (regenerado a cada run)
+tools/hooks/.wiki_task_context.json

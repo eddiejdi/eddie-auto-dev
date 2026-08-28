@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-02-10T12:54:47.753677",
+  "results": {
+    "Agent Chat": true,
+    "Monitor": true,
+    "Dashboard": true,
+    "API Docs": true,
+    "IDE Generate": false
+  },
+  "passed": 4,
+  "total": 5
+}

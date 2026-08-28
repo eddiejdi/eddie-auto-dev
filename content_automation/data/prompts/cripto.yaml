@@ -1,0 +1,8 @@
+topic: cripto
+title_template: "🔥 {trend_title}"
+script_template: |
+  Hook (3s): Você viu o que aconteceu com {topic} hoje?
+  Corpo (45s): {trend_title}. Em menos de 60 segundos: o mercado reagiu, traders ajustaram posição e o volume subiu.
+  Tags em alta: {tags}. Relevância agora: {score}.
+  Fechamento (10s): Se entrar agora, faça gestão de risco e acompanhe o próximo movimento.
+cta_template: "Salva este vídeo e segue para o boletim diário de {topic}!"

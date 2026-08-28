@@ -1,0 +1,26 @@
+{
+  "post_id": "0cdeb871c3d4",
+  "platform": "kwai",
+  "published_at": "2026-07-15T02:16:51.002263+00:00",
+  "mock": true,
+  "content": {
+    "topic": "cripto",
+    "title": "🔥 Bitcoin rompe resistência e mercado reage",
+    "script": "Hook (3s): Você viu o que aconteceu com cripto hoje?\nCorpo (45s): Bitcoin rompe resistência e mercado reage. Em menos de 60 segundos: o mercado reagiu, traders ajustaram posição e o volume subiu.\nTags em alta: btc, halving. Relevância agora: 0.89.\nFechamento (10s): Se entrar agora, faça gestão de risco e acompanhe o próximo movimento.",
+    "cta": "Salva este vídeo e segue para o boletim diário de cripto!",
+    "trend_score": 0.89,
+    "metadata": {
+      "prompt_file": "content_automation/data/prompts/cripto.yaml",
+      "trend_source": "mock_feed",
+      "tags": [
+        "btc",
+        "halving"
+      ]
+    }
+  },
+  "video": {
+    "mp4_path": "content_automation/output/videos/bitcoin_rompe_resist_ncia_e_mercado_reage/final.mp4",
+    "duration_seconds": 22.4,
+    "srt_path": "content_automation/output/videos/bitcoin_rompe_resist_ncia_e_mercado_reage/captions.srt"
+  }
+}

@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="2160" viewBox="0 0 3840 2160" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="420" y1="140" x2="3300" y2="1970" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#04101F"/>
+      <stop offset="0.48" stop-color="#0B2F6B"/>
+      <stop offset="0.82" stop-color="#1565C0"/>
+      <stop offset="1" stop-color="#7BE8FF"/>
+    </linearGradient>
+    <radialGradient id="aura" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(2720 820) rotate(-18) scale(1540 980)">
+      <stop offset="0" stop-color="#54D8FF" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#54D8FF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="aura2" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(980 1760) rotate(12) scale(1240 860)">
+      <stop offset="0" stop-color="#A5F4FF" stop-opacity="0.18"/>
+      <stop offset="1" stop-color="#A5F4FF" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="microgrid" width="96" height="96" patternUnits="userSpaceOnUse">
+      <path d="M96 0H0V96" stroke="#E2FAFF" stroke-opacity="0.06" stroke-width="2"/>
+    </pattern>
+    <linearGradient id="beam" x1="508" y1="1466" x2="2798" y2="672" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B4F5FF" stop-opacity="0.15"/>
+      <stop offset="0.45" stop-color="#B4F5FF" stop-opacity="0.82"/>
+      <stop offset="1" stop-color="#FFFFFF" stop-opacity="0.10"/>
+    </linearGradient>
+    <symbol id="rpaMark" viewBox="0 0 140 140">
+      <polygon points="70,10 83.6,28.2 105.3,21.5 105.6,44.1 127.1,51.5 114,70 127.1,88.5 105.6,95.9 105.3,118.5 83.6,111.8 70,130 56.4,111.8 34.7,118.5 34.4,95.9 12.9,88.5 26,70 12.9,51.5 34.4,44.1 34.7,21.5 56.4,28.2" fill="#FFFFFF" fill-opacity="0.9"/>
+      <circle cx="70" cy="70" r="28" fill="#FFFFFF" fill-opacity="0.10"/>
+      <circle cx="70" cy="70" r="10" fill="#FFFFFF" fill-opacity="0.64"/>
+    </symbol>
+  </defs>
+
+  <rect width="3840" height="2160" fill="url(#bg)"/>
+  <rect width="3840" height="2160" fill="url(#microgrid)"/>
+  <rect width="3840" height="2160" fill="url(#aura)"/>
+  <rect width="3840" height="2160" fill="url(#aura2)"/>
+
+  <g opacity="0.64">
+    <path d="M0 1714C432 1566 840 1417 1210 1160C1518 945 1832 676 2190 528C2604 357 3153 352 3840 468V2160H0V1714Z" fill="#03101D" fill-opacity="0.54"/>
+    <path d="M0 2052C712 1850 1234 1555 1764 1186C2187 892 2579 603 3076 398C3292 309 3548 245 3840 206" stroke="#B4F5FF" stroke-opacity="0.14" stroke-width="8"/>
+    <path d="M508 1466C930 1306 1211 1194 1546 1045C1916 880 2252 782 2798 672" stroke="url(#beam)" stroke-width="10" stroke-linecap="round"/>
+  </g>
+
+  <g opacity="0.26">
+    <circle cx="2840" cy="720" r="460" stroke="#D9FBFF" stroke-width="3"/>
+    <circle cx="2840" cy="720" r="620" stroke="#D9FBFF" stroke-opacity="0.4" stroke-width="2"/>
+    <circle cx="920" cy="1670" r="220" stroke="#D9FBFF" stroke-opacity="0.34" stroke-width="3"/>
+  </g>
+
+  <g transform="translate(286 1460)">
+    <rect x="0" y="0" width="1160" height="250" rx="34" fill="#07182F" fill-opacity="0.28" stroke="#B8F7FF" stroke-opacity="0.18" stroke-width="3"/>
+    <g transform="translate(66 56)">
+      <g transform="scale(1.44)">
+        <use href="#rpaMark"/>
+      </g>
+      <text x="186" y="84" font-family="Arial, Helvetica, sans-serif" font-size="108" font-weight="700" fill="#FFFFFF">RPA4All</text>
+      <text x="194" y="144" font-family="Arial, Helvetica, sans-serif" font-size="34" letter-spacing="7" fill="#CBF8FF">PLATAFORMA DE AUTOMACAO E IA</text>
+    </g>
+  </g>
+
+  <g transform="translate(2600 288) scale(5.6)" opacity="0.16">
+    <use href="#rpaMark"/>
+  </g>
+
+  <g opacity="0.38" fill="#F1FEFF">
+    <circle cx="292" cy="246" r="7"/>
+    <circle cx="846" cy="420" r="5"/>
+    <circle cx="1198" cy="1290" r="6"/>
+    <circle cx="1794" cy="1048" r="5"/>
+    <circle cx="2422" cy="812" r="6"/>
+    <circle cx="3274" cy="524" r="7"/>
+    <circle cx="3506" cy="1810" r="6"/>
+  </g>
+</svg>

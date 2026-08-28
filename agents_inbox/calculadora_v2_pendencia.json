@@ -1,0 +1,6 @@
+{
+  "project": "calculadora_v2",
+  "description": "Corrigir os erros de CI/CD listados em CI_REPORT.txt e garantir que todos os testes pytest passem.",
+  "ci_report": "CI_REPORT.txt",
+  "test_log": "/tmp/pytest_calculadora_v2.log"
+}

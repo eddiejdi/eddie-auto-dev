@@ -1,0 +1,35 @@
+# Configuração do pipeline de conteúdo automatizado
+
+scheduler:
+  posts_per_day: 3
+  post_times:
+    - "08:30"   # manhã
+    - "14:00"   # tarde
+    - "20:00"   # noite
+  poll_interval_seconds: 60
+  max_retries: 3
+  timezone: America/Sao_Paulo
+
+topics_priority:
+  - cripto
+  - curiosidades
+  - viral_trends
+
+daily_limit: 3
+
+paths:
+  data_dir: content_automation/data
+  output_dir: content_automation/output
+  prompts_dir: content_automation/data/prompts
+  db_path: content_automation/data/queue.db
+  logs_dir: content_automation/data/logs
+
+video:
+  width: 1080
+  height: 1920
+  max_duration_seconds: 60
+  tts_backend: mock   # mock | espeak
+
+publisher:
+  mode: kwai            # mock | kwai
+  platform: kwai

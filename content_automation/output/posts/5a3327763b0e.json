@@ -1,0 +1,26 @@
+{
+  "post_id": "5a3327763b0e",
+  "platform": "kwai",
+  "published_at": "2026-07-15T02:16:51.016172+00:00",
+  "mock": true,
+  "content": {
+    "topic": "curiosidades",
+    "title": "Você sabia? História curiosa que viralizou na internet",
+    "script": "Hook: Em 60 segundos você vai entender História curiosa que viralizou na internet.\nFato 1: Um detalhe pouco conhecido que muda a forma de ver o assunto.\nFato 2: Por que isso viraliza agora (história, viral).\nFechamento: Curiosidade prática para compartilhar hoje.",
+    "cta": "Comenta qual curiosidade você quer no próximo vídeo!",
+    "trend_score": 0.849,
+    "metadata": {
+      "prompt_file": "content_automation/data/prompts/curiosidades.yaml",
+      "trend_source": "mock_feed",
+      "tags": [
+        "história",
+        "viral"
+      ]
+    }
+  },
+  "video": {
+    "mp4_path": "content_automation/output/videos/voc_sabia_hist_ria_curiosa_que_viralizou_na_inte/final.mp4",
+    "duration_seconds": 16.8,
+    "srt_path": "content_automation/output/videos/voc_sabia_hist_ria_curiosa_que_viralizou_na_inte/captions.srt"
+  }
+}

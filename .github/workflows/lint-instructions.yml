@@ -1,0 +1,36 @@
+name: Lint Copilot Frontmatter
+
+on:
+  pull_request:
+    paths:
+      - ".github/instructions/**"
+      - ".github/prompts/**"
+      - ".github/agents/**"
+      - ".github/skills/**"
+      - ".github/hooks/lint-frontmatter.py"
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - ".github/instructions/**"
+      - ".github/prompts/**"
+      - ".github/agents/**"
+      - ".github/skills/**"
+      - ".github/hooks/lint-frontmatter.py"
+
+jobs:
+  lint-frontmatter:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Run frontmatter lint
+        run: |
+          python .github/hooks/lint-frontmatter.py

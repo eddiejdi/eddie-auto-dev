@@ -1,0 +1,61 @@
+{
+  "catalogVersion": "1.1.0",
+  "generatedAt": "2026-07-24T20:01:32.534086",
+  "domains": [
+    {
+      "domain": "tables",
+      "total": 63,
+      "output": "/workspace/eddie-auto-dev/.tables-catalog/catalog.json"
+    },
+    {
+      "domain": "apis",
+      "total": 174,
+      "output": "/workspace/eddie-auto-dev/.apis-catalog/catalog.json"
+    }
+  ],
+  "graph": {
+    "edgeCount": 1266,
+    "strongEdgeCount": 290,
+    "domains": 30,
+    "output": "/workspace/eddie-auto-dev/.taxonomy-catalog/graph.json",
+    "lifecycle": {
+      "linkedTables": 33,
+      "linkedApis": 53,
+      "unusedTables": 31,
+      "newlyUnused": 31,
+      "orphanApis": 112,
+      "ownershipGaps": {
+        "tables_unknown_owner": 0,
+        "tables_unassigned_team": 11,
+        "apis_unknown_owner": 0,
+        "apis_unassigned_team": 23
+      }
+    }
+  },
+  "docs": {
+    "quickStart": "TAXONOMY_QUICK_START.md",
+    "overview": "docs/taxonomy/README.md",
+    "architecture": "docs/taxonomy/ARCHITECTURE.md",
+    "operations": "docs/taxonomy/OPERATIONS.md",
+    "annotations": "docs/taxonomy/ANNOTATIONS.md",
+    "enforcement": "docs/taxonomy/ENFORCEMENT.md",
+    "variables": "docs/variables-taxonomy/README.md",
+    "tables": "docs/taxonomy/TABLES.md",
+    "apis": "docs/taxonomy/APIS.md",
+    "graph": "docs/taxonomy/GRAPH.md",
+    "ownership": "docs/taxonomy/OWNERSHIP.md",
+    "domainMap": "docs/taxonomy/DOMAIN_MAP.md"
+  },
+  "artifacts": {
+    "variables": ".variables-catalog/catalog.json",
+    "tables": ".tables-catalog/catalog.json",
+    "apis": ".apis-catalog/catalog.json",
+    "graph": ".taxonomy-catalog/graph.json",
+    "graphReport": ".taxonomy-catalog/GRAPH_REPORT.md",
+    "links": ".taxonomy-catalog/links.csv",
+    "orphans": ".taxonomy-catalog/ORPHANS.md",
+    "ownershipGaps": ".taxonomy-catalog/OWNERSHIP_GAPS.md",
+    "domainMap": ".taxonomy-catalog/DOMAIN_MAP.md",
+    "lifecycle": ".taxonomy-catalog/lifecycle_summary.json"
+  }
+}

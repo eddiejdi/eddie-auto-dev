@@ -1,0 +1,58 @@
+[
+  {
+    "arquivo": "remote_orchestrator.py",
+    "caminho": "shared-auto-dev/specialized_agents/remote_orchestrator.py",
+    "gpu": 0,
+    "shared_count": 0,
+    "shared_linhas": [],
+    "imports_count": 11,
+    "funcoes_publicas": [
+      "is_available",
+      "is_available"
+    ],
+    "linhas_total": 345,
+    "sucesso": true
+  },
+  {
+    "arquivo": "banking_agent.py",
+    "caminho": "shared-auto-dev/specialized_agents/banking_agent.py",
+    "gpu": 1,
+    "shared_count": 3,
+    "shared_linhas": [
+      [
+        2,
+        "Banking Integration Agent \u2014 Shared Auto-Dev"
+      ],
+      [
+        61,
+        "logger = logging.getLogger(\"shared.banking_agent\")"
+      ],
+      [
+        680,
+        "\"\ud83c\udfe6 **Shared Banking Agent**\\n\\n\""
+      ]
+    ],
+    "imports_count": 14,
+    "funcoes_publicas": [
+      "connected_providers",
+      "set_spending_threshold",
+      "get_banking_agent"
+    ],
+    "linhas_total": 741,
+    "sucesso": true
+  },
+  {
+    "arquivo": "conversation_monitor.py",
+    "caminho": "shared-auto-dev/specialized_agents/conversation_monitor.py",
+    "gpu": 0,
+    "shared_count": 0,
+    "shared_linhas": [],
+    "imports_count": 5,
+    "funcoes_publicas": [
+      "fetch_conversations",
+      "format_conversations"
+    ],
+    "linhas_total": 88,
+    "sucesso": true
+  }
+]

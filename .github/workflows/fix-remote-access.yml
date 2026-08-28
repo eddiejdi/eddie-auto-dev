@@ -1,0 +1,395 @@
+name: Fix Remote Access (SSH + Nextcloud)
+
+on:
+  workflow_dispatch:
+    inputs:
+      client_pubkey:
+        description: "WireGuard public key do cliente externo (gerada localmente)"
+        required: false
+        default: ""
+      client_ip:
+        description: "IP WireGuard para o cliente (ex: 10.66.66.20)"
+        required: false
+        default: "10.66.66.20"
+      create_cf_apps:
+        description: "Criar/atualizar Cloudflare Zero Trust Access Apps (ssh + vpn)?"
+        required: false
+        default: "false"
+
+permissions:
+  contents: read
+
+jobs:
+  fix-remote:
+    runs-on:
+      - self-hosted
+      - homelab
+      - homelab-only
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Runner info
+        run: |
+          echo "Runner: $(hostname)"
+          echo "Date: $(date -Iseconds)"
+          echo "User: $(whoami)"
+
+      - name: Fix Nextcloud container
+        run: |
+          echo "=== Nextcloud status ==="
+          docker ps -a --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}" || true
+          
+          # Se container não está running, iniciar
+          if ! docker ps --filter "name=nextcloud-app" --filter "status=running" -q | grep -q .; then
+            echo "Container offline — tentando iniciar..."
+            docker start nextcloud-app 2>/dev/null && echo "start ok" || echo "start failed (container pode não existir)"
+            sleep 5
+          fi
+          
+          # Verificar selfheal exporter
+          echo "=== selfheal status ==="
+          sudo systemctl is-active nextcloud-selfheal-exporter 2>/dev/null || echo "not active"
+          
+          # Se selfheal não está ativo, tentar reiniciar
+          if ! sudo systemctl is-active --quiet nextcloud-selfheal-exporter 2>/dev/null; then
+            echo "Reiniciando selfheal exporter..."
+            sudo systemctl start nextcloud-selfheal-exporter 2>/dev/null || true
+            sleep 15
+          fi
+          
+          # Aguardar NC subir (selfheal cria o container se não existe)
+          echo "=== Aguardando NC container subir (30s) ==="
+          sleep 30
+          docker ps --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}" || true
+          
+          # Verificar se 8880 está respondendo
+          echo "=== NC port 8880 ==="
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 http://127.0.0.1:8880/status.php 2>/dev/null || echo "000")
+          echo "status.php → HTTP $HTTP"
+          
+          # Checar logs recentes se aindacom problema
+          if [ "$HTTP" != "200" ]; then
+            echo "=== nextcloud container state e logs ==="
+            docker inspect nextcloud-app --format "State={{.State.Status}} StartedAt={{.State.StartedAt}}" 2>/dev/null || echo "container not found"
+            docker logs --since 10m nextcloud-app 2>&1 | tail -40 || true
+            
+            echo "=== selfheal journal últimos 30s ==="
+            sudo journalctl -u nextcloud-selfheal-exporter --no-pager -n 30 --since "2min ago" 2>/dev/null || true
+          fi
+
+      - name: Configure Cloudflare SSH tunnel
+        run: |
+          set -euo pipefail
+          echo "=== Detectar config e serviço do cloudflared ==="
+          CF_SERVICE=""
+          CF_CONTAINER=""
+          CONFIG_FILE=""
+
+          for f in /etc/cloudflared/config.yml /home/homelab/.cloudflared/config.yml; do
+            if [ -f "$f" ]; then
+              CONFIG_FILE="$f"
+              break
+            fi
+          done
+
+          for svc in cloudflared-rpa4all.service cloudflared.service cloudflared-tunnel.service; do
+            if systemctl list-unit-files "$svc" >/dev/null 2>&1; then
+              CF_SERVICE="$svc"
+              if sudo systemctl is-active --quiet "$svc" 2>/dev/null; then
+                break
+              fi
+            fi
+          done
+
+          if docker ps -a --filter "name=^/cloudflared$" -q 2>/dev/null | grep -q .; then
+            CF_CONTAINER="cloudflared"
+          fi
+
+          echo "config=${CONFIG_FILE:-not-found}"
+          echo "service=${CF_SERVICE:-not-found}"
+          echo "container=${CF_CONTAINER:-not-found}"
+
+          if [ -z "$CONFIG_FILE" ]; then
+            echo "cloudflared config não encontrado"
+            exit 1
+          fi
+
+          echo "=== Cloudflare config atual ==="
+          sudo cat "$CONFIG_FILE"
+
+          echo "=== Garantir ingress SSH ==="
+          sudo cp "$CONFIG_FILE" "${CONFIG_FILE}.bak.$(date +%Y%m%d_%H%M%S)"
+          sudo python3 "$GITHUB_WORKSPACE/scripts/cloudflared_insert_ssh.py" "$CONFIG_FILE"
+
+          echo "=== Validar config ==="
+          CF_BIN="$(command -v cloudflared || true)"
+          if [ -z "$CF_BIN" ] && [ -x /usr/local/bin/cloudflared ]; then
+            CF_BIN=/usr/local/bin/cloudflared
+          fi
+          if [ -n "$CF_BIN" ]; then
+            sudo "$CF_BIN" tunnel --config "$CONFIG_FILE" ingress validate
+          else
+            echo "AVISO: binário cloudflared não encontrado para validação"
+          fi
+
+          echo "=== Garantir rotas DNS do tunnel ==="
+          echo "=== Desativar DDNS legado do VPN direto ==="
+          if systemctl list-unit-files rpa4all-ddns-server.timer >/dev/null 2>&1; then
+            sudo systemctl stop rpa4all-ddns-server.timer 2>/dev/null || true
+            sudo systemctl disable rpa4all-ddns-server.timer 2>/dev/null || true
+          fi
+          if systemctl list-unit-files rpa4all-ddns-server.service >/dev/null 2>&1; then
+            sudo systemctl stop rpa4all-ddns-server.service 2>/dev/null || true
+          fi
+          if [ -n "$CF_BIN" ]; then
+            sudo python3 "$GITHUB_WORKSPACE/scripts/ensure_cloudflared_dns_route.py" \
+              --config "$CONFIG_FILE" \
+              --cloudflared-bin "$CF_BIN"
+          else
+            echo "AVISO: binário cloudflared não encontrado para route dns"
+          fi
+
+          echo "=== Reiniciar cloudflared ==="
+          if [ -n "$CF_SERVICE" ]; then
+            sudo systemctl restart "$CF_SERVICE"
+            sleep 8
+            sudo systemctl is-active "$CF_SERVICE"
+            sudo systemctl status "$CF_SERVICE" --no-pager -l | tail -12 || true
+          elif [ -n "$CF_CONTAINER" ]; then
+            docker restart "$CF_CONTAINER"
+            sleep 5
+            docker ps --filter "name=^/${CF_CONTAINER}$" --format "{{.Names}} {{.Status}}"
+          else
+            echo "Nenhum serviço/container cloudflared detectado para restart"
+            exit 1
+          fi
+
+      - name: Ensure VPN relay backend
+        run: |
+          set -euo pipefail
+          echo "=== Garantir relay local da VPN externa (TCP 51821 -> UDP 51820) ==="
+          python3 "$GITHUB_WORKSPACE/scripts/ensure_vpn_relay.py" \
+            --relay-script "$GITHUB_WORKSPACE/tools/udp_tcp_relay.py"
+          echo "=== Porta local 51821 ==="
+          ss -tln | grep 51821
+
+      - name: Add WireGuard peer for external client
+        if: ${{ github.event.inputs.client_pubkey != '' }}
+        run: |
+          set -euo pipefail
+          CLIENT_PUB="${{ github.event.inputs.client_pubkey }}"
+          CLIENT_IP="${{ github.event.inputs.client_ip }}"
+          
+          echo "=== WireGuard status ==="
+          sudo wg show wg0 2>/dev/null | head -20 || echo "wg0 não encontrado"
+          
+          # Adicionar peer
+          echo "=== Adicionando peer $CLIENT_IP ==="
+          sudo wg set wg0 \
+            peer "$CLIENT_PUB" \
+            allowed-ips "${CLIENT_IP}/32"
+          
+          # Salvar no config permanente
+          WG_CONF="/etc/wireguard/wg0.conf"
+          if [ -f "$WG_CONF" ]; then
+            # Verificar se peer já existe
+            if ! sudo grep -q "$CLIENT_PUB" "$WG_CONF"; then
+              echo "" | sudo tee -a "$WG_CONF" > /dev/null
+              echo "[Peer]" | sudo tee -a "$WG_CONF" > /dev/null
+              echo "PublicKey = $CLIENT_PUB" | sudo tee -a "$WG_CONF" > /dev/null
+              echo "AllowedIPs = ${CLIENT_IP}/32" | sudo tee -a "$WG_CONF" > /dev/null
+              echo "Peer adicionado ao wg0.conf"
+            else
+              echo "Peer já existe no wg0.conf"
+            fi
+          fi
+          
+          # Mostrar config servidor para gerar config cliente
+          echo "=== WireGuard server config (para gerar client config) ==="
+          SERVER_PUB=$(sudo wg show wg0 public-key 2>/dev/null || cat /etc/wireguard/wg0_public.key 2>/dev/null || echo "unknown")
+          SERVER_ENDPOINT=$(sudo grep -E "^Endpoint\s*=" /etc/wireguard/wg0.conf 2>/dev/null | head -1 | awk '{print $3}' || true)
+          WG_PORT=$(sudo wg show wg0 listen-port 2>/dev/null || echo "51820")
+          
+          echo "Server PublicKey: $SERVER_PUB"
+          echo "Server ListenPort: $WG_PORT"
+          echo "Client IP: $CLIENT_IP"
+          echo ""
+          echo "=== TEMPLATE DE CONFIGURAÇÃO DO CLIENTE ==="
+          echo "[Interface]"
+          echo "PrivateKey = <sua_chave_privada>"
+          echo "Address = ${CLIENT_IP}/24"
+          echo "DNS = 1.1.1.1"
+          echo ""
+          echo "[Peer]"
+          echo "PublicKey = $SERVER_PUB"
+          echo "AllowedIPs = 192.168.15.0/24, 10.66.66.0/24"
+          echo "Endpoint = vpn.rpa4all.com:$WG_PORT"
+          echo "PersistentKeepalive = 25"
+
+      - name: Generate WireGuard client keypair (se client_pubkey vazio)
+        if: ${{ github.event.inputs.client_pubkey == '' }}
+        run: |
+          set -euo pipefail
+          echo "=== Gerando novo par de chaves WireGuard para cliente externo ==="
+          
+          # Verificar se wg está disponível (pode estar em /usr/bin ou via sudo)
+          WG_BIN=$(which wg 2>/dev/null || which /usr/bin/wg 2>/dev/null || echo "")
+          if [ -z "$WG_BIN" ]; then
+            # Tentar instalar
+            sudo apt-get install -y wireguard-tools 2>/dev/null || true
+            WG_BIN=$(which wg 2>/dev/null || echo "")
+          fi
+          
+          if [ -z "$WG_BIN" ]; then
+            echo "wireguard-tools não disponível neste host"
+            # Tentar via docker
+            PRIV=$(docker run --rm alpine sh -c "apk add -q wireguard-tools && wg genkey" 2>/dev/null || echo "")
+            PUB=$(echo "$PRIV" | docker run --rm -i alpine sh -c "apk add -q wireguard-tools && wg pubkey" 2>/dev/null || echo "")
+          else
+            PRIV=$(wg genkey)
+            PUB=$(echo "$PRIV" | wg pubkey)
+          fi
+          
+          if [ -z "$PRIV" ]; then
+            echo "Não foi possível gerar chaves WireGuard"
+            exit 0
+          fi
+
+          echo "::add-mask::$PRIV"
+          
+          CLIENT_IP="${{ github.event.inputs.client_ip }}"
+          WG_PORT=$(sudo wg show wg0 listen-port 2>/dev/null || sudo grep ListenPort /etc/wireguard/wg0.conf 2>/dev/null | awk '{print $3}' || echo "51820")
+          SERVER_PUB=$(sudo cat /etc/wireguard/wg0.pub 2>/dev/null || sudo wg show wg0 public-key 2>/dev/null || sudo grep -A5 "^\[Interface\]" /etc/wireguard/wg0.conf 2>/dev/null | grep PublicKey | awk '{print $3}' || echo "OBTER_DO_SERVIDOR")
+          CLIENT_CONF_PATH="$RUNNER_TEMP/rpa4all-wg-client-${CLIENT_IP//./_}.conf"
+          
+          echo "=== Adicionando peer ao servidor ==="
+          sudo wg set wg0 peer "$PUB" allowed-ips "${CLIENT_IP}/32" 2>/dev/null && echo "Peer adicionado live" || echo "wg set falhou (tentando via conf)"
+          
+          # Salvar no wg0.conf
+          WG_CONF="/etc/wireguard/wg0.conf"
+          if [ -f "$WG_CONF" ] && ! sudo grep -q "$PUB" "$WG_CONF"; then
+            printf "\n[Peer]\nPublicKey = %s\nAllowedIPs = %s/32\n# Adicionado por fix-remote-access workflow em %s\n" \
+              "$PUB" "$CLIENT_IP" "$(date -Iseconds)" | sudo tee -a "$WG_CONF" > /dev/null
+            echo "Peer adicionado permanentemente ao wg0.conf"
+          fi
+
+          python3 "$GITHUB_WORKSPACE/scripts/render_wireguard_client_config.py" \
+            --private-key "$PRIV" \
+            --client-ip "$CLIENT_IP" \
+            --server-public-key "$SERVER_PUB" \
+            --endpoint-host vpn.rpa4all.com \
+            --endpoint-port "$WG_PORT" \
+            --output "$CLIENT_CONF_PATH"
+
+          chmod 600 "$CLIENT_CONF_PATH"
+          echo "Config do cliente gerada em artifact (sem expor chave privada no log)"
+          echo "Client public key: $PUB"
+
+      - name: Upload WireGuard client config
+        if: ${{ github.event.inputs.client_pubkey == '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: wireguard-client-config
+          path: ${{ runner.temp }}/rpa4all-wg-client-*.conf
+          if-no-files-found: error
+
+      - name: Final status
+        run: |
+          set -euo pipefail
+          echo "=== Final NC status ==="
+          docker ps --filter "name=nextcloud-app" --format "{{.Names}} {{.Status}}" || true
+          HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 http://127.0.0.1:8880/status.php 2>/dev/null || echo "000")
+          echo "Nextcloud status.php → HTTP $HTTP"
+          echo ""
+          echo "=== Cloudflared status ==="
+          docker ps --filter "name=^/cloudflared$" --format "{{.Names}} {{.Status}}" 2>/dev/null || true
+          for svc in cloudflared-rpa4all.service cloudflared.service cloudflared-tunnel.service; do
+            if systemctl list-unit-files "$svc" >/dev/null 2>&1; then
+              sudo systemctl is-active "$svc" 2>/dev/null && echo "$svc: active" || true
+            fi
+          done
+          echo ""
+          echo "=== WireGuard peers ==="
+          sudo wg show wg0 2>/dev/null | grep -E "^peer:|allowed ips:" | head -20 || echo "wg0 info não disponível"
+          echo ""
+          if [ -n "${CLIENT_CONF_PATH:-}" ]; then
+            echo "Artifact WireGuard: wireguard-client-config"
+          fi
+          echo ""
+          echo "=== SSH tunnel testável em: ==="
+          echo "COMANDO: ssh -o ProxyCommand='cloudflared access ssh --hostname ssh.rpa4all.com' homelab@ssh.rpa4all.com"
+
+  create-cf-access-apps:
+    runs-on:
+      - self-hosted
+      - homelab
+      - homelab-only
+    timeout-minutes: 10
+    if: ${{ github.event.inputs.create_cf_apps == 'true' }}
+    needs: fix-remote
+
+    steps:
+      - name: Obter CF Token e Account ID
+        env:
+          CF_ZT_SECRET: ${{ secrets.CF_ZERO_TRUST_TOKEN }}
+        run: |
+          TOKEN=""
+          # Prioridade 1: GitHub Secret CF_ZERO_TRUST_TOKEN
+          [ -n "$CF_ZT_SECRET" ] && TOKEN="$CF_ZT_SECRET" && echo "Token: GitHub Secret CF_ZERO_TRUST_TOKEN"
+          # Prioridade 2: /etc/cloudflare/zero-trust-token (arquivo dedicado no homelab)
+          [ -z "$TOKEN" ] && [ -f /etc/cloudflare/zero-trust-token ] && TOKEN=$(cat /etc/cloudflare/zero-trust-token) && echo "Token: /etc/cloudflare/zero-trust-token"
+          # Prioridade 3: cert.pem do cloudflared (token apiToken extraido)
+          if [ -z "$TOKEN" ]; then
+            for certpath in /home/homelab/.cloudflared/cert.pem /etc/cloudflared/cert.pem; do
+              [ -f "$certpath" ] || continue
+              TOKEN=$(CERTPATH="$certpath" python3 -c "import json,base64,os; d=open(os.environ['CERTPATH']).read(); lines=[l for l in d.strip().split('\n') if not l.startswith('---')]; print(json.loads(base64.b64decode(''.join(lines))).get('apiToken',''))" 2>/dev/null || true)
+              [ -n "$TOKEN" ] && echo "Token: cert.pem ($certpath)" && break
+            done
+          fi
+          # Prioridade 4: ddns-token (pode nao ter permissoes de Access)
+          [ -z "$TOKEN" ] && [ -f /etc/cloudflare/ddns-token ] && TOKEN=$(cat /etc/cloudflare/ddns-token) && echo "AVISO: usando ddns-token (pode falhar - adicione CF_ZERO_TRUST_TOKEN ao GitHub Secrets)"
+          [ -z "$TOKEN" ] && echo "ERRO: CF API Token nao encontrado" && exit 1
+          echo "CF_TOKEN=$TOKEN" >> "$GITHUB_ENV"
+          echo "Token obtido (${#TOKEN} chars)"
+          RESP=$(curl -s --max-time 15 -H "Authorization: Bearer $TOKEN" "https://api.cloudflare.com/client/v4/accounts?per_page=5")
+          ACCOUNT_ID=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin)['result'][0]['id'])")
+          echo "CF_ACCOUNT_ID=$ACCOUNT_ID" >> "$GITHUB_ENV"
+          echo "Account ID: $ACCOUNT_ID"
+
+      - name: Criar Access App SSH
+        run: |
+          APPS=$(curl -s --max-time 15 -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?per_page=50")
+          EXISTING=$(echo "$APPS" | python3 -c "import json,sys; apps=json.load(sys.stdin).get('result',[]); matched=[a['id'] for a in apps if 'ssh.rpa4all.com' in a.get('domain','')]; print(matched[0] if matched else '')" 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then METHOD="PUT"; URL="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps/$EXISTING"; else METHOD="POST"; URL="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps"; fi
+          RESP=$(curl -s --max-time 20 -X "$METHOD" -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            -d '{"name":"SSH Homelab rpa4all","domain":"ssh.rpa4all.com","type":"ssh","session_duration":"24h","policies":[{"name":"Public Bypass","decision":"bypass","include":[{"everyone":{}}]}]}' "$URL")
+          OK=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('success',''))")
+          [ "$OK" = "True" ] && echo "SSH app OK" || { echo "ERRO SSH app: $RESP"; exit 1; }
+
+      - name: Criar Access App VPN
+        run: |
+          APPS=$(curl -s --max-time 15 -H "Authorization: Bearer $CF_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?per_page=50")
+          EXISTING=$(echo "$APPS" | python3 -c "import json,sys; apps=json.load(sys.stdin).get('result',[]); matched=[a['id'] for a in apps if 'vpn.rpa4all.com' in a.get('domain','')]; print(matched[0] if matched else '')" 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then METHOD="PUT"; URL="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps/$EXISTING"; else METHOD="POST"; URL="https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps"; fi
+          RESP=$(curl -s --max-time 20 -X "$METHOD" -H "Authorization: Bearer $CF_TOKEN" -H "Content-Type: application/json" \
+            -d '{"name":"VPN WireGuard Relay rpa4all","domain":"vpn.rpa4all.com","type":"self_hosted","session_duration":"24h","policies":[{"name":"Public Bypass","decision":"bypass","include":[{"everyone":{}}]}]}' "$URL")
+          OK=$(echo "$RESP" | python3 -c "import json,sys; print(json.load(sys.stdin).get('success',''))")
+          [ "$OK" = "True" ] && echo "VPN app OK" || { echo "ERRO VPN app: $RESP"; exit 1; }
+
+      - name: Validar e instruir proximo passo
+        run: |
+          echo "=== Access Apps criadas ==="
+          curl -s --max-time 15 -H "Authorization: Bearer $CF_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CF_ACCOUNT_ID/access/apps?per_page=50" | \
+            python3 -c "import json,sys; apps=json.load(sys.stdin).get('result',[]); print('Total: '+str(len(apps))+' apps'); [print('  ['+a.get('type','?')+'] '+a.get('domain','?')) for a in apps if 'rpa4all.com' in a.get('domain','')]"
+          echo
+          timeout 10 cloudflared access login https://ssh.rpa4all.com 2>&1 | head -3 || true
+          timeout 10 cloudflared access login https://vpn.rpa4all.com 2>&1 | head -3 || true
+          echo
+          echo "=== Proximo passo (workstation) ==="
+          echo "  1. cloudflared access tcp --hostname vpn.rpa4all.com --url 127.0.0.1:51822 &"
+          echo "  2. python3 tools/udp_tcp_relay.py client --udp-listen 51823 --tcp-target 127.0.0.1:51822 &"
+          echo "  3. nmcli connection up homelab-vpn"

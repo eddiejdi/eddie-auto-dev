@@ -1,0 +1,9 @@
+topic: viral_trends
+title_template: "Trend alert: {trend_title}"
+script_template: |
+  Hook: Essa trend está com score {score} agora.
+  Passo 1: Use o gancho nos primeiros 2 segundos.
+  Passo 2: Entregue valor rápido sobre {trend_title}.
+  Passo 3: CTA claro no final para aumentar retenção.
+  Tags: {tags}.
+cta_template: "Marca alguém que precisa surfar essa trend hoje!"

@@ -1,0 +1,71 @@
+[
+  {
+    "arquivo": "instructor_agent.py",
+    "caminho": "shared-auto-dev/specialized_agents/instructor_agent.py",
+    "gpu": 0,
+    "shared_count": 1,
+    "shared_linhas": [
+      [
+        252,
+        "\"User-Agent\": \"Shared-Instructor-Bot/1.0 (Training Agent for Development)\","
+      ]
+    ],
+    "imports_count": 20,
+    "funcoes_publicas": [
+      "to_dict",
+      "to_dict",
+      "training_history",
+      "get_status",
+      "get_training_history"
+    ],
+    "linhas_total": 748,
+    "sucesso": true
+  },
+  {
+    "arquivo": "telegram_client.py",
+    "caminho": "shared-auto-dev/specialized_agents/telegram_client.py",
+    "gpu": 1,
+    "shared_count": 7,
+    "shared_linhas": [
+      [
+        45,
+        "raise RuntimeError(\"Telegram bot token must be stored in the repo cofre (shared/telegram_bot_token)\")"
+      ],
+      [
+        48,
+        "if (not chat_id) and os.path.exists(\"/etc/shared/telegram.env\"):"
+      ],
+      [
+        50,
+        "with open(\"/etc/shared/telegram.env\", \"r\", encoding=\"utf-8\") as f:"
+      ],
+      [
+        98,
+        "# If running under systemd the env file may not be loaded; try /etc/shared/telegram.env"
+      ],
+      [
+        99,
+        "if (not bot_token or not chat_id) and os.path.exists(\"/etc/shared/telegram.env\"):"
+      ]
+    ],
+    "imports_count": 14,
+    "funcoes_publicas": [
+      "from_env",
+      "from_env",
+      "is_configured"
+    ],
+    "linhas_total": 524,
+    "sucesso": true
+  },
+  {
+    "arquivo": "__init__.py",
+    "caminho": "shared-auto-dev/specialized_agents/__init__.py",
+    "gpu": 0,
+    "shared_count": 0,
+    "shared_linhas": [],
+    "imports_count": 12,
+    "funcoes_publicas": [],
+    "linhas_total": 94,
+    "sucesso": true
+  }
+]

@@ -1,0 +1,229 @@
+name: Deploy to Homelab
+
+on:
+  pull_request:
+    types:
+      - labeled
+  issues:
+    types:
+      - labeled
+  workflow_dispatch:
+
+jobs:
+  detect_selfhost:
+    runs-on: ubuntu-latest
+    outputs:
+      available: ${{ steps.check.outputs.available }}
+    steps:
+    - name: Check for self-hosted runners
+      id: check
+      run: |
+        set -e
+        REPO="${{ github.repository }}"
+        echo "Checking self-hosted runners for repo $REPO"
+        
+        # Fetch runners JSON
+        RESP=$(curl -s -H 'Accept: application/vnd.github+json' \
+          -H 'Authorization: token ${{ secrets.GITHUB_TOKEN }}' \
+          https://api.github.com/repos/$REPO/actions/runners)
+        
+        # Debug: print response summary
+        echo "Response: $(echo "$RESP" | jq '.runners | length') runners"
+        
+        # Check if any runner has label 'homelab' (case-insensitive match)
+        FOUND=$(echo "$RESP" | jq -r '.runners[].labels[].name' 2>/dev/null | grep -i "homelab" || true)
+        
+        if [ -n "$FOUND" ]; then
+          echo "Found homelab runner: $FOUND"
+          echo "available=true" >> $GITHUB_OUTPUT
+        else
+          echo "No homelab runner found"
+          # If this is a workflow_dispatch, force it to true
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Forcing available=true for workflow_dispatch"
+            echo "available=true" >> $GITHUB_OUTPUT
+          else
+            echo "available=false" >> $GITHUB_OUTPUT
+          fi
+        fi
+
+  deploy-selfhost:
+    needs: detect_selfhost
+    if: needs.detect_selfhost.outputs.available == 'true' && ((github.event_name ==
+      'pull_request' && (contains(join(' ', github.event.pull_request.labels.*.name),
+      'deploy') || github.event.label.name == 'deploy')) || github.event_name == 'workflow_dispatch'
+      || startsWith(github.ref, 'refs/heads/feat/remote-orchestrator'))
+    runs-on:
+      - self-hosted
+      - linux
+      - homelab-only
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          clean: true
+          fetch-depth: 1
+      - name: Show runner info
+        run: |
+          echo "Running on self-hosted runner: $(hostname)"
+      - name: (Optional) Install RCA scripts and services
+        env:
+          INSTALL_RCA_SERVICES: ${{ secrets.INSTALL_RCA_SERVICES }}
+        run: |
+          set -e
+          if [ "${INSTALL_RCA_SERVICES:-}" != "1" ]; then
+            echo "Skipping RCA install (INSTALL_RCA_SERVICES not set to 1)"
+            exit 0
+          fi
+          bash tools/deploy/install_rca_services.sh
+          echo "RCA services installed on self-hosted runner"
+      - name: Deploy application on target homelab host
+        run: |
+          set -e
+          echo "Executing deploy on self-hosted runner (local execution)"
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            set -e
+            cd /home/homelab/myClaude
+            git fetch --prune --refmap= origin +refs/heads/main:refs/deploy/main
+            git reset --hard refs/deploy/main
+            sudo mkdir -p /var/www/rpa4all.com
+            sudo rsync -az --delete site/ /var/www/rpa4all.com/
+            sudo chown -R www-data:www-data /var/www/rpa4all.com || true
+            if sudo nginx -t >/dev/null 2>&1; then
+              sudo systemctl reload nginx || sudo nginx -s reload || true
+            else
+              echo "nginx config test failed; keeping previous site" >&2
+              exit 1
+            fi
+          '
+
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            sudo systemctl stop specialized-agents 2>/dev/null || true
+            sleep 2
+          '
+
+          ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 '
+            cd /home/homelab/myClaude
+            nohup python3 -m uvicorn specialized_agents.api:app \
+              --host 0.0.0.0 \
+              --port 8503 \
+              >/tmp/specialized-agents.log 2>&1 &
+            sleep 4
+          '
+
+          HEALTH="$(ssh -o StrictHostKeyChecking=no homelab@192.168.15.2 'curl -s http://localhost:8503/health 2>/dev/null || echo TIMEOUT')"
+          echo "$HEALTH"
+          echo "$HEALTH" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"(ok|healthy)"'
+  deploy:
+    needs: deploy-selfhost
+    if: needs.deploy-selfhost.result != 'success' && ((github.event_name == 'pull_request'
+      && (contains(join(' ', github.event.pull_request.labels.*.name), 'deploy') ||
+      github.event.label.name == 'deploy')) || github.event_name == 'workflow_dispatch'
+      || startsWith(github.ref, 'refs/heads/feat/remote-orchestrator'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Debug event & secrets
+        run: |
+          set -e
+
+          echo "GITHUB_EVENT_NAME=$GITHUB_EVENT_NAME"
+
+          echo "Event payload (label or issue):"
+
+          jq -r '.label.name // .issue.label.name // "<no label>"' "$GITHUB_EVENT_PATH" 2>/dev/null || true
+
+          if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then echo "HOMELAB_SSH_PRIVATE_KEY=SET"; else echo "HOMELAB_SSH_PRIVATE_KEY=EMPTY"; fi
+
+          if [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then echo "SSH_PRIVATE_KEY=SET"; else echo "SSH_PRIVATE_KEY=EMPTY"; fi
+
+          if [ -n "${{ secrets.DEPLOY_SSH_KEY }}" ]; then echo "DEPLOY_SSH_KEY=SET"; else echo "DEPLOY_SSH_KEY=EMPTY"; fi
+      - name: Setup SSH key (use available secret)
+        run: |
+          set -e
+          mkdir -p ~/.ssh
+          if [ -n "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" ]; then
+            echo "${{ secrets.HOMELAB_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          elif [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ]; then
+            echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          elif [ -n "${{ secrets.DEPLOY_SSH_KEY }}" ]; then
+            echo "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_rsa
+          else
+            echo "No SSH key secret found (HOMELAB_SSH_PRIVATE_KEY, SSH_PRIVATE_KEY or DEPLOY_SSH_KEY)." >&2
+            exit 1
+          fi
+          chmod 600 ~/.ssh/id_rsa
+          if [ -n "${{ secrets.HOMELAB_HOST }}" ]; then
+            ssh-keyscan -H ${{ secrets.HOMELAB_HOST }} >> ~/.ssh/known_hosts || true
+          fi
+      - name: Deploy site to homelab (copy site/ -> /var/www/rpa4all.com)
+        if: always()
+        env:
+          HOMELAB_USER: ${{ secrets.HOMELAB_USER }}
+          HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
+        run: |
+          set -e
+          TARGET_HOST=${{ secrets.HOMELAB_HOST }}
+          TARGET_USER=${{ secrets.HOMELAB_USER }}
+          if [ -z "$TARGET_HOST" ] || [ -z "$TARGET_USER" ]; then
+            echo "HOMELAB_HOST or HOMELAB_USER not set - skipping site deploy"; exit 0
+          fi
+          echo "Copying site/ to $TARGET_USER@$TARGET_HOST:/tmp/site_deploy"
+          rsync -avz --delete --exclude='.git' site/ "$TARGET_USER@$TARGET_HOST:/tmp/site_deploy/"
+          echo "Moving files into place and reloading nginx on remote"
+          ssh -o StrictHostKeyChecking=no $TARGET_USER@$TARGET_HOST <<'SSH'
+            set -e
+            sudo mkdir -p /var/www/rpa4all.com
+            sudo rsync -avz --delete /tmp/site_deploy/ /var/www/rpa4all.com/
+            sudo chown -R www-data:www-data /var/www/rpa4all.com || true
+            if nginx -t >/dev/null 2>&1; then
+              sudo systemctl reload nginx || sudo nginx -s reload || true
+            else
+              echo "nginx config test failed; keeping previous site" >&2
+              exit 0
+            fi
+            rm -rf /tmp/site_deploy
+          SSH
+      - name: Deploy to homelab (with retry)
+        env:
+          HOMELAB_USER: ${{ secrets.HOMELAB_USER }}
+          HOMELAB_HOST: ${{ secrets.HOMELAB_HOST }}
+        run: |
+          set -e
+          TARGET_HOST=${{ secrets.HOMELAB_HOST }}
+          if [ -z "$TARGET_HOST" ]; then
+            echo "HOMELAB_HOST secret not set. Use repo secrets to define host." >&2
+            exit 1
+          fi
+          if echo "$TARGET_HOST" | grep -E '^(10\.|192\.168\.|172\.(1[6-9]|2[0-9]|3[0-1])\.)' >/dev/null; then
+            echo "HOMELAB_HOST appears to be a private IP ($TARGET_HOST). GitHub hosted runners cannot reach private networks."
+            echo "Recommended: install a self-hosted runner on your homelab and run the 'Deploy to Homelab (Self-hosted)' workflow (Actions -> Deploy to Homelab (Self-hosted))." >&2
+            echo "See docs/DEPLOY_TO_HOMELAB.md and tools/deploy/setup_self_hosted_runner.sh for installation instructions." >&2
+            exit 1
+          fi
+          echo "Deploying to $HOMELAB_USER@$TARGET_HOST"
+          ATTEMPTS=3
+          for i in $(seq 1 $ATTEMPTS); do
+            echo "Attempt $i of $ATTEMPTS"
+            ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no $HOMELAB_USER@$TARGET_HOST '
+              set -e
+              cd /home/homelab/myClaude
+              git fetch origin main
+              git reset --hard origin/main
+              sudo systemctl stop specialized-agents 2>/dev/null || true
+              sleep 2
+              nohup python3 -m uvicorn specialized_agents.api:app \
+                --host 0.0.0.0 \
+                --port 8503 \
+                >/tmp/specialized-agents.log 2>&1 &
+              sleep 4
+              curl -s http://localhost:8503/health 2>/dev/null | grep -q healthy
+            '
+            if [ $? -eq 0 ]; then
+              echo "Deploy succeeded"
+              exit 0
+            fi
+            sleep $((i * 5))
+          done
+          echo "All attempts failed" >&2
+          exit 1

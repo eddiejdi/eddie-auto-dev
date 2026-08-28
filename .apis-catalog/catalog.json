@@ -1,0 +1,4619 @@
+{
+  "catalogVersion": "1.0.0",
+  "domain": "apis",
+  "generatedAt": "2026-07-24T20:01:28.940347",
+  "environment": "production",
+  "categories": {
+    "infra": {
+      "DELETE /api/hosts/{name}": {
+        "operationKey": "DELETE /api/hosts/{name}",
+        "method": "DELETE",
+        "path": "/api/hosts/{name}",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "infra",
+        "sensitive": false,
+        "status": "active",
+        "owner": "ssh_agent",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/ssh_agent.py",
+            "line": 314,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /api/hosts": {
+        "operationKey": "GET /api/hosts",
+        "method": "GET",
+        "path": "/api/hosts",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "infra",
+        "sensitive": false,
+        "status": "active",
+        "owner": "ssh_agent",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/ssh_agent.py",
+            "line": 305,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /api/info/{name}": {
+        "operationKey": "GET /api/info/{name}",
+        "method": "GET",
+        "path": "/api/info/{name}",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "infra",
+        "sensitive": false,
+        "status": "active",
+        "owner": "ssh_agent",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/ssh_agent.py",
+            "line": 338,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /api/quick/{action}": {
+        "operationKey": "GET /api/quick/{action}",
+        "method": "GET",
+        "path": "/api/quick/{action}",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "infra",
+        "sensitive": false,
+        "status": "active",
+        "owner": "scripts",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/github_agent_server.py",
+            "line": 508,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /api/test/{name}": {
+        "operationKey": "GET /api/test/{name}",
+        "method": "GET",
+        "path": "/api/test/{name}",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "infra",
+        "sensitive": false,
+        "status": "active",
+        "owner": "ssh_agent",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/ssh_agent.py",
+            "line": 334,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /api/connect/{name}": {
+        "operationKey": "POST /api/connect/{name}",
+        "method": "POST",
+        "path": "/api/connect/{name}",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "infra",
+        "sensitive": false,
+        "status": "active",
+        "owner": "ssh_agent",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/ssh_agent.py",
+            "line": 318,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /api/disconnect/{name}": {
+        "operationKey": "POST /api/disconnect/{name}",
+        "method": "POST",
+        "path": "/api/disconnect/{name}",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "infra",
+        "sensitive": false,
+        "status": "active",
+        "owner": "ssh_agent",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/ssh_agent.py",
+            "line": 322,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /api/hosts": {
+        "operationKey": "POST /api/hosts",
+        "method": "POST",
+        "path": "/api/hosts",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "infra",
+        "sensitive": false,
+        "status": "active",
+        "owner": "ssh_agent",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/ssh_agent.py",
+            "line": 309,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      }
+    },
+    "secrets": {
+      "DELETE /secrets/local/{name}": {
+        "operationKey": "DELETE /secrets/local/{name}",
+        "method": "DELETE",
+        "path": "/secrets/local/{name}",
+        "source": "fastapi",
+        "service": "tools/secrets_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "secrets",
+        "sensitive": true,
+        "status": "active",
+        "owner": "secrets_agent",
+        "team": "security",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/secrets_agent/secrets_agent.py",
+            "line": 680,
+            "service": "tools/secrets_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /audit/recent": {
+        "operationKey": "GET /audit/recent",
+        "method": "GET",
+        "path": "/audit/recent",
+        "source": "fastapi",
+        "service": "tools/secrets_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "secrets",
+        "sensitive": true,
+        "status": "active",
+        "owner": "secrets_agent",
+        "team": "security",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/secrets_agent/secrets_agent.py",
+            "line": 761,
+            "service": "tools/secrets_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /secrets": {
+        "operationKey": "GET /secrets",
+        "method": "GET",
+        "path": "/secrets",
+        "source": "fastapi",
+        "service": "tools/secrets_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "secrets",
+        "sensitive": true,
+        "status": "active",
+        "owner": "secrets_agent",
+        "team": "security",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/secrets_agent/secrets_agent.py",
+            "line": 605,
+            "service": "tools/secrets_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /secrets/local/{name}": {
+        "operationKey": "GET /secrets/local/{name}",
+        "method": "GET",
+        "path": "/secrets/local/{name}",
+        "source": "fastapi",
+        "service": "tools/secrets_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "secrets",
+        "sensitive": true,
+        "status": "active",
+        "owner": "secrets_agent",
+        "team": "security",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/secrets_agent/secrets_agent.py",
+            "line": 657,
+            "service": "tools/secrets_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /secrets/{item_id}": {
+        "operationKey": "GET /secrets/{item_id}",
+        "method": "GET",
+        "path": "/secrets/{item_id}",
+        "source": "fastapi",
+        "service": "tools/secrets_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "secrets",
+        "sensitive": true,
+        "status": "active",
+        "owner": "secrets_agent",
+        "team": "security",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/secrets_agent/secrets_agent.py",
+            "line": 702,
+            "service": "tools/secrets_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /bw/unlock": {
+        "operationKey": "POST /bw/unlock",
+        "method": "POST",
+        "path": "/bw/unlock",
+        "source": "fastapi",
+        "service": "tools/secrets_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "secrets",
+        "sensitive": true,
+        "status": "active",
+        "owner": "secrets_agent",
+        "team": "security",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/secrets_agent/secrets_agent.py",
+            "line": 586,
+            "service": "tools/secrets_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /secrets": {
+        "operationKey": "POST /secrets",
+        "method": "POST",
+        "path": "/secrets",
+        "source": "fastapi",
+        "service": "tools/secrets_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "secrets",
+        "sensitive": true,
+        "status": "active",
+        "owner": "secrets_agent",
+        "team": "security",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/secrets_agent/secrets_agent.py",
+            "line": 620,
+            "service": "tools/secrets_agent"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "auth": {
+      "DELETE /sessions/{session_id}": {
+        "operationKey": "DELETE /sessions/{session_id}",
+        "method": "DELETE",
+        "path": "/sessions/{session_id}",
+        "source": "fastapi",
+        "service": "site/code_runner_manager",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "auth",
+        "sensitive": true,
+        "status": "active",
+        "owner": "code_runner",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "site/code_runner_manager.py",
+            "line": 402,
+            "service": "site/code_runner_manager"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /callback": {
+        "operationKey": "GET /callback",
+        "method": "GET",
+        "path": "/callback",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "auth",
+        "sensitive": true,
+        "status": "active",
+        "owner": "scripts",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/github_agent_server.py",
+            "line": 391,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /login/github": {
+        "operationKey": "GET /login/github",
+        "method": "GET",
+        "path": "/login/github",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "auth",
+        "sensitive": true,
+        "status": "active",
+        "owner": "scripts",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/github_agent_server.py",
+            "line": 371,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /logout": {
+        "operationKey": "GET /logout",
+        "method": "GET",
+        "path": "/logout",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "auth",
+        "sensitive": true,
+        "status": "active",
+        "owner": "scripts",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/github_agent_server.py",
+            "line": 458,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /sessions": {
+        "operationKey": "GET /sessions",
+        "method": "GET",
+        "path": "/sessions",
+        "source": "fastapi",
+        "service": "site/code_runner_manager",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "auth",
+        "sensitive": true,
+        "status": "active",
+        "owner": "code_runner",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "site/code_runner_manager.py",
+            "line": 378,
+            "service": "site/code_runner_manager"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /api/v1/auths/signin": {
+        "operationKey": "POST /api/v1/auths/signin",
+        "method": "POST",
+        "path": "/api/v1/auths/signin",
+        "source": "openapi",
+        "service": "docs",
+        "summary": "Sign in and set session cookie",
+        "operationId": "",
+        "tags": [],
+        "category": "auth",
+        "sensitive": true,
+        "status": "active",
+        "owner": "docs",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "docs/openapi.yaml",
+            "line": 11,
+            "service": "docs"
+          },
+          {
+            "file": "docs/openapi.generated.yaml",
+            "line": 11,
+            "service": "docs"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /login/token": {
+        "operationKey": "POST /login/token",
+        "method": "POST",
+        "path": "/login/token",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "auth",
+        "sensitive": true,
+        "status": "active",
+        "owner": "scripts",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/github_agent_server.py",
+            "line": 435,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /session/test-login": {
+        "operationKey": "POST /session/test-login",
+        "method": "POST",
+        "path": "/session/test-login",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "auth",
+        "sensitive": true,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 713,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /storage/portal/tokens": {
+        "operationKey": "POST /storage/portal/tokens",
+        "method": "POST",
+        "path": "/storage/portal/tokens",
+        "source": "fastapi",
+        "service": "storage_portal_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "auth",
+        "sensitive": true,
+        "status": "active",
+        "owner": "storage_portal",
+        "team": "storage",
+        "relatedTables": [
+          "public.api_tokens",
+          "public.portal_users",
+          "public.contracts"
+        ],
+        "locations": [
+          {
+            "file": "storage_portal_api.py",
+            "line": 1452,
+            "service": "storage_portal_api"
+          }
+        ],
+        "orphan": false
+      }
+    },
+    "social": {
+      "DELETE /tweets/{tweet_id}": {
+        "operationKey": "DELETE /tweets/{tweet_id}",
+        "method": "DELETE",
+        "path": "/tweets/{tweet_id}",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 706,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "DELETE /tweets/{tweet_id}/like": {
+        "operationKey": "DELETE /tweets/{tweet_id}/like",
+        "method": "DELETE",
+        "path": "/tweets/{tweet_id}/like",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 776,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "DELETE /tweets/{tweet_id}/retweet": {
+        "operationKey": "DELETE /tweets/{tweet_id}/retweet",
+        "method": "DELETE",
+        "path": "/tweets/{tweet_id}/retweet",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 788,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "DELETE /users/{username}/follow": {
+        "operationKey": "DELETE /users/{username}/follow",
+        "method": "DELETE",
+        "path": "/users/{username}/follow",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 814,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /bookmarks": {
+        "operationKey": "GET /bookmarks",
+        "method": "GET",
+        "path": "/bookmarks",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 800,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /me/followers": {
+        "operationKey": "GET /me/followers",
+        "method": "GET",
+        "path": "/me/followers",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 832,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /me/following": {
+        "operationKey": "GET /me/following",
+        "method": "GET",
+        "path": "/me/following",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 838,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /mentions": {
+        "operationKey": "GET /mentions",
+        "method": "GET",
+        "path": "/mentions",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 748,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /profile": {
+        "operationKey": "GET /profile",
+        "method": "GET",
+        "path": "/profile",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 756,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /profile/{username}": {
+        "operationKey": "GET /profile/{username}",
+        "method": "GET",
+        "path": "/profile/{username}",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 762,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /search": {
+        "operationKey": "GET /search",
+        "method": "GET",
+        "path": "/search",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 740,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /timeline/home": {
+        "operationKey": "GET /timeline/home",
+        "method": "GET",
+        "path": "/timeline/home",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 720,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /timeline/user/{username}": {
+        "operationKey": "GET /timeline/user/{username}",
+        "method": "GET",
+        "path": "/timeline/user/{username}",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 726,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /tweets/{tweet_id}": {
+        "operationKey": "GET /tweets/{tweet_id}",
+        "method": "GET",
+        "path": "/tweets/{tweet_id}",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 712,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /users/{username}/followers": {
+        "operationKey": "GET /users/{username}/followers",
+        "method": "GET",
+        "path": "/users/{username}/followers",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 820,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /users/{username}/following": {
+        "operationKey": "GET /users/{username}/following",
+        "method": "GET",
+        "path": "/users/{username}/following",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 826,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /video/download": {
+        "operationKey": "GET /video/download",
+        "method": "GET",
+        "path": "/video/download",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 857,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /video/info": {
+        "operationKey": "GET /video/info",
+        "method": "GET",
+        "path": "/video/info",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 864,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /search": {
+        "operationKey": "POST /search",
+        "method": "POST",
+        "path": "/search",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 734,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /tweets": {
+        "operationKey": "POST /tweets",
+        "method": "POST",
+        "path": "/tweets",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 700,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /tweets/{tweet_id}/bookmark": {
+        "operationKey": "POST /tweets/{tweet_id}/bookmark",
+        "method": "POST",
+        "path": "/tweets/{tweet_id}/bookmark",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 794,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /tweets/{tweet_id}/like": {
+        "operationKey": "POST /tweets/{tweet_id}/like",
+        "method": "POST",
+        "path": "/tweets/{tweet_id}/like",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 770,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /tweets/{tweet_id}/retweet": {
+        "operationKey": "POST /tweets/{tweet_id}/retweet",
+        "method": "POST",
+        "path": "/tweets/{tweet_id}/retweet",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 782,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /users/{username}/follow": {
+        "operationKey": "POST /users/{username}/follow",
+        "method": "POST",
+        "path": "/users/{username}/follow",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 808,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /video/download": {
+        "operationKey": "POST /video/download",
+        "method": "POST",
+        "path": "/video/download",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "social",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 851,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "marketing": {
+      "GET /": {
+        "operationKey": "GET /",
+        "method": "GET",
+        "path": "/",
+        "source": "fastapi",
+        "service": "marketing/app",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "marketing",
+        "sensitive": false,
+        "status": "active",
+        "owner": "marketing",
+        "team": "growth",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "marketing/app.py",
+            "line": 73,
+            "service": "marketing/app"
+          },
+          {
+            "file": "specialized_agents/api.py",
+            "line": 559,
+            "service": "specialized_agents/api"
+          },
+          {
+            "file": "site/code_runner_manager.py",
+            "line": 426,
+            "service": "site/code_runner_manager"
+          },
+          {
+            "file": "site/app_patched.py",
+            "line": 167,
+            "service": "site/app_patched"
+          },
+          {
+            "file": "tools/meeting_translator/server.py",
+            "line": 69,
+            "service": "tools/meeting_translator"
+          },
+          {
+            "file": "scripts/misc/github_agent_server.py",
+            "line": 322,
+            "service": "scripts/misc"
+          },
+          {
+            "file": "scripts/misc/dashboard.py",
+            "line": 378,
+            "service": "scripts/misc"
+          },
+          {
+            "file": "site/code_runner/app.py",
+            "line": 187,
+            "service": "site/code_runner"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /diagnostico": {
+        "operationKey": "GET /diagnostico",
+        "method": "GET",
+        "path": "/diagnostico",
+        "source": "fastapi",
+        "service": "marketing/app",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "marketing",
+        "sensitive": false,
+        "status": "active",
+        "owner": "marketing",
+        "team": "growth",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "marketing/app.py",
+            "line": 55,
+            "service": "marketing/app"
+          }
+        ],
+        "orphan": false
+      }
+    },
+    "trading": {
+      "GET /account": {
+        "operationKey": "GET /account",
+        "method": "GET",
+        "path": "/account",
+        "source": "fastapi",
+        "service": "mt5_bridge/bridge_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "trading",
+        "sensitive": false,
+        "status": "active",
+        "owner": "mt5_bridge",
+        "team": "trading",
+        "relatedTables": [
+          "clear.performance_stats",
+          "btc.performance_stats",
+          "clear.trades"
+        ],
+        "locations": [
+          {
+            "file": "mt5_bridge/bridge_api.py",
+            "line": 448,
+            "service": "mt5_bridge/bridge_api"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /balance": {
+        "operationKey": "GET /balance",
+        "method": "GET",
+        "path": "/balance",
+        "source": "fastapi",
+        "service": "specialized_agents/banking",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "trading",
+        "sensitive": false,
+        "status": "active",
+        "owner": "banking",
+        "team": "finance",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/banking/routes.py",
+            "line": 48,
+            "service": "specialized_agents/banking"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /history/deals": {
+        "operationKey": "GET /history/deals",
+        "method": "GET",
+        "path": "/history/deals",
+        "source": "fastapi",
+        "service": "mt5_bridge/bridge_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "trading",
+        "sensitive": false,
+        "status": "active",
+        "owner": "mt5_bridge",
+        "team": "trading",
+        "relatedTables": [
+          "clear.trades",
+          "btc.trades",
+          "clear.decisions",
+          "btc.decisions"
+        ],
+        "locations": [
+          {
+            "file": "mt5_bridge/bridge_api.py",
+            "line": 585,
+            "service": "mt5_bridge/bridge_api"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /marketing/leads/stats": {
+        "operationKey": "GET /marketing/leads/stats",
+        "method": "GET",
+        "path": "/marketing/leads/stats",
+        "source": "fastapi",
+        "service": "marketing/lead_capture_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "trading",
+        "sensitive": false,
+        "status": "active",
+        "owner": "marketing",
+        "team": "growth",
+        "relatedTables": [
+          "marketing.leads",
+          "marketing.daily_metrics"
+        ],
+        "locations": [
+          {
+            "file": "marketing/lead_capture_api.py",
+            "line": 356,
+            "service": "marketing/lead_capture_api"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /orders": {
+        "operationKey": "GET /orders",
+        "method": "GET",
+        "path": "/orders",
+        "source": "fastapi",
+        "service": "mt5_bridge/bridge_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "trading",
+        "sensitive": false,
+        "status": "active",
+        "owner": "mt5_bridge",
+        "team": "trading",
+        "relatedTables": [
+          "clear.trades",
+          "btc.trades"
+        ],
+        "locations": [
+          {
+            "file": "mt5_bridge/bridge_api.py",
+            "line": 554,
+            "service": "mt5_bridge/bridge_api"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /positions": {
+        "operationKey": "GET /positions",
+        "method": "GET",
+        "path": "/positions",
+        "source": "fastapi",
+        "service": "mt5_bridge/bridge_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "trading",
+        "sensitive": false,
+        "status": "active",
+        "owner": "mt5_bridge",
+        "team": "trading",
+        "relatedTables": [
+          "clear.trades",
+          "btc.trades"
+        ],
+        "locations": [
+          {
+            "file": "mt5_bridge/bridge_api.py",
+            "line": 417,
+            "service": "mt5_bridge/bridge_api"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /symbol/{symbol}/rates": {
+        "operationKey": "GET /symbol/{symbol}/rates",
+        "method": "GET",
+        "path": "/symbol/{symbol}/rates",
+        "source": "fastapi",
+        "service": "mt5_bridge/bridge_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "trading",
+        "sensitive": false,
+        "status": "active",
+        "owner": "mt5_bridge",
+        "team": "trading",
+        "relatedTables": [
+          "clear.candles",
+          "btc.candles",
+          "clear.market_states"
+        ],
+        "locations": [
+          {
+            "file": "mt5_bridge/bridge_api.py",
+            "line": 498,
+            "service": "mt5_bridge/bridge_api"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /symbol/{symbol}/tick": {
+        "operationKey": "GET /symbol/{symbol}/tick",
+        "method": "GET",
+        "path": "/symbol/{symbol}/tick",
+        "source": "fastapi",
+        "service": "mt5_bridge/bridge_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "trading",
+        "sensitive": false,
+        "status": "active",
+        "owner": "mt5_bridge",
+        "team": "trading",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "mt5_bridge/bridge_api.py",
+            "line": 470,
+            "service": "mt5_bridge/bridge_api"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /marketing/leads": {
+        "operationKey": "POST /marketing/leads",
+        "method": "POST",
+        "path": "/marketing/leads",
+        "source": "fastapi",
+        "service": "marketing/lead_capture_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "trading",
+        "sensitive": false,
+        "status": "active",
+        "owner": "marketing",
+        "team": "growth",
+        "relatedTables": [
+          "marketing.leads",
+          "marketing.daily_metrics",
+          "marketing.email_log"
+        ],
+        "locations": [
+          {
+            "file": "marketing/lead_capture_api.py",
+            "line": 325,
+            "service": "marketing/lead_capture_api"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /order": {
+        "operationKey": "POST /order",
+        "method": "POST",
+        "path": "/order",
+        "source": "fastapi",
+        "service": "mt5_bridge/bridge_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "trading",
+        "sensitive": false,
+        "status": "active",
+        "owner": "mt5_bridge",
+        "team": "trading",
+        "relatedTables": [
+          "clear.trades",
+          "btc.trades"
+        ],
+        "locations": [
+          {
+            "file": "mt5_bridge/bridge_api.py",
+            "line": 350,
+            "service": "mt5_bridge/bridge_api"
+          }
+        ],
+        "orphan": false
+      }
+    },
+    "ops": {
+      "GET /actions/run-remediation": {
+        "operationKey": "GET /actions/run-remediation",
+        "method": "GET",
+        "path": "/actions/run-remediation",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "ops",
+        "sensitive": false,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 842,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /actions/run-remediation": {
+        "operationKey": "POST /actions/run-remediation",
+        "method": "POST",
+        "path": "/actions/run-remediation",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "ops",
+        "sensitive": false,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 826,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /company/close-open-financial-periods": {
+        "operationKey": "POST /company/close-open-financial-periods",
+        "method": "POST",
+        "path": "/company/close-open-financial-periods",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "ops",
+        "sensitive": false,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 813,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /company/close-overdue-balances": {
+        "operationKey": "POST /company/close-overdue-balances",
+        "method": "POST",
+        "path": "/company/close-overdue-balances",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "ops",
+        "sensitive": false,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 800,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /tasks/remediate-client-pending": {
+        "operationKey": "POST /tasks/remediate-client-pending",
+        "method": "POST",
+        "path": "/tasks/remediate-client-pending",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "ops",
+        "sensitive": false,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 787,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /tasks/remediate-pending-selenium": {
+        "operationKey": "POST /tasks/remediate-pending-selenium",
+        "method": "POST",
+        "path": "/tasks/remediate-pending-selenium",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "ops",
+        "sensitive": false,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 896,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "monitoring": {
+      "GET /admin/logs": {
+        "operationKey": "GET /admin/logs",
+        "method": "GET",
+        "path": "/admin/logs",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "monitoring",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1305,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /api/learning-metrics": {
+        "operationKey": "GET /api/learning-metrics",
+        "method": "GET",
+        "path": "/api/learning-metrics",
+        "source": "flask",
+        "service": "scripts/training",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "monitoring",
+        "sensitive": false,
+        "status": "active",
+        "owner": "grafana",
+        "team": "observability",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/training/grafana_learning_dashboard.py",
+            "line": 285,
+            "service": "scripts/training"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /dashboard/operational-summary": {
+        "operationKey": "GET /dashboard/operational-summary",
+        "method": "GET",
+        "path": "/dashboard/operational-summary",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "monitoring",
+        "sensitive": false,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 776,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /debug/communication/subscribers": {
+        "operationKey": "GET /debug/communication/subscribers",
+        "method": "GET",
+        "path": "/debug/communication/subscribers",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "monitoring",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 712,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /debug/logs": {
+        "operationKey": "GET /debug/logs",
+        "method": "GET",
+        "path": "/debug/logs",
+        "source": "fastapi",
+        "service": "specialized_agents/bn_acervo_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "monitoring",
+        "sensitive": false,
+        "status": "active",
+        "owner": "bn_acervo",
+        "team": "content",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/bn_acervo_agent.py",
+            "line": 4469,
+            "service": "specialized_agents/bn_acervo_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /reports/daily-summary": {
+        "operationKey": "GET /reports/daily-summary",
+        "method": "GET",
+        "path": "/reports/daily-summary",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "monitoring",
+        "sensitive": false,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 745,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /reports/daily-summary/cached": {
+        "operationKey": "GET /reports/daily-summary/cached",
+        "method": "GET",
+        "path": "/reports/daily-summary/cached",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "monitoring",
+        "sensitive": false,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 737,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /alerts": {
+        "operationKey": "POST /alerts",
+        "method": "POST",
+        "path": "/alerts",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "monitoring",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 775,
+            "service": "specialized_agents/api"
+          },
+          {
+            "file": "tools/alerting/alertmanager_telegram_webhook.py",
+            "line": 153,
+            "service": "tools/alerting"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "health": {
+      "GET /admin/status": {
+        "operationKey": "GET /admin/status",
+        "method": "GET",
+        "path": "/admin/status",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1282,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /api/health": {
+        "operationKey": "GET /api/health",
+        "method": "GET",
+        "path": "/api/health",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "ssh_agent",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/ssh_agent.py",
+            "line": 342,
+            "service": "scripts/misc"
+          },
+          {
+            "file": "scripts/misc/dashboard.py",
+            "line": 382,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /api/status": {
+        "operationKey": "GET /api/status",
+        "method": "GET",
+        "path": "/api/status",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "scripts",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/github_agent_server.py",
+            "line": 485,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /authentik/status": {
+        "operationKey": "GET /authentik/status",
+        "method": "GET",
+        "path": "/authentik/status",
+        "source": "fastapi",
+        "service": "tools/secrets_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": true,
+        "status": "active",
+        "owner": "secrets_agent",
+        "team": "security",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/secrets_agent/secrets_agent.py",
+            "line": 599,
+            "service": "tools/secrets_agent"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /bw/status": {
+        "operationKey": "GET /bw/status",
+        "method": "GET",
+        "path": "/bw/status",
+        "source": "fastapi",
+        "service": "tools/secrets_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "secrets_agent",
+        "team": "security",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/secrets_agent/secrets_agent.py",
+            "line": 580,
+            "service": "tools/secrets_agent"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /health": {
+        "operationKey": "GET /health",
+        "method": "GET",
+        "path": "/health",
+        "source": "fastapi",
+        "service": "storage_portal_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "storage_portal",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "storage_portal_api.py",
+            "line": 1505,
+            "service": "storage_portal_api"
+          },
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1189,
+            "service": "specialized_agents/nextcloud_agent"
+          },
+          {
+            "file": "specialized_agents/wiki_agent.py",
+            "line": 520,
+            "service": "specialized_agents/wiki_agent"
+          },
+          {
+            "file": "specialized_agents/bn_acervo_agent.py",
+            "line": 4460,
+            "service": "specialized_agents/bn_acervo_agent"
+          },
+          {
+            "file": "specialized_agents/api.py",
+            "line": 132,
+            "service": "specialized_agents/api"
+          },
+          {
+            "file": "specialized_agents/api.py",
+            "line": 566,
+            "service": "specialized_agents/api"
+          },
+          {
+            "file": "specialized_agents/cmdb_agent.py",
+            "line": 1549,
+            "service": "specialized_agents/cmdb_agent"
+          },
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 692,
+            "service": "specialized_agents/conube_agent"
+          },
+          {
+            "file": "site/code_runner_manager.py",
+            "line": 365,
+            "service": "site/code_runner_manager"
+          },
+          {
+            "file": "site/app_patched.py",
+            "line": 156,
+            "service": "site/app_patched"
+          },
+          {
+            "file": "mt5_bridge/bridge_api.py",
+            "line": 316,
+            "service": "mt5_bridge/bridge_api"
+          },
+          {
+            "file": "tools/alerting/alertmanager_telegram_webhook.py",
+            "line": 195,
+            "service": "tools/alerting"
+          },
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 680,
+            "service": "tools/x_agent"
+          },
+          {
+            "file": "tools/secrets_agent/secrets_agent.py",
+            "line": 570,
+            "service": "tools/secrets_agent"
+          },
+          {
+            "file": "tools/meeting_translator/server.py",
+            "line": 113,
+            "service": "tools/meeting_translator"
+          },
+          {
+            "file": "deploy/printshare/app.py",
+            "line": 25,
+            "service": "deploy"
+          },
+          {
+            "file": "scripts/misc/whatsapp_api.py",
+            "line": 99,
+            "service": "scripts/misc"
+          },
+          {
+            "file": "site/code_runner/app.py",
+            "line": 175,
+            "service": "site/code_runner"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /marketing/health": {
+        "operationKey": "GET /marketing/health",
+        "method": "GET",
+        "path": "/marketing/health",
+        "source": "fastapi",
+        "service": "marketing/lead_capture_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "marketing",
+        "team": "growth",
+        "relatedTables": [
+          "marketing.leads",
+          "marketing.daily_metrics"
+        ],
+        "locations": [
+          {
+            "file": "marketing/lead_capture_api.py",
+            "line": 363,
+            "service": "marketing/lead_capture_api"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /metrics": {
+        "operationKey": "GET /metrics",
+        "method": "GET",
+        "path": "/metrics",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 693,
+            "service": "tools/x_agent"
+          },
+          {
+            "file": "tools/secrets_agent/secrets_agent.py",
+            "line": 565,
+            "service": "tools/secrets_agent"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /status": {
+        "operationKey": "GET /status",
+        "method": "GET",
+        "path": "/status",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 649,
+            "service": "specialized_agents/api"
+          },
+          {
+            "file": "specialized_agents/api.py",
+            "line": 734,
+            "service": "specialized_agents/api"
+          },
+          {
+            "file": "deploy/printshare/app.py",
+            "line": 30,
+            "service": "deploy"
+          },
+          {
+            "file": "scripts/misc/whatsapp_api.py",
+            "line": 83,
+            "service": "scripts/misc"
+          },
+          {
+            "file": "specialized_agents/banking/routes.py",
+            "line": 21,
+            "service": "specialized_agents/banking"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /tape/component-quality/status": {
+        "operationKey": "GET /tape/component-quality/status",
+        "method": "GET",
+        "path": "/tape/component-quality/status",
+        "source": "fastapi",
+        "service": "specialized_agents/tape_routes",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "tape",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/tape_routes.py",
+            "line": 280,
+            "service": "specialized_agents/tape_routes"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /tape/hba-test/status": {
+        "operationKey": "GET /tape/hba-test/status",
+        "method": "GET",
+        "path": "/tape/hba-test/status",
+        "source": "fastapi",
+        "service": "specialized_agents/tape_routes",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "tape",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/tape_routes.py",
+            "line": 230,
+            "service": "specialized_agents/tape_routes"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /tape/health": {
+        "operationKey": "GET /tape/health",
+        "method": "GET",
+        "path": "/tape/health",
+        "source": "fastapi",
+        "service": "specialized_agents/tape_routes",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "tape",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/tape_routes.py",
+            "line": 180,
+            "service": "specialized_agents/tape_routes"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /{agent_id}/health": {
+        "operationKey": "GET /{agent_id}/health",
+        "method": "GET",
+        "path": "/{agent_id}/health",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 695,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": false
+      },
+      "HEAD /health": {
+        "operationKey": "HEAD /health",
+        "method": "HEAD",
+        "path": "/health",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "health",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 142,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": false
+      }
+    },
+    "storage": {
+      "GET /admin/storage-diagnostics": {
+        "operationKey": "GET /admin/storage-diagnostics",
+        "method": "GET",
+        "path": "/admin/storage-diagnostics",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1289,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /download/file/{filename}": {
+        "operationKey": "GET /download/file/{filename}",
+        "method": "GET",
+        "path": "/download/file/{filename}",
+        "source": "fastapi",
+        "service": "tools/x_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "x_agent",
+        "team": "social",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/x_agent/x_agent.py",
+            "line": 870,
+            "service": "tools/x_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /files/download": {
+        "operationKey": "GET /files/download",
+        "method": "GET",
+        "path": "/files/download",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1256,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /files/list": {
+        "operationKey": "GET /files/list",
+        "method": "GET",
+        "path": "/files/list",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1219,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /media/resources": {
+        "operationKey": "GET /media/resources",
+        "method": "GET",
+        "path": "/media/resources",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 175,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /portal": {
+        "operationKey": "GET /portal",
+        "method": "GET",
+        "path": "/portal",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "scripts",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/github_agent_server.py",
+            "line": 340,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /share/list": {
+        "operationKey": "GET /share/list",
+        "method": "GET",
+        "path": "/share/list",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1276,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /storage": {
+        "operationKey": "GET /storage",
+        "method": "GET",
+        "path": "/storage",
+        "source": "fastapi",
+        "service": "marketing/app",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "marketing",
+        "team": "growth",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "marketing/app.py",
+            "line": 64,
+            "service": "marketing/app"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /storage/portal/bootstrap": {
+        "operationKey": "GET /storage/portal/bootstrap",
+        "method": "GET",
+        "path": "/storage/portal/bootstrap",
+        "source": "fastapi",
+        "service": "storage_portal_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "storage_portal",
+        "team": "storage",
+        "relatedTables": [
+          "public.contracts",
+          "public.portal_users",
+          "public.api_tokens"
+        ],
+        "locations": [
+          {
+            "file": "storage_portal_api.py",
+            "line": 1446,
+            "service": "storage_portal_api"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /storage/portal/files": {
+        "operationKey": "GET /storage/portal/files",
+        "method": "GET",
+        "path": "/storage/portal/files",
+        "source": "fastapi",
+        "service": "storage_portal_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "storage_portal",
+        "team": "storage",
+        "relatedTables": [
+          "public.contracts"
+        ],
+        "locations": [
+          {
+            "file": "storage_portal_api.py",
+            "line": 1470,
+            "service": "storage_portal_api"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /tape/component-quality/report": {
+        "operationKey": "GET /tape/component-quality/report",
+        "method": "GET",
+        "path": "/tape/component-quality/report",
+        "source": "fastapi",
+        "service": "specialized_agents/tape_routes",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "tape",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/tape_routes.py",
+            "line": 288,
+            "service": "specialized_agents/tape_routes"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /tape/hba-test/report": {
+        "operationKey": "GET /tape/hba-test/report",
+        "method": "GET",
+        "path": "/tape/hba-test/report",
+        "source": "fastapi",
+        "service": "specialized_agents/tape_routes",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "tape",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/tape_routes.py",
+            "line": 238,
+            "service": "specialized_agents/tape_routes"
+          }
+        ],
+        "orphan": true
+      },
+      "PATCH /storage/portal/users/{user_id}": {
+        "operationKey": "PATCH /storage/portal/users/{user_id}",
+        "method": "PATCH",
+        "path": "/storage/portal/users/{user_id}",
+        "source": "fastapi",
+        "service": "storage_portal_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "storage_portal",
+        "team": "storage",
+        "relatedTables": [
+          "public.portal_users",
+          "public.contracts"
+        ],
+        "locations": [
+          {
+            "file": "storage_portal_api.py",
+            "line": 1464,
+            "service": "storage_portal_api"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /files/list": {
+        "operationKey": "POST /files/list",
+        "method": "POST",
+        "path": "/files/list",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1225,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /files/mkdir": {
+        "operationKey": "POST /files/mkdir",
+        "method": "POST",
+        "path": "/files/mkdir",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1232,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /files/upload": {
+        "operationKey": "POST /files/upload",
+        "method": "POST",
+        "path": "/files/upload",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1239,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /media/image/generate": {
+        "operationKey": "POST /media/image/generate",
+        "method": "POST",
+        "path": "/media/image/generate",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 198,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /occ": {
+        "operationKey": "POST /occ",
+        "method": "POST",
+        "path": "/occ",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1210,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /portal/notify": {
+        "operationKey": "POST /portal/notify",
+        "method": "POST",
+        "path": "/portal/notify",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "scripts",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/github_agent_server.py",
+            "line": 357,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /share/create": {
+        "operationKey": "POST /share/create",
+        "method": "POST",
+        "path": "/share/create",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1263,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /storage/contracts/finalize": {
+        "operationKey": "POST /storage/contracts/finalize",
+        "method": "POST",
+        "path": "/storage/contracts/finalize",
+        "source": "fastapi",
+        "service": "storage_portal_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "storage_portal",
+        "team": "storage",
+        "relatedTables": [
+          "public.contracts",
+          "public.portal_users",
+          "public.payments"
+        ],
+        "locations": [
+          {
+            "file": "storage_portal_api.py",
+            "line": 1500,
+            "service": "storage_portal_api"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /storage/portal/files/folder": {
+        "operationKey": "POST /storage/portal/files/folder",
+        "method": "POST",
+        "path": "/storage/portal/files/folder",
+        "source": "fastapi",
+        "service": "storage_portal_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "storage_portal",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "storage_portal_api.py",
+            "line": 1479,
+            "service": "storage_portal_api"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /storage/portal/files/upload": {
+        "operationKey": "POST /storage/portal/files/upload",
+        "method": "POST",
+        "path": "/storage/portal/files/upload",
+        "source": "fastapi",
+        "service": "storage_portal_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "storage_portal",
+        "team": "storage",
+        "relatedTables": [
+          "public.payments",
+          "public.contract"
+        ],
+        "locations": [
+          {
+            "file": "storage_portal_api.py",
+            "line": 1484,
+            "service": "storage_portal_api"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /storage/portal/payments": {
+        "operationKey": "POST /storage/portal/payments",
+        "method": "POST",
+        "path": "/storage/portal/payments",
+        "source": "fastapi",
+        "service": "storage_portal_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "storage_portal",
+        "team": "storage",
+        "relatedTables": [
+          "public.payments",
+          "public.contracts",
+          "public.portal_users"
+        ],
+        "locations": [
+          {
+            "file": "storage_portal_api.py",
+            "line": 1494,
+            "service": "storage_portal_api"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /storage/portal/subusers": {
+        "operationKey": "POST /storage/portal/subusers",
+        "method": "POST",
+        "path": "/storage/portal/subusers",
+        "source": "fastapi",
+        "service": "storage_portal_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "storage_portal",
+        "team": "storage",
+        "relatedTables": [
+          "public.portal_users",
+          "public.contracts"
+        ],
+        "locations": [
+          {
+            "file": "storage_portal_api.py",
+            "line": 1458,
+            "service": "storage_portal_api"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /storage/request-access": {
+        "operationKey": "POST /storage/request-access",
+        "method": "POST",
+        "path": "/storage/request-access",
+        "source": "fastapi",
+        "service": "storage_portal_api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "storage_portal",
+        "team": "storage",
+        "relatedTables": [
+          "public.contracts",
+          "public.portal_users"
+        ],
+        "locations": [
+          {
+            "file": "storage_portal_api.py",
+            "line": 1435,
+            "service": "storage_portal_api"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /tape/component-quality": {
+        "operationKey": "POST /tape/component-quality",
+        "method": "POST",
+        "path": "/tape/component-quality",
+        "source": "fastapi",
+        "service": "specialized_agents/tape_routes",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "tape",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/tape_routes.py",
+            "line": 249,
+            "service": "specialized_agents/tape_routes"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /tape/hba-test": {
+        "operationKey": "POST /tape/hba-test",
+        "method": "POST",
+        "path": "/tape/hba-test",
+        "source": "fastapi",
+        "service": "specialized_agents/tape_routes",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "tape",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/tape_routes.py",
+            "line": 191,
+            "service": "specialized_agents/tape_routes"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /vpn/install": {
+        "operationKey": "POST /vpn/install",
+        "method": "POST",
+        "path": "/vpn/install",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1354,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /vpn/provision": {
+        "operationKey": "POST /vpn/provision",
+        "method": "POST",
+        "path": "/vpn/provision",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "storage",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1318,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "admin": {
+      "GET /admin/users": {
+        "operationKey": "GET /admin/users",
+        "method": "GET",
+        "path": "/admin/users",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "admin",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1295,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "meetings": {
+      "GET /api/jobs": {
+        "operationKey": "GET /api/jobs",
+        "method": "GET",
+        "path": "/api/jobs",
+        "source": "fastapi",
+        "service": "tools/meeting_translator",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "meetings",
+        "sensitive": false,
+        "status": "active",
+        "owner": "meeting_translator",
+        "team": "productivity",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/meeting_translator/server.py",
+            "line": 98,
+            "service": "tools/meeting_translator"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /api/jobs/{job_id}": {
+        "operationKey": "GET /api/jobs/{job_id}",
+        "method": "GET",
+        "path": "/api/jobs/{job_id}",
+        "source": "fastapi",
+        "service": "tools/meeting_translator",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "meetings",
+        "sensitive": false,
+        "status": "active",
+        "owner": "meeting_translator",
+        "team": "productivity",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/meeting_translator/server.py",
+            "line": 104,
+            "service": "tools/meeting_translator"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /jobs/{job_id}": {
+        "operationKey": "GET /jobs/{job_id}",
+        "method": "GET",
+        "path": "/jobs/{job_id}",
+        "source": "fastapi",
+        "service": "specialized_agents/bn_acervo_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "meetings",
+        "sensitive": false,
+        "status": "active",
+        "owner": "bn_acervo",
+        "team": "content",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/bn_acervo_agent.py",
+            "line": 4615,
+            "service": "specialized_agents/bn_acervo_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /api/join": {
+        "operationKey": "POST /api/join",
+        "method": "POST",
+        "path": "/api/join",
+        "source": "fastapi",
+        "service": "tools/meeting_translator",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "meetings",
+        "sensitive": false,
+        "status": "active",
+        "owner": "meeting_translator",
+        "team": "productivity",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/meeting_translator/server.py",
+            "line": 74,
+            "service": "tools/meeting_translator"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /jobs/cancel-active": {
+        "operationKey": "POST /jobs/cancel-active",
+        "method": "POST",
+        "path": "/jobs/cancel-active",
+        "source": "fastapi",
+        "service": "specialized_agents/bn_acervo_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "meetings",
+        "sensitive": false,
+        "status": "active",
+        "owner": "bn_acervo",
+        "team": "content",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/bn_acervo_agent.py",
+            "line": 4599,
+            "service": "specialized_agents/bn_acervo_agent"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "llm": {
+      "GET /api/tags": {
+        "operationKey": "GET /api/tags",
+        "method": "GET",
+        "path": "/api/tags",
+        "source": "openapi",
+        "service": "docs",
+        "summary": "Ollama tags / models",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "docs",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "docs/openapi.yaml",
+            "line": 82,
+            "service": "docs"
+          },
+          {
+            "file": "docs/openapi.generated.yaml",
+            "line": 72,
+            "service": "docs"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /api/v1/models": {
+        "operationKey": "GET /api/v1/models",
+        "method": "GET",
+        "path": "/api/v1/models",
+        "source": "openapi",
+        "service": "docs",
+        "summary": "List models",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "docs",
+        "team": "unassigned",
+        "relatedTables": [
+          "btc.llm_calls",
+          "btc.llm_log_config"
+        ],
+        "locations": [
+          {
+            "file": "docs/openapi.yaml",
+            "line": 33,
+            "service": "docs"
+          },
+          {
+            "file": "docs/openapi.generated.yaml",
+            "line": 33,
+            "service": "docs"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /api/v1/models/{id}": {
+        "operationKey": "GET /api/v1/models/{id}",
+        "method": "GET",
+        "path": "/api/v1/models/{id}",
+        "source": "openapi",
+        "service": "docs",
+        "summary": "Get model by id",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "docs",
+        "team": "unassigned",
+        "relatedTables": [
+          "btc.llm_calls"
+        ],
+        "locations": [
+          {
+            "file": "docs/openapi.yaml",
+            "line": 44,
+            "service": "docs"
+          },
+          {
+            "file": "docs/openapi.generated.yaml",
+            "line": 40,
+            "service": "docs"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /copilot/model-info": {
+        "operationKey": "GET /copilot/model-info",
+        "method": "GET",
+        "path": "/copilot/model-info",
+        "source": "fastapi",
+        "service": "specialized_agents/copilot_routes",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "specialized_agents",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/copilot_routes.py",
+            "line": 102,
+            "service": "specialized_agents/copilot_routes"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /resources": {
+        "operationKey": "GET /resources",
+        "method": "GET",
+        "path": "/resources",
+        "source": "fastapi",
+        "service": "specialized_agents/huggingface_inference_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "huggingface",
+        "team": "llm",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/huggingface_inference_agent.py",
+            "line": 227,
+            "service": "specialized_agents/huggingface_inference_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /v1/models": {
+        "operationKey": "GET /v1/models",
+        "method": "GET",
+        "path": "/v1/models",
+        "source": "fastapi",
+        "service": "specialized_agents/copilot_routes",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "specialized_agents",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/copilot_routes.py",
+            "line": 35,
+            "service": "specialized_agents/copilot_routes"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /api/chat": {
+        "operationKey": "POST /api/chat",
+        "method": "POST",
+        "path": "/api/chat",
+        "source": "fastapi",
+        "service": "tools/proxy_tool_interceptor",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "tools",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/proxy_tool_interceptor.py",
+            "line": 15,
+            "service": "tools/proxy_tool_interceptor"
+          },
+          {
+            "file": "tools/proxy_tool_interceptor.py",
+            "line": 428,
+            "service": "tools/proxy_tool_interceptor"
+          },
+          {
+            "file": "scripts/misc/github_agent_server.py",
+            "line": 466,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /api/generate": {
+        "operationKey": "POST /api/generate",
+        "method": "POST",
+        "path": "/api/generate",
+        "source": "openapi",
+        "service": "docs",
+        "summary": "Ollama generate text",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "docs",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "docs/openapi.yaml",
+            "line": 89,
+            "service": "docs"
+          },
+          {
+            "file": "docs/openapi.generated.yaml",
+            "line": 79,
+            "service": "docs"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /api/v1/rag/index": {
+        "operationKey": "POST /api/v1/rag/index",
+        "method": "POST",
+        "path": "/api/v1/rag/index",
+        "source": "openapi",
+        "service": "docs",
+        "summary": "Index documents for RAG",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "docs",
+        "team": "unassigned",
+        "relatedTables": [
+          "btc.training_samples"
+        ],
+        "locations": [
+          {
+            "file": "docs/openapi.yaml",
+            "line": 72,
+            "service": "docs"
+          },
+          {
+            "file": "docs/openapi.generated.yaml",
+            "line": 65,
+            "service": "docs"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /chat": {
+        "operationKey": "POST /chat",
+        "method": "POST",
+        "path": "/chat",
+        "source": "fastapi",
+        "service": "specialized_agents/nextcloud_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "nextcloud",
+        "team": "storage",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/nextcloud_agent.py",
+            "line": 1195,
+            "service": "specialized_agents/nextcloud_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /image/generate": {
+        "operationKey": "POST /image/generate",
+        "method": "POST",
+        "path": "/image/generate",
+        "source": "fastapi",
+        "service": "specialized_agents/huggingface_inference_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "huggingface",
+        "team": "llm",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/huggingface_inference_agent.py",
+            "line": 237,
+            "service": "specialized_agents/huggingface_inference_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /v1/chat/completions": {
+        "operationKey": "POST /v1/chat/completions",
+        "method": "POST",
+        "path": "/v1/chat/completions",
+        "source": "fastapi",
+        "service": "specialized_agents/copilot_routes",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "llm",
+        "sensitive": false,
+        "status": "active",
+        "owner": "specialized_agents",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/copilot_routes.py",
+            "line": 65,
+            "service": "specialized_agents/copilot_routes"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "platform": {
+      "GET /api/v1/functions": {
+        "operationKey": "GET /api/v1/functions",
+        "method": "GET",
+        "path": "/api/v1/functions",
+        "source": "openapi",
+        "service": "docs",
+        "summary": "List functions",
+        "operationId": "",
+        "tags": [],
+        "category": "platform",
+        "sensitive": false,
+        "status": "deprecated",
+        "owner": "docs",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "docs/openapi.yaml",
+            "line": 58,
+            "service": "docs"
+          },
+          {
+            "file": "docs/openapi.generated.yaml",
+            "line": 53,
+            "service": "docs"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /api/v2/packages": {
+        "operationKey": "GET /api/v2/packages",
+        "method": "GET",
+        "path": "/api/v2/packages",
+        "source": "fastapi",
+        "service": "site/code_runner_manager",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "platform",
+        "sensitive": false,
+        "status": "active",
+        "owner": "code_runner",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "site/code_runner_manager.py",
+            "line": 415,
+            "service": "site/code_runner_manager"
+          },
+          {
+            "file": "site/app_patched.py",
+            "line": 151,
+            "service": "site/app_patched"
+          },
+          {
+            "file": "site/code_runner/app.py",
+            "line": 166,
+            "service": "site/code_runner"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /api/v2/runtimes": {
+        "operationKey": "GET /api/v2/runtimes",
+        "method": "GET",
+        "path": "/api/v2/runtimes",
+        "source": "fastapi",
+        "service": "site/code_runner_manager",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "platform",
+        "sensitive": false,
+        "status": "active",
+        "owner": "code_runner",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "site/code_runner_manager.py",
+            "line": 410,
+            "service": "site/code_runner_manager"
+          },
+          {
+            "file": "site/app_patched.py",
+            "line": 141,
+            "service": "site/app_patched"
+          },
+          {
+            "file": "site/code_runner/app.py",
+            "line": 153,
+            "service": "site/code_runner"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /index": {
+        "operationKey": "GET /index",
+        "method": "GET",
+        "path": "/index",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "platform",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 606,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /panel": {
+        "operationKey": "GET /panel",
+        "method": "GET",
+        "path": "/panel",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "platform",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 560,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /api/v1/functions": {
+        "operationKey": "POST /api/v1/functions",
+        "method": "POST",
+        "path": "/api/v1/functions",
+        "source": "openapi",
+        "service": "docs",
+        "summary": "Create function",
+        "operationId": "",
+        "tags": [],
+        "category": "platform",
+        "sensitive": false,
+        "status": "active",
+        "owner": "docs",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "docs/openapi.yaml",
+            "line": 58,
+            "service": "docs"
+          },
+          {
+            "file": "docs/openapi.generated.yaml",
+            "line": 53,
+            "service": "docs"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /api/v2/execute": {
+        "operationKey": "POST /api/v2/execute",
+        "method": "POST",
+        "path": "/api/v2/execute",
+        "source": "fastapi",
+        "service": "site/code_runner_manager",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "platform",
+        "sensitive": false,
+        "status": "active",
+        "owner": "code_runner",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "site/code_runner_manager.py",
+            "line": 289,
+            "service": "site/code_runner_manager"
+          },
+          {
+            "file": "site/app_patched.py",
+            "line": 107,
+            "service": "site/app_patched"
+          },
+          {
+            "file": "site/code_runner/app.py",
+            "line": 104,
+            "service": "site/code_runner"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "banking": {
+      "GET /billing/pending": {
+        "operationKey": "GET /billing/pending",
+        "method": "GET",
+        "path": "/billing/pending",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "banking",
+        "sensitive": false,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 865,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /cofrinho": {
+        "operationKey": "GET /cofrinho",
+        "method": "GET",
+        "path": "/cofrinho",
+        "source": "fastapi",
+        "service": "specialized_agents/banking",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "banking",
+        "sensitive": false,
+        "status": "active",
+        "owner": "banking",
+        "team": "finance",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/banking/routes.py",
+            "line": 73,
+            "service": "specialized_agents/banking"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /billing/pay-pending": {
+        "operationKey": "POST /billing/pay-pending",
+        "method": "POST",
+        "path": "/billing/pay-pending",
+        "source": "fastapi",
+        "service": "specialized_agents/conube_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "banking",
+        "sensitive": false,
+        "status": "active",
+        "owner": "conube",
+        "team": "ops",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/conube_agent.py",
+            "line": 877,
+            "service": "specialized_agents/conube_agent"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "agents": {
+      "GET /messages": {
+        "operationKey": "GET /messages",
+        "method": "GET",
+        "path": "/messages",
+        "source": "fastapi",
+        "service": "specialized_agents/agent_communication_bus",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "agents",
+        "sensitive": false,
+        "status": "active",
+        "owner": "agent_bus",
+        "team": "platform",
+        "relatedTables": [
+          "public.agent_ipc"
+        ],
+        "locations": [
+          {
+            "file": "specialized_agents/agent_communication_bus.py",
+            "line": 357,
+            "service": "specialized_agents/agent_communication_bus"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /stats": {
+        "operationKey": "GET /stats",
+        "method": "GET",
+        "path": "/stats",
+        "source": "fastapi",
+        "service": "specialized_agents/agent_communication_bus",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "agents",
+        "sensitive": false,
+        "status": "active",
+        "owner": "agent_bus",
+        "team": "platform",
+        "relatedTables": [
+          "public.agent_ipc"
+        ],
+        "locations": [
+          {
+            "file": "specialized_agents/agent_communication_bus.py",
+            "line": 364,
+            "service": "specialized_agents/agent_communication_bus"
+          }
+        ],
+        "orphan": false
+      },
+      "GET /tool-interceptor/stats": {
+        "operationKey": "GET /tool-interceptor/stats",
+        "method": "GET",
+        "path": "/tool-interceptor/stats",
+        "source": "fastapi",
+        "service": "tools/proxy_tool_interceptor",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "agents",
+        "sensitive": false,
+        "status": "active",
+        "owner": "tools",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/proxy_tool_interceptor.py",
+            "line": 485,
+            "service": "tools/proxy_tool_interceptor"
+          }
+        ],
+        "orphan": true
+      },
+      "GET /tool-interceptor/tools": {
+        "operationKey": "GET /tool-interceptor/tools",
+        "method": "GET",
+        "path": "/tool-interceptor/tools",
+        "source": "fastapi",
+        "service": "tools/proxy_tool_interceptor",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "agents",
+        "sensitive": false,
+        "status": "active",
+        "owner": "tools",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/proxy_tool_interceptor.py",
+            "line": 489,
+            "service": "tools/proxy_tool_interceptor"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /evoke": {
+        "operationKey": "POST /evoke",
+        "method": "POST",
+        "path": "/evoke",
+        "source": "fastapi",
+        "service": "tools/operation_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "agents",
+        "sensitive": false,
+        "status": "active",
+        "owner": "operation_agent",
+        "team": "platform",
+        "relatedTables": [
+          "public.agent_actions"
+        ],
+        "locations": [
+          {
+            "file": "tools/operation_agent/evoke_handler.py",
+            "line": 28,
+            "service": "tools/operation_agent"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /penalize_and_retrain": {
+        "operationKey": "POST /penalize_and_retrain",
+        "method": "POST",
+        "path": "/penalize_and_retrain",
+        "source": "fastapi",
+        "service": "tools/operation_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "agents",
+        "sensitive": false,
+        "status": "active",
+        "owner": "operation_agent",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "tools/operation_agent/evoke_handler.py",
+            "line": 93,
+            "service": "tools/operation_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /publish": {
+        "operationKey": "POST /publish",
+        "method": "POST",
+        "path": "/publish",
+        "source": "fastapi",
+        "service": "specialized_agents/agent_communication_bus",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "agents",
+        "sensitive": false,
+        "status": "active",
+        "owner": "agent_bus",
+        "team": "platform",
+        "relatedTables": [
+          "public.agent_ipc"
+        ],
+        "locations": [
+          {
+            "file": "specialized_agents/agent_communication_bus.py",
+            "line": 371,
+            "service": "specialized_agents/agent_communication_bus"
+          },
+          {
+            "file": "specialized_agents/wiki_agent.py",
+            "line": 534,
+            "service": "specialized_agents/wiki_agent"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /send": {
+        "operationKey": "POST /send",
+        "method": "POST",
+        "path": "/send",
+        "source": "fastapi",
+        "service": "specialized_agents/agent_communication_bus",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "agents",
+        "sensitive": false,
+        "status": "active",
+        "owner": "agent_bus",
+        "team": "platform",
+        "relatedTables": [
+          "public.agent_ipc"
+        ],
+        "locations": [
+          {
+            "file": "specialized_agents/agent_communication_bus.py",
+            "line": 372,
+            "service": "specialized_agents/agent_communication_bus"
+          },
+          {
+            "file": "scripts/misc/whatsapp_api.py",
+            "line": 33,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /test": {
+        "operationKey": "POST /test",
+        "method": "POST",
+        "path": "/test",
+        "source": "fastapi",
+        "service": "specialized_agents/agent_communication_bus",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "agents",
+        "sensitive": false,
+        "status": "active",
+        "owner": "agent_bus",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/agent_communication_bus.py",
+            "line": 389,
+            "service": "specialized_agents/agent_communication_bus"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "general": {
+      "POST /api/execute": {
+        "operationKey": "POST /api/execute",
+        "method": "POST",
+        "path": "/api/execute",
+        "source": "flask",
+        "service": "scripts/misc",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "general",
+        "sensitive": false,
+        "status": "active",
+        "owner": "ssh_agent",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "scripts/misc/ssh_agent.py",
+            "line": 326,
+            "service": "scripts/misc"
+          }
+        ],
+        "orphan": false
+      },
+      "POST /print": {
+        "operationKey": "POST /print",
+        "method": "POST",
+        "path": "/print",
+        "source": "flask",
+        "service": "deploy",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "general",
+        "sensitive": false,
+        "status": "active",
+        "owner": "deploy",
+        "team": "unassigned",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "deploy/printshare/app.py",
+            "line": 49,
+            "service": "deploy"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /query": {
+        "operationKey": "POST /query",
+        "method": "POST",
+        "path": "/query",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "general",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 625,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /recording/clear": {
+        "operationKey": "POST /recording/clear",
+        "method": "POST",
+        "path": "/recording/clear",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "general",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 812,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /recording/pause": {
+        "operationKey": "POST /recording/pause",
+        "method": "POST",
+        "path": "/recording/pause",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "general",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 798,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /recording/resume": {
+        "operationKey": "POST /recording/resume",
+        "method": "POST",
+        "path": "/recording/resume",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "general",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 805,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /trading/converse": {
+        "operationKey": "POST /trading/converse",
+        "method": "POST",
+        "path": "/trading/converse",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "general",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 240,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /users": {
+        "operationKey": "POST /users",
+        "method": "POST",
+        "path": "/users",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "general",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 575,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /{agent_id}/activate": {
+        "operationKey": "POST /{agent_id}/activate",
+        "method": "POST",
+        "path": "/{agent_id}/activate",
+        "source": "fastapi",
+        "service": "specialized_agents/api",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "general",
+        "sensitive": false,
+        "status": "active",
+        "owner": "api_server",
+        "team": "platform",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/api.py",
+            "line": 676,
+            "service": "specialized_agents/api"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "cmdb": {
+      "POST /apply/glpi": {
+        "operationKey": "POST /apply/glpi",
+        "method": "POST",
+        "path": "/apply/glpi",
+        "source": "fastapi",
+        "service": "specialized_agents/cmdb_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "cmdb",
+        "sensitive": false,
+        "status": "active",
+        "owner": "cmdb",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/cmdb_agent.py",
+            "line": 1605,
+            "service": "specialized_agents/cmdb_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /apply/netbox": {
+        "operationKey": "POST /apply/netbox",
+        "method": "POST",
+        "path": "/apply/netbox",
+        "source": "fastapi",
+        "service": "specialized_agents/cmdb_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "cmdb",
+        "sensitive": false,
+        "status": "active",
+        "owner": "cmdb",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/cmdb_agent.py",
+            "line": 1590,
+            "service": "specialized_agents/cmdb_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /run": {
+        "operationKey": "POST /run",
+        "method": "POST",
+        "path": "/run",
+        "source": "fastapi",
+        "service": "specialized_agents/cmdb_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "cmdb",
+        "sensitive": false,
+        "status": "active",
+        "owner": "cmdb",
+        "team": "infra",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/cmdb_agent.py",
+            "line": 1571,
+            "service": "specialized_agents/cmdb_agent"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "acervo": {
+      "POST /dossier": {
+        "operationKey": "POST /dossier",
+        "method": "POST",
+        "path": "/dossier",
+        "source": "fastapi",
+        "service": "specialized_agents/bn_acervo_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "acervo",
+        "sensitive": false,
+        "status": "active",
+        "owner": "bn_acervo",
+        "team": "content",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/bn_acervo_agent.py",
+            "line": 4638,
+            "service": "specialized_agents/bn_acervo_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /jobs": {
+        "operationKey": "POST /jobs",
+        "method": "POST",
+        "path": "/jobs",
+        "source": "fastapi",
+        "service": "specialized_agents/bn_acervo_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "acervo",
+        "sensitive": false,
+        "status": "active",
+        "owner": "bn_acervo",
+        "team": "content",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/bn_acervo_agent.py",
+            "line": 4574,
+            "service": "specialized_agents/bn_acervo_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /story": {
+        "operationKey": "POST /story",
+        "method": "POST",
+        "path": "/story",
+        "source": "fastapi",
+        "service": "specialized_agents/bn_acervo_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "acervo",
+        "sensitive": false,
+        "status": "active",
+        "owner": "bn_acervo",
+        "team": "content",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/bn_acervo_agent.py",
+            "line": 4624,
+            "service": "specialized_agents/bn_acervo_agent"
+          }
+        ],
+        "orphan": true
+      }
+    },
+    "wiki": {
+      "POST /evolve": {
+        "operationKey": "POST /evolve",
+        "method": "POST",
+        "path": "/evolve",
+        "source": "fastapi",
+        "service": "specialized_agents/wiki_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "wiki",
+        "sensitive": false,
+        "status": "active",
+        "owner": "wiki",
+        "team": "knowledge",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/wiki_agent.py",
+            "line": 545,
+            "service": "specialized_agents/wiki_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /raw": {
+        "operationKey": "POST /raw",
+        "method": "POST",
+        "path": "/raw",
+        "source": "fastapi",
+        "service": "specialized_agents/wiki_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "wiki",
+        "sensitive": false,
+        "status": "active",
+        "owner": "wiki",
+        "team": "knowledge",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/wiki_agent.py",
+            "line": 556,
+            "service": "specialized_agents/wiki_agent"
+          }
+        ],
+        "orphan": true
+      },
+      "POST /refactor": {
+        "operationKey": "POST /refactor",
+        "method": "POST",
+        "path": "/refactor",
+        "source": "fastapi",
+        "service": "specialized_agents/wiki_agent",
+        "summary": "",
+        "operationId": "",
+        "tags": [],
+        "category": "wiki",
+        "sensitive": false,
+        "status": "active",
+        "owner": "wiki",
+        "team": "knowledge",
+        "relatedTables": [],
+        "locations": [
+          {
+            "file": "specialized_agents/wiki_agent.py",
+            "line": 566,
+            "service": "specialized_agents/wiki_agent"
+          }
+        ],
+        "orphan": true
+      }
+    }
+  },
+  "metadata": {
+    "totalEndpoints": 174,
+    "sourceFiles": [
+      "deploy/printshare/app.py",
+      "docs/openapi.generated.yaml",
+      "docs/openapi.yaml",
+      "marketing/app.py",
+      "marketing/lead_capture_api.py",
+      "mt5_bridge/bridge_api.py",
+      "scripts/misc/dashboard.py",
+      "scripts/misc/github_agent_server.py",
+      "scripts/misc/ssh_agent.py",
+      "scripts/misc/whatsapp_api.py",
+      "scripts/training/grafana_learning_dashboard.py",
+      "site/app_patched.py",
+      "site/code_runner/app.py",
+      "site/code_runner_manager.py",
+      "specialized_agents/agent_communication_bus.py",
+      "specialized_agents/api.py",
+      "specialized_agents/banking/routes.py",
+      "specialized_agents/bn_acervo_agent.py",
+      "specialized_agents/cmdb_agent.py",
+      "specialized_agents/conube_agent.py",
+      "specialized_agents/copilot_routes.py",
+      "specialized_agents/huggingface_inference_agent.py",
+      "specialized_agents/nextcloud_agent.py",
+      "specialized_agents/tape_routes.py",
+      "specialized_agents/wiki_agent.py",
+      "storage_portal_api.py",
+      "tools/alerting/alertmanager_telegram_webhook.py",
+      "tools/meeting_translator/server.py",
+      "tools/operation_agent/evoke_handler.py",
+      "tools/proxy_tool_interceptor.py",
+      "tools/secrets_agent/secrets_agent.py",
+      "tools/x_agent/x_agent.py"
+    ],
+    "serviceCount": 25,
+    "statusCounts": {
+      "active": 173,
+      "deprecated": 1
+    },
+    "ownerCounts": {
+      "ssh_agent": 9,
+      "secrets_agent": 9,
+      "code_runner": 5,
+      "x_agent": 27,
+      "marketing": 6,
+      "mt5_bridge": 7,
+      "conube": 12,
+      "nextcloud": 15,
+      "meeting_translator": 3,
+      "grafana": 1,
+      "scripts": 8,
+      "docs": 8,
+      "banking": 2,
+      "specialized_agents": 3,
+      "api_server": 16,
+      "bn_acervo": 6,
+      "storage_portal": 11,
+      "agent_bus": 5,
+      "huggingface": 2,
+      "tape": 7,
+      "tools": 3,
+      "cmdb": 3,
+      "operation_agent": 2,
+      "wiki": 3,
+      "deploy": 1
+    },
+    "orphanCount": 112,
+    "lifecycleUpdatedAt": "2026-07-24T20:01:32.527568"
+  }
+}

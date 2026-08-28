@@ -1,0 +1,131 @@
+name: Deploy Specialized Agents API
+
+on:
+  workflow_dispatch:
+    inputs:
+      service:
+        description: "Serviço a reiniciar após deploy"
+        required: false
+        default: "specialized-agents-api"
+
+jobs:
+  deploy:
+    runs-on:
+      - self-hosted
+      - linux
+      - homelab-only
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (sem submodules)
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+          clean: false
+          fetch-depth: 1
+
+      - name: Descobrir path do repositório implantado
+        id: repo
+        run: |
+          # Candidatos comuns para o path de deploy no homelab
+          for p in \
+            /home/homelab/eddie-auto-dev \
+            /home/homelab/myClaude \
+            /home/homelab/shared-auto-dev \
+            /home/edenilson/eddie-auto-dev; do
+            if [ -d "$p/.git" ]; then
+              echo "path=$p" >> "$GITHUB_OUTPUT"
+              echo "Repo encontrado em: $p"
+              break
+            fi
+          done
+          # Fallback: usar GITHUB_WORKSPACE (runner checkout)
+          if [ -z "$(grep '^path=' "$GITHUB_OUTPUT" 2>/dev/null)" ]; then
+            echo "path=$GITHUB_WORKSPACE" >> "$GITHUB_OUTPUT"
+            echo "Fallback para GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          fi
+
+      - name: Sincronizar arquivos alterados
+        run: |
+          set -e
+          DEST="${{ steps.repo.outputs.path }}"
+          SRC="$GITHUB_WORKSPACE"
+
+          echo "==> sincronizando de $SRC para $DEST"
+          rsync -a --checksum \
+            "$SRC/specialized_agents/nextcloud_agent.py" \
+            "$DEST/specialized_agents/" || true
+          rsync -a --checksum \
+            "$SRC/specialized_agents/api.py" \
+            "$DEST/specialized_agents/" || true
+          rsync -a --checksum \
+            "$SRC/specialized_agents/config.py" \
+            "$DEST/specialized_agents/" || true
+          rsync -a --checksum \
+            "$SRC/tests/test_nextcloud_agent.py" \
+            "$DEST/tests/" || true
+
+          # Conube billing → Mercado Pago (boletos Vindi)
+          for f in \
+            conube_billing.py \
+            conube_agent.py \
+            conube_agent_langgraph.py \
+            conube_remediation.py \
+            conube_operational.py \
+            conube_selenium.py \
+            governance_resume.py; do
+            rsync -a --checksum \
+              "$SRC/specialized_agents/$f" \
+              "$DEST/specialized_agents/" || true
+          done
+          rsync -a --checksum --exclude '__pycache__' \
+            "$SRC/specialized_agents/banking/" \
+            "$DEST/specialized_agents/banking/" || true
+          rsync -a --checksum \
+            "$SRC/tests/test_conube_billing.py" \
+            "$DEST/tests/" || true
+          echo "Sincronizacao concluida."
+
+      - name: Restart do serviço
+        run: |
+          SERVICE="${{ github.event.inputs.service || 'specialized-agents-api' }}"
+          echo "==> restart $SERVICE"
+
+          # Tenta sudo sem senha (-n), fallback para systemctl sem sudo (polkit)
+          if sudo -n systemctl restart "$SERVICE" 2>/dev/null; then
+            echo "restart via sudo ok"
+          elif systemctl restart "$SERVICE" 2>/dev/null; then
+            echo "restart via systemctl (sem sudo) ok"
+          else
+            # Fallback: matar processo uvicorn na porta 8503 para forçar reinício pelo systemd
+            echo "AVISO: systemctl sem sudo indisponivel — sinalizando processo uvicorn"
+            PID=$(lsof -ti :8503 2>/dev/null | head -1 || true)
+            if [ -n "$PID" ]; then
+              kill -HUP "$PID" && echo "SIGHUP enviado para PID $PID"
+            else
+              echo "AVISO: nenhum processo na porta 8503 — servico pode estar parado"
+            fi
+          fi
+          sleep 6
+
+          # Verificar status sem sudo
+          systemctl is-active "$SERVICE" 2>/dev/null \
+            || sudo -n systemctl is-active "$SERVICE" 2>/dev/null \
+            || echo "AVISO: nao foi possivel verificar status via systemctl"
+
+      - name: Healthcheck (com retry)
+        run: |
+          echo "==> aguardando API subir em http://localhost:8503/health"
+          for i in $(seq 1 12); do
+            RESP=$(curl -s --max-time 5 http://localhost:8503/health 2>/dev/null || true)
+            if echo "$RESP" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(0 if d.get('status') in ('ok','healthy') else 1)" 2>/dev/null; then
+              echo "==> API respondeu na tentativa $i:"
+              echo "$RESP" | python3 -m json.tool
+              echo "Deploy concluido com sucesso."
+              exit 0
+            fi
+            echo "  tentativa $i/12 — aguardando 5s..."
+            sleep 5
+          done
+          echo "AVISO: API nao respondeu apos 60s, verificar logs:"
+          sudo journalctl -u "${{ github.event.inputs.service || 'specialized-agents-api' }}" -n 30 --no-pager || true
+          exit 1
