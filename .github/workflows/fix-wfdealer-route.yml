@@ -1,0 +1,65 @@
+name: Fix WFDealer Route
+
+on:
+  workflow_dispatch:
+
+jobs:
+  fix-route:
+    runs-on: [self-hosted, linux, homelab]
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply WFDealer static route
+        run: |
+          set -euo pipefail
+
+          echo "=== Fix WFDealer Route ==="
+          TARGET_NET="179.190.60.0/24"
+          GATEWAY="192.168.15.1"
+
+          # Detectar interface LAN (não VPN)
+          IFACE=$(ip route get 8.8.8.8 2>/dev/null \
+            | grep -v nordlynx | grep -v tun \
+            | awk '/dev/{for(i=1;i<=NF;i++) if($i=="dev"){print $(i+1);exit}}' \
+            | head -1)
+          IFACE=${IFACE:-eth-onboard}
+
+          echo "Interface: $IFACE"
+
+          # Remover rota existente
+          ip route del "$TARGET_NET" 2>/dev/null || true
+
+          # Adicionar rota
+          sudo ip route add "$TARGET_NET" via "$GATEWAY" dev "$IFACE"
+          echo "Rota adicionada: $TARGET_NET via $GATEWAY dev $IFACE"
+
+          # Verificar
+          ip route get 179.190.60.1
+
+      - name: Test connectivity
+        run: |
+          echo "=== Testando wfdealer ==="
+          ping -c 2 -W 5 179.190.60.196 || echo "PING timeout (ICMP pode estar bloqueado)"
+          
+          curl -s --max-time 15 -o /dev/null -w "HTTPS wfdealer: HTTP %{http_code}\n" \
+            https://wfdealer.andreta.com.br/LoginAux.aspx?Windows || echo "HTTPS timeout"
+
+      - name: Make persistent
+        run: |
+          # Salvar via netplan routing policy
+          sudo tee /etc/netplan/99-wfdealer-route.yaml > /dev/null << 'EOF'
+          network:
+            version: 2
+            renderer: networkd
+            routing-policy:
+              - from: 179.190.60.0/24
+                table: 100
+                priority: 100
+              - to: 179.190.60.0/24
+                table: 100
+                priority: 100
+          EOF
+          echo "Persistência salva em /etc/netplan/99-wfdealer-route.yaml"
