@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-08-19T01:31:53.457473+00:00",
-  "repo_root": "/home/edenilson/.traycer/worktrees/eddiejdi__eddie-auto-dev/traycer-brave-seal",
+  "generated_at": "2026-08-29T02:55:11.959854+00:00",
+  "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 214,
+    "repo_services": 215,
     "trading_instances": 12,
     "critical_services": 87,
     "domains": {
       "identity": 4,
       "monitoring": 19,
       "network": 25,
-      "operations": 116,
+      "operations": 117,
       "storage": 39,
       "trading": 11
     }
@@ -1122,6 +1122,14 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "tools/selfheal/lto6-smb-proof-selfheal.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "mail-inbound.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "tools/email_inbound/mail-inbound.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },

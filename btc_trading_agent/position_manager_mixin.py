@@ -623,11 +623,9 @@ class PositionManagerMixin:
     ) -> bool:
         """Readota um único BUY persistente que explica o excesso na exchange.
 
-        Sem subconta nomeada só segue se o saldo da exchange for exclusivo
-        deste profile (credencial kucoin/sub-* dedicada).
+        Funciona tanto para contas exclusivas quanto compartilhadas — se existe
+        um BUY persistente neste profile que explica o excesso, é seguro readotar.
         """
-        if not subaccount and not exclusive:
-            return False
 
         excess = real_balance - db_position
         if excess <= tolerance:
@@ -937,7 +935,7 @@ class PositionManagerMixin:
             ):
                 return 0
             excess = real_balance - db_position
-            if exclusive and self._adopt_untracked_exchange_excess(
+            if self._adopt_untracked_exchange_excess(
                 excess=excess,
                 real_balance=real_balance,
                 db_position=db_position,
@@ -950,23 +948,15 @@ class PositionManagerMixin:
                 return 0
             logger.warning(
                 "⚠️ [reconcile] Exchange tem mais %s do que o DB conhece (%s/%s): "
-                "DB=%.8f | Exchange=%.8f | excesso=%.8f — %s",
+                "DB=%.8f | Exchange=%.8f | excesso=%.8f — adoção automática falhou",
                 base_currency, self.symbol, profile, db_position, real_balance, excess,
-                "adotar falhou" if exclusive else "conta compartilhada, sem ação automática",
             )
             _send_telegram_alert(
                 f"⚠️ *Reconciliação* `{self.symbol}`/`{profile}`\n"
                 f"Exchange tem *mais* {base_currency} do que o DB sabe:\n"
                 f"DB: `{db_position:.8f}` | Exchange: `{real_balance:.8f}` | "
                 f"excesso: `{excess:.8f}`\n"
-                + (
-                    "Adoção automática falhou — verificar logs."
-                    if exclusive
-                    else (
-                        "Sem ação automática (risco de atribuir saldo de outro "
-                        "profile na mesma subconta) — verificar manualmente."
-                    )
-                )
+                "Adoção automática falhou — verificar logs."
             )
             return 0
 

@@ -804,22 +804,24 @@ class TestReconcilePositionWithExchange:
         assert len(agent.state.entries) == 2
         mock_alert.assert_not_called()
 
-    def test_exchange_greater_than_db_alerts_and_does_not_mutate_entries(self):
-        """Conta compartilhada: exchange com MAIS moeda só alerta."""
+    def test_exchange_greater_than_db_adopted_via_new_lot(self):
+        """Conta compartilhada: exchange com MAIS moeda adota excesso automaticamente."""
         entries = [_entry(90_000, 0.001)]
         agent = _make_agent(entries=entries, dry_run=False)
+        agent.db.get_reconciliable_open_buys.return_value = []
+        agent.db.record_trade.return_value = 42
         with (
             patch.object(kucoin_api, "get_balance", return_value=0.010),
             patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
         ):
-            result = agent._reconcile_position_with_exchange()
+            result = agent._reconcile_position_with_exchange(current_price=90_000.0)
         assert result == 0
-        assert len(agent.state.entries) == 1  # nada mudou no state
+        assert len(agent.state.entries) == 2  # entry original + lote reconciliado
+        assert agent.state.entries[-1]["size"] == pytest.approx(0.009)
+        assert agent.state.position == pytest.approx(0.010)
+        agent.db.record_trade.assert_called_once()
         mock_alert.assert_called_once()
-        message = mock_alert.call_args.args[0]
-        assert "mais" in message.lower()
-        assert "BTC" in message
-        assert "Sem ação automática" in message
+        assert "efetiva" in mock_alert.call_args.args[0].lower()
 
     def test_exclusive_balance_applies_excess_to_latest_open_buy(self):
         """ETH-USDT/aggressive: subconta dedicada adota o excesso no lote."""
@@ -935,21 +937,26 @@ class TestReconcilePositionWithExchange:
         )
         mock_alert.assert_not_called()
 
-    def test_exchange_excess_without_subaccount_never_adopts_persistent_buy(self):
+    def test_exchange_excess_without_subaccount_adopts_via_new_lot(self):
+        """Conta compartilhada sem subconta: adopt excesso via new_lot (sem persistent buy)."""
         entries = [_entry(90_000, 0.001)]
         agent = _make_agent(entries=entries, dry_run=False, live_cfg={})
+        agent.db.get_reconciliable_open_buys.return_value = []
+        agent.db.record_trade.return_value = 55
 
         with (
             patch.object(kucoin_api, "get_balance", return_value=0.002),
             patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
         ):
-            result = agent._reconcile_position_with_exchange()
+            result = agent._reconcile_position_with_exchange(current_price=90_000.0)
 
         assert result == 0
-        assert len(agent.state.entries) == 1
-        agent.db.get_reconciliable_open_buys.assert_not_called()
-        agent.db.mark_open_buy_restored.assert_not_called()
+        assert len(agent.state.entries) == 2
+        assert agent.state.entries[-1]["size"] == pytest.approx(0.001)
+        agent.db.get_reconciliable_open_buys.assert_called_once()
+        agent.db.record_trade.assert_called_once()
         mock_alert.assert_called_once()
+        assert "efetiva" in mock_alert.call_args.args[0].lower()
 
     def test_exchange_excess_with_multiple_candidates_adopts_exclusive_lot(self):
         entries = [_entry(90_000, 0.001)]
