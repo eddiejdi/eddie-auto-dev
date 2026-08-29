@@ -730,8 +730,16 @@ class PositionManagerMixin:
         subaccount: str,
         base_currency: str,
         tolerance: float,
+        exclusive: bool = True,
     ) -> bool:
-        """Incorpora excesso exclusivo no state e no DB (lote ou fill)."""
+        """Incorpora excesso exclusivo no state e no DB (lote ou fill).
+
+        Em contas compartilhadas (exclusive=False), o excesso pode pertencer
+        a outro profile — não adota automaticamente.
+        """
+        if not exclusive:
+            return False
+
         dust = self._min_tradeable_dust()
         if excess <= max(dust, 0.0):
             return False
@@ -944,6 +952,7 @@ class PositionManagerMixin:
                 subaccount=subaccount,
                 base_currency=base_currency,
                 tolerance=tolerance,
+                exclusive=exclusive,
             ):
                 return 0
             logger.warning(
@@ -962,6 +971,18 @@ class PositionManagerMixin:
 
         if real_balance >= db_position - tolerance:
             return 0  # consistente, nada a fazer
+
+        # Em conta compartilhada, get_balance() retorna o saldo TOTAL de todos
+        # os profiles. Se real_balance < db_position, NÃO é fantasma — é saldo
+        # de outro profile que está sendo contabilizado junto. Só fecha slots
+        # se tiver exclusividade sobre a conta.
+        if not exclusive:
+            logger.info(
+                "ℹ️ [reconcile] Conta compartilhada: Exchange=%.8f %s < DB=%.8f %s, "
+                "mas saldo inclui outros profiles — sem fechamento de slots",
+                real_balance, base_currency, db_position, base_currency,
+            )
+            return 0
 
         logger.warning(
             "⚠️ [reconcile] Divergência detectada (pré-lock): DB=%.8f %s | Exchange=%.8f %s | "

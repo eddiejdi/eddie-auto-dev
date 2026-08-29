@@ -805,9 +805,12 @@ class TestReconcilePositionWithExchange:
         mock_alert.assert_not_called()
 
     def test_exchange_greater_than_db_adopted_via_new_lot(self):
-        """Conta compartilhada: exchange com MAIS moeda adota excesso automaticamente."""
+        """Conta exclusiva: exchange com MAIS moeda adota excesso automaticamente."""
         entries = [_entry(90_000, 0.001)]
-        agent = _make_agent(entries=entries, dry_run=False)
+        agent = _make_agent(
+            entries=entries, dry_run=False,
+            live_cfg={"kucoin_require_dedicated_credentials": True},
+        )
         agent.db.get_reconciliable_open_buys.return_value = []
         agent.db.record_trade.return_value = 42
         with (
@@ -938,9 +941,12 @@ class TestReconcilePositionWithExchange:
         mock_alert.assert_not_called()
 
     def test_exchange_excess_without_subaccount_adopts_via_new_lot(self):
-        """Conta compartilhada sem subconta: adopt excesso via new_lot (sem persistent buy)."""
+        """Conta exclusiva sem subconta: adopt excesso via new_lot (sem persistent buy)."""
         entries = [_entry(90_000, 0.001)]
-        agent = _make_agent(entries=entries, dry_run=False, live_cfg={})
+        agent = _make_agent(
+            entries=entries, dry_run=False,
+            live_cfg={"kucoin_require_dedicated_credentials": True},
+        )
         agent.db.get_reconciliable_open_buys.return_value = []
         agent.db.record_trade.return_value = 55
 
@@ -1078,7 +1084,10 @@ class TestReconcilePositionWithExchange:
             _entry(88_000, 0.001),  # mais antigo — deve sobreviver
             _entry(90_000, 0.001),  # mais recente — deve ser fechado
         ]
-        agent = _make_agent(entries=entries, dry_run=False)
+        agent = _make_agent(
+            entries=entries, dry_run=False,
+            live_cfg={"kucoin_require_dedicated_credentials": True},
+        )
         with (
             patch.object(kucoin_api, "get_balance", return_value=0.001),
             patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
@@ -1099,7 +1108,10 @@ class TestReconcilePositionWithExchange:
         está tudo consistente e não fecha nada."""
         entry_a = _entry(88_000, 0.001)
         entry_b = _entry(90_000, 0.001)
-        agent = _make_agent(entries=[entry_a, entry_b], dry_run=False)
+        agent = _make_agent(
+            entries=[entry_a, entry_b], dry_run=False,
+            live_cfg={"kucoin_require_dedicated_credentials": True},
+        )
         # real_balance fixo em 0.001: no snapshot pré-lock (2 entries =
         # 0.002 db_position) isso pareceria phantom=0.001 (1 entry sobra).
         # Mas um "trade concorrente" remove entry_b antes do lock ser
@@ -1121,4 +1133,89 @@ class TestReconcilePositionWithExchange:
         assert result == 0, "TOCTOU: fechou um slot usando phantom_btc obsoleto (pré-lock)"
         assert len(agent.state.entries) == 1
         assert agent.state.entries[0] is entry_a
+        mock_alert.assert_not_called()
+
+
+class TestSharedAccountGuards:
+    """Tests for shared account (exclusive=False) guards in reconciliation."""
+
+    def test_shared_account_no_phantom_closure_when_exchange_less_than_db(self):
+        """Conta compartilhada: get_balance() retorna saldo TOTAL (todos profiles).
+        Se real_balance < db_position, NÃO é fantasma — é saldo de outro profile.
+        Não deve fechar slots."""
+        entries = [_entry(90_000, 0.001), _entry(88_000, 0.001)]
+        agent = _make_agent(
+            entries=entries,
+            dry_run=False,
+            live_cfg={"kucoin_require_dedicated_credentials": False},
+        )
+        # Exchange tem 0.001 (total de todos profiles), DB tem 0.002 (este profile)
+        # Em conta exclusiva seria fantasma; em compartilhada, NÃO.
+        with (
+            patch.object(kucoin_api, "get_balance", return_value=0.001),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange(current_price=90_000.0)
+
+        assert result == 0, "Shared account fechou slots indevidamente"
+        assert len(agent.state.entries) == 2, "Entries não devem ser alterados"
+        mock_alert.assert_not_called()
+
+    def test_shared_account_no_excess_adoption(self):
+        """Conta compartilhada: exchange tem mais que DB, mas excesso pode
+        pertencer a outro profile. Não deve adotar automaticamente."""
+        entries = [_entry(90_000, 0.001)]
+        agent = _make_agent(
+            entries=entries,
+            dry_run=False,
+            live_cfg={"kucoin_require_dedicated_credentials": False},
+        )
+        # Exchange tem 0.002 (total), DB tem 0.001 (este profile)
+        # Em conta exclusiva adotaria; em compartilhada, NÃO.
+        with (
+            patch.object(kucoin_api, "get_balance", return_value=0.002),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange(current_price=90_000.0)
+
+        assert result == 0
+        assert len(agent.state.entries) == 1
+        assert agent.state.entries[0]["size"] == 0.001, "Size não deve mudar"
+        mock_alert.assert_called_once()
+
+    def test_exclusive_account_still_closes_phantoms(self):
+        """Conta exclusiva (kucoin_require_dedicated_credentials=True)
+        continua fechando fantasmas normalmente."""
+        entries = [_entry(90_000, 0.001), _entry(88_000, 0.001)]
+        agent = _make_agent(
+            entries=entries,
+            dry_run=False,
+            live_cfg={"kucoin_require_dedicated_credentials": True},
+        )
+        with (
+            patch.object(kucoin_api, "get_balance", return_value=0.001),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange(current_price=90_000.0)
+
+        assert result == 1, "Conta exclusiva deveria ter fechado 1 slot fantasma"
+        assert len(agent.state.entries) == 1
+        mock_alert.assert_not_called()
+
+    def test_shared_account_consistent_balance_returns_zero(self):
+        """Conta compartilhada com saldo consistente retorna 0."""
+        entries = [_entry(90_000, 0.001)]
+        agent = _make_agent(
+            entries=entries,
+            dry_run=False,
+            live_cfg={"kucoin_require_dedicated_credentials": False},
+        )
+        with (
+            patch.object(kucoin_api, "get_balance", return_value=0.001),
+            patch.object(position_manager_mixin, "_send_telegram_alert") as mock_alert,
+        ):
+            result = agent._reconcile_position_with_exchange(current_price=90_000.0)
+
+        assert result == 0
+        assert len(agent.state.entries) == 1
         mock_alert.assert_not_called()
