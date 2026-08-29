@@ -538,6 +538,67 @@ class BitcoinTradingAgent(
         self.state.last_trade_block_context = cleaned
         return False
 
+    def _close_phantom_slot(self, dust_size: float, price: float) -> None:
+        """Remove um slot fantasma do state quando o tamanho é menor que o mínimo
+        tradeable da exchange. Não grava sell sintético no DB.
+
+        Chamado quando _calculate_trade_size retorna um size < dust threshold,
+        indicando que a posição rastreada é um resíduo de reconciliação anterior
+        e não pode ser vendido na exchange.
+        """
+        entries = list(getattr(self.state, "entries", []) or [])
+        if not entries:
+            self.state.position = 0.0
+            self.state.entry_price = 0.0
+            self._sync_position_tracking()
+            return
+
+        closed = 0
+        for idx in range(len(entries) - 1, -1, -1):
+            entry = entries[idx]
+            entry_size = float(entry.get("size", 0) or 0)
+            if entry_size <= 0:
+                continue
+            entry_price = float(entry.get("price", 0) or 0)
+            buy_trade_id = entry.get("trade_id")
+            if buy_trade_id:
+                try:
+                    self.db.merge_trade_metadata(
+                        int(buy_trade_id),
+                        {
+                            "closed_reason": "dust_below_minsize",
+                            "phantom_close_price": round(price, 2),
+                            "phantom_real_balance": round(dust_size, 8),
+                        },
+                    )
+                except Exception as exc:
+                    logger.warning("[phantom] merge metadata failed: %s", exc)
+            logger.info(
+                "🔧 [phantom] Slot #%d closed (dust %.8f < min): buy#%s @ $%.2f",
+                idx + 1, dust_size, buy_trade_id, entry_price,
+            )
+            entries.pop(idx)
+            closed += 1
+            break  # close one slot at a time
+
+        self.state.entries = entries
+        if entries:
+            total_sz = sum(float(e.get("size", 0) or 0) for e in entries)
+            total_ct = sum(
+                float(e.get("size", 0) or 0) * float(e.get("price", 0) or 0)
+                for e in entries
+            )
+            self.state.position = total_sz
+            self.state.entry_price = total_ct / total_sz if total_sz > 0 else 0.0
+        else:
+            self.state.position = 0.0
+            self.state.entry_price = 0.0
+            self.state.entries = []
+            self.state.target_sell_price = 0.0
+            self.state.target_sell_reason = ""
+            self.state.trailing_high = 0.0
+        self._sync_position_tracking()
+
     def _annotate_blocked_decision(self, decision_id: int, signal: Signal) -> None:
         """Persiste o motivo de bloqueio em decisions.features para auditoria."""
         reason = getattr(self.state, "last_trade_block_reason", "") or "not_executed"
@@ -5249,6 +5310,16 @@ class BitcoinTradingAgent(
             size = self.state.position
             if size <= 0:
                 self._block_trade("sell_no_position")
+                return 0
+
+            dust = self._min_tradeable_dust()
+            if size < dust:
+                logger.info(
+                    "💤 SELL blocked: size %.8f below dust threshold %.8f — "
+                    "closing phantom slot instead",
+                    size, dust,
+                )
+                self._close_phantom_slot(size, price)
                 return 0
 
             guardrail_sell = self._get_guardrail_sell_verdict(price)
