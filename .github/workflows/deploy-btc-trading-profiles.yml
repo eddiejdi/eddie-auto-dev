@@ -72,6 +72,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Ensure homelab-btc-trading checkout
+        run: |
+          chmod +x scripts/ensure_btc_trading_checkout.sh
+          ENSURE_BTC_PULL=1 scripts/ensure_btc_trading_checkout.sh
+
       - name: Sync btc_trading_agent configs → patches (fonte canônica)
         run: |
           cp btc_trading_agent/config_BTC_USDT_conservative.json patches/config_BTC_USDT_conservative_optimized.json

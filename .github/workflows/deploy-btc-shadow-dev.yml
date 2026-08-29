@@ -35,6 +35,11 @@ jobs:
       - name: Checkout dev branch
         uses: actions/checkout@v4
 
+      - name: Ensure homelab-btc-trading checkout
+        run: |
+          chmod +x scripts/ensure_btc_trading_checkout.sh
+          ENSURE_BTC_PULL=1 scripts/ensure_btc_trading_checkout.sh
+
       - name: Compilar módulos do agente
         run: |
           python3 -m py_compile \
