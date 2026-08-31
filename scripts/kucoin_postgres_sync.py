@@ -221,12 +221,13 @@ def _snapshot_balances(conn) -> int:
 
     with conn.cursor() as cur:
         for account_type in ("trade", "main", "mining_user"):
+            api_account_type = "mining" if account_type == "mining_user" else account_type
             try:
-                balances = get_balances(account_type=account_type)
+                balances = get_balances(account_type=api_account_type)
             except Exception as exc:
-                logging.getLogger(__name__).warning(
-                    "Snapshot %s skipped: %s", account_type, exc
-                )
+                if account_type != "mining_user":
+                    raise
+                LOG.warning("Snapshot %s skipped: %s", account_type, exc, exc_info=True)
                 continue
             for balance in balances:
                 if balance.get("balance", 0) <= 0 and balance.get("available", 0) <= 0:
