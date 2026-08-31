@@ -771,11 +771,13 @@ class TestBRLFallback:
         mock_conn.cursor.return_value = mock_cur
 
         def balances_side_effect(*, account_type: str):
-            if account_type == failing_account:
-                raise RuntimeError(f"{account_type} unavailable")
             if account_type == "trade":
+                if failing_account == "trade":
+                    raise RuntimeError("trade unavailable")
                 return [{"currency": "USDT", "balance": 10.0, "available": 10.0, "holds": 0.0}]
             if account_type == "main":
+                if failing_account == "main":
+                    raise RuntimeError("main unavailable")
                 return []
             if account_type == "mining":
                 return []
