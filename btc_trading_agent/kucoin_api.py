@@ -932,12 +932,18 @@ def get_sub_account_balances() -> List[Dict[str, Any]]:
 
 
 def get_balance(currency: str = "USDT") -> float:
-    """Obtém saldo específico da conta TRADE."""
-    balances = get_balances(account_type="trade")
-    for b in balances:
-        if b["currency"] == currency:
-            return b["available"]
-    return 0.0
+    """Obtém saldo disponível de uma moeda (MAIN + TRADE).
+
+    Antes só lia da conta TRADE; agora soma MAIN+TRADE para evitar
+    falsos zeros quando o saldo está na conta MAIN (ex: SOL-USDT na
+    master kucoin/homelab sem subconta dedicada).
+    """
+    total = 0.0
+    for account_type in ("trade", "main"):
+        for b in get_balances(account_type=account_type):
+            if b["currency"] == currency:
+                total += b["available"]
+    return total
 
 
 def get_total_balance(currency: str = "USDT") -> float:

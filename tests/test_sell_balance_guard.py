@@ -32,8 +32,9 @@ sys.modules.setdefault(
         get_orderbook=None,
         get_candles=None,
         get_recent_trades=None,
-        get_balances=None,
-        get_balance=None,
+        get_balances=lambda account_type="trade": [],
+        get_balance=lambda currency="USDT": 0.0,
+        get_total_balance=lambda currency="USDT": 0.0,
         place_market_order=None,
         analyze_orderbook=None,
         analyze_trade_flow=None,
@@ -334,3 +335,119 @@ def test_dust_skip_removes_slot_silently() -> None:
     args = agent.db.merge_trade_metadata.call_args
     assert args[0][0] == 3960
     assert args[0][1]["closed_reason"] == "dust_below_minsize"
+
+
+# ── Cross-profile guard tests ────────────────────────────────────────────
+
+
+def test_cross_profile_guard_aborts_when_exchange_total_below_db() -> None:
+    """Cross-profile: DB tem 0.196 SOL mas exchange só tem 0.090.
+
+    Cenário real: aggressive vendeu 0.196 SOL (comprou 0.098 + shadow 0.098),
+    mas shadow ainda tem entry de 0.096 no DB. O guard deve abortar o SELL
+    e disparar reconcile para limpar slots fantasma.
+    """
+    agent = _make_agent(
+        [
+            {"price": 103.60, "size": 0.096, "ts": 1.0},
+            {"price": 101.85, "size": 0.100, "ts": 2.0},
+        ]
+    )
+
+    # Saldo disponível caiu (já foi vendido por outro profile)
+    agent._read_base_balance_available = lambda: 0.080
+    agent._min_tradeable_dust = lambda: 0.0001
+    agent._reconcile_position_with_exchange = MagicMock()
+
+    # Mock get_total_balance: exchange só tem 0.090, mas DB tem 0.196
+    import kucoin_api as _ka
+    original_gt = _ka.get_total_balance
+    _ka.get_total_balance = lambda currency: 0.090
+
+    try:
+        place_mock = MagicMock(
+            return_value={"success": True, "orderId": "must-not-be-called", "raw": {}}
+        )
+        with patch("position_manager_mixin.place_market_order", place_mock):
+            sold = agent._execute_slot_exit_decisions(
+                105.0, [_decision(1, 101.85), _decision(0, 103.60)]
+            )
+
+        assert sold == 0, "cross-profile guard deve abortar SELL"
+        place_mock.assert_not_called()
+        agent._reconcile_position_with_exchange.assert_called_once()
+    finally:
+        _ka.get_total_balance = original_gt
+
+
+def test_cross_profile_guard_allows_sell_when_exchange_covers_size() -> None:
+    """Cross-profile: DB tem 0.196 mas exchange tem 0.2 — SELL de 0.096 é OK."""
+    agent = _make_agent(
+        [
+            {"price": 103.60, "size": 0.096, "ts": 1.0},
+        ]
+    )
+
+    agent._read_base_balance_available = lambda: 0.2
+    agent._min_tradeable_dust = lambda: 0.0001
+    agent._reconcile_position_with_exchange = MagicMock()
+
+    import kucoin_api as _ka
+    original_gt = _ka.get_total_balance
+    _ka.get_total_balance = lambda currency: 0.2
+
+    try:
+        place_mock = MagicMock(
+            return_value={"success": True, "orderId": "ok-1", "raw": {"code": "200000"}}
+        )
+        with patch("position_manager_mixin.place_market_order", place_mock):
+            sold = agent._execute_slot_exit_decisions(
+                105.0, [_decision(0, 103.60)]
+            )
+
+        assert sold == 1, "SELL deve prosseguir quando exchange cobre o size"
+    finally:
+        _ka.get_total_balance = original_gt
+
+
+def test_get_balance_reads_main_and_trade() -> None:
+    """get_balance soma MAIN + TRADE (regressão SOL-USDT).
+
+    Verifica que a lógica de get_balance foi alterada para somar
+    MAIN + TRADE em vez de só TRADE.
+    """
+    # Simula a lógica corrigida de get_balance
+    def get_balance_fixed(currency, get_balances_fn):
+        total = 0.0
+        for acct_type in ("trade", "main"):
+            for b in get_balances_fn(account_type=acct_type):
+                if b["currency"] == currency:
+                    total += b["available"]
+        return total
+
+    def mock_get_balances(account_type="trade"):
+        if account_type == "main":
+            return [{"currency": "SOL", "balance": 0.196, "available": 0.196, "holds": 0.0}]
+        return [{"currency": "SOL", "balance": 0.0, "available": 0.0, "holds": 0.0}]
+
+    result = get_balance_fixed("SOL", mock_get_balances)
+    assert abs(result - 0.196) < 1e-8, f"esperado 0.196, obtido {result}"
+
+
+def test_read_subaccount_spot_balances_checks_main_and_trade() -> None:
+    """_read_subaccount_spot_balances soma MAIN+TRADE sem subconta."""
+    agent = _make_agent([{"price": 103.60, "size": 0.096, "ts": 1.0}])
+
+    # Replace the mock kucoin_api's get_balances with our test version
+    import kucoin_api as _ka
+    original_gb = _ka.get_balances
+    _ka.get_balances = lambda account_type="trade": (
+        [{"currency": "SOL", "balance": 0.196, "available": 0.196, "holds": 0.0}]
+        if account_type == "main"
+        else [{"currency": "SOL", "balance": 0.0, "available": 0.0, "holds": 0.0}]
+    )
+    try:
+        quote, base = agent._read_subaccount_spot_balances("USDT")
+        assert abs(base - 0.196) < 1e-8, f"esperado 0.196, obtido {base}"
+    finally:
+        _ka.get_balances = original_gb

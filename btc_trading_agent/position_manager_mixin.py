@@ -123,9 +123,19 @@ class PositionManagerMixin:
             )
             return _from_trade_accounts()
 
-        from kucoin_api import get_balance
+        from kucoin_api import get_balances
 
-        return float(get_balance(quote_cur) or 0.0), float(get_balance(base_cur) or 0.0)
+        # Conta compartilhada (sem subconta): lê de MAIN + TRADE para
+        # evitar falsos negativos quando o saldo está na conta MAIN.
+        by_ccy: dict[str, float] = {}
+        for acct_type in ("trade", "main"):
+            try:
+                for row in get_balances(account_type=acct_type):
+                    ccy = str(row.get("currency") or "")
+                    by_ccy[ccy] = by_ccy.get(ccy, 0.0) + float(row.get("available", 0) or 0)
+            except Exception:
+                pass
+        return by_ccy.get(quote_cur, 0.0), by_ccy.get(base_cur, 0.0)
 
     def _align_position_to_exchange(self, price: float = 0.0) -> None:
         """Copia o saldo base da subconta para ``state.position`` sem flatten.
@@ -418,6 +428,41 @@ class PositionManagerMixin:
                                 time.time() + _BALANCE_INSUFFICIENT_COOLDOWN_S
                             )
                             return False
+
+                        # ── Cross-profile guard: quando conta compartilhada,
+                        # saldo total na exchange pode ser menor que a posição
+                        # registrada no DB (outro profile já vendeu este SOL).
+                        # Compara saldo TOTAL (MAIN+TRADE) com a posição DB
+                        # para detectar slots fantasma antes de enviar à exchange.
+                        db_pos = sum(
+                            float(e.get("size", 0) or 0)
+                            for e in (getattr(self.state, "entries", None) or [])
+                        )
+                        if db_pos > available + tolerance:
+                            # Confirma com saldo total (MAIN+TRADE)
+                            try:
+                                from kucoin_api import get_total_balance
+                                total_available = get_total_balance(base_cur)
+                            except Exception:
+                                total_available = available
+                            if db_pos > total_available + tolerance and size > total_available + tolerance:
+                                base_cur = str(self.symbol).split("-")[0]
+                                logger.warning(
+                                    "⚠️ SELL slot #%d abortado (cross-profile): "
+                                    "DB=%.8f > exchange total=%.8f %s — "
+                                    "reconcile síncrono + cooldown.",
+                                    entry_idx + 1, db_pos, total_available, base_cur,
+                                )
+                                try:
+                                    self._reconcile_position_with_exchange(price)
+                                except Exception as exc:
+                                    logger.debug(
+                                        "reconcile cross-profile falhou: %s", exc,
+                                    )
+                                self._sell_balance_cooldown_until = (
+                                    time.time() + _BALANCE_INSUFFICIENT_COOLDOWN_S
+                                )
+                                return False
 
                 gross_pnl = (price - entry_price) * size
                 sell_fee = price * size * fee_pct
