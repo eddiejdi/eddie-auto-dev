@@ -220,8 +220,14 @@ def _snapshot_balances(conn) -> int:
         return _price_cache[currency]
 
     with conn.cursor() as cur:
-        for account_type in ("trade", "main"):
-            balances = get_balances(account_type=account_type)
+        for account_type in ("trade", "main", "mining_user"):
+            try:
+                balances = get_balances(account_type=account_type)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Snapshot %s skipped: %s", account_type, exc
+                )
+                continue
             for balance in balances:
                 if balance.get("balance", 0) <= 0 and balance.get("available", 0) <= 0:
                     continue
