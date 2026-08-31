@@ -220,8 +220,14 @@ def _snapshot_balances(conn) -> int:
         return _price_cache[currency]
 
     with conn.cursor() as cur:
-        for account_type in ("trade", "main"):
-            balances = get_balances(account_type=account_type)
+        for account_type in ("trade", "main", "mining_user"):
+            try:
+                balances = get_balances(account_type=account_type)
+            except Exception as exc:
+                logging.getLogger(__name__).warning(
+                    "Snapshot %s skipped: %s", account_type, exc
+                )
+                continue
             for balance in balances:
                 if balance.get("balance", 0) <= 0 and balance.get("available", 0) <= 0:
                     continue
@@ -484,7 +490,7 @@ def _refresh_sell_pnl(cur, trade_id: int, *, force: bool = False) -> bool:
     """Calcula e persiste PnL líquido (FIFO + fees) para um SELL sem pnl."""
     cur.execute(
         f"""
-        SELECT id, symbol, profile, side, price, size, timestamp, pnl, metadata
+        SELECT id, symbol, profile, side, price, size, funds, timestamp, pnl, pnl_pct, metadata
         FROM {SCHEMA}.trades
         WHERE id = %s
         """,
@@ -497,7 +503,16 @@ def _refresh_sell_pnl(cur, trade_id: int, *, force: bool = False) -> bool:
     side = str(trade.get("side") or "").lower()
     if side not in SELL_SIDES:
         return False
-    if trade.get("pnl") is not None and not force:
+    existing_pnl = trade.get("pnl")
+    existing_pct = _safe_float(trade.get("pnl_pct"))
+    funds = _safe_float(trade.get("funds"))
+    looks_like_proceeds = (
+        existing_pnl is not None
+        and funds > 0
+        and abs(existing_pct) < 1e-9
+        and abs(float(existing_pnl) - (funds - funds * TRADING_FEE_PCT)) < max(0.05, funds * 0.002)
+    )
+    if existing_pnl is not None and not force and not looks_like_proceeds:
         return False
 
     symbol = str(trade.get("symbol") or "BTC-USDT")
@@ -525,6 +540,30 @@ def _refresh_sell_pnl(cur, trade_id: int, *, force: bool = False) -> bool:
         sell_id=int(trade["id"]),
     )
     fifo = _fifo_cost_for_sell(trades_before, sell_size)
+    fifo_scope = "profile"
+    if fifo is None:
+        # Conta compartilhada: BUY no shadow e SELL no aggressive (ou o
+        # inverso) esgotam o FIFO do profile e deixam pnl≈funds / pct=0.
+        # Só para contabilidade — não altera ordens live.
+        cur.execute(
+            f"""
+            SELECT id, side, price, size, timestamp, metadata
+            FROM {SCHEMA}.trades
+            WHERE symbol = %s
+              AND dry_run = FALSE
+              AND side IN ('buy', 'sell', 'sell_reconciled')
+              AND (timestamp < %s OR (timestamp = %s AND id < %s))
+            ORDER BY timestamp ASC, id ASC
+            """,
+            (
+                symbol,
+                _safe_float(trade.get("timestamp")),
+                _safe_float(trade.get("timestamp")),
+                int(trade["id"]),
+            ),
+        )
+        fifo = _fifo_cost_for_sell([dict(r) for r in cur.fetchall()], sell_size)
+        fifo_scope = "symbol"
     if fifo is None:
         return False
 
@@ -548,6 +587,7 @@ def _refresh_sell_pnl(cur, trade_id: int, *, force: bool = False) -> bool:
     merged_metadata = {
         **metadata,
         "pnl_source": "kucoin_sync_fifo_net",
+        "pnl_fifo_scope": fifo_scope,
         "pnl_avg_entry": round(avg_entry, 8),
         "pnl_sell_fee_usdt": round(sell_fee_usdt, 8),
         "pnl_buy_fee_usdt": round(buy_fee_usdt, 8),

@@ -295,6 +295,52 @@ def test_gpu0_recusa_modelo_grande_com_trading_residente(monkeypatch):
     assert picked in (gpu1, nas)
 
 
+def test_trading_spill_3060_busy_to_1050_when_model_fits():
+    """3060 ocupada + NAS down: se o trading cabe na 1050, spill."""
+    gpu0 = _make_healthy(
+        _endpoint("gpu0-rtx3060", vram=12288, priority=0),
+        available={"trading-analyst:latest"},
+        loaded={"trading-analyst:latest": 6500.0},
+    )
+    gpu0._active = 3
+    gpu1 = _make_healthy(
+        _endpoint("gpu1-gtx1050", vram=2048, priority=2),
+        available={"trading-analyst:latest"},
+        loaded={"trading-analyst:latest": 900.0},
+    )
+    gpu1._active = 0
+    nas = _make_healthy(
+        _endpoint("nas-rtx2060", vram=8192, priority=1),
+        available={"trading-analyst:latest"},
+        loaded={"trading-analyst:latest": 6500.0},
+    )
+    nas._healthy = False
+    cluster = coord.GPUCluster([gpu0, gpu1, nas])
+    assert cluster.pick("trading-analyst") is gpu1
+
+
+def test_trading_keeps_3060_when_1050_cannot_fit():
+    """3060 ocupada mas 1050 sem VRAM: não força spill (NAS é o fallback)."""
+    gpu0 = _make_healthy(
+        _endpoint("gpu0-rtx3060", vram=12288, priority=0),
+        available={"trading-analyst:latest"},
+        loaded={"trading-analyst:latest": 6500.0},
+    )
+    gpu0._active = 3
+    gpu1 = _make_healthy(
+        _endpoint("gpu1-gtx1050", vram=2048, priority=2),
+        available={"trading-analyst:latest"},
+        loaded={},
+    )
+    nas = _make_healthy(
+        _endpoint("nas-rtx2060", vram=8192, priority=1),
+        available={"phi4-mini:latest"},
+    )
+    nas._healthy = False
+    cluster = coord.GPUCluster([gpu0, gpu1, nas])
+    assert cluster.pick("trading-analyst") is gpu0
+
+
 def test_gpu0_recusa_auxiliar_sem_headroom(monkeypatch):
     """Livre insuficiente para modelo + headroom → não usa a 3060."""
     monkeypatch.setattr(coord, "TRADING_RESERVE_GPU0", True)

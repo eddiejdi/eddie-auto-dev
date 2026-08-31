@@ -15,6 +15,7 @@ import hashlib
 import signal
 import logging
 import argparse
+import contextlib
 import threading
 import statistics
 import tempfile
@@ -41,6 +42,7 @@ try:
     from kucoin_api import (
         place_stop_loss_order, place_take_profit_order,
         cancel_stop_order, cancel_all_stop_orders, get_stop_orders,
+        _send_telegram_alert,
     )
     HAS_STOP_ORDERS = True
 except ImportError:
@@ -1473,6 +1475,12 @@ class BitcoinTradingAgent(
             self._restore_position()
         except Exception as e:
             logger.error(f"❌ Bootstrap - restore position failed: {e}")
+        # 2b. Sincronizar stop-orders server-side na exchange (SL/trailing)
+        if not self.state.dry_run:
+            try:
+                self._sync_exchange_stop_orders_on_boot()
+            except Exception as e:
+                logger.error(f"❌ Bootstrap - stop-order sync failed: {e}")
         # 3. Detectar depósitos externos (saldo exchange > posição DB)
         if not self.state.dry_run:
             try:
@@ -1791,8 +1799,8 @@ class BitcoinTradingAgent(
     _OLLAMA_PLAN_FALLBACK_MODEL = os.getenv("OLLAMA_PLAN_FALLBACK_MODEL", "").strip()
     _OLLAMA_TRADE_PARAMS_HOST = os.getenv("OLLAMA_TRADE_PARAMS_HOST", _OLLAMA_PLAN_HOST)
     _OLLAMA_TRADE_PARAMS_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_MODEL", _OLLAMA_PLAN_MODEL)
-    _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL", "gemma3:1b")
-    _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "gemma3:1b")
+    _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL", "trading-analyst")
+    _OLLAMA_TRADE_PARAMS_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_PARAMS_FALLBACK_MODEL", "trading-analyst")
     _OLLAMA_TRADE_PARAMS_MODE = os.getenv("OLLAMA_TRADE_PARAMS_MODE", "apply")
     _OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_PARAMS_MIN_INTERVAL_SEC", "300"))
     # gemma3-fast gera 64 tokens em ~1s mas pode esperar até 60s na fila do coordinator;
@@ -1802,7 +1810,7 @@ class BitcoinTradingAgent(
     _OLLAMA_TRADE_WINDOW_HOST = os.getenv("OLLAMA_TRADE_WINDOW_HOST", _OLLAMA_TRADE_PARAMS_HOST)
     _OLLAMA_TRADE_WINDOW_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_MODEL", _OLLAMA_TRADE_PARAMS_MODEL)
     _OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_CONSERVATIVE_MODEL", _OLLAMA_TRADE_PARAMS_CONSERVATIVE_MODEL)
-    _OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_MODEL", "gemma3:1b")
+    _OLLAMA_TRADE_WINDOW_FALLBACK_MODEL = os.getenv("OLLAMA_TRADE_WINDOW_FALLBACK_MODEL", "trading-analyst")
     _OLLAMA_TRADE_WINDOW_MODE = os.getenv("OLLAMA_TRADE_WINDOW_MODE", "apply")
     _OLLAMA_TRADE_WINDOW_MIN_INTERVAL_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_MIN_INTERVAL_SEC", "30"))
     _OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC = int(os.getenv("OLLAMA_TRADE_WINDOW_MIN_INTERVAL_AGGRESSIVE_SEC", "20"))
@@ -3947,16 +3955,22 @@ class BitcoinTradingAgent(
         except Exception as e:
             logger.warning(f"⚠️ Could not restore metrics: {e}")
 
-        # 5. Adiar target de venda até a primeira recalibração real do RAG
-        if self.state.position > 0 and self.state.entry_price > 0:
-            try:
-                self.state.target_sell_price = 0.0
-                self.state.target_sell_reason = ""
+        # Keep ledger slot TPs. Blanking target_sell_price here (ETH shadow 2026-08-21)
+        # left auto-TP as N/A until a RAG cycle that often never armed it.
+        if self.state.position > 0:
+            slot_targets = [
+                float(e.get("target_sell") or 0.0)
+                for e in list(getattr(self.state, "entries", []) or [])
+                if float(e.get("target_sell") or 0.0) > 0.0
+            ]
+            if slot_targets:
+                self.state.target_sell_price = min(slot_targets)
+                self.state.target_sell_reason = "restored_slot_targets"
                 logger.info(
-                    "⏳ Target SELL adiado até a primeira recalibração real da IA"
+                    "🎯 Target SELL restaurado dos slots: $%.2f (%d alvo(s))",
+                    self.state.target_sell_price,
+                    len(slot_targets),
                 )
-            except Exception as e:
-                logger.warning(f"⚠️ Could not restore target_sell_price: {e}")
 
     def _collect_historical_data(self):
         """Coleta candles históricos da KuCoin para popular indicadores.
@@ -5527,6 +5541,19 @@ class BitcoinTradingAgent(
                     size = self._calculate_trade_size(signal, price, force=force)
                     if size <= 0:
                         return False
+                    if float(getattr(self.state, "entry_price", 0) or 0) <= 0:
+                        logger.warning(
+                            "🛑 SELL abortado: position=%.8f sem cost basis "
+                            "(entry_price=0) — não enviar ordem nem Telegram "
+                            "com pnl_pct=0 / invested=0. Reconcile.",
+                            size,
+                        )
+                        self._block_trade("sell_no_cost_basis", size=size)
+                        try:
+                            self._reconcile_position_with_exchange(price)
+                        except Exception as exc:
+                            logger.debug("reconcile após sell_no_cost_basis: %s", exc)
+                        return False
                     order_id = None
                     trade_metadata = None
 
@@ -6054,76 +6081,236 @@ class BitcoinTradingAgent(
 
     # ── Exchange Stop-Loss / Take-Profit ──────────────────────────────────────
 
-    def _monitor_exchange_stop_orders(self):
-        """Monitora ordens stop na exchange e notifica quando disparam.
+    def _persist_stop_link(self, entry: dict, kind: str, order_id, price) -> None:
+        """Persiste o vínculo slot↔stop-order no metadata do trade do slot.
 
-        Verifica periodicamente se ordens stop-loss/take-profit foram executadas
-        e envia notificação Telegram quando isso acontece.
+        Sem isso um restart perde a referência e a ordem fica órfã na exchange.
+        """
+        trade_id = entry.get("trade_id")
+        if not trade_id or self.db is None:
+            return
+        try:
+            meta = (
+                {"exchange_sl_order_id": order_id, "exchange_sl_price": price}
+                if kind == "sl"
+                else {"exchange_tp_order_id": order_id, "exchange_tp_price": price}
+            )
+            self.db.merge_trade_metadata(int(trade_id), meta)
+        except Exception as e:
+            logger.debug(f"Stop-link persist error: {e}")
+
+    def _close_slot_for_exchange_stop(self, entry: dict, exit_price: float, reason: str):
+        """Fecha o slot no state/DB quando um stop dispara server-side.
+
+        Grava o SELL com slot_buy_trade_id (matcher do painel fecha correto),
+        PnL calculado e closed_reason rastreável.
+        """
+        size = float(entry.get("size", 0) or 0)
+        entry_price = float(entry.get("price", 0) or 0)
+        buy_trade_id = entry.get("trade_id")
+        sell_id = None
+        try:
+            profile = (
+                self._current_profile()
+                if callable(getattr(self, "_current_profile", None))
+                else getattr(self, "profile", "default")
+            )
+            sell_id = self.db.record_trade(
+                symbol=self.symbol, side="sell", price=float(exit_price),
+                size=size, funds=size * float(exit_price),
+                order_id=None, dry_run=False,
+                metadata={
+                    "slot_buy_trade_id": int(buy_trade_id) if buy_trade_id else None,
+                    "slot_entry_price": entry_price,
+                    "closed_reason": reason,
+                    "source": "kucoin_stop_order",
+                },
+                profile=profile,
+            )
+            if buy_trade_id:
+                meta = {"closed_reason": reason}
+                if sell_id:
+                    meta["slot_sell_trade_id"] = int(sell_id)
+                self.db.merge_trade_metadata(int(buy_trade_id), meta)
+                pnl = size * (float(exit_price) - entry_price)
+                pnl_pct = ((float(exit_price) / entry_price) - 1) * 100 if entry_price > 0 else 0
+                self.db.update_trade_pnl(
+                    int(sell_id), round(pnl, 4), round(pnl_pct, 2)
+                )
+        except Exception as e:
+            logger.warning(f"⚠️ Falha ao registrar SELL de stop-order no DB: {e}")
+        return sell_id
+
+    def _sync_exchange_stop_orders_on_boot(self):
+        """Reconcilia stop-orders server-side ao subir (sync when available).
+
+        - Posição fechada + stops ativas na exchange → órfãs: cancela e avisa.
+        - Posição aberta + stops ativas → re-adota nos slots por clientOid
+          (btc_sl_* → SL/trailing; btc_tp_* → TP), restaurando o vínculo
+          perdido pelo restart.
+        """
+        if self.state.dry_run or not HAS_STOP_ORDERS:
+            return
+
+        result = get_stop_orders(self.symbol, status="active")
+        if not result.get("success"):
+            return
+        active = result.get("orders") or []
+        if not active:
+            return
+
+        entries = list(getattr(self.state, "entries", []) or [])
+
+        if self.state.position <= 0 or not entries:
+            logger.warning(
+                f"🛑 {len(active)} stop-order(s) órfã(s) na exchange sem posição local — cancelando"
+            )
+            _send_telegram_alert(
+                f"⚠️ {self.symbol}: {len(active)} stop-order(s) órfã(s) "
+                f"(sem posição local) canceladas no boot."
+            )
+            cancel_all_stop_orders(self.symbol)
+            return
+
+        adopted = 0
+        for order in active:
+            client_oid = str(order.get("clientOid") or "")
+            order_id = order.get("orderId")
+            stop_price = float(order.get("stopPrice") or 0)
+            target = None
+            kind = None
+            if client_oid.startswith("btc_sl_"):
+                target, kind = entries[0], "sl"
+            elif client_oid.startswith("btc_tp_"):
+                target, kind = entries[-1], "tp"
+            if target is None:
+                continue
+            key_id = "exchange_stop_order_id" if kind == "sl" else "exchange_tp_order_id"
+            key_px = "exchange_stop_price" if kind == "sl" else "exchange_tp_price"
+            if not target.get(key_id):
+                target[key_id] = order_id
+                target[key_px] = stop_price
+                adopted += 1
+
+        logger.info(
+            f"🔗 Stop-order sync no boot: {len(active)} ativa(s) na exchange, "
+            f"{adopted} re-adotada(s) nos slots"
+        )
+        if adopted < len(active):
+            _send_telegram_alert(
+                f"ℹ️ {self.symbol}: {len(active) - adopted} stop-order(s) na exchange "
+                f"não puderam ser re-adotadas aos slots (ficam ativas; serão "
+                f"canceladas antes da próxima venda)."
+            )
+
+    def _monitor_exchange_stop_orders(self):
+        """Detecta stop-loss/take-profit executados server-side na KuCoin.
+
+        Ordem sumiu da lista ativa = executada (funciona mesmo com este
+        servidor offline). Ao detectar: grava o SELL no DB (par slot→sell),
+        cancela a ordem irmã restante (OCO), limpa o estado local e envia
+        alerta Telegram uma única vez.
         """
         if self.state.dry_run or not HAS_STOP_ORDERS:
             return
 
         try:
-            # Buscar ordens stop ativas
             result = get_stop_orders(self.symbol, status="active")
             if not result.get("success"):
                 return
+            active_ids = {
+                o.get("orderId") for o in (result.get("orders") or [])
+            }
 
-            active_orders = result.get("orders", [])
+            entries = list(getattr(self.state, "entries", []) or [])
+            if not entries:
+                return
+            changed = False
 
-            # Verificar se alguma ordem sumiu (foi executada)
-            for entry in list(getattr(self.state, "entries", [])):
-                sl_order_id = entry.get("exchange_stop_order_id")
+            # ── Stop-loss executada (cobre a posição inteira) ──
+            sl_entry = next(
+                (e for e in entries
+                 if e.get("exchange_stop_order_id")
+                 and e["exchange_stop_order_id"] not in active_ids),
+                None,
+            )
+            if sl_entry:
+                stop_price = float(sl_entry.get("exchange_stop_price", 0) or 0)
+                logger.info(
+                    f"🛑 Stop-loss executado na exchange: "
+                    f"Stop=${stop_price:,.2f} Entry=${sl_entry.get('price', 0):,.2f}"
+                )
+                _send_telegram_alert(
+                    f"🛑 STOP-LOSS EXECUTADO (server-side)!\n"
+                    f"Symbol: {self.symbol}\n"
+                    f"Preço stop: ${stop_price:,.2f}\n"
+                    f"Tamanho: {self.state.position:.6f}\n"
+                    f"Motivo: Preço caiu abaixo do stop"
+                )
+                # Fechar TODOS os slots no preço do stop (ordem cobria a posição)
+                for entry in entries:
+                    self._close_slot_for_exchange_stop(entry, stop_price, "exchange_stop_loss")
+                # Cancelar TPs restantes (OCO manual)
+                for entry in entries:
+                    tp_id = entry.get("exchange_tp_order_id")
+                    if tp_id:
+                        try:
+                            cancel_stop_order(order_id=tp_id)
+                        except Exception as e:
+                            logger.debug(f"Cancel TP pós-SL error: {e}")
+                entries = []
+                changed = True
+
+            # ── Take-profit executada (por slot) ──
+            for entry in list(entries):
                 tp_order_id = entry.get("exchange_tp_order_id")
+                if not tp_order_id or tp_order_id in active_ids:
+                    continue
+                tp_price = float(entry.get("exchange_tp_price", 0) or 0)
+                entry_price = float(entry.get("price", 0) or 0)
+                size = float(entry.get("size", 0) or 0)
+                pnl_pct = ((tp_price / entry_price) - 1) * 100 if entry_price > 0 else 0
+                logger.info(
+                    f"🎯 Take-profit executado na exchange: "
+                    f"Target=${tp_price:,.2f} Entry=${entry_price:,.2f} PnL=+{pnl_pct:.2f}%"
+                )
+                _send_telegram_alert(
+                    f"🎯 TAKE-PROFIT EXECUTADO (server-side)!\n"
+                    f"Symbol: {self.symbol}\n"
+                    f"Preço target: ${tp_price:,.2f}\n"
+                    f"Tamanho: {size:.6f}\n"
+                    f"Lucro: +{pnl_pct:.2f}%"
+                )
+                self._close_slot_for_exchange_stop(entry, tp_price, "exchange_take_profit")
+                entries.remove(entry)
+                changed = True
 
-                # Verificar stop-loss
-                if sl_order_id:
-                    order_found = any(
-                        o.get("orderId") == sl_order_id for o in active_orders
+            if not changed:
+                return
+
+            # Atualizar estado global a partir dos slots remanescentes
+            trade_lock = getattr(self, "_trade_lock", None)
+            lock_ctx = trade_lock if trade_lock is not None else contextlib.nullcontext()
+            with lock_ctx:
+                self.state.entries = entries
+                self.state.position = sum(float(e.get("size", 0) or 0) for e in entries)
+                if entries:
+                    total_cost = sum(
+                        float(e.get("size", 0) or 0) * float(e.get("price", 0) or 0)
+                        for e in entries
                     )
-                    if not order_found:
-                        # Ordem executada!
-                        entry_price = entry.get("price", 0)
-                        stop_price = entry.get("exchange_stop_price", 0)
-                        size = entry.get("size", 0)
-
-                        # Notificar
-                        _send_telegram_alert(
-                            f"🛑 STOP-LOSS EXECUTADO!\n"
-                            f"Symbol: {self.symbol}\n"
-                            f"Preço stop: ${stop_price:,.2f}\n"
-                            f"Preço entrada: ${entry_price:,.2f}\n"
-                            f"Tamanho: {size:.6f}\n"
-                            f"Motivo: Preço caiu abaixo do stop"
-                        )
-                        logger.info(
-                            f"🛑 Stop-loss executado na exchange: "
-                            f"Stop=${stop_price:,.2f} Entry=${entry_price:,.2f}"
-                        )
-
-                # Verificar take-profit
-                if tp_order_id:
-                    order_found = any(
-                        o.get("orderId") == tp_order_id for o in active_orders
+                    self.state.entry_price = (
+                        total_cost / self.state.position if self.state.position > 0 else 0
                     )
-                    if not order_found:
-                        entry_price = entry.get("price", 0)
-                        tp_price = entry.get("exchange_tp_price", 0)
-                        size = entry.get("size", 0)
-                        pnl_pct = ((tp_price / entry_price) - 1) * 100 if entry_price > 0 else 0
-
-                        _send_telegram_alert(
-                            f"🎯 TAKE-PROFIT EXECUTADO!\n"
-                            f"Symbol: {self.symbol}\n"
-                            f"Preço target: ${tp_price:,.2f}\n"
-                            f"Preço entrada: ${entry_price:,.2f}\n"
-                            f"Tamanho: {size:.6f}\n"
-                            f"Lucro: +{pnl_pct:.2f}%"
-                        )
-                        logger.info(
-                            f"🎯 Take-profit executado na exchange: "
-                            f"Target=${tp_price:,.2f} Entry=${entry_price:,.2f} PnL=+{pnl_pct:.2f}%"
-                        )
+                    last_price = float(getattr(self.state, "last_price", 0) or 0)
+                    if last_price > 0:
+                        self.state.position_value = self.state.position * last_price
+                else:
+                    self.state.entry_price = 0.0
+                    self.state.trailing_high = 0.0
+                    self.state.position_value = 0.0
+                if hasattr(self, "_sync_position_tracking"):
+                    self._sync_position_tracking()
 
         except Exception as e:
             logger.debug(f"Monitor stop-orders error: {e}")
@@ -6153,7 +6340,7 @@ class BitcoinTradingAgent(
 
         # Configurações
         sl_pct = auto_sl.get("pct", 0.03)  # Stop-loss máximo (3%)
-        min_profit激活 = auto_sl.get("min_profit_pct", 0.005)  # Lucro mínimo para ativar (0.5%)
+        min_profit_pct = auto_sl.get("min_profit_pct", 0.005)  # Lucro mínimo para ativar (0.5%)
 
         # Calcular lucro atual
         pnl_pct = (current_price / self.state.entry_price) - 1
@@ -6170,7 +6357,7 @@ class BitcoinTradingAgent(
         # ── Caso 1: Não tem stop-loss ainda ──
         if not current_stop_order_id:
             # Só coloca stop se houver lucro mínimo
-            if pnl_pct >= min_profit激活:
+            if pnl_pct >= min_profit_pct:
                 # Stop-loss em 0% (breakeven) - não vende com prejuízo
                 stop_price = self.state.entry_price
 
@@ -6197,6 +6384,9 @@ class BitcoinTradingAgent(
                         if self.state.entries:
                             self.state.entries[0]["exchange_stop_order_id"] = result.get("orderId")
                             self.state.entries[0]["exchange_stop_price"] = stop_price_rounded
+                            self._persist_stop_link(
+                                self.state.entries[0], "sl", result.get("orderId"), stop_price_rounded
+                            )
                     else:
                         logger.warning(
                             f"⚠️ Falha ao colocar stop-loss na exchange: {result.get('error')}"
@@ -6239,6 +6429,9 @@ class BitcoinTradingAgent(
                         if self.state.entries:
                             self.state.entries[0]["exchange_stop_order_id"] = result.get("orderId")
                             self.state.entries[0]["exchange_stop_price"] = new_stop_rounded
+                            self._persist_stop_link(
+                                self.state.entries[0], "sl", result.get("orderId"), new_stop_rounded
+                            )
                     else:
                         logger.warning(
                             f"⚠️ Falha ao atualizar stop-loss: {result.get('error')}"
@@ -6286,6 +6479,9 @@ class BitcoinTradingAgent(
                 if self.state.entries:
                     self.state.entries[-1]["exchange_tp_order_id"] = result.get("orderId")
                     self.state.entries[-1]["exchange_tp_price"] = target_price_rounded
+                    self._persist_stop_link(
+                        self.state.entries[-1], "tp", result.get("orderId"), target_price_rounded
+                    )
             else:
                 logger.warning(
                     f"⚠️ Falha ao colocar take-profit na exchange: {result.get('error')}"

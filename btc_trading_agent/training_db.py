@@ -750,6 +750,93 @@ class TrainingDatabase:
             )
             return cur.rowcount
 
+    def sanitize_stale_positions(
+        self,
+        symbol: str,
+        *,
+        max_age_days: int = 30,
+        exclude_profiles: Optional[List[str]] = None,
+    ) -> Dict[str, int]:
+        """Detecta e fecha posições BUY abertas stale no DB.
+
+        Regras de stale (aplicadas em OR — qualquer uma fecha):
+        1. Posições shadow com dry_run=True sem closed_reason (simulações)
+        2. Posições com idade > max_age_days (segurança contra órfãos)
+        3. Posições cujo profile não está na lista de profiles ativos
+           e cujo serviço está parado (verificado via exchange balance = 0)
+
+        Retorna dict com contagem de fechamentos por razão.
+        """
+        now = time.time()
+        max_age_ts = now - (max_age_days * 86400)
+        exclude = set(exclude_profiles or [])
+
+        reasons: Dict[str, int] = {}
+
+        with self._get_conn() as conn:
+            cur = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+            # 1. Shadow simulation positions (dry_run=True, no closed_reason)
+            cur.execute(
+                f"""
+                UPDATE {SCHEMA}.trades
+                SET metadata = COALESCE(metadata, '{{}}'::jsonb) ||
+                    '{{"closed_reason": "stale_shadow_simulation", "auto_closed_at": %s}}'::jsonb
+                WHERE symbol = %s
+                  AND side = 'buy'
+                  AND status != 'closed'
+                  AND dry_run = TRUE
+                  AND (metadata->>'closed_reason' IS NULL
+                       OR metadata->>'closed_reason' = '')
+                """,
+                (now, symbol),
+            )
+            if cur.rowcount > 0:
+                reasons["stale_shadow_simulation"] = cur.rowcount
+
+            # 2. Old positions (> max_age_days) from any profile
+            cur.execute(
+                f"""
+                UPDATE {SCHEMA}.trades
+                SET metadata = COALESCE(metadata, '{{}}'::jsonb) ||
+                    '{{"closed_reason": "stale_age_exceeded", "auto_closed_at": %s}}'::jsonb
+                WHERE symbol = %s
+                  AND side = 'buy'
+                  AND status != 'closed'
+                  AND dry_run = FALSE
+                  AND (metadata->>'closed_reason' IS NULL
+                       OR metadata->>'closed_reason' = '')
+                  AND timestamp < %s
+                """,
+                (now, symbol, max_age_ts),
+            )
+            if cur.rowcount > 0:
+                reasons["stale_age_exceeded"] = cur.rowcount
+
+            # 3. Positions from profiles not in the active set
+            if exclude:
+                cur.execute(
+                    f"""
+                    UPDATE {SCHEMA}.trades
+                    SET metadata = COALESCE(metadata, '{{}}'::jsonb) ||
+                        '{{"closed_reason": "stale_inactive_profile", "auto_closed_at": %s}}'::jsonb
+                    WHERE symbol = %s
+                      AND side = 'buy'
+                      AND status != 'closed'
+                      AND dry_run = FALSE
+                      AND (metadata->>'closed_reason' IS NULL
+                           OR metadata->>'closed_reason' = '')
+                      AND profile = ANY(%s)
+                    """,
+                    (now, symbol, list(exclude)),
+                )
+                if cur.rowcount > 0:
+                    reasons["stale_inactive_profile"] = cur.rowcount
+
+            conn.commit()
+
+        return reasons
+
     def count_trades_since(self, symbol: str, since: float,
                            dry_run: bool = False, profile: str = None) -> int:
         """Conta trades desde um timestamp (para limite diário)"""

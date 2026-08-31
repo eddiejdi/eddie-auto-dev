@@ -932,12 +932,18 @@ def get_sub_account_balances() -> List[Dict[str, Any]]:
 
 
 def get_balance(currency: str = "USDT") -> float:
-    """Obtém saldo específico da conta TRADE."""
-    balances = get_balances(account_type="trade")
-    for b in balances:
-        if b["currency"] == currency:
-            return b["available"]
-    return 0.0
+    """Obtém saldo disponível de uma moeda (MAIN + TRADE).
+
+    Antes só lia da conta TRADE; agora soma MAIN+TRADE para evitar
+    falsos zeros quando o saldo está na conta MAIN (ex: SOL-USDT na
+    master kucoin/homelab sem subconta dedicada).
+    """
+    total = 0.0
+    for account_type in ("trade", "main"):
+        for b in get_balances(account_type=account_type):
+            if b["currency"] == currency:
+                total += b["available"]
+    return total
 
 
 def get_total_balance(currency: str = "USDT") -> float:
@@ -1116,7 +1122,19 @@ def place_market_order(symbol: str, side: str, funds: float = None,
         # Respeita quoteIncrement do par (BRL/BTC/ETH etc.); round(..., 2) quebrava quotes crypto.
         payload["funds"] = _floor_to_increment(float(funds), increments["quoteIncrement"])
     elif size is not None:
-        payload["size"] = _floor_to_increment(float(size), increments["baseIncrement"])
+        floored = _floor_to_increment(float(size), increments["baseIncrement"])
+        if floored in ("0", "0.0", "0.00"):
+            logger.warning(
+                "⚠️ SELL dust skip: size=%.8f < baseIncrement=%s (%s) — ordem não enviada (sem Telegram)",
+                float(size), increments["baseIncrement"], symbol,
+            )
+            return {
+                "success": False,
+                "error": f"Dust size {size} below baseIncrement {increments['baseIncrement']}",
+                "raw": {"code": "dust_skip", "msg": "Quantity below base increment"},
+                "skip_notify": True,
+            }
+        payload["size"] = floored
     else:
         raise ValueError("Must specify 'funds' or 'size'")
 
@@ -1169,19 +1187,33 @@ def place_market_order(symbol: str, side: str, funds: float = None,
             raise last_error
 
     if result.get("code") != "200000":
-        logger.error(f"❌ Order failed: {result}")
         error_msg = result.get("msg", "Unknown")
-        _send_telegram_alert(
-            _format_market_order_notification(
-                symbol=symbol,
-                side=side,
-                funds=funds,
-                size=size,
-                error=error_msg,
-                notify_extra=notify_extra,
-            )
+        silent = (
+            "quantity is invalid" in str(error_msg).lower()
+            or str(result.get("code") or "") == "dust_skip"
         )
-        return {"success": False, "error": error_msg, "raw": result}
+        if silent:
+            logger.warning(
+                "⚠️ Order skipped (sem Telegram): %s", result
+            )
+        else:
+            logger.error(f"❌ Order failed: {result}")
+            _send_telegram_alert(
+                _format_market_order_notification(
+                    symbol=symbol,
+                    side=side,
+                    funds=funds,
+                    size=size,
+                    error=error_msg,
+                    notify_extra=notify_extra,
+                )
+            )
+        return {
+            "success": False,
+            "error": error_msg,
+            "raw": result,
+            "skip_notify": silent,
+        }
 
     # POST /api/v1/orders devolve "orderId"; GET .../client-order/{clientOid}
     # (usado no caminho de reconciliação acima) devolve "id" para o mesmo campo.
@@ -1491,11 +1523,12 @@ def get_stop_orders(
         return {"success": False, "error": str(e), "orders": []}
 
 
-def get_stop_order_by_client_oid(client_oid: str) -> Optional[Dict[str, Any]]:
+def get_stop_order_by_client_oid(client_oid: str, symbol: str = "BTC-USDT") -> Optional[Dict[str, Any]]:
     """Busca uma stop-order pelo clientOid.
 
     Args:
         client_oid: ID cliente
+        symbol: Par de trading (clientOid é único por símbolo na KuCoin)
 
     Returns:
         Dict com dados da ordem ou None
@@ -1503,7 +1536,7 @@ def get_stop_order_by_client_oid(client_oid: str) -> Optional[Dict[str, Any]]:
     validate_credentials()
 
     endpoint = "/api/v1/stop-order/queryClientOid"
-    params = {"clientOid": client_oid, "symbol": "BTC-USDT"}
+    params = {"clientOid": client_oid, "symbol": symbol}
 
     try:
         r = _signed_request("GET", endpoint, params=params, timeout=10)

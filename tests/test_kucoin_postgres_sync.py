@@ -313,6 +313,23 @@ class TestSellNetPnl:
         assert pnl == pytest.approx(9.79, rel=1e-6)
         assert pnl_pct > 0
 
+    def test_compute_net_sell_pnl_zero_cost_basis_is_pct_zero(self):
+        pnl, pnl_pct = sync._compute_net_sell_pnl(
+            sell_price=85.0,
+            sell_size=0.117,
+            avg_entry=0.0,
+            sell_fee_usdt=0.009945,
+            buy_fee_usdt=0.0,
+        )
+        assert pnl_pct == 0.0
+        assert pnl == pytest.approx(85.0 * 0.117 - 0.009945, rel=1e-6)
+
+    def test_fifo_none_when_no_buys(self):
+        trades = [
+            {"side": "sell", "price": 85.0, "size": 0.117, "metadata": {}},
+        ]
+        assert sync._fifo_cost_for_sell(trades, 0.117) is None
+
     def test_sum_sell_fees_from_usdt_fill(self):
         fills = [{
             "fee": "0.05",
@@ -689,5 +706,11 @@ class TestBRLFallback:
             brl_prices = [p[5] for p in brl_inserted if p[1] == "BRL"]
             assert brl_prices, "nenhum snapshot BRL com price_usdt"
             assert all(p == pytest.approx(1.0 / 5.4725) for p in brl_prices)
+            types = [
+                (c.kwargs.get("account_type") if c.kwargs else None)
+                or (c.args[0] if c.args else None)
+                for c in sync.get_balances.call_args_list
+            ]
+            assert "mining_user" in types
             usdt_prices = [p[5] for p in brl_inserted if p[1] == "USDT"]
             assert all(p == pytest.approx(1.0) for p in usdt_prices)
