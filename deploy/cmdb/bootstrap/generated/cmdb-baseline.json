@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-01T23:42:20.755798+00:00",
+  "generated_at": "2026-09-01T23:45:36.028721+00:00",
   "repo_root": "/tmp/opencode/pr-grafana-auth-fix",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",

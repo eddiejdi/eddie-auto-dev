@@ -24,14 +24,14 @@ datasources:
     orgId: 1
     url: 172.17.0.1:5433
     user: postgres
-    database: shared_bus
     basicAuth: false
     jsonData:
+      database: shared_bus
       postgresVersion: 1500
       sslmode: disable
       timescaledb: false
     secureJsonData:
-      password: $GF_DATABASE_PASSWORD
+      password: ${GF_DATABASE_PASSWORD}
     readOnly: false
 
   - name: BTC Trading PostgreSQL
@@ -41,12 +41,12 @@ datasources:
     orgId: 1
     url: 172.17.0.1:5433
     user: postgres
-    database: btc_trading
     basicAuth: false
     jsonData:
+      database: btc_trading
       postgresVersion: 1500
       sslmode: disable
       timescaledb: false
     secureJsonData:
-      password: $GF_DATABASE_PASSWORD
-    readOnly: true
+      password: ${GF_DATABASE_PASSWORD}
+    readOnly: false

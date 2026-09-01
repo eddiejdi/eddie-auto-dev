@@ -86,13 +86,22 @@ cmd_deploy_clear() {
 
 cmd_deploy_crypto() {
     log "Deploy btc_trading_agent → ${HOMELAB_USER}@${HOMELAB_HOST}"
-    # git pull no homelab + restart dos crypto-agents
     ssh -o StrictHostKeyChecking=no -o ConnectTimeout=10 \
         "${HOMELAB_USER}@${HOMELAB_HOST}" bash -s <<SSH
 set -euo pipefail
+PARENT="\$(dirname "${REMOTE_DIR}")"
+TRADING_ROOT="\${PARENT}/homelab-btc-trading"
+if [[ ! -d "\${TRADING_ROOT}/.git" ]]; then
+  echo "[git] clone homelab-btc-trading..."
+  git clone https://github.com/eddiejdi/homelab-btc-trading.git "\${TRADING_ROOT}"
+else
+  echo "[git] pull homelab-btc-trading..."
+  git -C "\${TRADING_ROOT}" pull origin main --ff-only 2>&1 | tail -3
+fi
 cd "${REMOTE_DIR}"
-echo "[git] pull..."
+echo "[git] pull eddie-auto-dev..."
 git pull origin main --ff-only 2>&1 | tail -3
+ln -sfn ../homelab-btc-trading/btc_trading_agent btc_trading_agent
 
 echo "[pip] instalando dependências..."
 if [[ -x .venv/bin/pip ]]; then

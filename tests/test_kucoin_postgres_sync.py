@@ -714,3 +714,101 @@ class TestBRLFallback:
             assert "mining_user" in types
             usdt_prices = [p[5] for p in brl_inserted if p[1] == "USDT"]
             assert all(p == pytest.approx(1.0) for p in usdt_prices)
+
+    @patch("kucoin_postgres_sync.get_price_fast")
+    def test_snapshot_balances_inclui_mining_user(self, mock_price) -> None:
+        """Snapshot deve consultar a API de mining e persistir como mining_user."""
+        mock_price.side_effect = [5.0, 60000.0]
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+        mock_cur.__exit__ = MagicMock(return_value=False)
+        mock_conn.cursor.return_value = mock_cur
+
+        def balances_side_effect(*, account_type: str):
+            if account_type == "trade":
+                return [{"currency": "USDT", "balance": 10.0, "available": 10.0, "holds": 0.0}]
+            if account_type == "main":
+                return []
+            if account_type == "mining":
+                return [{"currency": "BTC", "balance": 0.25, "available": 0.2, "holds": 0.05}]
+            raise AssertionError(f"account_type inesperado: {account_type}")
+
+        with patch.object(sync, "get_balances", side_effect=balances_side_effect) as mock_balances:
+            with patch.object(sync.kucoin_api, "get_sub_account_balances", return_value=[]):
+                count = sync._snapshot_balances(mock_conn)
+
+        assert [call.kwargs["account_type"] for call in mock_balances.call_args_list] == [
+            "trade",
+            "main",
+            "mining",
+        ]
+        inserted_rows = [
+            call.args[1]
+            for call in mock_cur.execute.call_args_list
+            if "INSERT INTO btc.exchange_balance_snapshots" in str(call.args[0])
+        ]
+        assert count == 2
+        assert any(row[0] == "mining_user" and row[1] == "BTC" for row in inserted_rows)
+
+    @patch("kucoin_postgres_sync.get_price_fast")
+    def test_snapshot_balances_ignora_falha_em_mining_user(self, mock_price) -> None:
+        """Falha em mining_user não deve abortar o restante do snapshot."""
+        mock_price.side_effect = [5.0, 60000.0]
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+        mock_cur.__exit__ = MagicMock(return_value=False)
+        mock_conn.cursor.return_value = mock_cur
+
+        def balances_side_effect(*, account_type: str):
+            if account_type == "trade":
+                return [{"currency": "USDT", "balance": 10.0, "available": 10.0, "holds": 0.0}]
+            if account_type == "main":
+                return []
+            if account_type == "mining":
+                raise RuntimeError("mining unavailable")
+            raise AssertionError(f"account_type inesperado: {account_type}")
+
+        with patch.object(sync, "get_balances", side_effect=balances_side_effect) as mock_balances:
+            with patch.object(sync.kucoin_api, "get_sub_account_balances", return_value=[]):
+                count = sync._snapshot_balances(mock_conn)
+
+        assert [call.kwargs["account_type"] for call in mock_balances.call_args_list] == [
+            "trade",
+            "main",
+            "mining",
+        ]
+        assert count == 1
+        mock_conn.commit.assert_called_once()
+
+    @pytest.mark.parametrize("failing_account", ["trade", "main"])
+    @patch("kucoin_postgres_sync.get_price_fast")
+    def test_snapshot_balances_propaga_falhas_core(self, mock_price, failing_account: str) -> None:
+        """Falhas em trade/main devem abortar o snapshot antes do commit."""
+        mock_price.side_effect = [5.0, 60000.0]
+        mock_conn = MagicMock()
+        mock_cur = MagicMock()
+        mock_cur.__enter__ = MagicMock(return_value=mock_cur)
+        mock_cur.__exit__ = MagicMock(return_value=False)
+        mock_conn.cursor.return_value = mock_cur
+
+        def balances_side_effect(*, account_type: str):
+            if account_type == "trade":
+                if failing_account == "trade":
+                    raise RuntimeError("trade unavailable")
+                return [{"currency": "USDT", "balance": 10.0, "available": 10.0, "holds": 0.0}]
+            if account_type == "main":
+                if failing_account == "main":
+                    raise RuntimeError("main unavailable")
+                return []
+            if account_type == "mining":
+                return []
+            raise AssertionError(f"account_type inesperado: {account_type}")
+
+        with patch.object(sync, "get_balances", side_effect=balances_side_effect):
+            with patch.object(sync.kucoin_api, "get_sub_account_balances", return_value=[]):
+                with pytest.raises(RuntimeError, match=f"{failing_account} unavailable"):
+                    sync._snapshot_balances(mock_conn)
+
+        mock_conn.commit.assert_not_called()

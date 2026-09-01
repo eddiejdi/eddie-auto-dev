@@ -345,7 +345,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             analyze = bool(arguments.get("analyze_media", True))
             only_new = bool(arguments.get("only_new", False))
 
-            data = await tg_get(client, "getUpdates", limit=100, offset=-100)
+            data = await tg_get(client, "getUpdates", limit=100, offset=-100, allowed_updates=["message"])
             updates = data.get("result", [])
 
             messages = []
@@ -409,7 +409,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
         elif name == "tg_context":
             n    = min(int(arguments.get("n", 10)), 50)
 
-            data = await tg_get(client, "getUpdates", limit=100, offset=-100)
+            data = await tg_get(client, "getUpdates", limit=100, offset=-100, allowed_updates=["message"])
             updates = data.get("result", [])
             messages = [u.get("message") or u.get("channel_post")
                         for u in updates if u.get("message") or u.get("channel_post")]
