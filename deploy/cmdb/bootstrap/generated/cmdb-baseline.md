@@ -1,21 +1,16 @@
 # CMDB Baseline
 
-- Generated at: `2026-09-01T00:13:33.773211+00:00`
+- Generated at: `2026-09-01T23:45:36.028721+00:00`
 - Site: `homelab-main`
 - Hosts discovered: `1`
 - Repo services discovered: `214`
-- Critical services flagged for MVP: `87`
+- Critical services flagged for MVP: `214`
 - Project: [eddie-auto-dev](https://github.com/eddiejdi/eddie-auto-dev)
 - Owner: `edenilson.adm@gmail.com`
 
 ## Domain counts
 
-- `identity`: 4
-- `monitoring`: 19
-- `network`: 25
-- `operations`: 116
-- `storage`: 39
-- `trading`: 11
+- `monitoring`: 214
 
 ## Trading profile instances (`12`)
 
@@ -38,46 +33,46 @@
 
 ## MVP critical services
 
-- `open-webui` (identity, compose) from `tools/authentik_management/configs/docker-compose.override.yml`
-- `vaultwarden` (identity, compose) from `tools/vaultwarden/docker-compose.yml`
-- `homelab-vault-backup.service` (identity, systemd) from `systemd/homelab-vault-backup.service`
-- `homelab-vault-close.service` (identity, systemd) from `systemd/homelab-vault-close.service`
 - `cadvisor` (monitoring, compose) from `docker/docker-compose-exporters.yml`
+- `glpi` (monitoring, compose) from `deploy/cmdb/docker-compose.yml`
+- `glpi-db` (monitoring, compose) from `deploy/cmdb/docker-compose.yml`
 - `grafana` (monitoring, compose) from `tools/authentik_management/configs/docker-compose.override.yml`
+- `hostd` (monitoring, compose) from `docker/docker-compose.sia.yml`
+- `mail-db` (monitoring, compose) from `docker/docker-compose.simple-mail.yml`
+- `mail-server` (monitoring, compose) from `docker/docker-compose.simple-mail.yml`
+- `mailu-backend` (monitoring, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-db` (monitoring, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-dovecot` (monitoring, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-frontend` (monitoring, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-postfix` (monitoring, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-redis` (monitoring, compose) from `docker/docker-compose.mailu.yml`
+- `mailu-roundcube` (monitoring, compose) from `docker/docker-compose.mailu.yml`
+- `netbox` (monitoring, compose) from `deploy/cmdb/docker-compose.yml`
+- `netbox-postgres` (monitoring, compose) from `deploy/cmdb/docker-compose.yml`
+- `netbox-redis` (monitoring, compose) from `deploy/cmdb/docker-compose.yml`
+- `netbox-redis-cache` (monitoring, compose) from `deploy/cmdb/docker-compose.yml`
+- `netbox-worker` (monitoring, compose) from `deploy/cmdb/docker-compose.yml`
+- `nginx` (monitoring, compose) from `docker/docker-compose.simple-mail.yml`
 - `node-exporter` (monitoring, compose) from `docker/docker-compose-exporters.yml`
+- `ntopng` (monitoring, compose) from `docker/docker-compose.ntopng.yml`
+- `ntopng-redis` (monitoring, compose) from `docker/docker-compose.ntopng.yml`
+- `open-webui` (monitoring, compose) from `tools/authentik_management/configs/docker-compose.override.yml`
+- `opensearch-dashboards` (monitoring, compose) from `docker/docker-compose.opensearch.yml`
+- `opensearch-node1` (monitoring, compose) from `docker/docker-compose.opensearch.yml`
+- `pihole` (monitoring, compose) from `deploy/pihole/docker-compose.yml`
 - `postfix-exporter` (monitoring, compose) from `docker/docker-compose.simple-mail.yml`
+- `postgres` (monitoring, compose) from `docker/docker-compose.email-simple.yml`
+- `printshare` (monitoring, compose) from `deploy/printshare/docker-compose.yml`
 - `prometheus` (monitoring, compose) from `docker/docker-compose.grafana.yml`
+- `proxy` (monitoring, compose) from `deploy/cmdb/docker-compose.yml`
+- `roundcube` (monitoring, compose) from `docker/docker-compose.simple-mail.yml`
+- `vaultwarden` (monitoring, compose) from `tools/vaultwarden/docker-compose.yml`
+- `wikijs` (monitoring, compose) from `docker/docker-compose.wikijs.yml`
+- `wikijs-db` (monitoring, compose) from `docker/docker-compose.wikijs.yml`
 - `agent-network-exporter.service` (monitoring, systemd) from `tools/systemd/agent-network-exporter.service`
-- `banking-metrics-exporter.service` (monitoring, systemd) from `systemd/banking-metrics-exporter.service`
-- `eddie_central_extended_metrics.service` (monitoring, systemd) from `systemd/eddie_central_extended_metrics.service`
-- `grafana-dashboard-sync.service` (monitoring, systemd) from `systemd/grafana-dashboard-sync.service`
-- `grafana-selfheal.service` (monitoring, systemd) from `systemd/grafana-selfheal.service`
-- `job-monitor.service` (monitoring, systemd) from `systemd/job-monitor.service`
-- `monitoring-containers-bootstrap.service` (monitoring, systemd) from `systemd/monitoring-containers-bootstrap.service`
-- `nas-ram-exporter.service` (monitoring, systemd) from `systemd/nas-ram-exporter.service`
-- `rss-sentiment-exporter.service` (monitoring, systemd) from `systemd/rss-sentiment-exporter.service`
-- `storj-exporter.service` (monitoring, systemd) from `deploy/storj-exporter.service`
-- `storj-payout-monitor.service` (monitoring, systemd) from `systemd/storj-payout-monitor.service`
-- `storj-payout-monitor.timer` (monitoring, systemd) from `systemd/storj-payout-monitor.timer`
-- `tape-component-quality-exporter.service` (monitoring, systemd) from `systemd/tape-component-quality-exporter.service`
-- `tunnel-healthcheck-exporter.service` (monitoring, systemd) from `systemd/tunnel-healthcheck-exporter.service`
-- `pihole` (network, compose) from `deploy/pihole/docker-compose.yml`
-- `proxy` (network, compose) from `deploy/cmdb/docker-compose.yml`
-- `cloudflared-named@.service` (network, systemd) from `tools/tunnels/cloudflared-named@.service`
-- `cloudflared-tunnel-guardian.service` (network, systemd) from `systemd/cloudflared-tunnel-guardian.service`
-- `cloudflared-tunnel-guardian.timer` (network, systemd) from `systemd/cloudflared-tunnel-guardian.timer`
-- `cloudflared.service` (network, systemd) from `tools/tunnels/cloudflared/cloudflared.service`
-- `dhcp-selfheal.service` (network, systemd) from `systemd/dhcp-selfheal.service`
-- `homelab-lan-gateway.service` (network, systemd) from `deploy/vpn/homelab-lan-gateway.service`
-- `iot-vpn-bypass-watchdog.service` (network, systemd) from `systemd/iot-vpn-bypass-watchdog.service`
-- `iot-vpn-bypass-watchdog.timer` (network, systemd) from `systemd/iot-vpn-bypass-watchdog.timer`
-- `ipv6-proxy.service` (network, systemd) from `systemd/ipv6-proxy.service`
-- `localtunnel@.service` (network, systemd) from `tools/tunnels/localtunnel@.service`
-- `pihole-ipv6-dns-fix.service` (network, systemd) from `systemd/pihole-ipv6-dns-fix.service`
-- `pihole.service` (network, systemd) from `systemd/pihole.service`
-- `protonvpn-best-server.service` (network, systemd) from `systemd/protonvpn-best-server.service`
-- `protonvpn-best-server.timer` (network, systemd) from `systemd/protonvpn-best-server.timer`
-- `protonvpn-boot-selfheal.service` (network, systemd) from `systemd/protonvpn-boot-selfheal.service`
+- `akash-sweep.service` (monitoring, systemd) from `systemd/akash-sweep.service`
+- `akash-sweep.timer` (monitoring, systemd) from `systemd/akash-sweep.timer`
+- `approval-gateway.service` (monitoring, systemd) from `systemd/approval-gateway.service`
 
 ## Serviços anotados manualmente
 
