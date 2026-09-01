@@ -1,18 +1,18 @@
 {
-  "generated_at": "2026-08-29T11:50:40.674131+00:00",
+  "generated_at": "2026-09-01T23:37:07.954527+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 215,
+    "repo_services": 216,
     "trading_instances": 12,
-    "critical_services": 87,
+    "critical_services": 88,
     "domains": {
       "identity": 4,
       "monitoring": 19,
-      "network": 25,
+      "network": 26,
       "operations": 117,
       "storage": 39,
       "trading": 11
@@ -570,6 +570,14 @@
       "domain": "network",
       "kind": "systemd",
       "source": "systemd/sia-api-proxy.service",
+      "recommended_owner": "platform",
+      "candidate_system": "NetBox service model"
+    },
+    {
+      "name": "udp-tcp-relay.service",
+      "domain": "network",
+      "kind": "systemd",
+      "source": "deploy/vpn/udp-tcp-relay.service",
       "recommended_owner": "platform",
       "candidate_system": "NetBox service model"
     },
@@ -2484,6 +2492,13 @@
         "name": "sia-api-proxy.service",
         "domain": "network",
         "source": "systemd/sia-api-proxy.service",
+        "kind": "systemd",
+        "critical": true
+      },
+      {
+        "name": "udp-tcp-relay.service",
+        "domain": "network",
+        "source": "deploy/vpn/udp-tcp-relay.service",
         "kind": "systemd",
         "critical": true
       },
