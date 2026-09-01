@@ -9,9 +9,32 @@ Tambem fornece fallback minimo para testes ``@pytest.mark.asyncio`` quando
 import asyncio
 import inspect
 import json
+import os
+import sys
 from pathlib import Path
 
 import pytest
+
+
+def _ensure_btc_agent_on_path() -> None:
+    """Resolve o agente extraído para homelab-btc-trading (symlink ou sibling)."""
+    root = Path(__file__).resolve().parents[1]
+    env_dir = os.environ.get("BTC_AGENT_DIR")
+    candidates = [
+        Path(env_dir) if env_dir else None,
+        root / "btc_trading_agent",
+        root.parent / "homelab-btc-trading" / "btc_trading_agent",
+    ]
+    for path in candidates:
+        if path is None or not path.is_dir():
+            continue
+        resolved = str(path.resolve())
+        if resolved not in sys.path:
+            sys.path.insert(0, resolved)
+        return
+
+
+_ensure_btc_agent_on_path()
 
 try:
     import httpx

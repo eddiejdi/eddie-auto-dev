@@ -1244,6 +1244,15 @@ class PositionManagerMixin:
             if phantom_btc <= tolerance:
                 return 0  # já consistente no momento em que o lock foi obtido
 
+            if not exclusive:
+                logger.warning(
+                    "⚠️ [reconcile] Conta compartilhada: DB=%.8f %s | "
+                    "Exchange=%.8f %s | phantom=%.8f %s — sem fechamento automático",
+                    db_position, base_currency, real_balance, base_currency,
+                    phantom_btc, base_currency,
+                )
+                return 0
+
             logger.warning(
                 "⚠️ [reconcile] Divergência confirmada dentro do lock: DB=%.8f %s | "
                 "Exchange=%.8f %s | phantom=%.8f %s — fechando slots excedentes",

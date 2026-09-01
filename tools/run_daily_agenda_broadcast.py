@@ -801,6 +801,11 @@ def _run_with_optional_approval(
         decision = wait_for_decision(
             date_str=date_str,
             timeout_minutes=timeout_minutes,
+            # Polling do Telegram é feito de forma centralizada pelo
+            # eddie-telegram-bot, unico long-poll do token. Ele roteia os botões
+            # dag:* via approval_gateway._on_callback -> daily_agenda_approval.
+            # Aguardar apenas o arquivo de estado evita 409/conflico de pollers.
+            poll_telegram=False,
         )
         if decision == "approved":
             approval_note = "Aprovado no Telegram."
