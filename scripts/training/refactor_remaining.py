@@ -59,7 +59,6 @@ if __name__ == '__main__':
         base / 'home_assistant',
         base / 'homeassistant',
         base / 'home_assistant_integration',
-        base / 'estou-aqui',
         base / 'github-mcp-server',
         base / 'rag-mcp-server',
     ]

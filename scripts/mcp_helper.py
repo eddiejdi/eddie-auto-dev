@@ -18,7 +18,7 @@ MCP_SERVERS = {
     "github": f"{HOMELAB_BASE}/github-mcp-server/src/github_mcp_server.py",
     "ssh": f"{HOMELAB_BASE}/ssh_agent_mcp.py",
     "rag": f"{HOMELAB_BASE}/rag-mcp-server/src/rag_mcp_server.py",
-    "homelab": "/home/homelab/estou-aqui-deploy/scripts/homelab_mcp_server.py",
+    "homelab": "/home/homelab/myClaude/scripts/homelab_mcp_server.py",
 }
 
 

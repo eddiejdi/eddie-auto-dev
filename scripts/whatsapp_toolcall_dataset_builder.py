@@ -71,7 +71,6 @@ SECOND_TURN_TOOLS = (
     "secrets_list",
     "journal_query",
     "trading_recent_trades",
-    "api_health",
     "bus_get_messages",
 )
 
@@ -179,12 +178,6 @@ _TEMPLATE_PHRASES: Dict[str, List[str]] = {
     "secrets_list": ["quais segredos existem cadastrados?", "lista os segredos disponíveis"],
     "secrets_health": ["o secrets agent tá online?", "status do secrets agent"],
     "secrets_get": ["me mostra o segredo {name}", "qual o valor de {name}?"],
-    "api_health": ["a api estou aqui tá no ar?", "status da api"],
-    "api_events_list": ["lista os eventos ativos", "quais eventos tem cadastrado?"],
-    "api_events_get": ["detalhes do evento {event_id}"],
-    "api_events_create": ["cria um evento chamado {title}"],
-    "api_checkins_create": ["faz check-in no evento {event_id}"],
-    "api_auth_login": ["faz login na api com {email}"],
     "db_list_tables": ["lista as tabelas do banco", "quais tabelas existem no banco?"],
     "db_describe_table": ["descreve a tabela {table_name}", "estrutura da tabela {table_name}"],
     "db_active_events": ["quais eventos estão ativos no banco?"],

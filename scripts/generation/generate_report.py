@@ -85,8 +85,8 @@ def generate_consolidated_report():
         "estou_aqui": {
             "arquivos": sum(1 for f in all_files if "estou-aqui" in f),
             "shared_refs": shared_by_component.get("estou-aqui", 0),
-            "descricao": "Plataforma de eventos comunitários",
-            "novo_nome": "mantém-se (projeto independente)"
+            "descricao": "Plataforma de eventos comunitários - REMOVIDO (descontinuado 2026-09)",
+            "novo_nome": "REMOVIDO"
         },
         "smart_integrations": {
             "arquivos": sum(1 for f in all_files if "smartlife" in f or "homeassistant" in f),

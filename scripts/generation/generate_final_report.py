@@ -61,7 +61,7 @@ def generate_final_report():
     lotes310_eddie = sum(s["shared_refs"] for s in lotes310_resumo)
     
     componentes_mapa = {
-        "estou-aqui": ("LOTE3", "Plataforma de Eventos Comunitários", "manter"),
+        "estou-aqui": ("LOTE3", "Plataforma de Eventos Comunitários", "REMOVIDO - descontinuado 2026-09"),
         "smartlife_integration": ("LOTE4", "Integração SmartLife", "refatorar"),
         "homeassistant_integration": ("LOTE4", "Integração Home Assistant", "refatorar"),
         "rag-mcp-server": ("LOTE5", "Model Context Protocol - RAG", "manter"),

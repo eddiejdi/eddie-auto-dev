@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Homelab MCP Server — Integra Cline com Communication Bus, Secrets Agent,
-API Estou Aqui, PostgreSQL e Trading Agent via Model Context Protocol (stdio).
+PostgreSQL e Trading Agent via Model Context Protocol (stdio).
 
 Uso:
     python3 scripts/homelab_mcp_server.py
@@ -10,8 +10,7 @@ Configuração via variáveis de ambiente:
     HOMELAB_URL           - URL do Communication Bus (default: http://192.168.15.2:8503)
     SECRETS_AGENT_URL     - URL do Secrets Agent (default: http://192.168.15.2:8088)
     SECRETS_AGENT_API_KEY - Chave de API do Secrets Agent
-    API_BASE_URL          - URL da API Estou Aqui (default: http://localhost:3000)
-    DATABASE_URL          - Connection string PostgreSQL (Estou Aqui / governance)
+    DATABASE_URL          - Connection string PostgreSQL (governance / trading)
     TRADING_DATABASE_URL  - Connection string PostgreSQL do trading agent (btc_trading DB)
     CHROMA_DB_PATH        - Path do ChromaDB (default: /home/homelab/myClaude/chroma_db)
     CODE_SANDBOX_DIR      - Sandbox de code_write_file/code_read_file/code_list_files
@@ -71,12 +70,11 @@ _load_local_secrets_env()
 HOMELAB_URL = os.environ.get("HOMELAB_URL", "http://192.168.15.2:8503")
 SECRETS_AGENT_URL = os.environ.get("SECRETS_AGENT_URL", "http://192.168.15.2:8088")
 SECRETS_AGENT_API_KEY = os.environ.get("SECRETS_AGENT_API_KEY", "")
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://192.168.15.2:3000")
+# API_BASE_URL removido — projeto Estou Aqui descontinuado
 DATABASE_URL = os.environ.get("DATABASE_URL", "")
 TRADING_DATABASE_URL = os.environ.get("TRADING_DATABASE_URL", "")
 
-# Token JWT em memória para API calls autenticadas
-_jwt_token: Optional[str] = None
+# Token JWT removido — projeto Estou Aqui descontinuado
 
 # ── Helpers HTTP ──────────────────────────────────────────────────────────
 
@@ -125,12 +123,7 @@ def _http_post(url: str, payload: dict, headers: dict | None = None, timeout: fl
         return {"ok": False, "error": str(e)}
 
 
-def _api_headers() -> dict:
-    """Headers para API Estou Aqui (inclui JWT se disponível)."""
-    h = {"Content-Type": "application/json"}
-    if _jwt_token:
-        h["Authorization"] = f"Bearer {_jwt_token}"
-    return h
+# _api_headers() removido — projeto Estou Aqui descontinuado
 
 
 def _secrets_headers() -> dict:
@@ -150,9 +143,8 @@ mcp = FastMCP(
     instructions=(
         "MCP Server para integração com o homelab Eddie. "
         "Fornece acesso ao: Communication Bus (bus_*), Secrets Agent (secrets_*), "
-        "API Estou Aqui (api_*), PostgreSQL genérico (db_*), "
-        "Agent Governance (intent_*, journal_*), Memória compartilhada (memory_*) "
-        "e Trading Agent BTC (trading_*). "
+        "PostgreSQL genérico (db_*), Agent Governance (intent_*, journal_*), "
+        "Memória compartilhada (memory_*) e Trading Agent BTC (trading_*). "
         "Para análise de mercado use trading_summary() como ponto de entrada. "
         "Dados de trading são somente-leitura do schema btc.* no PostgreSQL."
     ),
@@ -269,138 +261,11 @@ def secrets_health() -> str:
     return json.dumps({"ok": False, "status": "offline", "error": result.get("error", "")}, indent=2)
 
 
-# ═══════════════════════════  API ESTOU AQUI  ═════════════════════════════
-
-@mcp.tool()
-def api_health() -> str:
-    """Verifica o status da API Estou Aqui (backend Express)."""
-    result = _http_get(f"{API_BASE_URL}/health")
-    return json.dumps(result, ensure_ascii=False, indent=2)
-
-
-@mcp.tool()
-def api_auth_login(email: str, password: str) -> str:
-    """Faz login na API Estou Aqui e armazena JWT para chamadas subsequentes.
-
-    Args:
-        email: E-mail do usuário.
-        password: Senha do usuário.
-    """
-    global _jwt_token
-    result = _http_post(f"{API_BASE_URL}/api/auth/login", {"email": email, "password": password})
-    if result.get("ok") and "data" in result:
-        token = result["data"].get("token")
-        if token:
-            _jwt_token = token
-            result["data"]["token"] = token[:20] + "...[armazenado]"
-    return json.dumps(result, ensure_ascii=False, indent=2)
-
-
-@mcp.tool()
-def api_events_list(
-    lat: float = 0, lng: float = 0, radius: float = 0,
-    category: str = "", city: str = "", status: str = ""
-) -> str:
-    """Lista eventos da plataforma Estou Aqui.
-
-    Args:
-        lat: Latitude para busca geográfica (0 = sem filtro).
-        lng: Longitude para busca geográfica (0 = sem filtro).
-        radius: Raio em km (0 = sem filtro).
-        category: Filtrar por categoria (manifestacao, protesto, marcha, etc.).
-        city: Filtrar por cidade.
-        status: Filtrar por status (active, scheduled, completed).
-    """
-    params = []
-    if lat and lng:
-        params.extend([f"lat={lat}", f"lng={lng}"])
-    if radius:
-        params.append(f"radius={radius}")
-    if category:
-        params.append(f"category={category}")
-    if city:
-        params.append(f"city={city}")
-    if status:
-        params.append(f"status={status}")
-
-    qs = "&".join(params)
-    url = f"{API_BASE_URL}/api/events" + (f"?{qs}" if qs else "")
-    result = _http_get(url, headers=_api_headers())
-    return json.dumps(result, ensure_ascii=False, indent=2)
-
-
-@mcp.tool()
-def api_events_get(event_id: str) -> str:
-    """Obtém detalhes de um evento específico.
-
-    Args:
-        event_id: UUID do evento.
-    """
-    result = _http_get(f"{API_BASE_URL}/api/events/{event_id}", headers=_api_headers())
-    return json.dumps(result, ensure_ascii=False, indent=2)
-
-
-@mcp.tool()
-def api_events_create(
-    title: str, description: str, category: str,
-    latitude: float, longitude: float,
-    city: str = "", state: str = "", scheduled_date: str = ""
-) -> str:
-    """Cria um novo evento na plataforma (requer login prévio via api_auth_login).
-
-    Args:
-        title: Título do evento.
-        description: Descrição do evento.
-        category: Categoria (manifestacao, protesto, marcha, ato, greve, ocupacao, vigilia, passeata, reuniao).
-        latitude: Latitude do local.
-        longitude: Longitude do local.
-        city: Cidade.
-        state: Estado (UF).
-        scheduled_date: Data agendada (ISO 8601).
-    """
-    if not _jwt_token:
-        return json.dumps({"ok": False, "error": "Login necessário. Use api_auth_login primeiro."}, indent=2)
-
-    payload: dict[str, Any] = {
-        "title": title,
-        "description": description,
-        "category": category,
-        "latitude": latitude,
-        "longitude": longitude,
-    }
-    if city:
-        payload["city"] = city
-    if state:
-        payload["state"] = state
-    if scheduled_date:
-        payload["scheduledDate"] = scheduled_date
-
-    result = _http_post(f"{API_BASE_URL}/api/events", payload, headers=_api_headers())
-    return json.dumps(result, ensure_ascii=False, indent=2)
-
-
-@mcp.tool()
-def api_checkins_create(event_id: str, latitude: float, longitude: float) -> str:
-    """Faz check-in em um evento (requer login prévio).
-
-    Args:
-        event_id: UUID do evento.
-        latitude: Latitude atual do usuário.
-        longitude: Longitude atual do usuário.
-    """
-    if not _jwt_token:
-        return json.dumps({"ok": False, "error": "Login necessário. Use api_auth_login primeiro."}, indent=2)
-
-    payload = {"eventId": event_id, "latitude": latitude, "longitude": longitude}
-    result = _http_post(f"{API_BASE_URL}/api/checkins", payload, headers=_api_headers())
-    return json.dumps(result, ensure_ascii=False, indent=2)
-
-
 # ═══════════════════════════  POSTGRESQL  ═════════════════════════════════
 
 @mcp.tool()
 def db_execute_query(sql: str, params: str = "[]") -> str:
-    """Executa uma query SQL no PostgreSQL do Estou Aqui.
+    """Executa uma query SQL no PostgreSQL (governance / trading).
 
     ATENÇÃO: Use apenas queries SELECT para leitura. Queries de escrita são bloqueadas.
 
@@ -458,7 +323,7 @@ def db_execute_query(sql: str, params: str = "[]") -> str:
 
 @mcp.tool()
 def db_list_tables() -> str:
-    """Lista todas as tabelas do banco de dados Estou Aqui."""
+    """Lista todas as tabelas do banco de dados PostgreSQL."""
     return db_execute_query(
         "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
     )
@@ -907,40 +772,7 @@ def resource_secrets_status() -> str:
     return secrets_health()
 
 
-@mcp.resource("estouaqui://api/routes")
-def resource_api_routes() -> str:
-    """Lista de rotas disponíveis na API Estou Aqui."""
-    routes = {
-        "auth": ["POST /api/auth/login", "POST /api/auth/register", "POST /api/auth/google", "GET /api/auth/profile"],
-        "events": ["GET /api/events", "GET /api/events/:id", "POST /api/events", "PUT /api/events/:id", "DELETE /api/events/:id"],
-        "checkins": ["POST /api/checkins", "DELETE /api/checkins/:id", "GET /api/checkins/event/:eventId"],
-        "chat": ["GET /api/chat/:eventId", "POST /api/chat/:eventId"],
-        "estimates": ["GET /api/estimates/:eventId", "POST /api/estimates/:eventId"],
-        "notifications": ["POST /api/notifications/subscribe", "POST /api/notifications/send"],
-        "alerts": ["GET /api/alerts/active", "GET /api/alerts/history", "POST /api/alerts/webhook"],
-        "coalitions": ["GET /api/coalitions", "POST /api/coalitions", "PUT /api/coalitions/:id"],
-        "webchat": ["GET /api/webchat/messages", "POST /api/webchat/send"],
-        "health": ["GET /health"],
-    }
-    return json.dumps(routes, ensure_ascii=False, indent=2)
-
-
-@mcp.resource("estouaqui://db/models")
-def resource_db_models() -> str:
-    """Modelos Sequelize do banco de dados Estou Aqui."""
-    models = {
-        "User": {"table": "Users", "id": "UUID", "fields": ["name", "email", "password", "googleId", "role", "avatar"]},
-        "Event": {"table": "Events", "id": "UUID", "fields": ["title", "description", "category", "latitude", "longitude", "city", "state", "status", "organizer"]},
-        "Checkin": {"table": "Checkins", "id": "UUID", "fields": ["userId", "eventId", "latitude", "longitude"]},
-        "ChatMessage": {"table": "ChatMessages", "id": "UUID", "fields": ["userId", "eventId", "content"]},
-        "CrowdEstimate": {"table": "CrowdEstimates", "id": "UUID", "fields": ["eventId", "userId", "estimate", "density", "area"]},
-        "Coalition": {"table": "Coalitions", "id": "UUID", "fields": ["name", "description", "cause", "creatorId"]},
-        "Notification": {"table": "Notifications", "id": "UUID", "fields": ["userId", "title", "body", "type"]},
-        "TelegramGroup": {"table": "TelegramGroups", "id": "UUID", "fields": ["eventId", "groupId", "title"]},
-        "BetaSignup": {"table": "BetaSignups", "id": "UUID", "fields": ["name", "email", "city", "phone", "motivation"]},
-        "WebChatMessage": {"table": "WebChatMessages", "id": "UUID", "fields": ["content", "sender", "sessionId"]},
-    }
-    return json.dumps(models, ensure_ascii=False, indent=2)
+# Resources estouaqui://api/routes e estouaqui://db/models removidos — projeto Estou Aqui descontinuado
 
 
 # ═══════════════════════════  SHARED MEMORY  ══════════════════════════════
@@ -952,6 +784,37 @@ def _get_mem():
         return agent_memory
     except ImportError:
         return None
+
+
+def _is_permission_denied(exc: Exception) -> bool:
+    msg = str(exc).lower()
+    return isinstance(exc, PermissionError) or "permission denied" in msg or "os error 13" in msg
+
+
+def _is_chroma_bindings_error(exc: Exception) -> bool:
+    msg = str(exc)
+    return "RustBindingsAPI" in msg and "bindings" in msg
+
+
+def _should_retry_memory_with_fallback(exc: Exception) -> bool:
+    return _is_permission_denied(exc) or _is_chroma_bindings_error(exc)
+
+
+def _fallback_chroma_path() -> str:
+    path = os.environ.get("MCP_CHROMA_FALLBACK_PATH", "")
+    if path.strip():
+        return path
+    user = os.environ.get("USER", "agent")
+    return f"/tmp/{user}/homelab_mcp/chroma_db"
+
+
+def _switch_mem_path(mem: Any, new_path: str) -> None:
+    os.makedirs(new_path, exist_ok=True)
+    # agent_memory mantém singletons em módulo; precisamos resetar para
+    # forçar reabertura do PersistentClient no novo path.
+    setattr(mem, "CHROMA_DB_PATH", new_path)
+    setattr(mem, "_client", None)
+    setattr(mem, "_collection", None)
 
 
 @mcp.tool()
@@ -974,6 +837,22 @@ def memory_search(query: str, sources: str = "", limit: int = 5) -> str:
         results  = mem.search(query, sources=src_list, limit=max(1, limit))
         return json.dumps({"results": results, "count": len(results)}, ensure_ascii=False)
     except Exception as exc:
+        if _should_retry_memory_with_fallback(exc):
+            try:
+                fallback = _fallback_chroma_path()
+                _switch_mem_path(mem, fallback)
+                src_list = [s.strip() for s in sources.split(",") if s.strip()] or None
+                results = mem.search(query, sources=src_list, limit=max(1, limit))
+                return json.dumps(
+                    {
+                        "results": results,
+                        "count": len(results),
+                        "warning": f"CHROMA_DB_PATH sem permissão; usando fallback {fallback}",
+                    },
+                    ensure_ascii=False,
+                )
+            except Exception as retry_exc:
+                return json.dumps({"error": str(retry_exc)})
         return json.dumps({"error": str(exc)})
 
 
@@ -1001,6 +880,27 @@ def memory_store(fact: str, source: str = "agent", tags: str = "", ttl_days: int
         )
         return json.dumps({"ok": True, "memory_id": mem_id}, ensure_ascii=False)
     except Exception as exc:
+        if _should_retry_memory_with_fallback(exc):
+            try:
+                fallback = _fallback_chroma_path()
+                _switch_mem_path(mem, fallback)
+                tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+                mem_id = mem.store(
+                    fact,
+                    source=source,
+                    tags=tag_list,
+                    ttl_days=ttl_days,
+                )
+                return json.dumps(
+                    {
+                        "ok": True,
+                        "memory_id": mem_id,
+                        "warning": f"CHROMA_DB_PATH sem permissão; usando fallback {fallback}",
+                    },
+                    ensure_ascii=False,
+                )
+            except Exception as retry_exc:
+                return json.dumps({"error": str(retry_exc)})
         return json.dumps({"error": str(exc)})
 
 
@@ -1072,10 +972,9 @@ def _get_trading_db_url() -> Optional[str]:
         return url
 
     # 2. DATABASE_URL já configurado no ambiente — mesma instância Postgres
-    #    (o schema btc.* do trading agent convive com o schema public da
-    #    Estou Aqui no mesmo banco btc_trading). Evita depender de um
-    #    secret que pode ter sido salvo com host "localhost" (só válido
-    #    quando executado no próprio homelab, não em consumidores remotos).
+    #    (o schema btc.* do trading agent convive com o schema public de governance).
+    #    Evita depender de um secret que pode ter sido salvo com host "localhost"
+    #    (só válido quando executado no próprio homelab, não em consumidores remotos).
     resolved = _get_db_url()
     if resolved:
         _trading_db_url_cache = resolved
@@ -1592,6 +1491,6 @@ def code_list_files(subdir: str = "") -> str:
 # ═══════════════════════════  ENTRYPOINT  ═════════════════════════════════
 
 if __name__ == "__main__":
-    logger.info(f"Homelab MCP Server iniciando — Bus: {HOMELAB_URL} | Secrets: {SECRETS_AGENT_URL} | API: {API_BASE_URL}")
+    logger.info(f"Homelab MCP Server iniciando — Bus: {HOMELAB_URL} | Secrets: {SECRETS_AGENT_URL}")
     logger.info(f"DB configurado: {'Sim' if DATABASE_URL else 'Não'}")
     mcp.run(transport="stdio")

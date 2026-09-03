@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
 Processador Massivo - LOTES 3-10 em Paralelo
-Processa estou-aqui, smartlife_integration, etc.
+Processa smartlife_integration, homeassistant_integration, etc.
+Nota: Lote 3 (estou-aqui) removido - descontinuado 2026-09
 """
 
 import asyncio
@@ -22,9 +23,9 @@ CACHE_DIR = Path("/home/edenilson/shared-auto-dev/.analysis_cache")
 RESULTS_DIR = Path("/home/edenilson/shared-auto-dev/analysis_results")
 CACHE_DIR.mkdir(exist_ok=True)
 
-# Mapeamento de componentes per lote
+# Mapeamento de componentes por lote
 LOTES = {
-    3: ["estou-aqui"],
+    3: [],  # estou-aqui removido (descontinuado 2026-09)
     4: ["smartlife_integration", "homeassistant_integration"],
     5: ["rag-mcp-server", "github-mcp-server"],
     6: ["shared-copilot/src"],

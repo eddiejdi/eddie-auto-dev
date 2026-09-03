@@ -10,7 +10,7 @@ from psycopg2.extras import RealDictCursor
 from datetime import datetime, timedelta
 
 # DATABASE_URL
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgress:estou_aqui_dev_2026@localhost:5432/estou_aqui")
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgress:shared_memory_2026@localhost:5433/btc_trading")
 
 def search_whatsapp_messages():
     """Busca mensagens do WhatsApp no PostgreSQL"""

@@ -249,7 +249,7 @@ class GoogleCalendarClient:
 
         Substitui o `credentials.json` solto em disco: o client_id/secret do
         Google vivem no Authentik e são lidos via Secrets Agent, igual ao
-        resto do homelab (KuCoin, Grafana, OAuth do Estou Aqui).
+        resto do homelab (KuCoin, Grafana).
 
         Retorna None quando o cofre não tem os valores — aí o chamador cai
         no arquivo, mantendo compatibilidade com instalações antigas.

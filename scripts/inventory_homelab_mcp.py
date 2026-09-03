@@ -34,7 +34,7 @@ MCP_SERVERS = {
         "transport": "stdio",
     },
     "homelab": {
-        "path": "/home/homelab/estou-aqui-deploy/scripts/homelab_mcp_server.py",
+        "path": "/home/homelab/myClaude/scripts/homelab_mcp_server.py",
         "description": "Homelab MCP Server - Gerenciamento do servidor homelab",
         "category": "infrastructure",
         "transport": "stdio",

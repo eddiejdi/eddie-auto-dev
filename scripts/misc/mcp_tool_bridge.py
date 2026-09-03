@@ -57,9 +57,6 @@ TOOL_RISK: dict[str, str] = {
     "bus_health": "none",
     "bus_get_messages": "none",
     "bus_search_by_agent": "none",
-    "api_health": "none",
-    "api_events_list": "none",
-    "api_events_get": "none",
     "db_list_tables": "none",
     "db_describe_table": "none",
     "db_active_events": "none",
@@ -88,11 +85,8 @@ TOOL_RISK: dict[str, str] = {
     # ou executa SQL arbitrário (mesmo com guardrails de app)
     "secrets_list": "high",
     "secrets_health": "high",
-    "api_auth_login": "high",
     "bus_publish": "high",
     "bus_record_result": "high",
-    "api_events_create": "high",
-    "api_checkins_create": "high",
     "db_execute_query": "high",
     # code_write_file grava arquivo em disco (sandboxed, mas ainda assim
     # conteúdo gerado por LLM sem revisão prévia) — exige aprovação.

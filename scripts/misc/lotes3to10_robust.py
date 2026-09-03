@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Processador Robustofor LOTES 3-10
-Componentes: estou-aqui, integrations, mcp-servers, tools, scripts, misc
+Processador Robusto para LOTES 3-10
+Componentes: integrations, mcp-servers, tools, scripts, misc
+Nota: Lote 3 (estou-aqui) removido - descontinuado 2026-09
 """
 
 import asyncio
@@ -156,7 +157,6 @@ async def main():
     base_path = Path("/home/edenilson/shared-auto-dev")
     
     components = {
-        "LOTE3_estou-aqui": base_path / "estou-aqui",
         "LOTE4_smartlife": base_path / "smartlife_integration",
         "LOTE4_homeassistant": base_path / "homeassistant_integration",
         "LOTE5_rag-mcp": base_path / "rag-mcp-server",
