@@ -296,7 +296,14 @@ class ProfitOnlySignalSellPolicy(SignalSellPolicy):
 
 
 class StopLossSignalSellPolicy(SignalSellPolicy):
-    """Cuts only the slots that individually violated stop-loss."""
+    """Cuts only the slots that individually violated stop-loss.
+
+    Nova lógica (alinhada com StopLossRule 2026-08-16):
+    - Só ativa quando trailing_high >= entry * (1 + min_profit_pct)
+    - Quando ativa, stop é em 0% (breakeven) - não vende com prejuízo
+    - Se lucro aumenta, stop sobe para proteger lucro
+    - NUNCA bypass_guardrail quando vende em prejuízo
+    """
 
     def select(
         self,
@@ -307,24 +314,43 @@ class StopLossSignalSellPolicy(SignalSellPolicy):
         if not bool(auto_sl.get("enabled", False)):
             return []
 
-        sl_pct = float(auto_sl.get("pct", 0.05) or 0.05)
+        # Lucro mínimo para ativar stop-loss (padrão: 0.5%)
+        min_profit_pct = float(auto_sl.get("min_profit_pct", 0.005) or 0.005)
+        # Trail percent para cálculo do stop (padrão: 1%)
+        trail_pct = float(auto_sl.get("trail_pct", 0.01) or 0.01)
+
         decisions: list[SlotExitDecision] = []
         for index, entry in enumerate(entries):
             entry_price = float(entry.get("price", 0) or 0)
             size = float(entry.get("size", 0) or 0)
             if entry_price <= 0 or size <= 0:
                 continue
-            pnl_pct = (ctx.price / entry_price) - 1
-            if pnl_pct > -sl_pct:
+
+            # Obter trailing_high do slot (mesmo lógica do StopLossRule)
+            trailing_high = float(entry.get("trailing_high", entry_price) or entry_price)
+            if trailing_high <= 0:
+                trailing_high = entry_price
+
+            high_pnl_pct = (trailing_high / entry_price) - 1
+
+            # Se o pico nunca atingiu lucro mínimo, não ativa stop-loss
+            if high_pnl_pct < min_profit_pct:
                 continue
-            decisions.append(
-                SlotExitDecision(
-                    entry_idx=index,
-                    expected_entry_price=entry_price,
-                    reason=f"PER_SLOT_SL slot#{index + 1} ({pnl_pct * 100:.2f}%)",
-                    bypass_guardrail=True,
+
+            # Stop é trail_pct abaixo do pico, mas mínimo 0% (breakeven)
+            stop_price = trailing_high * (1 - trail_pct)
+
+            # Se preço atual caiu abaixo do stop, vende (com lucro ou breakeven)
+            pnl_pct = (ctx.price / entry_price) - 1
+            if ctx.price <= stop_price and pnl_pct >= 0:
+                decisions.append(
+                    SlotExitDecision(
+                        entry_idx=index,
+                        expected_entry_price=entry_price,
+                        reason=f"PER_SLOT_SL slot#{index + 1} (lucro {pnl_pct * 100:.2f}%, stop em {((stop_price/entry_price)-1)*100:.2f}%)",
+                        bypass_guardrail=True,
+                    )
                 )
-            )
         return decisions
 
 
