@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-09-07T04:53:53.771690+00:00",
+  "generated_at": "2026-09-10T12:51:38.774021+00:00",
   "repo_root": "/workspace/eddie-auto-dev",
   "inventory_file": "config/inventory_homelab.yml",
   "output_dir": "deploy/cmdb/bootstrap/generated",
   "site_name": "homelab-main",
   "summary": {
     "hosts": 1,
-    "repo_services": 218,
+    "repo_services": 219,
     "trading_instances": 12,
     "critical_services": 88,
     "domains": {
       "identity": 4,
       "monitoring": 19,
       "network": 26,
-      "operations": 119,
+      "operations": 120,
       "storage": 39,
       "trading": 11
     }
@@ -1226,6 +1226,14 @@
       "domain": "operations",
       "kind": "systemd",
       "source": "systemd/nas-ollama-load.service",
+      "recommended_owner": "application",
+      "candidate_system": "GLPI review"
+    },
+    {
+      "name": "network-health.service",
+      "domain": "operations",
+      "kind": "systemd",
+      "source": "deploy/network/network-health.service",
       "recommended_owner": "application",
       "candidate_system": "GLPI review"
     },
